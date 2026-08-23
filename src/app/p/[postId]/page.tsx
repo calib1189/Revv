@@ -72,9 +72,12 @@ export default async function PostPage({
         <div className="flex items-center gap-3 px-4 py-3">
           <Avatar username={author?.username ?? "unknown"} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">
+            <Link
+              href={`/u/${author?.username ?? "unknown"}`}
+              className="truncate text-sm font-medium hover:underline"
+            >
               @{author?.username ?? "unknown"}
-            </p>
+            </Link>
             {vehicleTitle && (
               <Link
                 href={`/garage/${vehicle!.id}`}

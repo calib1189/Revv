@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Avatar } from "@/features/feed/avatar";
 import { DeleteCommentButton } from "@/features/feed/delete-comment-button";
 import { relativeTime } from "@/lib/format/relative-time";
@@ -27,7 +28,12 @@ export function CommentList({
           <Avatar username={comment.authorUsername} />
           <div className="min-w-0 flex-1">
             <p className="text-sm">
-              <span className="font-medium">@{comment.authorUsername}</span>{" "}
+              <Link
+                href={`/u/${comment.authorUsername}`}
+                className="font-medium hover:underline"
+              >
+                @{comment.authorUsername}
+              </Link>{" "}
               {comment.body}
             </p>
             <div className="mt-0.5 flex items-center gap-3">

@@ -7,12 +7,42 @@ import { getVehicleById } from "@/lib/db/vehicles";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
+import { getActiveBuild } from "@/lib/db/builds";
+import { listBuildParts } from "@/lib/db/build-parts";
 import { VehicleSpecs } from "@/features/garage/vehicle-specs";
 import { CoverPhotoUploader } from "@/features/garage/cover-photo-uploader";
 import { GalleryUploader } from "@/features/garage/gallery-uploader";
 import { GalleryGrid } from "@/features/garage/gallery-grid";
 import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
+import { ModificationList } from "@/features/builds/modification-list";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ vehicleId: string }>;
+}): Promise<Metadata> {
+  const { vehicleId } = await params;
+  const supabase = await createClient();
+  const vehicle = await getVehicleById(supabase, vehicleId);
+  if (!vehicle) return {};
+
+  const title = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
+  const description = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    title: `${title} · REVV`,
+    description: description || undefined,
+    openGraph: {
+      title,
+      description: description || undefined,
+      type: "website",
+    },
+  };
+}
 
 export default async function VehiclePage({
   params,
@@ -28,13 +58,17 @@ export default async function VehiclePage({
   ]);
   if (!vehicle) notFound();
 
-  const [owner, gallery, heroMedia] = await Promise.all([
+  const [owner, gallery, heroMedia, activeBuild] = await Promise.all([
     getProfileByUserId(supabase, vehicle.owner_id),
     listVehicleMedia(supabase, vehicleId),
     vehicle.hero_media_id
       ? getMediaById(supabase, vehicle.hero_media_id)
       : Promise.resolve(null),
+    getActiveBuild(supabase, vehicleId),
   ]);
+  const buildParts = activeBuild
+    ? await listBuildParts(supabase, activeBuild.id)
+    : [];
 
   const isOwner = user?.id === vehicle.owner_id;
   const heroUrl = heroMedia
@@ -73,7 +107,12 @@ export default async function VehiclePage({
               {title}
             </h1>
             {owner && (
-              <p className="mt-1 text-sm text-white/70">@{owner.username}</p>
+              <Link
+                href={`/u/${owner.username}`}
+                className="mt-1 inline-block text-sm text-white/70 hover:text-white"
+              >
+                @{owner.username}
+              </Link>
             )}
           </div>
         </div>
@@ -127,6 +166,14 @@ export default async function VehiclePage({
           {gallery.length === 0 && (
             <p className="text-sm text-muted">No photos in the gallery yet.</p>
           )}
+        </div>
+
+        <div className="mt-10">
+          <ModificationList
+            buildParts={buildParts}
+            vehicleId={vehicle.id}
+            isOwner={isOwner}
+          />
         </div>
       </div>
     </div>

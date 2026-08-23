@@ -62,9 +62,18 @@ export async function Header() {
                 </span>
               )}
             </Link>
-            <span className="hidden text-sm text-muted sm:inline">
-              {username ? `@${username}` : user.email}
-            </span>
+            {username ? (
+              <Link
+                href={`/u/${username}`}
+                className="hidden text-sm text-muted hover:text-foreground sm:inline"
+              >
+                @{username}
+              </Link>
+            ) : (
+              <span className="hidden text-sm text-muted sm:inline">
+                {user.email}
+              </span>
+            )}
             <SignOutButton />
           </div>
         ) : (

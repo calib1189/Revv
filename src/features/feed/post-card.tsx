@@ -47,7 +47,12 @@ export function PostCard({ data }: { data: PostCardData }) {
       <div className="flex items-center gap-3 px-4 py-3">
         <Avatar username={authorUsername} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">@{authorUsername}</p>
+          <Link
+            href={`/u/${authorUsername}`}
+            className="truncate text-sm font-medium hover:underline"
+          >
+            @{authorUsername}
+          </Link>
           {vehicleTitle && post.vehicle_id && (
             <Link
               href={`/garage/${post.vehicle_id}`}

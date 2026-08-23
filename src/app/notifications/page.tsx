@@ -61,9 +61,11 @@ export default async function NotificationsPage() {
               : "REVV";
             const verb = KIND_VERB[n.kind] ?? n.kind;
             const href =
-              n.target_type === "post" && n.target_id
-                ? `/p/${n.target_id}`
-                : "#";
+              n.kind === "follow"
+                ? `/u/${username}`
+                : n.target_type === "post" && n.target_id
+                  ? `/p/${n.target_id}`
+                  : "#";
 
             return (
               <li key={n.id} className="px-4 py-3">

@@ -11,6 +11,7 @@ const PROTECTED_EXACT = [
   "/feed/new",
   "/saved",
   "/notifications",
+  "/settings/profile",
 ];
 const PROTECTED_PATTERNS = [/^\/garage\/[^/]+\/edit$/];
 

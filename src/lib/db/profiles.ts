@@ -31,3 +31,33 @@ export async function createProfile(
   if (error) throw error;
   return data;
 }
+
+export async function getProfileByUsername(
+  supabase: SupabaseClient<Database>,
+  username: string,
+): Promise<Profile | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProfileBio(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  bio: string | null,
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ bio })
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
