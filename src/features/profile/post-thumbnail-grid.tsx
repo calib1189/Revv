@@ -1,11 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
+import { EyeIcon } from "@/components/ui/icons";
+import { formatCompactNumber } from "@/lib/format/compact-number";
 
 export interface PostThumbnail {
   postId: string;
   url: string | null;
   kind: "photo" | "video";
   authorUsername: string;
+  viewCount: number;
 }
 
 function PlayGlyph() {
@@ -54,6 +57,13 @@ export function PostThumbnailGrid({ posts }: { posts: PostThumbnail[] }) {
             />
           )}
           {post.kind === "video" && <PlayGlyph />}
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 pb-1 pt-4">
+            <span className="flex items-center gap-1 text-[11px] font-medium text-white">
+              <EyeIcon className="h-3 w-3" />
+              {formatCompactNumber(post.viewCount)}
+            </span>
+          </div>
         </Link>
       ))}
     </div>

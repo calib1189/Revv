@@ -10,6 +10,8 @@ import type { Meetup } from "@/lib/db/meetups";
 export interface MeetupListItem {
   meetup: Meetup;
   hostUsername: string;
+  photoUrl: string | null;
+  photoCount: number;
 }
 
 export function MeetupsList({
@@ -77,7 +79,7 @@ export function MeetupsList({
 
       {currentUserId && (
         <div className="mb-6">
-          <CreateMeetupForm onCreated={() => router.refresh()} />
+          <CreateMeetupForm userId={currentUserId} onCreated={() => router.refresh()} />
         </div>
       )}
 
@@ -92,14 +94,14 @@ export function MeetupsList({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {sorted.map(({ meetup, hostUsername }) => (
+          {sorted.map(({ meetup, hostUsername, photoUrl, photoCount }) => (
             <MeetupCard
               key={meetup.id}
               meetup={meetup}
               hostUsername={hostUsername}
+              photoUrl={photoUrl}
+              photoCount={photoCount}
               distanceMiles={distanceFor(meetup)}
-              isHost={meetup.host_id === currentUserId}
-              onDeleted={() => router.refresh()}
             />
           ))}
         </div>

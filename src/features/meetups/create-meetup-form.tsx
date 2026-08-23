@@ -1,32 +1,70 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { createMeetupAction, type CreateMeetupState } from "@/features/meetups/actions";
+import { useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { createMeetup } from "@/lib/db/meetups";
+import { addMeetupMedia } from "@/lib/db/meetup-media";
+import { createMedia } from "@/lib/db/media";
+import { uploadImage } from "@/lib/storage/upload";
+import { validateImageFile } from "@/lib/validation/media";
+import { validateMeetup } from "@/lib/validation/meetup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
 
-const initialState: CreateMeetupState = { error: null, success: false };
+const MAX_PHOTOS = 5;
 
-export function CreateMeetupForm({ onCreated }: { onCreated: () => void }) {
+interface SelectedPhoto {
+  file: File;
+  previewUrl: string;
+}
+
+export function CreateMeetupForm({
+  userId,
+  onCreated,
+}: {
+  userId: string;
+  onCreated: () => void;
+}) {
   const [isOpen, setIsOpen] = useState(false);
-  const [state, formAction, isPending] = useActionState(createMeetupAction, initialState);
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "loading" | "denied">("idle");
+  const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
-  const wasPending = useRef(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (wasPending.current && !isPending && !state.error && state.success) {
-      setIsOpen(false);
-      formRef.current?.reset();
-      setCoords(null);
-      onCreated();
+  function resetAndClose() {
+    photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+    setPhotos([]);
+    setCoords(null);
+    setError(null);
+    formRef.current?.reset();
+    setIsOpen(false);
+  }
+
+  function handleSelectPhotos(files: FileList) {
+    const next: SelectedPhoto[] = [...photos];
+    for (const file of Array.from(files)) {
+      if (next.length >= MAX_PHOTOS) break;
+      const fileError = validateImageFile(file);
+      if (fileError) {
+        setError(fileError);
+        continue;
+      }
+      next.push({ file, previewUrl: URL.createObjectURL(file) });
     }
-    wasPending.current = isPending;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPending, state.error, state.success]);
+    setPhotos(next);
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[index].previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
 
   function handleUseLocation() {
     if (!navigator.geolocation) {
@@ -44,6 +82,55 @@ export function CreateMeetupForm({ onCreated }: { onCreated: () => void }) {
     );
   }
 
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const title = String(formData.get("title") ?? "");
+    const locationName = String(formData.get("locationName") ?? "");
+    const startsAt = String(formData.get("startsAt") ?? "");
+    const description = String(formData.get("description") ?? "").trim();
+
+    const validationError = validateMeetup({ title, locationName, startsAt });
+    if (validationError) return setError(validationError);
+
+    setIsPending(true);
+    try {
+      const supabase = createClient();
+      const meetup = await createMeetup(supabase, {
+        host_id: userId,
+        title: title.trim(),
+        description: description || null,
+        location_name: locationName.trim(),
+        starts_at: new Date(startsAt).toISOString(),
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+      });
+
+      let position = 0;
+      for (const photo of photos) {
+        const uploaded = await uploadImage(supabase, userId, photo.file);
+        const media = await createMedia(supabase, {
+          owner_id: userId,
+          storage_path: uploaded.storagePath,
+          kind: "image",
+          width: uploaded.width,
+          height: uploaded.height,
+        });
+        await addMeetupMedia(supabase, meetup.id, media.id, position);
+        position += 1;
+      }
+
+      resetAndClose();
+      onCreated();
+    } catch {
+      setError("Couldn't create that meetup. Try again.");
+    } finally {
+      setIsPending(false);
+    }
+  }
+
   if (!isOpen) {
     return (
       <Button type="button" className="px-3 py-1.5 text-sm" onClick={() => setIsOpen(true)}>
@@ -53,8 +140,12 @@ export function CreateMeetupForm({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <form ref={formRef} action={formAction} className="glass flex flex-col gap-4 rounded-2xl p-4">
-      {state.error && <Callout tone="danger">{state.error}</Callout>}
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className="glass flex flex-col gap-4 rounded-2xl p-4"
+    >
+      {error && <Callout tone="danger">{error}</Callout>}
 
       <div>
         <Label htmlFor="meetup-title">Title</Label>
@@ -90,6 +181,51 @@ export function CreateMeetupForm({ onCreated }: { onCreated: () => void }) {
       </div>
 
       <div>
+        <Label>Photos (optional)</Label>
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.length) handleSelectPhotos(e.target.files);
+            e.target.value = "";
+          }}
+        />
+
+        {photos.length > 0 && (
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            {photos.map((photo, i) => (
+              <div key={i} className="group relative aspect-square overflow-hidden rounded-lg bg-surface">
+                {/* eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset */}
+                <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(i)}
+                  aria-label="Remove photo"
+                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {photos.length < MAX_PHOTOS && (
+          <Button
+            type="button"
+            variant="secondary"
+            className="px-3 py-1.5 text-sm"
+            onClick={() => photoInputRef.current?.click()}
+          >
+            {photos.length > 0 ? "Add more photos" : "Add photos"}
+          </Button>
+        )}
+      </div>
+
+      <div>
         <Button
           type="button"
           variant="secondary"
@@ -110,8 +246,6 @@ export function CreateMeetupForm({ onCreated }: { onCreated: () => void }) {
               ? "Couldn't get your location — the meetup will still post, just without a distance for others."
               : "Optional — lets nearby people see how far away this is."}
         </p>
-        <input type="hidden" name="lat" value={coords?.lat ?? ""} />
-        <input type="hidden" name="lng" value={coords?.lng ?? ""} />
       </div>
 
       <div className="flex gap-3">
@@ -120,7 +254,7 @@ export function CreateMeetupForm({ onCreated }: { onCreated: () => void }) {
         </Button>
         <button
           type="button"
-          onClick={() => setIsOpen(false)}
+          onClick={resetAndClose}
           className="px-1 py-2.5 text-sm text-muted hover:text-foreground"
         >
           Cancel

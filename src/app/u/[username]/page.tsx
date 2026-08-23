@@ -7,7 +7,8 @@ import { isBlocking } from "@/lib/db/blocks";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { listPostsByAuthor } from "@/lib/db/posts";
 import { listSavedPosts } from "@/lib/db/saves";
-import { listLikedPosts } from "@/lib/db/likes";
+import { listLikedPosts, getLikeCountsForPosts } from "@/lib/db/likes";
+import { formatCompactNumber } from "@/lib/format/compact-number";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
@@ -75,86 +76,96 @@ export default async function ProfilePage({
       ])
     : [[], []];
 
-  const [postThumbnails, savedThumbnails, likedThumbnails] = await Promise.all([
+  const [postThumbnails, savedThumbnails, likedThumbnails, likeCountsByPost] = await Promise.all([
     composeThumbnails(supabase, posts),
     composeThumbnails(supabase, savedPosts),
     composeThumbnails(supabase, likedPosts),
+    getLikeCountsForPosts(supabase, posts.map((p) => p.id)),
   ]);
+  const totalLikes = [...likeCountsByPost.values()].reduce((sum, n) => sum + n, 0);
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
-      <div className="flex items-start gap-4">
-        <Avatar username={profile.username} />
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-semibold">@{profile.username}</h1>
+          <h1 className="truncate text-2xl font-bold tracking-tight">
+            @{profile.username}
+          </h1>
+          <div className="mt-1.5 h-5">
             <RankPill score={bestRatingScore} />
-            {isOwnProfile ? (
-              <Link href="/settings/profile">
-                <Button variant="secondary" className="px-3 py-1.5 text-sm">
-                  Edit profile
-                </Button>
-              </Link>
-            ) : currentUser ? (
-              <>
-                {!amBlocking && (
-                  <>
-                    <FollowButton
-                      followeeId={profile.id}
-                      followeeUsername={profile.username}
-                      initialIsFollowing={following}
-                    />
-                    <MessageButton userId={profile.id} />
-                  </>
-                )}
-                <BlockButton
-                  targetUserId={profile.id}
-                  targetUsername={profile.username}
-                  initialIsBlocking={amBlocking}
-                />
-              </>
-            ) : null}
           </div>
 
-          <div className="mt-2 flex gap-4 text-sm text-muted">
-            <span>
-              <span className="font-medium text-foreground">
-                {followerCount}
-              </span>{" "}
-              followers
-            </span>
-            <span>
-              <span className="font-medium text-foreground">
-                {followingCount}
-              </span>{" "}
-              following
-            </span>
-          </div>
-
-          {profile.bio && (
-            <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">
-              {profile.bio}
-            </p>
-          )}
-
-          {isOwnProfile && (
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-              <Link href="/saved" className="text-muted hover:text-foreground">
-                Saved
-              </Link>
-              <Link href="/notifications" className="text-muted hover:text-foreground">
-                Activity
-              </Link>
-              {profile.is_admin && (
-                <Link href="/admin/reports" className="text-accent hover:underline">
-                  Admin
-                </Link>
-              )}
-              <SignOutButton />
+          <div className="mt-4 flex gap-6">
+            <div>
+              <p className="text-lg font-bold leading-none">{followingCount}</p>
+              <p className="mt-1.5 text-xs text-muted">Following</p>
             </div>
-          )}
+            <div>
+              <p className="text-lg font-bold leading-none">{followerCount}</p>
+              <p className="mt-1.5 text-xs text-muted">Followers</p>
+            </div>
+            <div>
+              <p className="text-lg font-bold leading-none">
+                {formatCompactNumber(totalLikes)}
+              </p>
+              <p className="mt-1.5 text-xs text-muted">Likes</p>
+            </div>
+          </div>
         </div>
+
+        <Avatar username={profile.username} className="h-20 w-20 flex-shrink-0 text-2xl" />
       </div>
+
+      {profile.bio && (
+        <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">
+          {profile.bio}
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {isOwnProfile ? (
+          <Link href="/settings/profile">
+            <Button variant="secondary" className="px-4 py-1.5 text-sm">
+              Edit profile
+            </Button>
+          </Link>
+        ) : currentUser ? (
+          <>
+            {!amBlocking && (
+              <>
+                <FollowButton
+                  followeeId={profile.id}
+                  followeeUsername={profile.username}
+                  initialIsFollowing={following}
+                />
+                <MessageButton userId={profile.id} />
+              </>
+            )}
+            <BlockButton
+              targetUserId={profile.id}
+              targetUsername={profile.username}
+              initialIsBlocking={amBlocking}
+            />
+          </>
+        ) : null}
+      </div>
+
+      {isOwnProfile && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4 text-sm">
+          <Link href="/saved" className="text-muted hover:text-foreground">
+            Saved
+          </Link>
+          <Link href="/notifications" className="text-muted hover:text-foreground">
+            Activity
+          </Link>
+          {profile.is_admin && (
+            <Link href="/admin/reports" className="text-accent hover:underline">
+              Admin
+            </Link>
+          )}
+          <SignOutButton />
+        </div>
+      )}
 
       <ProfileTabs
         isOwnProfile={isOwnProfile}

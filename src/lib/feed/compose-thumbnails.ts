@@ -4,6 +4,7 @@ import type { Post } from "@/lib/db/posts";
 import { listPostMediaForPosts } from "@/lib/db/post-media";
 import { getProfilesByIds } from "@/lib/db/profiles";
 import { publicMediaUrl } from "@/lib/db/media";
+import { getViewCountsForPosts } from "@/lib/db/post-views";
 import type { PostThumbnail } from "@/features/profile/post-thumbnail-grid";
 
 /** Builds grid thumbnails for a list of posts that may span multiple
@@ -16,9 +17,10 @@ export async function composeThumbnails(
 ): Promise<PostThumbnail[]> {
   if (posts.length === 0) return [];
 
-  const [postMedia, authors] = await Promise.all([
+  const [postMedia, authors, viewCounts] = await Promise.all([
     listPostMediaForPosts(supabase, posts.map((p) => p.id)),
     getProfilesByIds(supabase, [...new Set(posts.map((p) => p.author_id))]),
+    getViewCountsForPosts(supabase, posts.map((p) => p.id)),
   ]);
 
   const firstMediaByPost = new Map<string, (typeof postMedia)[number]>();
@@ -34,6 +36,7 @@ export async function composeThumbnails(
       url: media ? publicMediaUrl(supabase, media.media.storage_path) : null,
       kind: post.post_type,
       authorUsername: authorUsernameById.get(post.author_id) ?? "unknown",
+      viewCount: viewCounts.get(post.id) ?? 0,
     };
   });
 }

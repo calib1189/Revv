@@ -21,6 +21,20 @@ export async function listUpcomingMeetups(
   return data;
 }
 
+export async function getMeetupById(
+  supabase: SupabaseClient<Database>,
+  meetupId: string,
+): Promise<Meetup | null> {
+  const { data, error } = await supabase
+    .from("meetups")
+    .select("*")
+    .eq("id", meetupId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function listMeetupsByHost(
   supabase: SupabaseClient<Database>,
   hostId: string,

@@ -77,16 +77,6 @@ export function SwipeFeed({
         ))}
         {hasMore && <div ref={sentinelRef} className="h-1" />}
       </div>
-
-      {isAuthenticated && (
-        <Link
-          href="/feed/new"
-          aria-label="New post"
-          className="absolute bottom-6 right-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-medium text-accent-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255_/_0.25),0_8px_24px_-10px_rgb(255_68_51_/_0.55)]"
-        >
-          +
-        </Link>
-      )}
     </div>
   );
 }
