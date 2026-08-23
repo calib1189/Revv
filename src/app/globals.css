@@ -87,3 +87,149 @@ body {
     backdrop-filter: blur(12px);
   }
 }
+
+/* ------------------------------------------------------------------- *
+ * Build rank frames — the "flex" decoration for AI-rated builds.
+ * .rank-frame is the shared wrapper (border box + z-index context);
+ * .rank-<tier> supplies the tier's color/animation treatment. Tiers
+ * escalate in visual intensity: flat color borders through iron/silver/
+ * gold/platinum/emerald, then diamond gets a twinkling sparkle overlay,
+ * ruby gets a glow that roams around the frame, and cosmic gets a full
+ * animated starfield/nebula background.
+ * ------------------------------------------------------------------- */
+@layer components {
+  .rank-frame {
+    position: relative;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .rank-frame.rank-frame-compact {
+    border-radius: 1rem;
+  }
+
+  .rank-frame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 5;
+    box-sizing: border-box;
+  }
+
+  .rank-bronze::before { border: 3px solid #a3652f; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15); }
+  .rank-copper::before { border: 3px solid #c17a4d; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15); }
+  .rank-iron::before { border: 3px solid #9295a0; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15); }
+  .rank-silver::before { border: 3px solid #cbd0d8; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25), 0 0 12px -2px rgb(203 208 216 / 0.5); }
+  .rank-gold::before { border: 3px solid #e8bf4f; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.3), 0 0 16px -2px rgb(232 191 79 / 0.6); }
+  .rank-platinum::before { border: 3px solid #e4ecf2; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.4), 0 0 18px -1px rgb(228 236 242 / 0.7); }
+  .rank-emerald::before { border: 3px solid #2fd48a; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25), 0 0 20px -1px rgb(47 212 138 / 0.7); }
+
+  .rank-diamond::before {
+    border: 3px solid transparent;
+    background:
+      linear-gradient(135deg, #bff4ff, #7dd3fc, #ffffff, #a5f3fc) border-box;
+    -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    box-shadow: 0 0 22px -1px rgb(165 243 252 / 0.8);
+  }
+  .rank-diamond .rank-sparkle {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    border-radius: inherit;
+    background-image:
+      radial-gradient(1.6px 1.6px at 12% 22%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 78% 15%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 88% 68%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 22% 82%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 55% 45%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 40% 65%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 65% 85%, #fff, transparent);
+    animation: rank-sparkle-twinkle 2.2s ease-in-out infinite;
+  }
+
+  .rank-ruby::before {
+    border: 3px solid #e33a5c;
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25), 0 0 18px -1px rgb(227 58 92 / 0.7);
+  }
+  .rank-ruby .rank-glow {
+    position: absolute;
+    inset: -14px;
+    z-index: 4;
+    pointer-events: none;
+    background: radial-gradient(circle 46px, rgb(227 58 92 / 0.85), transparent 70%);
+    background-repeat: no-repeat;
+    background-size: 90px 90px;
+    filter: blur(6px);
+    animation: rank-ruby-roam 6s ease-in-out infinite;
+  }
+
+  .rank-cosmic::before { border: 3px solid rgb(255 255 255 / 0.35); }
+  .rank-cosmic .rank-nebula {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0.85;
+    mix-blend-mode: screen;
+    background-image:
+      radial-gradient(1.6px 1.6px at 10% 20%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 25% 65%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 40% 15%, #fff, transparent),
+      radial-gradient(1px 1px at 55% 80%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 70% 35%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 85% 60%, #fff, transparent),
+      radial-gradient(1px 1px at 15% 85%, #fff, transparent),
+      radial-gradient(1.6px 1.6px at 92% 22%, #fff, transparent),
+      radial-gradient(1.2px 1.2px at 50% 50%, #fff, transparent),
+      radial-gradient(1px 1px at 65% 92%, #fff, transparent),
+      radial-gradient(ellipse 140px 100px at 30% 40%, rgb(139 92 246 / 0.55), transparent 60%),
+      radial-gradient(ellipse 160px 110px at 72% 62%, rgb(236 72 153 / 0.45), transparent 60%),
+      radial-gradient(ellipse 120px 90px at 55% 20%, rgb(56 189 248 / 0.4), transparent 60%);
+    animation: rank-cosmic-drift 16s ease-in-out infinite;
+  }
+
+  @keyframes rank-sparkle-twinkle {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+
+  @keyframes rank-ruby-roam {
+    0% { background-position: 0% 0%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+    100% { background-position: 0% 0%; }
+  }
+
+  @keyframes rank-cosmic-drift {
+    0%, 100% {
+      background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 30% 40%, 72% 62%, 55% 20%;
+    }
+    50% {
+      background-position: 3% 2%, -2% 3%, 2% -2%, -3% 2%, 2% 3%, -2% -3%, 3% -2%, -2% 2%, 2% -3%, -3% 3%, 34% 44%, 68% 58%, 58% 24%;
+    }
+  }
+
+  /* rank badge, bottom-right corner */
+  .rank-badge {
+    position: absolute;
+    right: 0.625rem;
+    bottom: 0.625rem;
+    z-index: 6;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 9999px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(6px);
+  }
+}

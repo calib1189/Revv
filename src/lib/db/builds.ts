@@ -19,6 +19,24 @@ export async function getActiveBuild(
   return data;
 }
 
+/** One active build per vehicle_id, for card grids that need a rating
+ * badge without an N+1 query per vehicle. */
+export async function listActiveBuildsByVehicleIds(
+  supabase: SupabaseClient<Database>,
+  vehicleIds: string[],
+): Promise<Map<string, Build>> {
+  if (vehicleIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from("builds")
+    .select("*")
+    .eq("status", "active")
+    .in("vehicle_id", vehicleIds);
+
+  if (error) throw error;
+  return new Map(data.map((build) => [build.vehicle_id, build]));
+}
+
 export async function getBuildById(
   supabase: SupabaseClient<Database>,
   id: string,
@@ -55,6 +73,26 @@ export async function updateBuildStatus(
   const { data, error } = await supabase
     .from("builds")
     .update({ status })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateBuildRating(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  rating: { score: number; summary: string },
+): Promise<Build> {
+  const { data, error } = await supabase
+    .from("builds")
+    .update({
+      ai_rating_score: rating.score,
+      ai_rating_summary: rating.summary,
+      ai_rating_rated_at: new Date().toISOString(),
+    })
     .eq("id", id)
     .select("*")
     .single();

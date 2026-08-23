@@ -17,6 +17,8 @@ import { GalleryUploader } from "@/features/garage/gallery-uploader";
 import { GalleryGrid } from "@/features/garage/gallery-grid";
 import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ModificationList } from "@/features/builds/modification-list";
+import { RankFrame } from "@/features/garage/rank-frame";
+import { RateBuildPanel } from "@/features/garage/rate-build-panel";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { BudgetCard } from "@/features/builds/budget-card";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
@@ -96,44 +98,46 @@ export default async function VehiclePage({
 
   return (
     <div className="flex-1 pb-16">
-      <div className="relative aspect-[16/10] w-full bg-surface sm:aspect-[21/9]">
-        {heroUrl ? (
-          <Image
-            src={heroUrl}
-            alt={title}
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted">
-            No cover photo yet
-          </div>
-        )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+      <RankFrame score={activeBuild?.ai_rating_score ?? null}>
+        <div className="relative aspect-[16/10] w-full bg-surface sm:aspect-[21/9]">
+          {heroUrl ? (
+            <Image
+              src={heroUrl}
+              alt={title}
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-muted">
+              No cover photo yet
+            </div>
+          )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
 
-        <div className="absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-5xl items-end justify-between gap-4 px-4 py-6 sm:px-6">
-          <div>
-            {vehicle.year && (
-              <p className="text-sm font-medium text-white/70">
-                {vehicle.year}
-              </p>
-            )}
-            <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-              {title}
-            </h1>
-            {owner && (
-              <Link
-                href={`/u/${owner.username}`}
-                className="mt-1 inline-block text-sm text-white/70 hover:text-white"
-              >
-                @{owner.username}
-              </Link>
-            )}
+          <div className="absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-5xl items-end justify-between gap-4 px-4 py-6 sm:px-6">
+            <div>
+              {vehicle.year && (
+                <p className="text-sm font-medium text-white/70">
+                  {vehicle.year}
+                </p>
+              )}
+              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                {title}
+              </h1>
+              {owner && (
+                <Link
+                  href={`/u/${owner.username}`}
+                  className="mt-1 inline-block text-sm text-white/70 hover:text-white"
+                >
+                  @{owner.username}
+                </Link>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </RankFrame>
 
       <div className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-6">
         {isOwner && (
@@ -162,12 +166,27 @@ export default async function VehiclePage({
           </div>
         )}
 
+        {isOwner && (
+          <div className="mb-6">
+            <RateBuildPanel vehicleId={vehicle.id} />
+          </div>
+        )}
+
         {!isOwner && user && buildParts.length > 0 && (
           <div className="mb-6">
             <CopyBuildButton
               sourceVehicleId={vehicle.id}
               myVehicles={await listVehiclesByOwner(supabase, user.id)}
             />
+          </div>
+        )}
+
+        {activeBuild?.ai_rating_score != null && activeBuild.ai_rating_summary && (
+          <div className="glass mb-6 rounded-2xl p-4">
+            <p className="text-sm font-medium">
+              AI rating: {activeBuild.ai_rating_score.toFixed(1)}/10
+            </p>
+            <p className="mt-1 text-sm text-muted">{activeBuild.ai_rating_summary}</p>
           </div>
         )}
 

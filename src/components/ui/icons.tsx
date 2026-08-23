@@ -105,6 +105,14 @@ export function PinIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function GemIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M6.5 3h11L21 9l-9 12L3 9l3.5-6Z" />
+    </svg>
+  );
+}
+
 export function BellIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

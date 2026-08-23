@@ -8,6 +8,7 @@ import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { listPostsByAuthor } from "@/lib/db/posts";
 import { listPostMediaForPosts } from "@/lib/db/post-media";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { Avatar } from "@/features/feed/avatar";
 import { VehicleCard } from "@/features/garage/vehicle-card";
 import { PostThumbnailGrid } from "@/features/profile/post-thumbnail-grid";
@@ -50,7 +51,10 @@ export default async function ProfilePage({
   const heroIds = vehicles
     .map((v) => v.hero_media_id)
     .filter((id): id is string => Boolean(id));
-  const heroMedia = await getMediaByIds(supabase, heroIds);
+  const [heroMedia, activeBuildByVehicle] = await Promise.all([
+    getMediaByIds(supabase, heroIds),
+    listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id)),
+  ]);
   const heroUrlById = new Map(
     heroMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
@@ -134,6 +138,7 @@ export default async function ProfilePage({
                     ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
                     : null
                 }
+                ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
               />
             ))}
           </div>

@@ -128,6 +128,9 @@ export interface Database {
           title: string | null;
           budget_cents: number | null;
           copied_from_build_id: string | null;
+          ai_rating_score: number | null;
+          ai_rating_summary: string | null;
+          ai_rating_rated_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -137,6 +140,9 @@ export interface Database {
           title?: string | null;
           budget_cents?: number | null;
           copied_from_build_id?: string | null;
+          ai_rating_score?: number | null;
+          ai_rating_summary?: string | null;
+          ai_rating_rated_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["builds"]["Insert"]>;

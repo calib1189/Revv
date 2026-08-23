@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { VehicleCard } from "@/features/garage/vehicle-card";
 import { Button } from "@/components/ui/button";
 
@@ -16,7 +17,10 @@ export default async function GaragePage() {
   const heroIds = vehicles
     .map((v) => v.hero_media_id)
     .filter((id): id is string => Boolean(id));
-  const heroMedia = await getMediaByIds(supabase, heroIds);
+  const [heroMedia, activeBuildByVehicle] = await Promise.all([
+    getMediaByIds(supabase, heroIds),
+    listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id)),
+  ]);
   const heroUrlById = new Map(
     heroMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
@@ -58,6 +62,7 @@ export default async function GaragePage() {
                   ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
                   : null
               }
+              ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
             />
           ))}
         </div>
