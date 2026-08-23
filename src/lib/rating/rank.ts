@@ -52,10 +52,11 @@ export const RANK_BADGE_TEXT_COLORS: Record<RankTier, string> = {
   cosmic: "#f4f4f5",
 };
 
-/** Score is 0-10. Each tier spans a full point except the top, which is
- * reserved for a perfect 10. */
+/** Score is 0-10. Each tier spans a full point except ruby and cosmic at
+ * the top, which split the last point in half (9-9.4 ruby, 9.5-10
+ * cosmic) so cosmic is reachable without requiring a literal perfect 10. */
 export function rankForScore(score: number): RankTier {
-  if (score >= 10) return "cosmic";
+  if (score >= 9.5) return "cosmic";
   if (score >= 9) return "ruby";
   if (score >= 8) return "diamond";
   if (score >= 7) return "emerald";

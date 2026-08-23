@@ -20,7 +20,9 @@ describe("rankForScore", () => {
     [8, "diamond"],
     [8.9, "diamond"],
     [9, "ruby"],
-    [9.9, "ruby"],
+    [9.4, "ruby"],
+    [9.5, "cosmic"],
+    [9.9, "cosmic"],
     [10, "cosmic"],
   ] as const)("maps score %s to %s", (score, tier) => {
     expect(rankForScore(score)).toBe(tier);
