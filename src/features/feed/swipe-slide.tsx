@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LikeButton } from "@/features/feed/like-button";
 import { SaveButton } from "@/features/feed/save-button";
-import { RankMiniBadge } from "@/features/garage/rank-mini-badge";
+import { Avatar } from "@/features/feed/avatar";
+import { RankFrame } from "@/features/garage/rank-frame";
 import { CaptionText } from "@/features/feed/caption-text";
 import { recordViewAction } from "@/features/feed/actions";
 import { CommentIcon, EyeIcon } from "@/components/ui/icons";
@@ -155,29 +156,39 @@ export function SwipeSlide({
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 pb-6">
         <div className="pointer-events-auto flex items-end justify-between gap-4">
-          <div className="min-w-0 flex-1 text-white">
-            <Link href={`/u/${data.authorUsername}`} className="text-sm font-semibold hover:underline">
-              @{data.authorUsername}
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <Link href={`/u/${data.authorUsername}`} className="flex-shrink-0">
+              <RankFrame score={data.vehicleRatingScore} compact hideBadge className="rounded-full">
+                <Avatar
+                  username={data.authorUsername}
+                  avatarUrl={data.authorAvatarUrl}
+                  className="h-10 w-10 text-sm"
+                />
+              </RankFrame>
             </Link>
-            {data.vehicleTitle && data.post.vehicle_id && (
-              <Link
-                href={`/garage/${data.post.vehicle_id}`}
-                className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white"
-              >
-                <span>{data.vehicleTitle}</span>
-                <RankMiniBadge score={data.vehicleRatingScore} className="h-3.5 w-3.5" />
+            <div className="min-w-0 flex-1 text-white">
+              <Link href={`/u/${data.authorUsername}`} className="text-sm font-semibold hover:underline">
+                @{data.authorUsername}
               </Link>
-            )}
-            {data.post.caption && (
-              <CaptionText
-                text={data.post.caption}
-                className="mt-1 line-clamp-2 text-sm text-white/90"
-              />
-            )}
-            <p className="mt-1 flex items-center gap-1 text-xs text-white/60">
-              <EyeIcon className="h-3.5 w-3.5" />
-              {formatCompactNumber(data.viewCount)} view{data.viewCount === 1 ? "" : "s"}
-            </p>
+              {data.vehicleTitle && data.post.vehicle_id && (
+                <Link
+                  href={`/garage/${data.post.vehicle_id}`}
+                  className="block text-xs text-white/70 hover:text-white"
+                >
+                  {data.vehicleTitle}
+                </Link>
+              )}
+              {data.post.caption && (
+                <CaptionText
+                  text={data.post.caption}
+                  className="mt-1 line-clamp-2 text-sm text-white/90"
+                />
+              )}
+              <p className="mt-1 flex items-center gap-1 text-xs text-white/60">
+                <EyeIcon className="h-3.5 w-3.5" />
+                {formatCompactNumber(data.viewCount)} view{data.viewCount === 1 ? "" : "s"}
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-shrink-0 flex-col items-center gap-4 text-white">

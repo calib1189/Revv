@@ -6,7 +6,7 @@ import { getLikeCountsForPosts, getLikedPostIds } from "@/lib/db/likes";
 import { getCommentCountsForPosts } from "@/lib/db/comments";
 import { getSavedPostIds } from "@/lib/db/saves";
 import { getViewCountsForPosts } from "@/lib/db/post-views";
-import { publicMediaUrl } from "@/lib/db/media";
+import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Profile } from "@/lib/db/profiles";
@@ -52,6 +52,14 @@ export async function composePostCards(
   const vehicleById = new Map(
     (vehicles.data ?? []).map((v: Vehicle) => [v.id, v]),
   );
+
+  const avatarMediaIds = (authors.data ?? [])
+    .map((a: Profile) => a.avatar_media_id)
+    .filter((id): id is string => Boolean(id));
+  const avatarMedia = await getMediaByIds(supabase, avatarMediaIds);
+  const avatarUrlByMediaId = new Map(
+    avatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
+  );
   const mediaByPost = new Map<string, PostMediaItem[]>();
   for (const pm of postMedia) {
     const list = mediaByPost.get(pm.post_id) ?? [];
@@ -66,9 +74,13 @@ export async function composePostCards(
 
   return posts.map((post) => {
     const vehicle = post.vehicle_id ? vehicleById.get(post.vehicle_id) : null;
+    const author = authorById.get(post.author_id);
     return {
       post,
-      authorUsername: authorById.get(post.author_id)?.username ?? "unknown",
+      authorUsername: author?.username ?? "unknown",
+      authorAvatarUrl: author?.avatar_media_id
+        ? (avatarUrlByMediaId.get(author.avatar_media_id) ?? null)
+        : null,
       vehicleTitle: vehicle
         ? vehicle.nickname || `${vehicle.make} ${vehicle.model}`
         : null,

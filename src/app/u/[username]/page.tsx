@@ -14,7 +14,6 @@ import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
-import { rankForScore, RANK_LABELS } from "@/lib/rating/rank";
 import { ProfileTabs } from "@/features/profile/profile-tabs";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
@@ -117,16 +116,9 @@ export default async function ProfilePage({
           </div>
         </div>
 
-        <div className="flex flex-shrink-0 flex-col items-center gap-1.5">
-          <RankFrame score={bestRatingScore} compact hideBadge className="rounded-full">
-            <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-20 w-20 text-2xl" />
-          </RankFrame>
-          {bestRatingScore != null && (
-            <p className="text-xs font-medium text-muted">
-              {RANK_LABELS[rankForScore(bestRatingScore)]}
-            </p>
-          )}
-        </div>
+        <RankFrame score={bestRatingScore} compact hideBadge className="flex-shrink-0 rounded-full">
+          <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-20 w-20 text-2xl" />
+        </RankFrame>
       </div>
 
       {profile.bio && (

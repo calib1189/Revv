@@ -20,6 +20,7 @@ export interface PostMediaItem {
 export interface PostCardData {
   post: Post;
   authorUsername: string;
+  authorAvatarUrl: string | null;
   vehicleTitle: string | null;
   vehicleRatingScore: number | null;
   media: PostMediaItem[];
@@ -35,6 +36,7 @@ export function PostCard({ data }: { data: PostCardData }) {
   const {
     post,
     authorUsername,
+    authorAvatarUrl,
     vehicleTitle,
     media,
     likeCount,
@@ -50,7 +52,7 @@ export function PostCard({ data }: { data: PostCardData }) {
   return (
     <article className="glass overflow-hidden rounded-2xl">
       <div className="flex items-center gap-3 px-4 py-3">
-        <Avatar username={authorUsername} />
+        <Avatar username={authorUsername} avatarUrl={authorAvatarUrl} />
         <div className="min-w-0 flex-1">
           <Link
             href={`/u/${authorUsername}`}
