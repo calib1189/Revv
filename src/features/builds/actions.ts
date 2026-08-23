@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getOrCreateActiveBuild } from "@/lib/db/builds";
+import { getOrCreateActiveBuild, updateBuildBudget } from "@/lib/db/builds";
 import { createBuildPart, updateBuildPart, deleteBuildPart } from "@/lib/db/build-parts";
 import { validateBuildPartForm, dollarsToCents } from "@/lib/validation/build-part";
 import type { BuildPartFormErrors } from "@/lib/validation/build-part";
@@ -92,4 +92,29 @@ export async function deleteBuildPartAction(
   const supabase = await createClient();
   await deleteBuildPart(supabase, buildPartId);
   revalidatePath(`/garage/${vehicleId}`);
+}
+
+export interface BudgetFormState {
+  error: string | null;
+}
+
+export async function updateBudgetAction(
+  vehicleId: string,
+  _prevState: BudgetFormState,
+  formData: FormData,
+): Promise<BudgetFormState> {
+  const raw = String(formData.get("budget") ?? "");
+  if (raw.trim()) {
+    const dollars = Number(raw);
+    if (!Number.isFinite(dollars) || dollars < 0) {
+      return { error: "Budget must be a positive number." };
+    }
+  }
+
+  const supabase = await createClient();
+  const build = await getOrCreateActiveBuild(supabase, vehicleId);
+  await updateBuildBudget(supabase, build.id, dollarsToCents(raw));
+
+  revalidatePath(`/garage/${vehicleId}`);
+  return { error: null };
 }

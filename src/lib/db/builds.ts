@@ -63,6 +63,22 @@ export async function updateBuildStatus(
   return data;
 }
 
+export async function updateBuildBudget(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  budgetCents: number | null,
+): Promise<Build> {
+  const { data, error } = await supabase
+    .from("builds")
+    .update({ budget_cents: budgetCents })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteBuild(
   supabase: SupabaseClient<Database>,
   id: string,

@@ -18,6 +18,8 @@ import { GalleryGrid } from "@/features/garage/gallery-grid";
 import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ModificationList } from "@/features/builds/modification-list";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
+import { BudgetCard } from "@/features/builds/budget-card";
+import { calculateBudgetSummary } from "@/lib/builds/budget";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
@@ -195,6 +197,17 @@ export default async function VehiclePage({
           {gallery.length === 0 && (
             <p className="text-sm text-muted">No photos in the gallery yet.</p>
           )}
+        </div>
+
+        <div className="mt-10">
+          <BudgetCard
+            summary={calculateBudgetSummary(
+              buildParts,
+              activeBuild?.budget_cents ?? null,
+            )}
+            vehicleId={vehicle.id}
+            isOwner={isOwner}
+          />
         </div>
 
         <div className="mt-10">
