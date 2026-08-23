@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
@@ -8,6 +9,7 @@ import { getUnreadMessageCount } from "@/lib/db/messages";
 import { SignOutButton } from "@/features/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { BellIcon, BookmarkIcon, CompassIcon, CommentIcon } from "@/components/ui/icons";
+import logo from "@/app/icon.png";
 
 export async function Header() {
   const user = await getCurrentUser();
@@ -44,8 +46,9 @@ export async function Header() {
     <header className="glass-raised sticky top-0 z-10 rounded-none border-x-0 border-t-0">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            REVV
+          <Link href="/" className="flex items-center gap-2">
+            <Image src={logo} alt="" width={28} height={28} className="rounded-md" priority />
+            <span className="text-lg font-semibold tracking-tight">REVV</span>
           </Link>
           <Link
             href="/discover"
