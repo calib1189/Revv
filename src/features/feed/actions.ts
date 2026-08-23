@@ -3,12 +3,27 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { likePost, unlikePost } from "@/lib/db/likes";
 import { savePost, unsavePost } from "@/lib/db/saves";
 import { createComment, deleteComment } from "@/lib/db/comments";
-import { deletePost } from "@/lib/db/posts";
+import { deletePost, listFeedPosts } from "@/lib/db/posts";
 import { createReport } from "@/lib/db/reports";
 import { validateComment } from "@/lib/validation/comment";
+import { composePostCards } from "@/lib/feed/compose-post-cards";
+import type { PostCardData } from "@/features/feed/post-card";
+
+export async function loadMoreFeedPostsAction(
+  before: string,
+): Promise<PostCardData[]> {
+  const supabase = await createClient();
+  const [user, posts] = await Promise.all([
+    getCurrentUser(),
+    listFeedPosts(supabase, { before, limit: 8 }),
+  ]);
+
+  return composePostCards(supabase, posts, user?.id ?? null);
+}
 
 async function requireUser() {
   const supabase = await createClient();

@@ -380,6 +380,32 @@ export interface Database {
         >;
         Relationships: never[];
       };
+      meetups: {
+        Row: {
+          id: string;
+          host_id: string;
+          title: string;
+          description: string | null;
+          location_name: string;
+          lat: number | null;
+          lng: number | null;
+          starts_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          host_id: string;
+          title: string;
+          description?: string | null;
+          location_name: string;
+          lat?: number | null;
+          lng?: number | null;
+          starts_at: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["meetups"]["Insert"]>;
+        Relationships: never[];
+      };
       events: {
         Row: {
           id: string;

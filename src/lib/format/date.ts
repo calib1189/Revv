@@ -13,3 +13,19 @@ export function formatDateOnly(dateOnly: string): string {
     { month: "short", day: "numeric", year: "numeric" },
   );
 }
+
+/** Formats a full timestamp as e.g. "Sat, Mar 14 · 6:00 PM" in the viewer's
+ * local timezone. */
+export function formatDateTime(isoTimestamp: string): string {
+  const date = new Date(isoTimestamp);
+  const datePart = date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const timePart = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  return `${datePart} · ${timePart}`;
+}

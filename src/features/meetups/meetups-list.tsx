@@ -1,0 +1,101 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { MeetupCard } from "@/features/meetups/meetup-card";
+import { CreateMeetupForm } from "@/features/meetups/create-meetup-form";
+import { haversineMiles } from "@/lib/geo/distance";
+import type { Meetup } from "@/lib/db/meetups";
+
+export interface MeetupListItem {
+  meetup: Meetup;
+  hostUsername: string;
+}
+
+export function MeetupsList({
+  items,
+  currentUserId,
+}: {
+  items: MeetupListItem[];
+  currentUserId: string | null;
+}) {
+  const router = useRouter();
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationDenied, setLocationDenied] = useState(
+    () => typeof navigator === "undefined" || !navigator.geolocation,
+  );
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+      },
+      () => setLocationDenied(true),
+      { timeout: 8000 },
+    );
+  }, []);
+
+  const sorted = useMemo(() => {
+    if (!userLocation) return items;
+    return [...items].sort((a, b) => {
+      const distA =
+        a.meetup.lat != null && a.meetup.lng != null
+          ? haversineMiles(userLocation, { lat: a.meetup.lat, lng: a.meetup.lng })
+          : Infinity;
+      const distB =
+        b.meetup.lat != null && b.meetup.lng != null
+          ? haversineMiles(userLocation, { lat: b.meetup.lat, lng: b.meetup.lng })
+          : Infinity;
+      return distA - distB;
+    });
+  }, [items, userLocation]);
+
+  function distanceFor(meetup: Meetup): number | null {
+    if (!userLocation || meetup.lat == null || meetup.lng == null) return null;
+    return haversineMiles(userLocation, { lat: meetup.lat, lng: meetup.lng });
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
+      <div className="mb-2 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">Car meets near you</h1>
+      </div>
+      {locationDenied && (
+        <p className="mb-4 text-sm text-muted">
+          Turn on location to sort these by distance — showing upcoming meets by date instead.
+        </p>
+      )}
+
+      {currentUserId && (
+        <div className="mb-6">
+          <CreateMeetupForm onCreated={() => router.refresh()} />
+        </div>
+      )}
+
+      {sorted.length === 0 ? (
+        <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-24 text-center">
+          <p className="text-lg font-medium">No upcoming meets</p>
+          <p className="max-w-xs text-sm text-muted">
+            {currentUserId
+              ? "Be the first to post one."
+              : "Log in to post one, or check back later."}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {sorted.map(({ meetup, hostUsername }) => (
+            <MeetupCard
+              key={meetup.id}
+              meetup={meetup}
+              hostUsername={hostUsername}
+              distanceMiles={distanceFor(meetup)}
+              isHost={meetup.host_id === currentUserId}
+              onDeleted={() => router.refresh()}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

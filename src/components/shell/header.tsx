@@ -51,7 +51,7 @@ export async function Header() {
           </Link>
           <Link
             href="/discover"
-            aria-label="Discover"
+            aria-label="Car meets near you"
             className="text-muted hover:text-foreground"
           >
             <CompassIcon className="h-5 w-5" />
@@ -64,7 +64,7 @@ export async function Header() {
               href="/feed"
               className="text-sm font-medium text-foreground hover:text-muted"
             >
-              Feed
+              For You
             </Link>
             <Link
               href="/garage"

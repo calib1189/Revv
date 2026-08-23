@@ -20,8 +20,7 @@ function MuteIcon({ muted }: { muted: boolean }) {
   );
 }
 
-export function DiscoverSlide({ data }: { data: PostCardData }) {
-  const video = data.media[0];
+function VideoMedia({ url }: { url: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [muted, setMuted] = useState(true);
@@ -46,23 +45,17 @@ export function DiscoverSlide({ data }: { data: PostCardData }) {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative h-[calc(100dvh-56px)] w-full flex-shrink-0 snap-start bg-black"
-    >
-      {video && (
-        <video
-          ref={videoRef}
-          src={video.url}
-          muted={muted}
-          loop
-          playsInline
-          preload="metadata"
-          onClick={() => setMuted((m) => !m)}
-          className="h-full w-full object-contain"
-        />
-      )}
-
+    <div ref={containerRef} className="absolute inset-0">
+      <video
+        ref={videoRef}
+        src={url}
+        muted={muted}
+        loop
+        playsInline
+        preload="metadata"
+        onClick={() => setMuted((m) => !m)}
+        className="h-full w-full object-contain"
+      />
       <button
         type="button"
         onClick={() => setMuted((m) => !m)}
@@ -71,6 +64,57 @@ export function DiscoverSlide({ data }: { data: PostCardData }) {
       >
         <MuteIcon muted={muted} />
       </button>
+    </div>
+  );
+}
+
+function PhotoMedia({ urls }: { urls: string[] }) {
+  const [index, setIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  function handleScroll() {
+    const el = containerRef.current;
+    if (!el || el.clientWidth === 0) return;
+    setIndex(Math.round(el.scrollLeft / el.clientWidth));
+  }
+
+  return (
+    <div className="absolute inset-0">
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto"
+      >
+        {urls.map((url, i) => (
+          // eslint-disable-next-line @next/next/no-img-element -- full-bleed slide, next/image fill needs a sized ancestor we don't have here
+          <img
+            key={i}
+            src={url}
+            alt=""
+            className="h-full w-full flex-shrink-0 snap-center object-contain"
+          />
+        ))}
+      </div>
+      {urls.length > 1 && (
+        <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
+          {index + 1}/{urls.length}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function SwipeSlide({ data }: { data: PostCardData }) {
+  const isVideo = data.media[0]?.kind === "video";
+
+  return (
+    <div className="relative h-[calc(100dvh-56px)] w-full flex-shrink-0 snap-start bg-black">
+      {data.media.length > 0 &&
+        (isVideo ? (
+          <VideoMedia url={data.media[0].url} />
+        ) : (
+          <PhotoMedia urls={data.media.map((m) => m.url)} />
+        ))}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 pb-6">
         <div className="pointer-events-auto flex items-end justify-between gap-4">
