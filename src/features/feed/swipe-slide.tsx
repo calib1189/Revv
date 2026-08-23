@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LikeButton } from "@/features/feed/like-button";
 import { SaveButton } from "@/features/feed/save-button";
+import { RankMiniBadge } from "@/features/garage/rank-mini-badge";
 import { CommentIcon } from "@/components/ui/icons";
 import type { PostCardData } from "@/features/feed/post-card";
 
@@ -125,9 +126,10 @@ export function SwipeSlide({ data }: { data: PostCardData }) {
             {data.vehicleTitle && data.post.vehicle_id && (
               <Link
                 href={`/garage/${data.post.vehicle_id}`}
-                className="block text-xs text-white/70 hover:text-white"
+                className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white"
               >
-                {data.vehicleTitle}
+                <span>{data.vehicleTitle}</span>
+                <RankMiniBadge score={data.vehicleRatingScore} className="h-3.5 w-3.5" />
               </Link>
             )}
             {data.post.caption && (

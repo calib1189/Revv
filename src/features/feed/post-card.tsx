@@ -19,6 +19,7 @@ export interface PostCardData {
   post: Post;
   authorUsername: string;
   vehicleTitle: string | null;
+  vehicleRatingScore: number | null;
   media: PostMediaItem[];
   likeCount: number;
   commentCount: number;

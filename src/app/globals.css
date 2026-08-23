@@ -281,4 +281,40 @@ body {
     letter-spacing: 0.02em;
     backdrop-filter: blur(6px);
   }
+
+  /* ------------------------------------------------------------------- *
+   * Rank mini chips — a small standalone "logo" version of the rank
+   * material, for spots too small for a full frame (e.g. next to the
+   * vehicle tag on a For You slide). No ring/mask needed here since
+   * there's no photo underneath to protect — the tier gradient just
+   * fills the whole shape directly. Cosmic uses a star glyph instead of
+   * a filled circle per request, with its own twinkle.
+   * ------------------------------------------------------------------- */
+  .rank-mini {
+    display: inline-block;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    box-sizing: border-box;
+  }
+
+  .rank-mini.rank-bronze { background: linear-gradient(120deg, #6b3f1f, #c98a52, #6b3f1f, #a3652f, #c98a52); background-size: 300% 300%; animation: rank-shine-sweep 4.2s linear infinite; }
+  .rank-mini.rank-copper { background: linear-gradient(120deg, #7a3f22, #e0a374, #7a3f22, #c17a4d, #e0a374); background-size: 300% 300%; animation: rank-shine-sweep 3.8s linear infinite; }
+  .rank-mini.rank-iron { background: linear-gradient(120deg, #52555e, #b8bcc4, #52555e, #82858e, #b8bcc4); background-size: 300% 300%; animation: rank-shine-sweep 5s linear infinite; }
+  .rank-mini.rank-silver { background: linear-gradient(120deg, #8b909a, #ffffff, #8b909a, #cbd0d8, #ffffff); background-size: 300% 300%; animation: rank-shine-sweep 3.2s linear infinite; filter: drop-shadow(0 0 3px rgb(203 208 216 / 0.6)); }
+  .rank-mini.rank-gold { background: linear-gradient(120deg, #7a5a13, #fbe08a, #7a5a13, #e8bf4f, #fbe08a); background-size: 300% 300%; animation: rank-shine-sweep 2.8s linear infinite; filter: drop-shadow(0 0 4px rgb(232 191 79 / 0.65)); }
+  .rank-mini.rank-platinum { background: linear-gradient(120deg, #a9bac6, #ffffff, #a9bac6, #e4ecf2, #ffffff); background-size: 300% 300%; animation: rank-shine-sweep 2.3s linear infinite; filter: drop-shadow(0 0 4px rgb(228 236 242 / 0.75)); }
+  .rank-mini.rank-emerald { background: conic-gradient(from var(--rank-angle, 0deg), #094328, #2fd48a, #8bffce, #17b374, #094328, #2fd48a, #094328); animation: rank-angle-spin 6s linear infinite; filter: drop-shadow(0 0 4px rgb(47 212 138 / 0.7)); }
+  .rank-mini.rank-diamond { background: conic-gradient(from var(--rank-angle, 0deg), #6bc4ea, #ffffff, #bff4ff, #7dd3fc, #ffffff, #a5f3fc, #ffffff, #6bc4ea); animation: rank-angle-spin 3.4s linear infinite; filter: drop-shadow(0 0 5px rgb(165 243 252 / 0.8)); }
+  .rank-mini.rank-ruby { background: conic-gradient(from var(--rank-angle, 0deg), #5c0819, #ff3b5c, #ffc2cf, #e33a5c, #8c0f27, #ff5c78, #5c0819, #ff3b5c, #5c0819); animation: rank-angle-spin 2.1s linear infinite, rank-ruby-pulse 1.6s ease-in-out infinite; }
+
+  .rank-star {
+    color: #d8b4fe;
+    animation: rank-star-twinkle 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgb(167 139 250 / 0.85));
+  }
+
+  @keyframes rank-star-twinkle {
+    0%, 100% { opacity: 0.6; transform: scale(0.82); filter: drop-shadow(0 0 2px rgb(167 139 250 / 0.6)) hue-rotate(0deg); }
+    50% { opacity: 1; transform: scale(1.18); filter: drop-shadow(0 0 7px rgb(236 72 153 / 0.9)) hue-rotate(40deg); }
+  }
 }

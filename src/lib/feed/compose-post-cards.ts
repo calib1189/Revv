@@ -6,6 +6,7 @@ import { getLikeCountsForPosts, getLikedPostIds } from "@/lib/db/likes";
 import { getCommentCountsForPosts } from "@/lib/db/comments";
 import { getSavedPostIds } from "@/lib/db/saves";
 import { publicMediaUrl } from "@/lib/db/media";
+import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Profile } from "@/lib/db/profiles";
 import type { PostCardData, PostMediaItem } from "@/features/feed/post-card";
@@ -25,7 +26,7 @@ export async function composePostCards(
     ),
   ];
 
-  const [postMedia, likeCounts, commentCounts, likedIds, savedIds, authors, vehicles] =
+  const [postMedia, likeCounts, commentCounts, likedIds, savedIds, authors, vehicles, activeBuildByVehicle] =
     await Promise.all([
       listPostMediaForPosts(supabase, postIds),
       getLikeCountsForPosts(supabase, postIds),
@@ -40,6 +41,7 @@ export async function composePostCards(
       vehicleIds.length > 0
         ? supabase.from("vehicles").select("*").in("id", vehicleIds)
         : Promise.resolve({ data: [] as Vehicle[], error: null }),
+      listActiveBuildsByVehicleIds(supabase, vehicleIds),
     ]);
 
   const authorById = new Map(
@@ -67,6 +69,9 @@ export async function composePostCards(
       authorUsername: authorById.get(post.author_id)?.username ?? "unknown",
       vehicleTitle: vehicle
         ? vehicle.nickname || `${vehicle.make} ${vehicle.model}`
+        : null,
+      vehicleRatingScore: post.vehicle_id
+        ? (activeBuildByVehicle.get(post.vehicle_id)?.ai_rating_score ?? null)
         : null,
       media: mediaByPost.get(post.id) ?? [],
       likeCount: likeCounts.get(post.id) ?? 0,
