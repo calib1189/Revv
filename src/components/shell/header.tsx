@@ -57,7 +57,7 @@ export async function Header() {
         </div>
 
         {user ? (
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/feed"
               className="text-sm font-medium text-foreground hover:text-muted"
@@ -104,7 +104,7 @@ export async function Header() {
             {isAdmin && (
               <Link
                 href="/admin/reports"
-                className="text-sm font-medium text-accent hover:underline"
+                className="hidden text-sm font-medium text-accent hover:underline sm:inline"
               >
                 Admin
               </Link>
