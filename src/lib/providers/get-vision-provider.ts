@@ -1,12 +1,14 @@
 import type { VisionProvider } from "./vision-provider";
 import { MockVisionProvider } from "./mock-vision-provider";
+import { GeminiVisionProvider } from "./gemini-vision-provider";
 
 /**
- * Swap in a real implementation here once a vision API key is configured
- * (e.g. read process.env.VISION_PROVIDER and branch). Until then every
- * environment gets the mock, which is fine — it's clearly labeled as a
- * mock everywhere its output is shown.
+ * Real provider when GEMINI_API_KEY is configured, mock otherwise — the
+ * mock stays fully functional for local dev / no-key environments, and is
+ * clearly labeled as a mock everywhere its output is shown.
  */
 export function getVisionProvider(): VisionProvider {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (apiKey) return new GeminiVisionProvider(apiKey);
   return new MockVisionProvider();
 }

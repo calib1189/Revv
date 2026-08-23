@@ -106,7 +106,7 @@ export function AiIdentifyPanel({
               <>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-accent">
-                    Mock AI suggestion
+                    {suggestion.isMock ? "Mock AI suggestion" : "AI suggestion"}
                   </span>
                   <span className="text-xs text-muted">
                     {confidencePercent}% confidence
