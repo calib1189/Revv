@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { EditBioForm } from "@/features/profile/edit-bio-form";
+import Link from "next/link";
 
 export default async function EditProfilePage() {
   const user = await getCurrentUser();
@@ -17,6 +18,12 @@ export default async function EditProfilePage() {
         Edit profile
       </h1>
       <EditBioForm initialBio={profile?.bio ?? null} />
+
+      <div className="mt-8 border-t border-border pt-6">
+        <Link href="/settings/billing" className="text-sm text-accent hover:underline">
+          Billing
+        </Link>
+      </div>
     </div>
   );
 }

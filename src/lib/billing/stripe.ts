@@ -1,0 +1,89 @@
+// Direct REST calls against the Stripe API instead of the `stripe` npm
+// package — adding a dependency needs sign-off first, and Stripe's API is
+// plain HTTPS + form-encoded bodies, so no SDK is required for this.
+// Server-only: never import this from a "use client" component.
+
+import crypto from "node:crypto";
+
+const STRIPE_API_BASE = "https://api.stripe.com/v1";
+
+async function stripeRequest<T>(
+  path: string,
+  body: Record<string, string>,
+): Promise<T> {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) throw new Error("Stripe is not configured.");
+
+  const response = await fetch(`${STRIPE_API_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams(body).toString(),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Stripe request failed (${response.status}): ${errorBody}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+export async function createCheckoutSession({
+  customerEmail,
+  userId,
+  successUrl,
+  cancelUrl,
+}: {
+  customerEmail: string;
+  userId: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ url: string | null }> {
+  const priceId = process.env.STRIPE_PRICE_ID;
+  if (!priceId) throw new Error("STRIPE_PRICE_ID is not configured.");
+
+  const session = await stripeRequest<{ url: string | null }>(
+    "/checkout/sessions",
+    {
+      mode: "subscription",
+      "line_items[0][price]": priceId,
+      "line_items[0][quantity]": "1",
+      customer_email: customerEmail,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      "metadata[user_id]": userId,
+    },
+  );
+  return session;
+}
+
+/**
+ * Verifies the Stripe-Signature header per Stripe's documented webhook
+ * signing scheme: HMAC-SHA256 of "{timestamp}.{payload}" using the
+ * webhook signing secret, compared with a constant-time check.
+ */
+export function verifyStripeSignature(
+  payload: string,
+  signatureHeader: string,
+  secret: string,
+): boolean {
+  const parts = Object.fromEntries(
+    signatureHeader.split(",").map((part) => part.split("=") as [string, string]),
+  );
+  const timestamp = parts.t;
+  const signature = parts.v1;
+  if (!timestamp || !signature) return false;
+
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(`${timestamp}.${payload}`)
+    .digest("hex");
+
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(signature);
+  if (expectedBuffer.length !== actualBuffer.length) return false;
+
+  return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+}

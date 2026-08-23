@@ -12,6 +12,7 @@ const PROTECTED_EXACT = [
   "/saved",
   "/notifications",
   "/settings/profile",
+  "/settings/billing",
   "/messages",
 ];
 const PROTECTED_PATTERNS = [

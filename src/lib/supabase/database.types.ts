@@ -443,6 +443,32 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
         Relationships: never[];
       };
+      subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          stripe_customer_id: string;
+          stripe_subscription_id: string | null;
+          status: "incomplete" | "active" | "past_due" | "canceled" | "unpaid";
+          price_id: string | null;
+          current_period_end: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          stripe_customer_id: string;
+          stripe_subscription_id?: string | null;
+          status?: "incomplete" | "active" | "past_due" | "canceled" | "unpaid";
+          price_id?: string | null;
+          current_period_end?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["subscriptions"]["Insert"]
+        >;
+        Relationships: never[];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
