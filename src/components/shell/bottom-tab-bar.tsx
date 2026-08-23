@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UsersIcon, PlusIcon, CommentIcon, PersonIcon } from "@/components/ui/icons";
+import { HomeIcon, UsersIcon, PlusIcon, CommentIcon, PersonIcon } from "@/components/ui/icons";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -20,6 +20,16 @@ export function BottomTabBar({
 
   return (
     <div className="mx-auto flex h-16 max-w-5xl items-center justify-around px-4">
+      <Link
+        href="/feed"
+        aria-label="Home"
+        className={`flex flex-col items-center gap-0.5 ${
+          isActive(pathname, "/feed") ? "text-foreground" : "text-muted"
+        }`}
+      >
+        <HomeIcon className="h-6 w-6" />
+      </Link>
+
       <Link
         href="/friends"
         aria-label="Friends"

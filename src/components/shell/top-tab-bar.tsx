@@ -18,7 +18,8 @@ export function TopTabBar() {
   const pathname = usePathname();
 
   return (
-    <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+    <div className="mx-auto grid h-14 max-w-5xl grid-cols-[1fr_auto_1fr] items-center px-4">
+      <span />
       <nav className="no-scrollbar flex items-center gap-5 overflow-x-auto">
         {TABS.map((tab) => {
           const active = isActive(pathname, tab.href);
@@ -40,7 +41,7 @@ export function TopTabBar() {
       <Link
         href="/search"
         aria-label="Search"
-        className="flex-shrink-0 text-muted hover:text-foreground"
+        className="flex-shrink-0 justify-self-end text-muted hover:text-foreground"
       >
         <SearchIcon className="h-5 w-5" />
       </Link>
