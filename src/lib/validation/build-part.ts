@@ -10,9 +10,15 @@ export interface BuildPartFormErrors {
   installCost?: string;
 }
 
+/** Strips common currency formatting ($ prefix, thousands commas) so
+ * "$1,500" and "1500" both parse the same way. */
+export function parseMoneyInput(value: string): number {
+  return Number(value.trim().replace(/[$,]/g, ""));
+}
+
 function validateMoneyField(value: string): string | undefined {
   if (!value.trim()) return undefined;
-  const dollars = Number(value);
+  const dollars = parseMoneyInput(value);
   if (!Number.isFinite(dollars) || dollars < 0) {
     return "Must be a positive number.";
   }
@@ -38,5 +44,5 @@ export function validateBuildPartForm(
 
 export function dollarsToCents(value: string): number | null {
   if (!value.trim()) return null;
-  return Math.round(Number(value) * 100);
+  return Math.round(parseMoneyInput(value) * 100);
 }

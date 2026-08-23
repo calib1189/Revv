@@ -6,14 +6,21 @@ const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODE
 const PROMPT =
   "You are rating a car build for a fun, gamified ranking feature on an " +
   "automotive social app — think of it like a video game rank, not a " +
-  "professional appraisal. Look at the photos and the build details below, " +
-  "then give an honest but encouraging score from 0 to 10 (one decimal), " +
-  "considering how coherent and well-executed the modifications are, and " +
-  "how clean the car looks in the photos. A bone-stock car isn't bad, it " +
-  "just scores lower than a thoughtfully built one. Reserve 9+ for " +
-  "genuinely exceptional builds and 10 for something truly showstopping — " +
-  "don't hand it out easily. Give a short, specific one-to-two sentence " +
-  "reason for the score.";
+  "professional appraisal. The photos are the primary evidence — look " +
+  "closely at paint, body panels, bumpers, lights, wheels, stance, and " +
+  "interior for anything custom or modified, even if it isn't itemized in " +
+  "the build details below. Custom paint, custom-fabricated panels, " +
+  "widebody kits, and other bodywork are major modifications — weigh them " +
+  "at least as heavily as bolt-on parts. Then give an honest but " +
+  "encouraging score from 0 to 10 (one decimal), considering how coherent " +
+  "and well-executed the build looks and how clean the car presents in the " +
+  "photos. A bone-stock car isn't bad, it just scores lower than a " +
+  "thoughtfully built one — but only call a car stock if the photos " +
+  "actually look stock. Reserve 9+ for genuinely exceptional, heavily " +
+  "customized builds and 10 for something truly showstopping — don't hand " +
+  "it out easily, but don't withhold it from a build that clearly earns it " +
+  "either. Give a short, specific one-to-two sentence reason for the score " +
+  "that names what you actually see.";
 
 interface GeminiRatingResponse {
   score: number;

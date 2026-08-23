@@ -14,7 +14,13 @@ export function buildRatingSummary(vehicle: Vehicle, buildParts: BuildPart[]): s
   if (vehicle.drivetrain) lines.push(`Drivetrain: ${vehicle.drivetrain}`);
 
   if (buildParts.length === 0) {
-    lines.push("No modifications listed — this is a stock or unmodified build.");
+    lines.push(
+      "No modifications are logged in the structured parts list. This does " +
+        "NOT mean the car is stock — many owners haven't gotten around to " +
+        "logging every part yet, especially custom bodywork, paint, or " +
+        "fabrication work. Judge the actual level of customization from the " +
+        "photos themselves, not from the absence of a parts list.",
+    );
   } else {
     lines.push(`${buildParts.length} modification(s):`);
     for (const part of buildParts) {

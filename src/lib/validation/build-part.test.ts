@@ -34,6 +34,14 @@ describe("validateBuildPartForm", () => {
     expect(errors.price).toBeUndefined();
     expect(errors.installCost).toBeUndefined();
   });
+
+  it("accepts a price typed with a leading dollar sign", () => {
+    expect(validateBuildPartForm({ ...valid, price: "$500" }).price).toBeUndefined();
+  });
+
+  it("accepts a price typed with thousands commas", () => {
+    expect(validateBuildPartForm({ ...valid, price: "$1,500.50" }).price).toBeUndefined();
+  });
 });
 
 describe("dollarsToCents", () => {
@@ -51,5 +59,13 @@ describe("dollarsToCents", () => {
 
   it("returns 0 for zero", () => {
     expect(dollarsToCents("0")).toBe(0);
+  });
+
+  it("strips a leading dollar sign", () => {
+    expect(dollarsToCents("$500")).toBe(50000);
+  });
+
+  it("strips thousands commas", () => {
+    expect(dollarsToCents("$1,500.50")).toBe(150050);
   });
 });

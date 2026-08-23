@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateActiveBuild, updateBuildBudget } from "@/lib/db/builds";
 import { createBuildPart, updateBuildPart, deleteBuildPart } from "@/lib/db/build-parts";
-import { validateBuildPartForm, dollarsToCents } from "@/lib/validation/build-part";
+import { validateBuildPartForm, dollarsToCents, parseMoneyInput } from "@/lib/validation/build-part";
 import type { BuildPartFormErrors } from "@/lib/validation/build-part";
 import type { BuildPart } from "@/lib/db/build-parts";
 
@@ -105,7 +105,7 @@ export async function updateBudgetAction(
 ): Promise<BudgetFormState> {
   const raw = String(formData.get("budget") ?? "");
   if (raw.trim()) {
-    const dollars = Number(raw);
+    const dollars = parseMoneyInput(raw);
     if (!Number.isFinite(dollars) || dollars < 0) {
       return { error: "Budget must be a positive number." };
     }
