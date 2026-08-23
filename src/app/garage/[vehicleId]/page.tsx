@@ -20,6 +20,8 @@ import { ModificationList } from "@/features/builds/modification-list";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { BudgetCard } from "@/features/builds/budget-card";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
+import { listMaintenanceForVehicle } from "@/lib/db/maintenance";
+import { MaintenanceList } from "@/features/maintenance/maintenance-list";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
@@ -83,6 +85,9 @@ export default async function VehiclePage({
   const partsById = new Map(linkedParts.map((p) => [p.id, p]));
 
   const isOwner = user?.id === vehicle.owner_id;
+  const maintenanceRecords = isOwner
+    ? await listMaintenanceForVehicle(supabase, vehicleId)
+    : [];
   const heroUrl = heroMedia
     ? publicMediaUrl(supabase, heroMedia.storage_path)
     : null;
@@ -218,6 +223,16 @@ export default async function VehiclePage({
             isOwner={isOwner}
           />
         </div>
+
+        {isOwner && (
+          <div className="mt-10">
+            <MaintenanceList
+              records={maintenanceRecords}
+              vehicleId={vehicle.id}
+              isOwner={isOwner}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
