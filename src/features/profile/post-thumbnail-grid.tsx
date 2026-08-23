@@ -5,6 +5,7 @@ export interface PostThumbnail {
   postId: string;
   url: string | null;
   kind: "photo" | "video";
+  authorUsername: string;
 }
 
 function PlayGlyph() {
@@ -19,13 +20,7 @@ function PlayGlyph() {
   );
 }
 
-export function PostThumbnailGrid({
-  posts,
-  username,
-}: {
-  posts: PostThumbnail[];
-  username: string;
-}) {
+export function PostThumbnailGrid({ posts }: { posts: PostThumbnail[] }) {
   if (posts.length === 0) return null;
 
   return (
@@ -35,7 +30,7 @@ export function PostThumbnailGrid({
           key={post.postId}
           href={
             post.kind === "video"
-              ? `/u/${username}/reel/${post.postId}`
+              ? `/u/${post.authorUsername}/reel/${post.postId}`
               : `/p/${post.postId}`
           }
           className="relative aspect-square overflow-hidden bg-surface"

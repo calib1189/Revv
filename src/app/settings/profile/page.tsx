@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { EditBioForm } from "@/features/profile/edit-bio-form";
+import { DeleteAccountButton } from "@/features/auth/delete-account-button";
 import Link from "next/link";
 
 export default async function EditProfilePage() {
@@ -24,6 +25,12 @@ export default async function EditProfilePage() {
           Billing
         </Link>
       </div>
+
+      {profile && (
+        <div className="mt-8 border-t border-border pt-6">
+          <DeleteAccountButton username={profile.username} />
+        </div>
+      )}
     </div>
   );
 }

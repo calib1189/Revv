@@ -6,9 +6,11 @@ import { getFollowerCount, getFollowingCount, isFollowing } from "@/lib/db/follo
 import { isBlocking } from "@/lib/db/blocks";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { listPostsByAuthor } from "@/lib/db/posts";
-import { listPostMediaForPosts } from "@/lib/db/post-media";
+import { listSavedPosts } from "@/lib/db/saves";
+import { listLikedPosts } from "@/lib/db/likes";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
+import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { Avatar } from "@/features/feed/avatar";
 import { RankPill } from "@/features/garage/rank-pill";
 import { ProfileTabs } from "@/features/profile/profile-tabs";
@@ -66,14 +68,18 @@ export default async function ProfilePage({
     return best == null || score > best ? score : best;
   }, null);
 
-  const postMedia = await listPostMediaForPosts(
-    supabase,
-    posts.map((p) => p.id),
-  );
-  const firstMediaByPost = new Map<string, (typeof postMedia)[number]>();
-  for (const pm of postMedia) {
-    if (!firstMediaByPost.has(pm.post_id)) firstMediaByPost.set(pm.post_id, pm);
-  }
+  const [savedPosts, likedPosts] = isOwnProfile
+    ? await Promise.all([
+        listSavedPosts(supabase, profile.id),
+        listLikedPosts(supabase, profile.id),
+      ])
+    : [[], []];
+
+  const [postThumbnails, savedThumbnails, likedThumbnails] = await Promise.all([
+    composeThumbnails(supabase, posts),
+    composeThumbnails(supabase, savedPosts),
+    composeThumbnails(supabase, likedPosts),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
@@ -151,15 +157,10 @@ export default async function ProfilePage({
       </div>
 
       <ProfileTabs
-        username={profile.username}
-        posts={posts.map((post) => {
-          const media = firstMediaByPost.get(post.id);
-          return {
-            postId: post.id,
-            url: media ? publicMediaUrl(supabase, media.media.storage_path) : null,
-            kind: post.post_type,
-          };
-        })}
+        isOwnProfile={isOwnProfile}
+        posts={postThumbnails}
+        savedPosts={isOwnProfile ? savedThumbnails : undefined}
+        likedPosts={isOwnProfile ? likedThumbnails : undefined}
         vehicles={vehicles.map((vehicle) => ({
           vehicle,
           heroUrl: vehicle.hero_media_id

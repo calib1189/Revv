@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import type { Post } from "@/lib/db/posts";
 
 export async function likePost(
   supabase: SupabaseClient<Database>,
@@ -55,6 +56,33 @@ export async function getLikeCountsForPosts(
     counts.set(row.post_id, (counts.get(row.post_id) ?? 0) + 1);
   }
   return counts;
+}
+
+export async function listLikedPosts(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<Post[]> {
+  const { data: likeRows, error: likeError } = await supabase
+    .from("likes")
+    .select("post_id, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (likeError) throw likeError;
+  if (likeRows.length === 0) return [];
+
+  const { data: posts, error: postsError } = await supabase
+    .from("posts")
+    .select("*")
+    .in(
+      "id",
+      likeRows.map((row) => row.post_id),
+    );
+  if (postsError) throw postsError;
+
+  const postById = new Map(posts.map((post) => [post.id, post]));
+  return likeRows
+    .map((row) => postById.get(row.post_id))
+    .filter((post): post is Post => Boolean(post));
 }
 
 /** post_ids liked by this user, out of the given set. */
