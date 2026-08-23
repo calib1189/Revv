@@ -15,6 +15,8 @@ const PROTECTED_EXACT = [
   "/settings/billing",
   "/messages",
   "/assistant",
+  "/admin/reports",
+  "/admin/audit-log",
 ];
 const PROTECTED_PATTERNS = [
   /^\/garage\/[^/]+\/edit$/,

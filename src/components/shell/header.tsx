@@ -12,6 +12,7 @@ import { BellIcon, BookmarkIcon, CompassIcon, CommentIcon } from "@/components/u
 export async function Header() {
   const user = await getCurrentUser();
   let username: string | null = null;
+  let isAdmin = false;
   let unreadCount = 0;
   let unreadMessageCount = 0;
 
@@ -22,6 +23,7 @@ export async function Header() {
       getUnreadNotificationCount(supabase, user.id),
     ]);
     username = profile?.username ?? null;
+    isAdmin = profile?.is_admin ?? false;
     unreadCount = count;
 
     // Degrade gracefully if the messaging migration hasn't been applied
@@ -99,6 +101,14 @@ export async function Header() {
                 </span>
               )}
             </Link>
+            {isAdmin && (
+              <Link
+                href="/admin/reports"
+                className="text-sm font-medium text-accent hover:underline"
+              >
+                Admin
+              </Link>
+            )}
             {username ? (
               <Link
                 href={`/u/${username}`}

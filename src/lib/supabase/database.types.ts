@@ -19,6 +19,7 @@ export interface Database {
           username: string;
           bio: string | null;
           avatar_media_id: string | null;
+          is_admin: boolean;
           created_at: string;
         };
         Insert: {
@@ -26,6 +27,7 @@ export interface Database {
           username: string;
           bio?: string | null;
           avatar_media_id?: string | null;
+          is_admin?: boolean;
           created_at?: string;
         };
         Update: {
@@ -33,6 +35,7 @@ export interface Database {
           username?: string;
           bio?: string | null;
           avatar_media_id?: string | null;
+          is_admin?: boolean;
           created_at?: string;
         };
         Relationships: never[];
@@ -467,6 +470,28 @@ export interface Database {
         Update: Partial<
           Database["public"]["Tables"]["subscriptions"]["Insert"]
         >;
+        Relationships: never[];
+      };
+      audit_logs: {
+        Row: {
+          id: string;
+          actor_id: string | null;
+          action: string;
+          target_type: string | null;
+          target_id: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          actor_id?: string | null;
+          action: string;
+          target_type?: string | null;
+          target_id?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["audit_logs"]["Insert"]>;
         Relationships: never[];
       };
     };
