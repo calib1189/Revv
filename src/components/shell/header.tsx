@@ -46,9 +46,8 @@ export async function Header() {
     <header className="glass-raised sticky top-0 z-10 rounded-none border-x-0 border-t-0">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src={logo} alt="" width={28} height={28} className="rounded-md" priority />
-            <span className="text-lg font-semibold tracking-tight">REVV</span>
+          <Link href="/" aria-label="REVV">
+            <Image src={logo} alt="" width={32} height={32} className="rounded-md" priority />
           </Link>
           <Link
             href="/discover"
