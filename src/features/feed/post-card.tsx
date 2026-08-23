@@ -4,8 +4,10 @@ import { PhotoCarousel } from "@/features/feed/photo-carousel";
 import { VideoPlayer } from "@/features/feed/video-player";
 import { LikeButton } from "@/features/feed/like-button";
 import { SaveButton } from "@/features/feed/save-button";
-import { CommentIcon } from "@/components/ui/icons";
+import { CaptionText } from "@/features/feed/caption-text";
+import { CommentIcon, EyeIcon } from "@/components/ui/icons";
 import { relativeTime } from "@/lib/format/relative-time";
+import { formatCompactNumber } from "@/lib/format/compact-number";
 import type { Post } from "@/lib/db/posts";
 
 export interface PostMediaItem {
@@ -23,6 +25,7 @@ export interface PostCardData {
   media: PostMediaItem[];
   likeCount: number;
   commentCount: number;
+  viewCount: number;
   isLiked: boolean;
   isSaved: boolean;
   isAuthenticated: boolean;
@@ -36,6 +39,7 @@ export function PostCard({ data }: { data: PostCardData }) {
     media,
     likeCount,
     commentCount,
+    viewCount,
     isLiked,
     isSaved,
     isAuthenticated,
@@ -90,6 +94,10 @@ export function PostCard({ data }: { data: PostCardData }) {
           <CommentIcon className="h-5 w-5" />
           {commentCount > 0 && <span>{commentCount}</span>}
         </Link>
+        <span className="flex items-center gap-1.5 text-sm text-muted">
+          <EyeIcon className="h-5 w-5" />
+          {formatCompactNumber(viewCount)}
+        </span>
         <div className="flex-1" />
         <SaveButton
           postId={post.id}
@@ -99,10 +107,10 @@ export function PostCard({ data }: { data: PostCardData }) {
       </div>
 
       {post.caption && (
-        <p className="px-4 pb-4 pt-2 text-sm leading-relaxed">
+        <div className="px-4 pb-4 pt-2 text-sm leading-relaxed">
           <span className="font-medium">@{authorUsername}</span>{" "}
-          {post.caption}
-        </p>
+          <CaptionText text={post.caption} className="inline" />
+        </div>
       )}
       {!post.caption && <div className="pb-4" />}
     </article>

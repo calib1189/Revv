@@ -5,7 +5,10 @@ import Link from "next/link";
 import { LikeButton } from "@/features/feed/like-button";
 import { SaveButton } from "@/features/feed/save-button";
 import { RankMiniBadge } from "@/features/garage/rank-mini-badge";
-import { CommentIcon } from "@/components/ui/icons";
+import { CaptionText } from "@/features/feed/caption-text";
+import { recordViewAction } from "@/features/feed/actions";
+import { CommentIcon, EyeIcon } from "@/components/ui/icons";
+import { formatCompactNumber } from "@/lib/format/compact-number";
 import type { PostCardData } from "@/features/feed/post-card";
 
 function MuteIcon({ muted }: { muted: boolean }) {
@@ -113,9 +116,36 @@ export function SwipeSlide({
   slideHeight?: string;
 }) {
   const isVideo = data.media[0]?.kind === "video";
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasRecordedView = useRef(false);
+
+  useEffect(() => {
+    if (!data.isAuthenticated) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (
+          entry.isIntersecting &&
+          entry.intersectionRatio > 0.6 &&
+          !hasRecordedView.current
+        ) {
+          hasRecordedView.current = true;
+          recordViewAction(data.post.id);
+        }
+      },
+      { threshold: [0, 0.6, 1] },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [data.isAuthenticated, data.post.id]);
 
   return (
-    <div className={`relative ${slideHeight} w-full flex-shrink-0 snap-start bg-black`}>
+    <div
+      ref={containerRef}
+      className={`relative ${slideHeight} w-full flex-shrink-0 snap-start bg-black`}
+    >
       {data.media.length > 0 &&
         (isVideo ? (
           <VideoMedia url={data.media[0].url} />
@@ -139,10 +169,15 @@ export function SwipeSlide({
               </Link>
             )}
             {data.post.caption && (
-              <p className="mt-1 line-clamp-2 text-sm text-white/90">
-                {data.post.caption}
-              </p>
+              <CaptionText
+                text={data.post.caption}
+                className="mt-1 line-clamp-2 text-sm text-white/90"
+              />
             )}
+            <p className="mt-1 flex items-center gap-1 text-xs text-white/60">
+              <EyeIcon className="h-3.5 w-3.5" />
+              {formatCompactNumber(data.viewCount)} view{data.viewCount === 1 ? "" : "s"}
+            </p>
           </div>
 
           <div className="flex flex-shrink-0 flex-col items-center gap-4 text-white">

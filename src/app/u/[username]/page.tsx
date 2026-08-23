@@ -10,8 +10,8 @@ import { listPostMediaForPosts } from "@/lib/db/post-media";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { Avatar } from "@/features/feed/avatar";
-import { VehicleCard } from "@/features/garage/vehicle-card";
-import { PostThumbnailGrid } from "@/features/profile/post-thumbnail-grid";
+import { RankPill } from "@/features/garage/rank-pill";
+import { ProfileTabs } from "@/features/profile/profile-tabs";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
 import { MessageButton } from "@/features/messages/message-button";
@@ -60,6 +60,12 @@ export default async function ProfilePage({
     heroMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
 
+  const bestRatingScore = vehicles.reduce<number | null>((best, v) => {
+    const score = activeBuildByVehicle.get(v.id)?.ai_rating_score ?? null;
+    if (score == null) return best;
+    return best == null || score > best ? score : best;
+  }, null);
+
   const postMedia = await listPostMediaForPosts(
     supabase,
     posts.map((p) => p.id),
@@ -76,6 +82,7 @@ export default async function ProfilePage({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-xl font-semibold">@{profile.username}</h1>
+            <RankPill score={bestRatingScore} />
             {isOwnProfile ? (
               <Link href="/settings/profile">
                 <Button variant="secondary" className="px-3 py-1.5 text-sm">
@@ -143,45 +150,24 @@ export default async function ProfilePage({
         </div>
       </div>
 
-      {vehicles.length > 0 && (
-        <div className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold">Garage</h2>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {vehicles.map((vehicle) => (
-              <VehicleCard
-                key={vehicle.id}
-                vehicle={vehicle}
-                heroUrl={
-                  vehicle.hero_media_id
-                    ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
-                    : null
-                }
-                ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="mt-10">
-        <h2 className="mb-4 text-lg font-semibold">Posts</h2>
-        {posts.length === 0 ? (
-          <p className="text-sm text-muted">No posts yet.</p>
-        ) : (
-          <PostThumbnailGrid
-            posts={posts.map((post) => {
-              const media = firstMediaByPost.get(post.id);
-              return {
-                postId: post.id,
-                url: media
-                  ? publicMediaUrl(supabase, media.media.storage_path)
-                  : null,
-                kind: post.post_type,
-              };
-            })}
-          />
-        )}
-      </div>
+      <ProfileTabs
+        username={profile.username}
+        posts={posts.map((post) => {
+          const media = firstMediaByPost.get(post.id);
+          return {
+            postId: post.id,
+            url: media ? publicMediaUrl(supabase, media.media.storage_path) : null,
+            kind: post.post_type,
+          };
+        })}
+        vehicles={vehicles.map((vehicle) => ({
+          vehicle,
+          heroUrl: vehicle.hero_media_id
+            ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
+            : null,
+          ratingScore: activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null,
+        }))}
+      />
     </div>
   );
 }

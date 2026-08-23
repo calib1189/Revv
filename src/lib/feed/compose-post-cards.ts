@@ -5,6 +5,7 @@ import { listPostMediaForPosts } from "@/lib/db/post-media";
 import { getLikeCountsForPosts, getLikedPostIds } from "@/lib/db/likes";
 import { getCommentCountsForPosts } from "@/lib/db/comments";
 import { getSavedPostIds } from "@/lib/db/saves";
+import { getViewCountsForPosts } from "@/lib/db/post-views";
 import { publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import type { Vehicle } from "@/lib/db/vehicles";
@@ -26,11 +27,12 @@ export async function composePostCards(
     ),
   ];
 
-  const [postMedia, likeCounts, commentCounts, likedIds, savedIds, authors, vehicles, activeBuildByVehicle] =
+  const [postMedia, likeCounts, commentCounts, viewCounts, likedIds, savedIds, authors, vehicles, activeBuildByVehicle] =
     await Promise.all([
       listPostMediaForPosts(supabase, postIds),
       getLikeCountsForPosts(supabase, postIds),
       getCommentCountsForPosts(supabase, postIds),
+      getViewCountsForPosts(supabase, postIds),
       currentUserId
         ? getLikedPostIds(supabase, currentUserId, postIds)
         : Promise.resolve(new Set<string>()),
@@ -76,6 +78,7 @@ export async function composePostCards(
       media: mediaByPost.get(post.id) ?? [],
       likeCount: likeCounts.get(post.id) ?? 0,
       commentCount: commentCounts.get(post.id) ?? 0,
+      viewCount: viewCounts.get(post.id) ?? 0,
       isLiked: likedIds.has(post.id),
       isSaved: savedIds.has(post.id),
       isAuthenticated: Boolean(currentUserId),

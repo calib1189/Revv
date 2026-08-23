@@ -278,6 +278,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["saves"]["Insert"]>;
         Relationships: never[];
       };
+      post_views: {
+        Row: {
+          id: string;
+          post_id: string;
+          viewer_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          viewer_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_views"]["Insert"]>;
+        Relationships: never[];
+      };
       comments: {
         Row: {
           id: string;

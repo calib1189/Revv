@@ -19,7 +19,13 @@ function PlayGlyph() {
   );
 }
 
-export function PostThumbnailGrid({ posts }: { posts: PostThumbnail[] }) {
+export function PostThumbnailGrid({
+  posts,
+  username,
+}: {
+  posts: PostThumbnail[];
+  username: string;
+}) {
   if (posts.length === 0) return null;
 
   return (
@@ -27,7 +33,11 @@ export function PostThumbnailGrid({ posts }: { posts: PostThumbnail[] }) {
       {posts.map((post) => (
         <Link
           key={post.postId}
-          href={`/p/${post.postId}`}
+          href={
+            post.kind === "video"
+              ? `/u/${username}/reel/${post.postId}`
+              : `/p/${post.postId}`
+          }
           className="relative aspect-square overflow-hidden bg-surface"
         >
           {post.url && post.kind === "photo" && (

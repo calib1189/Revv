@@ -9,8 +9,12 @@ import { listPostMediaForPosts } from "@/lib/db/post-media";
 import { publicMediaUrl } from "@/lib/db/media";
 import { getLikeCount, getLikedPostIds } from "@/lib/db/likes";
 import { getSavedPostIds } from "@/lib/db/saves";
+import { getViewCount, recordPostView } from "@/lib/db/post-views";
 import { listCommentsByPost } from "@/lib/db/comments";
 import { Avatar } from "@/features/feed/avatar";
+import { CaptionText } from "@/features/feed/caption-text";
+import { EyeIcon } from "@/components/ui/icons";
+import { formatCompactNumber } from "@/lib/format/compact-number";
 import { VideoPlayer } from "@/features/feed/video-player";
 import { PostPhotoView } from "@/features/feed/post-photo-view";
 import { listHotspotsForMedia } from "@/lib/db/hotspots";
@@ -46,6 +50,15 @@ export default async function PostPage({
     getLikeCount(supabase, post.id),
     listCommentsByPost(supabase, post.id),
   ]);
+
+  if (user) {
+    try {
+      await recordPostView(supabase, post.id, user.id);
+    } catch {
+      // best-effort only
+    }
+  }
+  const viewCount = await getViewCount(supabase, post.id);
 
   const [likedIds, savedIds, commentAuthors] = await Promise.all([
     user ? getLikedPostIds(supabase, user.id, [post.id]) : Promise.resolve(new Set<string>()),
@@ -156,6 +169,10 @@ export default async function PostPage({
             initialCount={likeCount}
             isAuthenticated={Boolean(user)}
           />
+          <span className="flex items-center gap-1 text-sm text-muted">
+            <EyeIcon className="h-4 w-4" />
+            {formatCompactNumber(viewCount)}
+          </span>
           <div className="flex-1" />
           <SaveButton
             postId={post.id}
@@ -165,10 +182,10 @@ export default async function PostPage({
         </div>
 
         {post.caption && (
-          <p className="px-4 pb-4 pt-2 text-sm leading-relaxed">
+          <div className="px-4 pb-4 pt-2 text-sm leading-relaxed">
             <span className="font-medium">@{author?.username}</span>{" "}
-            {post.caption}
-          </p>
+            <CaptionText text={post.caption} className="inline" />
+          </div>
         )}
         {!post.caption && <div className="pb-4" />}
 

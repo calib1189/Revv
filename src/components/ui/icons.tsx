@@ -17,6 +17,29 @@ export function HeartIcon({
   );
 }
 
+export function EyeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+export function PlayIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M7 4.5v15l13-7.5-13-7.5Z" />
+    </svg>
+  );
+}
+
 export function CommentIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -54,6 +77,20 @@ export function MoreIcon(props: SVGProps<SVGSVGElement>) {
       <circle cx="5" cy="12" r="1.75" />
       <circle cx="12" cy="12" r="1.75" />
       <circle cx="19" cy="12" r="1.75" />
+    </svg>
+  );
+}
+
+export function BackIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <path d="M15 5 8 12l7 7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { likePost, unlikePost } from "@/lib/db/likes";
 import { savePost, unsavePost } from "@/lib/db/saves";
+import { recordPostView } from "@/lib/db/post-views";
 import { createComment, deleteComment } from "@/lib/db/comments";
 import { deletePost, listFeedPosts } from "@/lib/db/posts";
 import { createReport } from "@/lib/db/reports";
@@ -23,6 +24,20 @@ export async function loadMoreFeedPostsAction(
   ]);
 
   return composePostCards(supabase, posts, user?.id ?? null);
+}
+
+/** Fire-and-forget from the client when a post becomes visible in the
+ * feed. Swallows its own errors — a missed view shouldn't surface
+ * anywhere in the UI. */
+export async function recordViewAction(postId: string): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const user = await getCurrentUser();
+    if (!user) return;
+    await recordPostView(supabase, postId, user.id);
+  } catch {
+    // best-effort only
+  }
 }
 
 async function requireUser() {
