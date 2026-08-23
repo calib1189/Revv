@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
 export type Build = Database["public"]["Tables"]["builds"]["Row"];
+export type BuildInsert = Database["public"]["Tables"]["builds"]["Insert"];
 
 export async function getActiveBuild(
   supabase: SupabaseClient<Database>,
@@ -16,6 +17,58 @@ export async function getActiveBuild(
 
   if (error) throw error;
   return data;
+}
+
+export async function getBuildById(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<Build | null> {
+  const { data, error } = await supabase
+    .from("builds")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createBuild(
+  supabase: SupabaseClient<Database>,
+  input: BuildInsert,
+): Promise<Build> {
+  const { data, error } = await supabase
+    .from("builds")
+    .insert(input)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateBuildStatus(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  status: Build["status"],
+): Promise<Build> {
+  const { data, error } = await supabase
+    .from("builds")
+    .update({ status })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteBuild(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("builds").delete().eq("id", id);
+  if (error) throw error;
 }
 
 /** Vehicles get their build lazily, on first use (e.g. adding a mod). */

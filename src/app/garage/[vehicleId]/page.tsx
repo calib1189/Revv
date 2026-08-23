@@ -10,12 +10,14 @@ import { listVehicleMedia } from "@/lib/db/vehicle-media";
 import { getActiveBuild } from "@/lib/db/builds";
 import { listBuildParts } from "@/lib/db/build-parts";
 import { getPartsByIds } from "@/lib/db/parts";
+import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { VehicleSpecs } from "@/features/garage/vehicle-specs";
 import { CoverPhotoUploader } from "@/features/garage/cover-photo-uploader";
 import { GalleryUploader } from "@/features/garage/gallery-uploader";
 import { GalleryGrid } from "@/features/garage/gallery-grid";
 import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ModificationList } from "@/features/builds/modification-list";
+import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
@@ -150,6 +152,15 @@ export default async function VehiclePage({
               </Button>
             </Link>
             <DeleteVehicleButton vehicleId={vehicle.id} />
+          </div>
+        )}
+
+        {!isOwner && user && buildParts.length > 0 && (
+          <div className="mb-6">
+            <CopyBuildButton
+              sourceVehicleId={vehicle.id}
+              myVehicles={await listVehiclesByOwner(supabase, user.id)}
+            />
           </div>
         )}
 

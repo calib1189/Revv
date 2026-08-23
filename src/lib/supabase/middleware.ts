@@ -16,6 +16,7 @@ const PROTECTED_EXACT = [
 const PROTECTED_PATTERNS = [
   /^\/garage\/[^/]+\/edit$/,
   /^\/garage\/[^/]+\/visualize$/,
+  /^\/garage\/[^/]+\/builds\/[^/]+\/review$/,
 ];
 
 function isProtectedPath(pathname: string) {
