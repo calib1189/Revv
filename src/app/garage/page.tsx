@@ -25,9 +25,16 @@ export default async function GaragePage() {
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Your garage</h1>
-        <Link href="/garage/new">
-          <Button className="px-3 py-1.5 text-sm">Add vehicle</Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/assistant">
+            <Button variant="secondary" className="px-3 py-1.5 text-sm">
+              Ask assistant
+            </Button>
+          </Link>
+          <Link href="/garage/new">
+            <Button className="px-3 py-1.5 text-sm">Add vehicle</Button>
+          </Link>
+        </div>
       </div>
 
       {vehicles.length === 0 ? (
