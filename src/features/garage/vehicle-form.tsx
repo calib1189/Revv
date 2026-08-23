@@ -126,7 +126,7 @@ export function VehicleForm({
           name="description"
           rows={4}
           defaultValue={vehicle?.description ?? ""}
-          className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted transition-colors focus:border-accent/60 focus:outline-none"
         />
       </div>
 

@@ -187,15 +187,15 @@ export function ComposePostForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && <Callout tone="danger">{error}</Callout>}
 
-      <div className="inline-flex w-fit rounded-lg border border-border bg-surface p-1">
+      <div className="glass inline-flex w-fit rounded-full p-1">
         {(["photo", "video"] as const).map((m) => (
           <button
             key={m}
             type="button"
             onClick={() => switchMode(m)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
+            className={`rounded-full px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
               mode === m
-                ? "bg-surface-raised text-foreground"
+                ? "bg-accent text-accent-foreground"
                 : "text-muted hover:text-foreground"
             }`}
           >
@@ -307,7 +307,7 @@ export function ComposePostForm({
             id="vehicle"
             value={vehicleId}
             onChange={(e) => setVehicleId(e.target.value)}
-            className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground focus:border-accent focus:outline-none"
+            className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
           >
             <option value="">None</option>
             {vehicles.map((vehicle) => (
@@ -327,7 +327,7 @@ export function ComposePostForm({
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           placeholder="What's the story?"
-          className="w-full rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted transition-colors focus:border-accent/60 focus:outline-none"
         />
       </div>
 

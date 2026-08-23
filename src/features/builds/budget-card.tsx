@@ -33,7 +33,7 @@ export function BudgetCard({
 
   if (isEditing) {
     return (
-      <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="glass rounded-2xl p-4">
         <form action={formAction} className="flex items-end gap-3">
           <div className="flex-1">
             {state.error && (
@@ -73,7 +73,7 @@ export function BudgetCard({
   const overBudget = summary.remainingCents != null && summary.remainingCents < 0;
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="glass rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-semibold">Budget</h2>
         {isOwner && (

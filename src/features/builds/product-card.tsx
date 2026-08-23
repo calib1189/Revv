@@ -4,7 +4,7 @@ export function ProductCard({ part }: { part: Part }) {
   const specs = Object.entries((part.specs as Record<string, unknown>) ?? {});
 
   return (
-    <div className="rounded-lg border border-border bg-background p-3">
+    <div className="glass-inset rounded-xl p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium">
           {part.brand} {part.product}

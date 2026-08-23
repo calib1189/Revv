@@ -43,7 +43,7 @@ export function PostCard({ data }: { data: PostCardData }) {
   const video = post.post_type === "video" ? media[0] : null;
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-surface">
+    <article className="glass overflow-hidden rounded-2xl">
       <div className="flex items-center gap-3 px-4 py-3">
         <Avatar username={authorUsername} />
         <div className="min-w-0 flex-1">

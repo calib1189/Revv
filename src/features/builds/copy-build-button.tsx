@@ -32,7 +32,7 @@ export function CopyBuildButton({
       );
     }
     return (
-      <div className="rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm">
+      <div className="glass rounded-xl px-3.5 py-2.5 text-sm">
         <p className="text-muted">
           Add a vehicle first to copy this build onto it.
         </p>
@@ -57,12 +57,12 @@ export function CopyBuildButton({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3">
+    <div className="glass flex flex-col gap-2 rounded-xl p-3">
       {error && <p className="text-xs text-danger">{error}</p>}
       <select
         value={targetId}
         onChange={(e) => setTargetId(e.target.value)}
-        className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+        className="glass-inset w-full rounded-lg px-2 py-1.5 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
       >
         {myVehicles.map((v) => (
           <option key={v.id} value={v.id}>

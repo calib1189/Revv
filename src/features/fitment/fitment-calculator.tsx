@@ -18,7 +18,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-5">
+    <div className="glass rounded-2xl p-5">
       <h2 className="mb-4 text-base font-semibold">{title}</h2>
       {children}
     </div>

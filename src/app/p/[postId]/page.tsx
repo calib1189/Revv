@@ -109,7 +109,7 @@ export default async function PostPage({
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-8 sm:px-6">
-      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+      <div className="glass overflow-hidden rounded-2xl">
         <div className="flex items-center gap-3 px-4 py-3">
           <Avatar username={author?.username ?? "unknown"} />
           <div className="min-w-0 flex-1">

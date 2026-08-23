@@ -46,7 +46,7 @@ function HotspotDot({
       {isOpen && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute left-1/2 top-full z-10 mt-2 w-56 -translate-x-1/2 rounded-lg border border-border bg-surface p-3 shadow-xl"
+          className="glass-raised absolute left-1/2 top-full z-10 mt-2 w-56 -translate-x-1/2 rounded-2xl p-3"
         >
           <p className="text-sm font-medium">{hotspot.buildPart.raw_name}</p>
           {hotspot.buildPart.price_cents != null && (
@@ -127,7 +127,7 @@ export function HotspotLayer({
       {pending && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="absolute z-10 w-56 -translate-x-1/2 rounded-lg border border-border bg-surface p-3 shadow-xl"
+          className="glass-raised absolute z-10 w-56 -translate-x-1/2 rounded-2xl p-3"
           style={{ left: `${pending.x * 100}%`, top: `${pending.y * 100}%` }}
         >
           <p className="mb-2 text-xs font-medium">Tag which mod?</p>
@@ -142,7 +142,7 @@ export function HotspotLayer({
               onChange={(e) => {
                 if (e.target.value) handleAssign(e.target.value);
               }}
-              className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground focus:border-accent focus:outline-none"
+              className="glass-inset w-full rounded-lg px-2 py-1.5 text-xs text-foreground transition-colors focus:border-accent/60 focus:outline-none"
             >
               <option value="" disabled>
                 Choose a mod…

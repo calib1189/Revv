@@ -81,7 +81,7 @@ export default async function ReviewDraftBuildPage({
         </div>
       )}
 
-      <div className="mb-6 flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3">
+      <div className="glass mb-6 flex items-center justify-between rounded-xl px-4 py-3">
         <span className="text-sm text-muted">Estimated total</span>
         <span className="text-sm font-medium">{formatCents(totalCents)}</span>
       </div>

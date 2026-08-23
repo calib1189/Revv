@@ -46,14 +46,14 @@ export function ReportButton({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3"
+      className="glass-raised flex flex-col gap-2 rounded-xl p-3"
     >
       {state.error && <p className="text-sm text-danger">{state.error}</p>}
       <select
         name="reason"
         required
         defaultValue=""
-        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+        className="glass-inset w-full rounded-xl px-3 py-2 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
       >
         <option value="" disabled>
           Why are you reporting this?

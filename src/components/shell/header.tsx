@@ -41,7 +41,7 @@ export async function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
+    <header className="glass-raised sticky top-0 z-10 rounded-none border-x-0 border-t-0">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-4">
           <Link href="/" className="text-lg font-semibold tracking-tight">

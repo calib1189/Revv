@@ -47,7 +47,7 @@ export default async function NotificationsPage() {
       </div>
 
       {notifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-border py-24 text-center">
+        <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-24 text-center">
           <p className="text-lg font-medium">No notifications yet</p>
           <p className="max-w-xs text-sm text-muted">
             Likes and comments on your posts will show up here.

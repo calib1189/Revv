@@ -46,7 +46,7 @@ export function PartsBrowser({ categories }: { categories: string[] }) {
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               category === null
                 ? "bg-accent text-accent-foreground"
-                : "bg-surface text-muted hover:text-foreground"
+                : "glass text-muted hover:text-foreground"
             }`}
           >
             All
@@ -59,7 +59,7 @@ export function PartsBrowser({ categories }: { categories: string[] }) {
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 category === c
                   ? "bg-accent text-accent-foreground"
-                  : "bg-surface text-muted hover:text-foreground"
+                  : "glass text-muted hover:text-foreground"
               }`}
             >
               {c}
@@ -71,7 +71,7 @@ export function PartsBrowser({ categories }: { categories: string[] }) {
       {parts === null ? (
         <p className="text-sm text-muted">Loading…</p>
       ) : parts.length === 0 ? (
-        <div className="rounded-2xl border border-border py-16 text-center">
+        <div className="glass rounded-2xl py-16 text-center">
           <p className="text-sm font-medium">No parts in the catalog yet</p>
           <p className="mt-1 text-xs text-muted">
             Verified parts get added here as the catalog grows.

@@ -28,15 +28,15 @@ export default async function AdminAnalyticsPage() {
       </div>
 
       <div className="mb-8 grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-border bg-surface p-4 text-center">
+        <div className="glass rounded-2xl p-4 text-center">
           <p className="text-2xl font-semibold">{totals.profiles}</p>
           <p className="text-xs text-muted">Users</p>
         </div>
-        <div className="rounded-xl border border-border bg-surface p-4 text-center">
+        <div className="glass rounded-2xl p-4 text-center">
           <p className="text-2xl font-semibold">{totals.vehicles}</p>
           <p className="text-xs text-muted">Vehicles</p>
         </div>
-        <div className="rounded-xl border border-border bg-surface p-4 text-center">
+        <div className="glass rounded-2xl p-4 text-center">
           <p className="text-2xl font-semibold">{totals.posts}</p>
           <p className="text-xs text-muted">Posts</p>
         </div>

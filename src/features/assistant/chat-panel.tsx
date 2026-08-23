@@ -36,7 +36,7 @@ export function ChatPanel() {
 
   return (
     <div className="flex h-[calc(100dvh-56px-2.5rem)] flex-col">
-      <div className="flex-1 overflow-y-auto rounded-t-xl border border-b-0 border-border bg-surface p-4">
+      <div className="glass flex-1 overflow-y-auto rounded-t-2xl border-b-0 p-4">
         {messages.length === 0 ? (
           <p className="text-sm text-muted">
             Ask about your garage — try &ldquo;what&apos;s my budget&rdquo; or
@@ -73,7 +73,7 @@ export function ChatPanel() {
 
       <form
         onSubmit={handleSend}
-        className="flex gap-2 rounded-b-xl border border-border bg-surface p-3"
+        className="glass-raised flex gap-2 rounded-b-2xl p-3"
       >
         <Input
           ref={inputRef}

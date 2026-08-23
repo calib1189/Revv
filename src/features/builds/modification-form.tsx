@@ -51,7 +51,7 @@ export function ModificationForm({
   return (
     <form
       action={formAction}
-      className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4"
+      className="glass flex flex-col gap-4 rounded-2xl p-4"
     >
       {state.error && <Callout tone="danger">{state.error}</Callout>}
 
@@ -82,7 +82,7 @@ export function ModificationForm({
             id="status"
             name="status"
             defaultValue={buildPart?.status ?? "planned"}
-            className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground focus:border-accent focus:outline-none"
+            className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
           >
             <option value="planned">Planned</option>
             <option value="ordered">Ordered</option>
@@ -129,7 +129,7 @@ export function ModificationForm({
           name="notes"
           rows={2}
           defaultValue={buildPart?.notes ?? ""}
-          className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted transition-colors focus:border-accent/60 focus:outline-none"
         />
       </div>
 

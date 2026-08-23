@@ -11,6 +11,13 @@
   --accent-foreground: #0a0a0b;
   --danger: #ef4444;
   --success: #22c55e;
+
+  --glass-tint: 255 255 255;
+  --glass-bg: rgb(var(--glass-tint) / 0.05);
+  --glass-bg-raised: rgb(var(--glass-tint) / 0.08);
+  --glass-border: rgb(var(--glass-tint) / 0.1);
+  --glass-border-raised: rgb(var(--glass-tint) / 0.14);
+  --glass-highlight: rgb(var(--glass-tint) / 0.14);
 }
 
 @theme inline {
@@ -34,6 +41,11 @@ html {
 
 body {
   background: var(--color-background);
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgb(255 255 255 / 0.05), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, rgb(255 68 51 / 0.04), transparent 55%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--color-foreground);
 }
 
@@ -44,4 +56,34 @@ body {
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+@layer components {
+  /* Liquid-glass surface: frosted, translucent, with a hairline border that
+     catches light on its top edge. Two tiers — .glass for standard cards,
+     .glass-raised for anything that should sit visually above them (modals,
+     the sticky header, popovers). */
+  .glass {
+    background: linear-gradient(180deg, var(--glass-bg), rgb(var(--glass-tint) / 0.02));
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px) saturate(140%);
+    box-shadow:
+      inset 0 1px 0 0 var(--glass-highlight),
+      0 12px 32px -16px rgb(0 0 0 / 0.55);
+  }
+
+  .glass-raised {
+    background: linear-gradient(180deg, var(--glass-bg-raised), rgb(var(--glass-tint) / 0.03));
+    border: 1px solid var(--glass-border-raised);
+    backdrop-filter: blur(28px) saturate(160%);
+    box-shadow:
+      inset 0 1px 0 0 var(--glass-highlight),
+      0 16px 48px -16px rgb(0 0 0 / 0.65);
+  }
+
+  .glass-inset {
+    background: rgb(0 0 0 / 0.2);
+    border: 1px solid rgb(var(--glass-tint) / 0.08);
+    backdrop-filter: blur(12px);
+  }
 }

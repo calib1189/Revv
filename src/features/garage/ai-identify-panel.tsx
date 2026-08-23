@@ -52,7 +52,7 @@ export function AiIdentifyPanel({
     : "";
 
   return (
-    <div className="mb-6 rounded-xl border border-border bg-surface p-4">
+    <div className="glass mb-6 rounded-2xl p-4">
       <input
         ref={inputRef}
         type="file"

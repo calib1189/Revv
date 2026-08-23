@@ -54,7 +54,7 @@ export default async function BillingPage({
       )}
 
       {subscription?.status === "active" ? (
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="glass rounded-2xl p-4">
           <p className="text-sm font-medium text-success">
             Your subscription is active.
           </p>
@@ -70,7 +70,7 @@ export default async function BillingPage({
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="glass rounded-2xl p-4">
           <p className="mb-4 text-sm text-muted">
             {subscription
               ? `Subscription ${subscription.status}.`

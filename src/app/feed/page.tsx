@@ -33,7 +33,7 @@ export default async function FeedPage({
       </div>
 
       {cards.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-border py-24 text-center">
+        <div className="glass flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
           <p className="text-lg font-medium">No posts yet</p>
           <p className="max-w-xs text-sm text-muted">
             {user
