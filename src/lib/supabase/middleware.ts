@@ -2,7 +2,17 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
-const PROTECTED_PREFIXES = ["/home"];
+// Exact/pattern matches only — /garage/[id] itself stays public (vehicles
+// are publicly readable), so a plain prefix match would wrongly gate it.
+const PROTECTED_EXACT = ["/garage", "/garage/new"];
+const PROTECTED_PATTERNS = [/^\/garage\/[^/]+\/edit$/];
+
+function isProtectedPath(pathname: string) {
+  return (
+    PROTECTED_EXACT.includes(pathname) ||
+    PROTECTED_PATTERNS.some((pattern) => pattern.test(pathname))
+  );
+}
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -36,11 +46,7 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
-    request.nextUrl.pathname.startsWith(prefix),
-  );
-
-  if (isProtected && !user) {
+  if (isProtectedPath(request.nextUrl.pathname) && !user) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);

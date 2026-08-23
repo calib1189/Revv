@@ -97,6 +97,26 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;
         Relationships: never[];
       };
+      vehicle_media: {
+        Row: {
+          id: string;
+          vehicle_id: string;
+          media_id: string;
+          position: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          vehicle_id: string;
+          media_id: string;
+          position?: number;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["vehicle_media"]["Insert"]
+        >;
+        Relationships: never[];
+      };
       builds: {
         Row: {
           id: string;

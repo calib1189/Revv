@@ -23,7 +23,13 @@ export async function Header() {
         </Link>
 
         {user ? (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/garage"
+              className="text-sm font-medium text-foreground hover:text-muted"
+            >
+              Garage
+            </Link>
             <span className="text-sm text-muted">
               {username ? `@${username}` : user.email}
             </span>

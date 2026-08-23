@@ -3,7 +3,7 @@
 import { Callout } from "@/components/ui/callout";
 import { Button } from "@/components/ui/button";
 
-export default function HomeError({
+export default function VehicleError({
   reset,
 }: {
   error: Error & { digest?: string };
@@ -11,9 +11,7 @@ export default function HomeError({
 }) {
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
-      <Callout tone="danger">
-        Something went wrong loading your home page.
-      </Callout>
+      <Callout tone="danger">Couldn&apos;t load this vehicle.</Callout>
       <Button variant="secondary" onClick={reset}>
         Try again
       </Button>

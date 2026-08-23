@@ -57,7 +57,7 @@ export async function signIn(
 ): Promise<AuthActionState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/home");
+  const next = String(formData.get("next") ?? "/garage");
 
   if (!email || !password) {
     return { error: "Email and password are required." };
@@ -71,7 +71,7 @@ export async function signIn(
 
   if (error) return { error: friendlyError(error.message) };
 
-  redirect(next.startsWith("/") ? next : "/home");
+  redirect(next.startsWith("/") ? next : "/garage");
 }
 
 export async function signOut(_formData: FormData): Promise<void> {
