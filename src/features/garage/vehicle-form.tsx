@@ -10,18 +10,27 @@ import type { VehicleFormState } from "@/features/garage/actions";
 
 const initialState: VehicleFormState = { error: null };
 
+export interface VehicleFormValues {
+  year?: number | string | null;
+  make?: string | null;
+  model?: string | null;
+  trim?: string | null;
+}
+
 interface VehicleFormProps {
   action: (
     prevState: VehicleFormState,
     formData: FormData,
   ) => Promise<VehicleFormState>;
   vehicle?: Vehicle;
+  initialValues?: VehicleFormValues;
   submitLabel: string;
 }
 
 export function VehicleForm({
   action,
   vehicle,
+  initialValues,
   submitLabel,
 }: VehicleFormProps) {
   const [state, formAction, isPending] = useActionState(
@@ -29,8 +38,14 @@ export function VehicleForm({
     initialState,
   );
 
+  const values = { ...vehicle, ...initialValues };
+
   return (
-    <form action={formAction} className="flex flex-col gap-6">
+    <form
+      key={JSON.stringify(initialValues ?? {})}
+      action={formAction}
+      className="flex flex-col gap-6"
+    >
       {state.error && <Callout tone="danger">{state.error}</Callout>}
 
       <div className="grid grid-cols-2 gap-4">
@@ -40,26 +55,26 @@ export function VehicleForm({
             id="year"
             name="year"
             inputMode="numeric"
-            defaultValue={vehicle?.year ?? ""}
+            defaultValue={values?.year ?? ""}
             required
           />
         </div>
         <div>
           <Label htmlFor="make">Make</Label>
-          <Input id="make" name="make" defaultValue={vehicle?.make ?? ""} required />
+          <Input id="make" name="make" defaultValue={values?.make ?? ""} required />
         </div>
         <div>
           <Label htmlFor="model">Model</Label>
           <Input
             id="model"
             name="model"
-            defaultValue={vehicle?.model ?? ""}
+            defaultValue={values?.model ?? ""}
             required
           />
         </div>
         <div>
           <Label htmlFor="trim">Trim</Label>
-          <Input id="trim" name="trim" defaultValue={vehicle?.trim ?? ""} />
+          <Input id="trim" name="trim" defaultValue={values?.trim ?? ""} />
         </div>
         <div>
           <Label htmlFor="engine">Engine</Label>

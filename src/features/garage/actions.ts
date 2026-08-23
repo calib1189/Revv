@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createVehicle, updateVehicle, deleteVehicle } from "@/lib/db/vehicles";
 import { validateVehicleForm } from "@/lib/validation/vehicle";
+import { validateImageFile } from "@/lib/validation/media";
+import { getVisionProvider } from "@/lib/providers/get-vision-provider";
+import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleInsert } from "@/lib/db/vehicles";
 
 export interface VehicleFormState {
@@ -81,6 +84,28 @@ export async function updateVehicleAction(
 
   revalidatePath(`/garage/${vehicleId}`);
   redirect(`/garage/${vehicleId}`);
+}
+
+export interface IdentifyVehicleResult {
+  data?: VehicleIdentification;
+  error?: string;
+}
+
+export async function identifyVehicleAction(
+  formData: FormData,
+): Promise<IdentifyVehicleResult> {
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose a photo first." };
+  }
+
+  const validationError = validateImageFile(file);
+  if (validationError) return { error: validationError };
+
+  const provider = getVisionProvider();
+  const bytes = await file.arrayBuffer();
+  const data = await provider.identifyVehicle(bytes, file.type);
+  return { data };
 }
 
 export async function deleteVehicleAction(vehicleId: string): Promise<void> {

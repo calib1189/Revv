@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
-import { VehicleForm } from "@/features/garage/vehicle-form";
-import { createVehicleAction } from "@/features/garage/actions";
+import { NewVehicleClient } from "@/features/garage/new-vehicle-client";
 
 export default async function NewVehiclePage() {
   const user = await getCurrentUser();
@@ -12,7 +11,7 @@ export default async function NewVehiclePage() {
       <h1 className="mb-8 text-2xl font-semibold tracking-tight">
         Add a vehicle
       </h1>
-      <VehicleForm action={createVehicleAction} submitLabel="Add vehicle" />
+      <NewVehicleClient />
     </div>
   );
 }
