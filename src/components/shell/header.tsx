@@ -17,18 +17,25 @@ export async function Header() {
 
   if (user) {
     const supabase = await createClient();
-    const [profile, count, conversations] = await Promise.all([
+    const [profile, count] = await Promise.all([
       getProfileByUserId(supabase, user.id),
       getUnreadNotificationCount(supabase, user.id),
-      listConversationsForUser(supabase, user.id),
     ]);
     username = profile?.username ?? null;
     unreadCount = count;
-    unreadMessageCount = await getUnreadMessageCount(
-      supabase,
-      conversations.map((c) => c.id),
-      user.id,
-    );
+
+    // Degrade gracefully if the messaging migration hasn't been applied
+    // yet — a missing table here shouldn't take down every page's header.
+    try {
+      const conversations = await listConversationsForUser(supabase, user.id);
+      unreadMessageCount = await getUnreadMessageCount(
+        supabase,
+        conversations.map((c) => c.id),
+        user.id,
+      );
+    } catch {
+      unreadMessageCount = 0;
+    }
   }
 
   return (
