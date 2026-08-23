@@ -18,5 +18,12 @@ export async function sendChatMessageAction(
 
   const context = await buildUserContext(supabase, user.id);
   const provider = getChatProvider();
-  return provider.sendMessage(messages, context);
+  try {
+    return await provider.sendMessage(messages, context);
+  } catch {
+    return {
+      content: "Couldn't reach the assistant right now. Try again in a bit.",
+      isMock: false,
+    };
+  }
 }
