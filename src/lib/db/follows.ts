@@ -63,3 +63,31 @@ export async function getFollowingCount(
   if (error) throw error;
   return count ?? 0;
 }
+
+/** IDs of the people this user follows, most recently followed first. */
+export async function listFollowingIds(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("follows")
+    .select("followee_id")
+    .eq("follower_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.map((row) => row.followee_id);
+}
+
+/** IDs of the people who follow this user, most recent first. */
+export async function listFollowerIds(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("follows")
+    .select("follower_id")
+    .eq("followee_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data.map((row) => row.follower_id);
+}

@@ -6,6 +6,7 @@ import { listConversationsForUser, otherParticipant } from "@/lib/db/conversatio
 import { getLastMessageForConversations } from "@/lib/db/messages";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { Avatar } from "@/features/feed/avatar";
+import { InboxTabs } from "@/features/shell/inbox-tabs";
 import { relativeTime } from "@/lib/format/relative-time";
 
 export default async function MessagesInboxPage() {
@@ -28,7 +29,8 @@ export default async function MessagesInboxPage() {
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-8 sm:px-6">
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Messages</h1>
+      <h1 className="mb-4 text-2xl font-semibold tracking-tight">Messages</h1>
+      <InboxTabs current="messages" />
 
       {conversations.length === 0 ? (
         <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-24 text-center">

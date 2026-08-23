@@ -14,6 +14,7 @@ const PROTECTED_EXACT = [
   "/settings/profile",
   "/settings/billing",
   "/messages",
+  "/friends",
   "/assistant",
   "/admin/reports",
   "/admin/audit-log",

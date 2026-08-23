@@ -15,6 +15,7 @@ import { PostThumbnailGrid } from "@/features/profile/post-thumbnail-grid";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
 import { MessageButton } from "@/features/messages/message-button";
+import { SignOutButton } from "@/features/auth/sign-out-button";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -121,6 +122,23 @@ export default async function ProfilePage({
             <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">
               {profile.bio}
             </p>
+          )}
+
+          {isOwnProfile && (
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <Link href="/saved" className="text-muted hover:text-foreground">
+                Saved
+              </Link>
+              <Link href="/notifications" className="text-muted hover:text-foreground">
+                Activity
+              </Link>
+              {profile.is_admin && (
+                <Link href="/admin/reports" className="text-accent hover:underline">
+                  Admin
+                </Link>
+              )}
+              <SignOutButton />
+            </div>
           )}
         </div>
       </div>

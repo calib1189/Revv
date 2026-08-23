@@ -35,7 +35,7 @@ export function ChatPanel() {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-56px-2.5rem)] flex-col">
+    <div className="flex h-[calc(100dvh-56px-64px-2.5rem)] flex-col">
       <div className="glass flex-1 overflow-y-auto rounded-t-2xl border-b-0 p-4">
         {messages.length === 0 ? (
           <p className="text-sm text-muted">

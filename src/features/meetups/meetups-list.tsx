@@ -21,12 +21,20 @@ export function MeetupsList({
 }) {
   const router = useRouter();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationDenied, setLocationDenied] = useState(
-    () => typeof navigator === "undefined" || !navigator.geolocation,
-  );
+  const [locationDenied, setLocationDenied] = useState(false);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      // Deferred to a microtask rather than called directly in the effect
+      // body — same value either way, but avoids a synchronous setState
+      // during the render-commit phase. Starting `locationDenied` at
+      // `false` unconditionally (rather than checking `typeof navigator`
+      // in a lazy initializer) also keeps the very first render identical
+      // between server and client, since the server has no `navigator` at
+      // all — checking it there previously caused a hydration mismatch.
+      Promise.resolve().then(() => setLocationDenied(true));
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });

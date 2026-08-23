@@ -46,9 +46,13 @@ export function SwipeFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, hasMore]);
 
+  const feedHeight = isAuthenticated
+    ? "h-[calc(100dvh-56px-64px)]"
+    : "h-[calc(100dvh-56px)]";
+
   if (posts.length === 0) {
     return (
-      <div className="flex h-[calc(100dvh-56px)] flex-col items-center justify-center gap-4 text-center">
+      <div className={`flex ${feedHeight} flex-col items-center justify-center gap-4 text-center`}>
         <p className="text-lg font-medium">No posts yet</p>
         <p className="max-w-xs text-sm text-muted">
           {isAuthenticated
@@ -67,9 +71,9 @@ export function SwipeFeed({
 
   return (
     <div className="relative">
-      <div className="no-scrollbar h-[calc(100dvh-56px)] snap-y snap-mandatory overflow-y-auto">
+      <div className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}>
         {posts.map((post) => (
-          <SwipeSlide key={post.post.id} data={post} />
+          <SwipeSlide key={post.post.id} data={post} slideHeight={feedHeight} />
         ))}
         {hasMore && <div ref={sentinelRef} className="h-1" />}
       </div>

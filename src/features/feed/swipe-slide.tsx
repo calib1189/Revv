@@ -105,11 +105,17 @@ function PhotoMedia({ urls }: { urls: string[] }) {
   );
 }
 
-export function SwipeSlide({ data }: { data: PostCardData }) {
+export function SwipeSlide({
+  data,
+  slideHeight = "h-[calc(100dvh-56px-64px)]",
+}: {
+  data: PostCardData;
+  slideHeight?: string;
+}) {
   const isVideo = data.media[0]?.kind === "video";
 
   return (
-    <div className="relative h-[calc(100dvh-56px)] w-full flex-shrink-0 snap-start bg-black">
+    <div className={`relative ${slideHeight} w-full flex-shrink-0 snap-start bg-black`}>
       {data.media.length > 0 &&
         (isVideo ? (
           <VideoMedia url={data.media[0].url} />

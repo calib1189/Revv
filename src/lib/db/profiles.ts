@@ -46,6 +46,40 @@ export async function getProfileByUsername(
   return data;
 }
 
+export async function getProfilesByIds(
+  supabase: SupabaseClient<Database>,
+  userIds: string[],
+): Promise<Profile[]> {
+  if (userIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("id", userIds);
+
+  if (error) throw error;
+  return data;
+}
+
+export async function searchProfilesByUsername(
+  supabase: SupabaseClient<Database>,
+  query: string,
+  limit = 20,
+): Promise<Profile[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .ilike("username", `%${trimmed}%`)
+    .order("username", { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+  return data;
+}
+
 export async function updateProfileBio(
   supabase: SupabaseClient<Database>,
   userId: string,

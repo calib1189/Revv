@@ -6,6 +6,7 @@ import { listNotifications } from "@/lib/db/notifications";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { Avatar } from "@/features/feed/avatar";
 import { MarkAllReadButton } from "@/features/notifications/mark-all-read-button";
+import { InboxTabs } from "@/features/shell/inbox-tabs";
 import { relativeTime } from "@/lib/format/relative-time";
 
 const KIND_VERB: Record<string, string> = {
@@ -39,12 +40,13 @@ export default async function NotificationsPage() {
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-8 sm:px-6">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">
           Notifications
         </h1>
         {hasUnread && <MarkAllReadButton />}
       </div>
+      <InboxTabs current="activity" />
 
       {notifications.length === 0 ? (
         <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-24 text-center">

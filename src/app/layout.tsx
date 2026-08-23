@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/shell/header";
 import { Footer } from "@/components/shell/footer";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,7 +20,9 @@ export const metadata: Metadata = {
   description: "The social platform for your build.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const user = await getCurrentUser();
+
   return (
     <html
       lang="en"
@@ -27,8 +30,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <Header />
-        <main className="flex flex-1 flex-col">{children}</main>
-        <Footer />
+        <div className={`flex flex-1 flex-col ${user ? "pb-16" : ""}`}>
+          <main className="flex flex-1 flex-col">{children}</main>
+          <Footer />
+        </div>
       </body>
     </html>
   );

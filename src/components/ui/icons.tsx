@@ -105,6 +105,67 @@ export function PinIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function SearchIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PlusIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.25}
+      {...props}
+    >
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function UsersIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <circle cx="9" cy="8" r="3.25" />
+      <path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5" strokeLinecap="round" />
+      <path d="M16 4.3c1.6.5 2.75 2 2.75 3.7 0 1.7-1.15 3.2-2.75 3.7" strokeLinecap="round" />
+      <path d="M14.5 13.6c2.9.7 5 3.2 5 6.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PersonIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function GemIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
