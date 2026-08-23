@@ -11,8 +11,12 @@ import { getLikeCount, getLikedPostIds } from "@/lib/db/likes";
 import { getSavedPostIds } from "@/lib/db/saves";
 import { listCommentsByPost } from "@/lib/db/comments";
 import { Avatar } from "@/features/feed/avatar";
-import { PhotoCarousel } from "@/features/feed/photo-carousel";
 import { VideoPlayer } from "@/features/feed/video-player";
+import { PostPhotoView } from "@/features/feed/post-photo-view";
+import { listHotspotsForMedia } from "@/lib/db/hotspots";
+import { getActiveBuild } from "@/lib/db/builds";
+import { listBuildParts } from "@/lib/db/build-parts";
+import { getPartsByIds } from "@/lib/db/parts";
 import { LikeButton } from "@/features/feed/like-button";
 import { SaveButton } from "@/features/feed/save-button";
 import { CommentList } from "@/features/feed/comment-list";
@@ -66,6 +70,43 @@ export default async function PostPage({
     ? vehicle.nickname || `${vehicle.make} ${vehicle.model}`
     : null;
 
+  const mediaIds = postMedia.map((pm) => pm.media_id);
+  const [hotspots, activeBuild] = await Promise.all([
+    post.post_type === "photo"
+      ? listHotspotsForMedia(supabase, mediaIds)
+      : Promise.resolve([]),
+    vehicle ? getActiveBuild(supabase, vehicle.id) : Promise.resolve(null),
+  ]);
+
+  const buildParts = activeBuild
+    ? await listBuildParts(supabase, activeBuild.id)
+    : [];
+  const buildPartById = new Map(buildParts.map((bp) => [bp.id, bp]));
+  const linkedParts = await getPartsByIds(
+    supabase,
+    buildParts.map((bp) => bp.part_id).filter((id): id is string => Boolean(id)),
+  );
+  const partById = new Map(linkedParts.map((p) => [p.id, p]));
+
+  const photosWithHotspots = postMedia.map((pm) => ({
+    mediaId: pm.media_id,
+    url: publicMediaUrl(supabase, pm.media.storage_path),
+    hotspots: hotspots
+      .filter((h) => h.media_id === pm.media_id)
+      .map((h) => {
+        const buildPart = buildPartById.get(h.build_part_id);
+        if (!buildPart) return null;
+        return {
+          id: h.id,
+          x: h.x,
+          y: h.y,
+          buildPart,
+          linkedPart: buildPart.part_id ? (partById.get(buildPart.part_id) ?? null) : null,
+        };
+      })
+      .filter((h): h is NonNullable<typeof h> => h !== null),
+  }));
+
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 py-8 sm:px-6">
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
@@ -99,10 +140,12 @@ export default async function PostPage({
             height={postMedia[0].media.height}
           />
         ) : (
-          <PhotoCarousel
-            photos={postMedia.map((pm) => ({
-              url: publicMediaUrl(supabase, pm.media.storage_path),
-            }))}
+          <PostPhotoView
+            postId={post.id}
+            photos={photosWithHotspots}
+            isOwner={isOwner}
+            canTag={isOwner && Boolean(vehicle)}
+            availableParts={buildParts}
           />
         )}
 

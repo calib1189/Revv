@@ -9,6 +9,7 @@ import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
 import { getActiveBuild } from "@/lib/db/builds";
 import { listBuildParts } from "@/lib/db/build-parts";
+import { getPartsByIds } from "@/lib/db/parts";
 import { VehicleSpecs } from "@/features/garage/vehicle-specs";
 import { CoverPhotoUploader } from "@/features/garage/cover-photo-uploader";
 import { GalleryUploader } from "@/features/garage/gallery-uploader";
@@ -69,6 +70,13 @@ export default async function VehiclePage({
   const buildParts = activeBuild
     ? await listBuildParts(supabase, activeBuild.id)
     : [];
+  const linkedParts = await getPartsByIds(
+    supabase,
+    buildParts
+      .map((p) => p.part_id)
+      .filter((id): id is string => Boolean(id)),
+  );
+  const partsById = new Map(linkedParts.map((p) => [p.id, p]));
 
   const isOwner = user?.id === vehicle.owner_id;
   const heroUrl = heroMedia
@@ -176,6 +184,7 @@ export default async function VehiclePage({
         <div className="mt-10">
           <ModificationList
             buildParts={buildParts}
+            partsById={partsById}
             vehicleId={vehicle.id}
             isOwner={isOwner}
           />

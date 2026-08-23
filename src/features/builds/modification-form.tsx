@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
+import { PartPicker } from "@/features/builds/part-picker";
 import type { BuildPart } from "@/lib/db/build-parts";
+import type { Part } from "@/lib/db/parts";
 import type { BuildPartFormState } from "@/features/builds/actions";
 
 const initialState: BuildPartFormState = { error: null };
@@ -21,6 +23,7 @@ interface ModificationFormProps {
     formData: FormData,
   ) => Promise<BuildPartFormState>;
   buildPart?: BuildPart;
+  initialPart?: Part | null;
   submitLabel: string;
   onSuccess?: () => void;
   onCancel?: () => void;
@@ -29,6 +32,7 @@ interface ModificationFormProps {
 export function ModificationForm({
   action,
   buildPart,
+  initialPart,
   submitLabel,
   onSuccess,
   onCancel,
@@ -115,6 +119,8 @@ export function ModificationForm({
           />
         </div>
       </div>
+
+      <PartPicker initialPart={initialPart} />
 
       <div>
         <Label htmlFor="notes">Notes</Label>

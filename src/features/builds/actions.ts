@@ -21,6 +21,7 @@ function readFields(formData: FormData) {
     installCost: String(formData.get("installCost") ?? ""),
     installedAt: String(formData.get("installedAt") ?? ""),
     notes: String(formData.get("notes") ?? ""),
+    partId: String(formData.get("partId") ?? "") || null,
   };
 }
 
@@ -43,6 +44,7 @@ export async function createBuildPartAction(
 
   await createBuildPart(supabase, {
     build_id: build.id,
+    part_id: fields.partId,
     raw_name: fields.rawName.trim(),
     category: fields.category.trim() || null,
     status: fields.status,
@@ -69,6 +71,7 @@ export async function updateBuildPartAction(
 
   const supabase = await createClient();
   await updateBuildPart(supabase, buildPartId, {
+    part_id: fields.partId,
     raw_name: fields.rawName.trim(),
     category: fields.category.trim() || null,
     status: fields.status,

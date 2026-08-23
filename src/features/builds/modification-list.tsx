@@ -7,10 +7,12 @@ import {
 } from "@/features/builds/actions";
 import { ModificationForm } from "@/features/builds/modification-form";
 import { DeleteModificationButton } from "@/features/builds/delete-modification-button";
+import { ProductCard } from "@/features/builds/product-card";
 import { Button } from "@/components/ui/button";
 import { formatCents } from "@/lib/format/money";
 import { formatDateOnly } from "@/lib/format/date";
 import type { BuildPart } from "@/lib/db/build-parts";
+import type { Part } from "@/lib/db/parts";
 
 const STATUS_LABEL: Record<BuildPart["status"], string> = {
   planned: "Planned",
@@ -26,10 +28,12 @@ const STATUS_CLASS: Record<BuildPart["status"], string> = {
 
 function ModificationRow({
   part,
+  linkedPart,
   vehicleId,
   isOwner,
 }: {
   part: BuildPart;
+  linkedPart: Part | null;
   vehicleId: string;
   isOwner: boolean;
 }) {
@@ -41,6 +45,7 @@ function ModificationRow({
         <ModificationForm
           action={updateBuildPartAction.bind(null, part.id, vehicleId)}
           buildPart={part}
+          initialPart={linkedPart}
           submitLabel="Save"
           onSuccess={() => setIsEditing(false)}
           onCancel={() => setIsEditing(false)}
@@ -51,7 +56,7 @@ function ModificationRow({
 
   return (
     <li className="flex items-start justify-between gap-4 border-b border-border py-4 last:border-b-0">
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{part.raw_name}</p>
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
           {part.category && <span>{part.category}</span>}
@@ -64,6 +69,11 @@ function ModificationRow({
         </div>
         {part.notes && (
           <p className="mt-1 text-xs text-muted">{part.notes}</p>
+        )}
+        {linkedPart && (
+          <div className="mt-2 max-w-sm">
+            <ProductCard part={linkedPart} />
+          </div>
         )}
       </div>
 
@@ -92,10 +102,12 @@ function ModificationRow({
 
 export function ModificationList({
   buildParts,
+  partsById,
   vehicleId,
   isOwner,
 }: {
   buildParts: BuildPart[];
+  partsById: Map<string, Part>;
   vehicleId: string;
   isOwner: boolean;
 }) {
@@ -135,6 +147,7 @@ export function ModificationList({
             <ModificationRow
               key={part.id}
               part={part}
+              linkedPart={part.part_id ? (partsById.get(part.part_id) ?? null) : null}
               vehicleId={vehicleId}
               isOwner={isOwner}
             />
