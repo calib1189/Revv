@@ -13,6 +13,7 @@ import {
   validateVideoDuration,
 } from "@/lib/validation/media";
 import { validateCaption, validatePhotoCount } from "@/lib/validation/post";
+import { trackEvent } from "@/lib/analytics/track";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
@@ -169,6 +170,11 @@ export function ComposePostForm({
         });
         await addPostMedia(supabase, post.id, media.id, 0);
       }
+
+      await trackEvent(supabase, userId, "post_created", {
+        post_id: post.id,
+        post_type: mode,
+      });
 
       router.push(`/p/${post.id}`);
     } catch {

@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { listOpenReports } from "@/lib/db/reports";
 import { ReportRow } from "@/features/admin/report-row";
+import { AdminNav } from "@/features/admin/admin-nav";
 
 export default async function AdminReportsPage() {
   const user = await getCurrentUser();
@@ -29,9 +29,7 @@ export default async function AdminReportsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">
           Reports queue
         </h1>
-        <Link href="/admin/audit-log" className="text-sm text-accent hover:underline">
-          Audit log
-        </Link>
+        <AdminNav current="/admin/reports" />
       </div>
 
       {reports.length === 0 ? (

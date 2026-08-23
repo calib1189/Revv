@@ -7,6 +7,7 @@ import { createVehicle, updateVehicle, deleteVehicle } from "@/lib/db/vehicles";
 import { validateVehicleForm } from "@/lib/validation/vehicle";
 import { validateImageFile } from "@/lib/validation/media";
 import { getVisionProvider } from "@/lib/providers/get-vision-provider";
+import { trackEvent } from "@/lib/analytics/track";
 import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleInsert } from "@/lib/db/vehicles";
 
@@ -64,6 +65,9 @@ export async function createVehicleAction(
   const vehicle = await createVehicle(supabase, {
     ...toVehicleInput(fields),
     owner_id: user.id,
+  });
+  await trackEvent(supabase, user.id, "vehicle_created", {
+    vehicle_id: vehicle.id,
   });
 
   redirect(`/garage/${vehicle.id}`);

@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { listAuditLogs } from "@/lib/db/audit-logs";
 import { relativeTime } from "@/lib/format/relative-time";
+import { AdminNav } from "@/features/admin/admin-nav";
 
 export default async function AuditLogPage() {
   const user = await getCurrentUser();
@@ -27,9 +27,7 @@ export default async function AuditLogPage() {
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Audit log</h1>
-        <Link href="/admin/reports" className="text-sm text-accent hover:underline">
-          Reports queue
-        </Link>
+        <AdminNav current="/admin/audit-log" />
       </div>
 
       {logs.length === 0 ? (

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { validateUsername } from "@/lib/validation/username";
+import { trackEvent } from "@/lib/analytics/track";
 
 export interface AuthActionState {
   error: string | null;
@@ -37,7 +38,7 @@ export async function signUp(
   const origin = (await headers()).get("origin");
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -47,6 +48,10 @@ export async function signUp(
   });
 
   if (error) return { error: friendlyError(error.message) };
+
+  if (data.user) {
+    await trackEvent(supabase, data.user.id, "signup");
+  }
 
   redirect("/signup/check-email");
 }
