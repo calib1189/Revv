@@ -8,7 +8,7 @@ import { getSavedPostIds } from "@/lib/db/saves";
 import { publicMediaUrl } from "@/lib/db/media";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Profile } from "@/lib/db/profiles";
-import type { PostCardData } from "@/features/feed/post-card";
+import type { PostCardData, PostMediaItem } from "@/features/feed/post-card";
 
 export async function composePostCards(
   supabase: SupabaseClient<Database>,
@@ -48,10 +48,15 @@ export async function composePostCards(
   const vehicleById = new Map(
     (vehicles.data ?? []).map((v: Vehicle) => [v.id, v]),
   );
-  const mediaByPost = new Map<string, string[]>();
+  const mediaByPost = new Map<string, PostMediaItem[]>();
   for (const pm of postMedia) {
     const list = mediaByPost.get(pm.post_id) ?? [];
-    list.push(publicMediaUrl(supabase, pm.media.storage_path));
+    list.push({
+      url: publicMediaUrl(supabase, pm.media.storage_path),
+      kind: pm.media.kind,
+      width: pm.media.width,
+      height: pm.media.height,
+    });
     mediaByPost.set(pm.post_id, list);
   }
 
@@ -63,7 +68,7 @@ export async function composePostCards(
       vehicleTitle: vehicle
         ? vehicle.nickname || `${vehicle.make} ${vehicle.model}`
         : null,
-      photoUrls: mediaByPost.get(post.id) ?? [],
+      media: mediaByPost.get(post.id) ?? [],
       likeCount: likeCounts.get(post.id) ?? 0,
       commentCount: commentCounts.get(post.id) ?? 0,
       isLiked: likedIds.has(post.id),

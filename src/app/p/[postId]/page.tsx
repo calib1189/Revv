@@ -12,6 +12,7 @@ import { getSavedPostIds } from "@/lib/db/saves";
 import { listCommentsByPost } from "@/lib/db/comments";
 import { Avatar } from "@/features/feed/avatar";
 import { PhotoCarousel } from "@/features/feed/photo-carousel";
+import { VideoPlayer } from "@/features/feed/video-player";
 import { LikeButton } from "@/features/feed/like-button";
 import { SaveButton } from "@/features/feed/save-button";
 import { CommentList } from "@/features/feed/comment-list";
@@ -88,11 +89,19 @@ export default async function PostPage({
           </span>
         </div>
 
-        <PhotoCarousel
-          photos={postMedia.map((pm) => ({
-            url: publicMediaUrl(supabase, pm.media.storage_path),
-          }))}
-        />
+        {post.post_type === "video" && postMedia[0] ? (
+          <VideoPlayer
+            url={publicMediaUrl(supabase, postMedia[0].media.storage_path)}
+            width={postMedia[0].media.width}
+            height={postMedia[0].media.height}
+          />
+        ) : (
+          <PhotoCarousel
+            photos={postMedia.map((pm) => ({
+              url: publicMediaUrl(supabase, pm.media.storage_path),
+            }))}
+          />
+        )}
 
         <div className="flex items-center gap-4 px-4 pt-3">
           <LikeButton
