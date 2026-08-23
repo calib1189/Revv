@@ -23,9 +23,6 @@ export function RankFrame({
   return (
     <div className={`rank-frame rank-${tier} ${compact ? "rank-frame-compact" : ""}`}>
       {children}
-      {tier === "diamond" && <div className="rank-sparkle" />}
-      {tier === "ruby" && <div className="rank-glow" />}
-      {tier === "cosmic" && <div className="rank-nebula" />}
       <div
         className={`rank-badge ${compact ? "text-[0.65rem]" : ""}`}
         style={{
