@@ -12,11 +12,13 @@ const PROTECTED_EXACT = [
   "/saved",
   "/notifications",
   "/settings/profile",
+  "/messages",
 ];
 const PROTECTED_PATTERNS = [
   /^\/garage\/[^/]+\/edit$/,
   /^\/garage\/[^/]+\/visualize$/,
   /^\/garage\/[^/]+\/builds\/[^/]+\/review$/,
+  /^\/messages\/[^/]+$/,
 ];
 
 function isProtectedPath(pathname: string) {

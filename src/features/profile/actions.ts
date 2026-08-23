@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { followUser, unfollowUser } from "@/lib/db/follows";
 import { updateProfileBio } from "@/lib/db/profiles";
+import { blockUser, unblockUser } from "@/lib/db/blocks";
 import { validateBio } from "@/lib/validation/profile";
 
 async function requireUser() {
@@ -27,6 +28,20 @@ export async function toggleFollowAction(
     await followUser(supabase, user.id, followeeId);
   }
   revalidatePath(`/u/${followeeUsername}`);
+}
+
+export async function toggleBlockAction(
+  targetUserId: string,
+  targetUsername: string,
+  isBlocking: boolean,
+): Promise<void> {
+  const { supabase, user } = await requireUser();
+  if (isBlocking) {
+    await unblockUser(supabase, user.id, targetUserId);
+  } else {
+    await blockUser(supabase, user.id, targetUserId);
+  }
+  revalidatePath(`/u/${targetUsername}`);
 }
 
 export interface UpdateBioState {

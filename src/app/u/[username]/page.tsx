@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUsername } from "@/lib/db/profiles";
 import { getFollowerCount, getFollowingCount, isFollowing } from "@/lib/db/follows";
+import { isBlocking } from "@/lib/db/blocks";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { listPostsByAuthor } from "@/lib/db/posts";
 import { listPostMediaForPosts } from "@/lib/db/post-media";
@@ -11,6 +12,8 @@ import { Avatar } from "@/features/feed/avatar";
 import { VehicleCard } from "@/features/garage/vehicle-card";
 import { PostThumbnailGrid } from "@/features/profile/post-thumbnail-grid";
 import { FollowButton } from "@/features/profile/follow-button";
+import { BlockButton } from "@/features/profile/block-button";
+import { MessageButton } from "@/features/messages/message-button";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -30,12 +33,15 @@ export default async function ProfilePage({
 
   const isOwnProfile = currentUser?.id === profile.id;
 
-  const [followerCount, followingCount, following, vehicles, posts] =
+  const [followerCount, followingCount, following, amBlocking, vehicles, posts] =
     await Promise.all([
       getFollowerCount(supabase, profile.id),
       getFollowingCount(supabase, profile.id),
       currentUser && !isOwnProfile
         ? isFollowing(supabase, currentUser.id, profile.id)
+        : Promise.resolve(false),
+      currentUser && !isOwnProfile
+        ? isBlocking(supabase, currentUser.id, profile.id)
         : Promise.resolve(false),
       listVehiclesByOwner(supabase, profile.id),
       listPostsByAuthor(supabase, profile.id),
@@ -72,11 +78,23 @@ export default async function ProfilePage({
                 </Button>
               </Link>
             ) : currentUser ? (
-              <FollowButton
-                followeeId={profile.id}
-                followeeUsername={profile.username}
-                initialIsFollowing={following}
-              />
+              <>
+                {!amBlocking && (
+                  <>
+                    <FollowButton
+                      followeeId={profile.id}
+                      followeeUsername={profile.username}
+                      initialIsFollowing={following}
+                    />
+                    <MessageButton userId={profile.id} />
+                  </>
+                )}
+                <BlockButton
+                  targetUserId={profile.id}
+                  targetUsername={profile.username}
+                  initialIsBlocking={amBlocking}
+                />
+              </>
             ) : null}
           </div>
 

@@ -3,23 +3,32 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getUnreadNotificationCount } from "@/lib/db/notifications";
+import { listConversationsForUser } from "@/lib/db/conversations";
+import { getUnreadMessageCount } from "@/lib/db/messages";
 import { SignOutButton } from "@/features/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
-import { BellIcon, BookmarkIcon, CompassIcon } from "@/components/ui/icons";
+import { BellIcon, BookmarkIcon, CompassIcon, CommentIcon } from "@/components/ui/icons";
 
 export async function Header() {
   const user = await getCurrentUser();
   let username: string | null = null;
   let unreadCount = 0;
+  let unreadMessageCount = 0;
 
   if (user) {
     const supabase = await createClient();
-    const [profile, count] = await Promise.all([
+    const [profile, count, conversations] = await Promise.all([
       getProfileByUserId(supabase, user.id),
       getUnreadNotificationCount(supabase, user.id),
+      listConversationsForUser(supabase, user.id),
     ]);
     username = profile?.username ?? null;
     unreadCount = count;
+    unreadMessageCount = await getUnreadMessageCount(
+      supabase,
+      conversations.map((c) => c.id),
+      user.id,
+    );
   }
 
   return (
@@ -58,6 +67,18 @@ export async function Header() {
               className="text-muted hover:text-foreground"
             >
               <BookmarkIcon className="h-5 w-5" />
+            </Link>
+            <Link
+              href="/messages"
+              aria-label="Messages"
+              className="relative text-muted hover:text-foreground"
+            >
+              <CommentIcon className="h-5 w-5" />
+              {unreadMessageCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[9px] font-medium text-accent-foreground">
+                  {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                </span>
+              )}
             </Link>
             <Link
               href="/notifications"
