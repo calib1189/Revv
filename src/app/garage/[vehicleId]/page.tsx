@@ -144,6 +144,11 @@ export default async function VehiclePage({
                 Visualize a mod
               </Button>
             </Link>
+            <Link href="/tools/fitment">
+              <Button variant="secondary" className="px-3 py-1.5 text-sm">
+                Fitment calculator
+              </Button>
+            </Link>
             <DeleteVehicleButton vehicleId={vehicle.id} />
           </div>
         )}
