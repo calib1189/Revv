@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm test
+
+      - run: npm run build
+        env:
+          # These are the *public* Supabase URL/anon key (safe to expose —
+          # that's what NEXT_PUBLIC_ means), needed only so the build step
+          # can render Supabase-backed pages. Add them under this repo's
+          # Settings -> Secrets and variables -> Actions before this step
+          # will pass; until then the build still runs, just against the
+          # app's "Supabase not configured" fallback UI.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

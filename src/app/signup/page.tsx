@@ -16,6 +16,18 @@ export default function SignUpPage() {
       ) : (
         <SupabaseNotConfigured />
       )}
+
+      <p className="mt-6 text-xs text-muted">
+        By creating an account you agree to REVV&apos;s{" "}
+        <Link href="/legal/terms" className="text-accent hover:underline">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link href="/legal/privacy" className="text-accent hover:underline">
+          Privacy Policy
+        </Link>
+        .
+      </p>
     </div>
   );
 }

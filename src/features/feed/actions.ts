@@ -61,7 +61,11 @@ export async function createCommentAction(
   if (error) return { error };
 
   const { supabase, user } = await requireUser();
-  await createComment(supabase, postId, user.id, body.trim());
+  try {
+    await createComment(supabase, postId, user.id, body.trim());
+  } catch {
+    return { error: "Couldn't post that comment. Try again in a bit." };
+  }
   revalidatePath(`/p/${postId}`);
   return { error: null };
 }
@@ -101,12 +105,16 @@ export async function createReportAction(
   }
 
   const { supabase, user } = await requireUser();
-  await createReport(supabase, {
-    reporter_id: user.id,
-    target_type: targetType,
-    target_id: targetId,
-    reason,
-  });
+  try {
+    await createReport(supabase, {
+      reporter_id: user.id,
+      target_type: targetType,
+      target_id: targetId,
+      reason,
+    });
+  } catch {
+    return { error: "Couldn't file that report. Try again in a bit.", success: false };
+  }
 
   return { error: null, success: true };
 }
