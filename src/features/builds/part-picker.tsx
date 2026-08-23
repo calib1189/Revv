@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { searchParts } from "@/lib/db/parts";
 import { Label } from "@/components/ui/label";
@@ -75,7 +76,10 @@ export function PartPicker({ initialPart }: { initialPart?: Part | null }) {
       {!selected && trimmedQuery && hasSearched && results.length === 0 && (
         <p className="mt-1.5 text-xs text-muted">
           No matching parts in the catalog yet — this will save with just
-          the name you typed above.
+          the name you typed above.{" "}
+          <Link href="/parts" className="text-accent hover:underline">
+            Browse the catalog
+          </Link>
         </p>
       )}
     </div>

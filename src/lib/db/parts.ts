@@ -21,6 +21,30 @@ export async function searchParts(
   return data;
 }
 
+export async function browseParts(
+  supabase: SupabaseClient<Database>,
+  { category, limit = 24 }: { category?: string; limit?: number } = {},
+): Promise<Part[]> {
+  let query = supabase.from("parts").select("*").order("brand").limit(limit);
+  if (category) query = query.eq("category", category);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
+export async function listPartCategories(
+  supabase: SupabaseClient<Database>,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("parts")
+    .select("category")
+    .not("category", "is", null);
+
+  if (error) throw error;
+  return [...new Set(data.map((row) => row.category as string))].sort();
+}
+
 export async function getPartById(
   supabase: SupabaseClient<Database>,
   id: string,
