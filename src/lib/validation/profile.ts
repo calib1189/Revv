@@ -6,3 +6,12 @@ export function validateBio(bio: string): string | null {
   }
   return null;
 }
+
+const MAX_DISPLAY_NAME_LENGTH = 50;
+
+export function validateDisplayName(displayName: string): string | null {
+  if (displayName.length > MAX_DISPLAY_NAME_LENGTH) {
+    return `Name must be ${MAX_DISPLAY_NAME_LENGTH} characters or fewer.`;
+  }
+  return null;
+}

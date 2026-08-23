@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { followUser, unfollowUser } from "@/lib/db/follows";
-import { updateProfileBio } from "@/lib/db/profiles";
+import { updateProfileBio, updateProfileDisplayName } from "@/lib/db/profiles";
 import { blockUser, unblockUser } from "@/lib/db/blocks";
-import { validateBio } from "@/lib/validation/profile";
+import { validateBio, validateDisplayName } from "@/lib/validation/profile";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -58,6 +58,25 @@ export async function updateBioAction(
 
   const { supabase, user } = await requireUser();
   const profile = await updateProfileBio(supabase, user.id, bio.trim() || null);
+  revalidatePath(`/u/${profile.username}`);
+  revalidatePath("/settings/profile");
+  return { error: null };
+}
+
+export interface UpdateDisplayNameState {
+  error: string | null;
+}
+
+export async function updateDisplayNameAction(
+  _prevState: UpdateDisplayNameState,
+  formData: FormData,
+): Promise<UpdateDisplayNameState> {
+  const displayName = String(formData.get("displayName") ?? "");
+  const error = validateDisplayName(displayName);
+  if (error) return { error };
+
+  const { supabase, user } = await requireUser();
+  const profile = await updateProfileDisplayName(supabase, user.id, displayName.trim() || null);
   revalidatePath(`/u/${profile.username}`);
   revalidatePath("/settings/profile");
   return { error: null };

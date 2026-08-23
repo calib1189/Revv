@@ -13,7 +13,8 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { Avatar } from "@/features/feed/avatar";
-import { RankPill } from "@/features/garage/rank-pill";
+import { RankFrame } from "@/features/garage/rank-frame";
+import { rankForScore, RANK_LABELS } from "@/lib/rating/rank";
 import { ProfileTabs } from "@/features/profile/profile-tabs";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
@@ -55,13 +56,16 @@ export default async function ProfilePage({
   const heroIds = vehicles
     .map((v) => v.hero_media_id)
     .filter((id): id is string => Boolean(id));
-  const [heroMedia, activeBuildByVehicle] = await Promise.all([
+  const avatarIds = profile.avatar_media_id ? [profile.avatar_media_id] : [];
+  const [heroMedia, activeBuildByVehicle, avatarMedia] = await Promise.all([
     getMediaByIds(supabase, heroIds),
     listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id)),
+    getMediaByIds(supabase, avatarIds),
   ]);
   const heroUrlById = new Map(
     heroMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
+  const avatarUrl = avatarMedia[0] ? publicMediaUrl(supabase, avatarMedia[0].storage_path) : null;
 
   const bestRatingScore = vehicles.reduce<number | null>((best, v) => {
     const score = activeBuildByVehicle.get(v.id)?.ai_rating_score ?? null;
@@ -89,11 +93,11 @@ export default async function ProfilePage({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-bold tracking-tight">
-            @{profile.username}
+            {profile.display_name || `@${profile.username}`}
           </h1>
-          <div className="mt-1.5 h-5">
-            <RankPill score={bestRatingScore} />
-          </div>
+          {profile.display_name && (
+            <p className="truncate text-sm text-muted">@{profile.username}</p>
+          )}
 
           <div className="mt-4 flex gap-6">
             <div>
@@ -113,7 +117,16 @@ export default async function ProfilePage({
           </div>
         </div>
 
-        <Avatar username={profile.username} className="h-20 w-20 flex-shrink-0 text-2xl" />
+        <div className="flex flex-shrink-0 flex-col items-center gap-1.5">
+          <RankFrame score={bestRatingScore} compact hideBadge className="rounded-full">
+            <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-20 w-20 text-2xl" />
+          </RankFrame>
+          {bestRatingScore != null && (
+            <p className="text-xs font-medium text-muted">
+              {RANK_LABELS[rankForScore(bestRatingScore)]}
+            </p>
+          )}
+        </div>
       </div>
 
       {profile.bio && (

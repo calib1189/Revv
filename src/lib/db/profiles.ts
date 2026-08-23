@@ -95,3 +95,35 @@ export async function updateProfileBio(
   if (error) throw error;
   return data;
 }
+
+export async function updateProfileDisplayName(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  displayName: string | null,
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ display_name: displayName })
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProfileAvatar(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  avatarMediaId: string | null,
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ avatar_media_id: avatarMediaId })
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}

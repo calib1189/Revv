@@ -17,6 +17,7 @@ export interface Database {
         Row: {
           id: string;
           username: string;
+          display_name: string | null;
           bio: string | null;
           avatar_media_id: string | null;
           is_admin: boolean;
@@ -25,6 +26,7 @@ export interface Database {
         Insert: {
           id: string;
           username: string;
+          display_name?: string | null;
           bio?: string | null;
           avatar_media_id?: string | null;
           is_admin?: boolean;
@@ -33,6 +35,7 @@ export interface Database {
         Update: {
           id?: string;
           username?: string;
+          display_name?: string | null;
           bio?: string | null;
           avatar_media_id?: string | null;
           is_admin?: boolean;
