@@ -19,7 +19,7 @@ export function SignInForm({ next }: { next?: string }) {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {state.error && <Callout tone="danger">{state.error}</Callout>}
-      <input type="hidden" name="next" value={next ?? "/garage"} />
+      <input type="hidden" name="next" value={next ?? "/feed"} />
 
       <div>
         <Label htmlFor="email">Email</Label>

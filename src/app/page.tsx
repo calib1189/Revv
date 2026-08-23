@@ -8,7 +8,7 @@ import { SupabaseNotConfigured } from "@/components/ui/supabase-not-configured";
 export default async function LandingPage() {
   if (isSupabaseConfigured()) {
     const user = await getCurrentUser();
-    if (user) redirect("/garage");
+    if (user) redirect("/feed");
   }
 
   return (

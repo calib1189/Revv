@@ -2,9 +2,16 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
-// Exact/pattern matches only — /garage/[id] itself stays public (vehicles
-// are publicly readable), so a plain prefix match would wrongly gate it.
-const PROTECTED_EXACT = ["/garage", "/garage/new"];
+// Exact/pattern matches only — /garage/[id] and /p/[id] stay public (both
+// vehicles and posts are publicly readable), so a plain prefix match would
+// wrongly gate them.
+const PROTECTED_EXACT = [
+  "/garage",
+  "/garage/new",
+  "/feed/new",
+  "/saved",
+  "/notifications",
+];
 const PROTECTED_PATTERNS = [/^\/garage\/[^/]+\/edit$/];
 
 function isProtectedPath(pathname: string) {

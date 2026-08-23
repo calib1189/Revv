@@ -1,0 +1,85 @@
+"use client";
+
+import { useActionState, useState } from "react";
+import {
+  createReportAction,
+  type ReportFormState,
+} from "@/features/feed/actions";
+import { Button } from "@/components/ui/button";
+
+const REASONS = [
+  { value: "spam", label: "Spam" },
+  { value: "harassment", label: "Harassment" },
+  { value: "inappropriate", label: "Inappropriate content" },
+  { value: "other", label: "Other" },
+];
+
+const initialState: ReportFormState = { error: null, success: false };
+
+export function ReportButton({
+  targetType,
+  targetId,
+}: {
+  targetType: "post" | "comment";
+  targetId: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const action = createReportAction.bind(null, targetType, targetId);
+  const [state, formAction, isPending] = useActionState(action, initialState);
+
+  if (state.success) {
+    return <p className="text-sm text-muted">Report submitted. Thank you.</p>;
+  }
+
+  if (!isOpen) {
+    return (
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className="text-sm text-muted hover:text-foreground"
+      >
+        Report
+      </button>
+    );
+  }
+
+  return (
+    <form
+      action={formAction}
+      className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3"
+    >
+      {state.error && <p className="text-sm text-danger">{state.error}</p>}
+      <select
+        name="reason"
+        required
+        defaultValue=""
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-accent focus:outline-none"
+      >
+        <option value="" disabled>
+          Why are you reporting this?
+        </option>
+        {REASONS.map((reason) => (
+          <option key={reason.value} value={reason.value}>
+            {reason.label}
+          </option>
+        ))}
+      </select>
+      <div className="flex gap-2">
+        <Button
+          type="submit"
+          disabled={isPending}
+          className="px-3 py-1.5 text-sm"
+        >
+          {isPending ? "Submitting…" : "Submit report"}
+        </Button>
+        <button
+          type="button"
+          onClick={() => setIsOpen(false)}
+          className="text-sm text-muted"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
