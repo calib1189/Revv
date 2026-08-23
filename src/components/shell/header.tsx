@@ -5,7 +5,7 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { getUnreadNotificationCount } from "@/lib/db/notifications";
 import { SignOutButton } from "@/features/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
-import { BellIcon, BookmarkIcon } from "@/components/ui/icons";
+import { BellIcon, BookmarkIcon, CompassIcon } from "@/components/ui/icons";
 
 export async function Header() {
   const user = await getCurrentUser();
@@ -25,9 +25,18 @@ export async function Header() {
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
-          REVV
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/" className="text-lg font-semibold tracking-tight">
+            REVV
+          </Link>
+          <Link
+            href="/discover"
+            aria-label="Discover"
+            className="text-muted hover:text-foreground"
+          >
+            <CompassIcon className="h-5 w-5" />
+          </Link>
+        </div>
 
         {user ? (
           <div className="flex items-center gap-3 sm:gap-4">

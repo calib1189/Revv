@@ -72,6 +72,24 @@ export function CloseIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function CompassIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path
+        d="M15 9l-2 6-4 2 2-6 4-2Z"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function BellIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
