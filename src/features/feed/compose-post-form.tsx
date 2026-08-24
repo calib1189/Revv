@@ -17,6 +17,9 @@ import { trackEvent } from "@/lib/analytics/track";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
+import { VideoEditor } from "@/features/editor/video-editor";
+import { CameraRecorder } from "@/features/editor/camera-recorder";
+import { CameraIcon } from "@/components/ui/icons";
 import type { Vehicle } from "@/lib/db/vehicles";
 
 type Mode = "photo" | "video";
@@ -58,6 +61,8 @@ export function ComposePostForm({
   const [mode, setMode] = useState<Mode>("photo");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
   const [video, setVideo] = useState<SelectedVideo | null>(null);
+  const [editorSource, setEditorSource] = useState<File | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const [caption, setCaption] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +104,16 @@ export function ComposePostForm({
     });
   }
 
-  async function handleSelectVideo(file: File) {
+  function handleSelectVideo(file: File) {
+    setError(null);
+    // Raw picks/recordings go through the editor first — duration is
+    // checked against the *exported* (possibly trimmed) clip, not this
+    // source file, since trimming a too-long clip is the whole point.
+    setEditorSource(file);
+  }
+
+  async function handleEditorExported(file: File) {
+    setEditorSource(null);
     setError(null);
     const fileError = validateVideoFile(file);
     if (fileError) return setError(fileError);
@@ -289,15 +303,44 @@ export function ComposePostForm({
             </p>
           )}
 
-          <Button
-            type="button"
-            variant="secondary"
-            className="px-3 py-1.5 text-sm"
-            onClick={() => videoInputRef.current?.click()}
-          >
-            {video ? "Choose a different video" : "Choose video"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="px-3 py-1.5 text-sm"
+              onClick={() => videoInputRef.current?.click()}
+            >
+              {video ? "Choose a different video" : "Choose video"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
+              onClick={() => setIsRecording(true)}
+            >
+              <CameraIcon className="h-4 w-4" />
+              Record
+            </Button>
+          </div>
         </div>
+      )}
+
+      {editorSource && (
+        <VideoEditor
+          source={editorSource}
+          onCancel={() => setEditorSource(null)}
+          onExported={handleEditorExported}
+        />
+      )}
+
+      {isRecording && (
+        <CameraRecorder
+          onClose={() => setIsRecording(false)}
+          onCaptured={(file) => {
+            setIsRecording(false);
+            setEditorSource(file);
+          }}
+        />
       )}
 
       {vehicles.length > 0 && (
