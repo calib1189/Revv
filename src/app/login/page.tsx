@@ -14,7 +14,7 @@ export default async function LoginPage({
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
       <Link href="/" className="mb-8 self-center">
-        <Image src="/logo.png" alt="REVV" width={88} height={88} priority className="rounded-2xl" />
+        <Image src="/logo.png" alt="REVV" width={160} height={131} priority />
       </Link>
       <h1 className="mb-6 text-xl font-semibold">Log in</h1>
 
