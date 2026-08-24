@@ -141,6 +141,25 @@ export async function updateProfileDisplayName(
   return data;
 }
 
+export const GARAGE_THEMES = ["workshop", "showroom", "midnight"] as const;
+export type GarageTheme = (typeof GARAGE_THEMES)[number];
+
+export async function updateProfileGarageTheme(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  theme: GarageTheme,
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ garage_theme: theme })
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function updateProfileAvatar(
   supabase: SupabaseClient<Database>,
   userId: string,
