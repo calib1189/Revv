@@ -162,7 +162,7 @@ export function SwipeSlide({
   return (
     <div
       ref={containerRef}
-      className={`relative ${slideHeight} w-full flex-shrink-0 snap-start bg-black`}
+      className={`relative ${slideHeight} w-full flex-shrink-0 snap-start overflow-hidden bg-black`}
     >
       {data.media.length > 0 &&
         (isVideo ? (
