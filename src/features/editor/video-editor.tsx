@@ -8,6 +8,7 @@ import { FILTER_PRESETS } from "@/features/editor/filters";
 import { aspectNeedsPan } from "@/features/editor/crop";
 import {
   DEFAULT_EDIT_STATE,
+  TEXT_FONTS,
   type EditState,
   type AspectRatioId,
   type TextLayer,
@@ -226,6 +227,7 @@ export function VideoEditor({
       y: 0.5,
       color: "#ffffff",
       fontSize: 64,
+      fontId: "sans",
     };
     setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
     setNewTextDraft("");
@@ -409,7 +411,7 @@ export function VideoEditor({
                   className={`h-14 w-14 rounded-xl bg-gradient-to-br from-zinc-500 to-zinc-800 ${
                     state.filterId === f.id ? "ring-2 ring-accent ring-offset-2 ring-offset-black" : ""
                   }`}
-                  style={{ filter: f.css }}
+                  style={{ filter: f.previewCss }}
                 />
                 <span className="text-xs text-white/80">{f.label}</span>
               </button>
@@ -438,29 +440,64 @@ export function VideoEditor({
             </div>
 
             {selectedLayer && (
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 p-3">
-                <div className="flex items-center gap-2">
-                  {TEXT_COLORS.map((c) => (
+              <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    {TEXT_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => updateTextLayer(selectedLayer.id, { color: c })}
+                        className={`h-6 w-6 rounded-full border-2 ${
+                          selectedLayer.color === c ? "border-accent" : "border-white/20"
+                        }`}
+                        style={{ backgroundColor: c }}
+                        aria-label={`Text color ${c}`}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeTextLayer(selectedLayer.id)}
+                    aria-label="Delete text"
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-white/60">Size</span>
+                  <input
+                    type="range"
+                    min={24}
+                    max={160}
+                    step={2}
+                    value={selectedLayer.fontSize}
+                    onChange={(e) =>
+                      updateTextLayer(selectedLayer.id, { fontSize: Number(e.target.value) })
+                    }
+                    className="flex-1"
+                  />
+                </div>
+
+                <div className="no-scrollbar flex gap-2 overflow-x-auto">
+                  {TEXT_FONTS.map((f) => (
                     <button
-                      key={c}
+                      key={f.id}
                       type="button"
-                      onClick={() => updateTextLayer(selectedLayer.id, { color: c })}
-                      className={`h-6 w-6 rounded-full border-2 ${
-                        selectedLayer.color === c ? "border-accent" : "border-white/20"
+                      onClick={() => updateTextLayer(selectedLayer.id, { fontId: f.id })}
+                      style={{ fontFamily: f.stack }}
+                      className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-sm ${
+                        selectedLayer.fontId === f.id
+                          ? "bg-accent text-accent-foreground"
+                          : "bg-white/10 text-white/80"
                       }`}
-                      style={{ backgroundColor: c }}
-                      aria-label={`Text color ${c}`}
-                    />
+                    >
+                      Aa
+                    </button>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeTextLayer(selectedLayer.id)}
-                  aria-label="Delete text"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
               </div>
             )}
             {!selectedLayer && state.textLayers.length > 0 && (

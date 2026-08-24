@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CameraFlipIcon, CloseIcon, CameraIcon } from "@/components/ui/icons";
+import { CameraFlipIcon, CloseIcon, CameraIcon, LockIcon } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
 function pickVideoMimeType(): string {
@@ -17,6 +17,10 @@ const MAX_RECORD_SECONDS = 180;
  * it's a video recording — the standard Instagram/Snapchat gesture, so
  * there's no separate photo/video mode to pick before you even shoot. */
 const HOLD_THRESHOLD_MS = 300;
+/** How far right the shutter has to be dragged, in pixels, while
+ * recording before it locks — past this the finger can lift and
+ * recording keeps going until a subsequent tap stops it. */
+const LOCK_DRAG_PX = 80;
 
 export function CameraRecorder({
   onCaptured,
@@ -30,8 +34,11 @@ export function CameraRecorder({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragStartXRef = useRef<number | null>(null);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const [isRecording, setIsRecording] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -127,6 +134,8 @@ export function CameraRecorder({
     recorder.start();
     recorderRef.current = recorder;
     setIsRecording(true);
+    setIsLocked(false);
+    setDragOffset(0);
     setSeconds(0);
     timerRef.current = setInterval(() => {
       setSeconds((s) => {
@@ -139,15 +148,37 @@ export function CameraRecorder({
   function stopRecording() {
     recorderRef.current?.stop();
     setIsRecording(false);
+    setIsLocked(false);
+    setDragOffset(0);
     if (timerRef.current) clearInterval(timerRef.current);
   }
 
-  function handleShutterDown() {
-    if (error || isRecording) return;
+  function handleShutterDown(e: React.PointerEvent<HTMLButtonElement>) {
+    if (error) return;
+    if (isRecording) {
+      // A fresh press while already recording only happens once the
+      // finger has lifted after locking — that's the "press again to
+      // stop" gesture.
+      if (isLocked) stopRecording();
+      return;
+    }
+    dragStartXRef.current = e.clientX;
+    // Keeps receiving move/up events for this touch even once the
+    // finger drags outside the button's bounds — required for the
+    // drag-to-lock gesture to track all the way to the lock target.
+    e.currentTarget.setPointerCapture(e.pointerId);
     holdTimerRef.current = setTimeout(() => {
       holdTimerRef.current = null;
       startRecording();
     }, HOLD_THRESHOLD_MS);
+  }
+
+  function handleShutterMove(e: React.PointerEvent<HTMLButtonElement>) {
+    if (!isRecording || isLocked || dragStartXRef.current == null) return;
+    const dx = e.clientX - dragStartXRef.current;
+    const clamped = Math.min(Math.max(dx, 0), LOCK_DRAG_PX);
+    setDragOffset(clamped);
+    if (dx >= LOCK_DRAG_PX) setIsLocked(true);
   }
 
   function handleShutterUp() {
@@ -155,10 +186,13 @@ export function CameraRecorder({
       // Released before the hold threshold — a tap, not a hold.
       clearTimeout(holdTimerRef.current);
       holdTimerRef.current = null;
+      dragStartXRef.current = null;
       capturePhoto();
       return;
     }
-    if (isRecording) stopRecording();
+    dragStartXRef.current = null;
+    // Locked recordings ignore release — they only stop on the next tap.
+    if (isRecording && !isLocked) stopRecording();
   }
 
   function formatTime(total: number) {
@@ -192,6 +226,12 @@ export function CameraRecorder({
           <span className="flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1 text-sm font-medium text-white">
             <span className="h-2 w-2 rounded-full bg-accent" />
             {formatTime(seconds)}
+            {isLocked && (
+              <>
+                <LockIcon className="ml-0.5 h-3.5 w-3.5 text-white/70" />
+                <span className="text-xs font-normal text-white/60">tap to stop</span>
+              </>
+            )}
           </span>
         ) : (
           !error && (
@@ -221,19 +261,41 @@ export function CameraRecorder({
       )}
 
       <div className="relative z-10 mt-auto flex items-center justify-center pb-[calc(2rem+env(safe-area-inset-bottom))]">
+        {isRecording && !isLocked && (
+          <div
+            className="pointer-events-none absolute top-1/2 h-12 w-[136px] -translate-y-1/2 rounded-full bg-black/40"
+            style={{ left: "calc(50% + 24px)" }}
+          >
+            <LockIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60" />
+            <span
+              className="absolute top-1/2 left-2 flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow"
+              style={{ transform: `translate(${dragOffset}px, -50%)` }}
+            >
+              <CameraIcon className="h-4 w-4" />
+            </span>
+          </div>
+        )}
         <button
           type="button"
           onPointerDown={handleShutterDown}
+          onPointerMove={handleShutterMove}
           onPointerUp={handleShutterUp}
-          onPointerLeave={() => {
+          onPointerCancel={() => {
             if (holdTimerRef.current) {
               clearTimeout(holdTimerRef.current);
               holdTimerRef.current = null;
             }
+            dragStartXRef.current = null;
+            if (isRecording && !isLocked) stopRecording();
           }}
           disabled={!!error}
-          aria-label="Tap for photo, hold for video"
-          className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white disabled:opacity-40"
+          aria-label={isLocked ? "Stop recording" : "Tap for photo, hold for video"}
+          className="relative z-10 flex h-20 w-20 select-none items-center justify-center rounded-full border-4 border-white disabled:opacity-40"
+          style={{
+            touchAction: "none",
+            WebkitUserSelect: "none",
+            WebkitTouchCallout: "none",
+          }}
         >
           <span
             className={`bg-accent transition-all ${

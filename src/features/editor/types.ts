@@ -8,6 +8,21 @@ export interface CropRect {
   height: number;
 }
 
+export type TextFontId = "sans" | "serif" | "rounded" | "impact" | "condensed";
+
+/** System font stacks only, deliberately — a canvas ctx.font that names
+ * a web font which hasn't finished loading yet silently falls back and
+ * can flicker once it does, and every frame in the live-preview loop
+ * would race that. System fonts are always already available, so there's
+ * no load to race, at the cost of not having infinite font choice. */
+export const TEXT_FONTS: { id: TextFontId; label: string; stack: string }[] = [
+  { id: "sans", label: "Sans", stack: "system-ui, -apple-system, sans-serif" },
+  { id: "serif", label: "Serif", stack: "Georgia, 'Times New Roman', serif" },
+  { id: "rounded", label: "Rounded", stack: "ui-rounded, -apple-system, sans-serif" },
+  { id: "impact", label: "Impact", stack: "Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif" },
+  { id: "condensed", label: "Condensed", stack: "'Arial Narrow', sans-serif" },
+];
+
 export interface TextLayer {
   id: string;
   text: string;
@@ -16,6 +31,7 @@ export interface TextLayer {
   y: number;
   color: string;
   fontSize: number;
+  fontId: TextFontId;
 }
 
 export type AspectRatioId = "9:16" | "1:1" | "4:5" | "original";

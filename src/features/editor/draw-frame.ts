@@ -1,5 +1,7 @@
 import { cropRectForAspect } from "@/features/editor/crop";
-import { getFilterCss } from "@/features/editor/filters";
+import { getFilterPreset } from "@/features/editor/filters";
+import { applyFilter } from "@/features/editor/pixel-filters";
+import { TEXT_FONTS } from "@/features/editor/types";
 import type { EditState } from "@/features/editor/types";
 
 export type MediaSource = HTMLVideoElement | HTMLImageElement;
@@ -11,13 +13,22 @@ function sourceDimensions(source: MediaSource): { width: number; height: number 
   return { width: source.naturalWidth, height: source.naturalHeight };
 }
 
+function fontStack(fontId: string): string {
+  return TEXT_FONTS.find((f) => f.id === fontId)?.stack ?? TEXT_FONTS[0].stack;
+}
+
 /** Draws one composited frame — cropped, filtered, with text layers on
  * top — onto a canvas. Shared by the video editor (per animation frame)
  * and the photo editor (once, for both preview and export) — a photo is
  * just a source with a single frame, so the same crop/filter/text math
  * applies unchanged. Used identically for the live edit preview and for
  * the final export, so what's on screen while editing is exactly what
- * ends up in the output, not an approximation of it. */
+ * ends up in the output, not an approximation of it.
+ *
+ * Filters are baked in via direct pixel manipulation (pixel-filters.ts),
+ * not CanvasRenderingContext2D.filter — WebKit's support for that API is
+ * inconsistent enough in practice that relying on it means filters
+ * silently do nothing on some devices. */
 export function drawFrame(
   ctx: CanvasRenderingContext2D,
   source: MediaSource,
@@ -34,13 +45,18 @@ export function drawFrame(
   const sw = crop.width * width;
   const sh = crop.height * height;
 
-  ctx.filter = getFilterCss(state.filterId);
   ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvasWidth, canvasHeight);
-  ctx.filter = "none";
+
+  const preset = getFilterPreset(state.filterId);
+  if (state.filterId !== "original") {
+    const frame = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+    applyFilter(frame, preset);
+    ctx.putImageData(frame, 0, 0);
+  }
 
   for (const layer of state.textLayers) {
     const fontSize = layer.fontSize * (canvasWidth / 1080);
-    ctx.font = `700 ${fontSize}px system-ui, -apple-system, sans-serif`;
+    ctx.font = `700 ${fontSize}px ${fontStack(layer.fontId)}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.lineJoin = "round";
