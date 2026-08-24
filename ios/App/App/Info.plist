@@ -24,6 +24,20 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.calib1189.revv.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Not a real web origin — exists only so Google/Apple's
+				     OAuth redirect can hand control back to this app after
+				     login completes in the system browser view. -->
+				<string>revv</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -10,6 +10,30 @@ export function OAuthButtons() {
   async function handleOAuth(provider: "google" | "apple") {
     setPending(provider);
     const supabase = createClient();
+
+    const { Capacitor } = await import("@capacitor/core");
+    if (Capacitor.isNativePlatform()) {
+      // Google (and, per Apple's own guidance, Apple too) refuses to show
+      // its login page inside an app's embedded WebView — it has to run
+      // in the system browser. skipBrowserRedirect gets us the login URL
+      // without Supabase auto-navigating this WebView to it; Browser.open
+      // shows it in an SFSafariViewController instead. The custom-scheme
+      // redirectTo is what hands control back — see native-app-bridge.tsx
+      // for the other half, which catches it and finishes the flow.
+      const { Browser } = await import("@capacitor/browser");
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: "revv://auth/callback", skipBrowserRedirect: true },
+      });
+      if (error || !data.url) {
+        setPending(null);
+        return;
+      }
+      await Browser.open({ url: data.url });
+      setPending(null);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${window.location.origin}/auth/callback` },
