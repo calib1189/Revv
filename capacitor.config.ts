@@ -7,7 +7,9 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // still has to point at *something* on disk (Capacitor's CLI requires
 // it to exist), so it's a placeholder that's never actually served.
 const config: CapacitorConfig = {
-  appId: "com.revv.app",
+  // "com.revv.app" was already taken — bundle IDs are globally unique
+  // across every Apple developer account, not just this one.
+  appId: "com.calib1189.revv",
   appName: "REVV",
   webDir: "public",
   server: {
