@@ -5,7 +5,20 @@ import { CameraFlipIcon, CloseIcon, CameraIcon, LockIcon, GalleryIcon, CheckIcon
 import { Callout } from "@/components/ui/callout";
 
 function pickVideoMimeType(): string {
-  const candidates = ["video/mp4;codecs=avc1", "video/webm;codecs=vp9", "video/webm"];
+  // Must declare an audio codec, not just video (avc1 alone) — the stream
+  // being recorded here always includes a real microphone track, and
+  // MediaRecorder can drop the audio track entirely when the codecs
+  // string only names a video codec. This is almost certainly why
+  // recordings came out with no audio: it was silently video-only from
+  // the moment it was captured, before the video ever reached the editor
+  // or export — no amount of fixing the export pipeline could recover
+  // audio that was never actually recorded in the first place.
+  const candidates = [
+    "video/mp4;codecs=avc1,mp4a.40.2",
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm",
+  ];
   for (const type of candidates) {
     if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(type)) return type;
   }
