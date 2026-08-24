@@ -492,6 +492,12 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["push_subscriptions"]["Insert"]>;
         Relationships: never[];
       };
+      signup_attempts: {
+        Row: { id: string; ip: string; created_at: string };
+        Insert: { id?: string; ip: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["signup_attempts"]["Insert"]>;
+        Relationships: never[];
+      };
       blocks: {
         Row: { blocker_id: string; blocked_id: string; created_at: string };
         Insert: {

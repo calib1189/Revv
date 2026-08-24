@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId, markProfileOnboarded } from "@/lib/db/profiles";
+import { ClaimUsernameForm } from "@/features/profile/claim-username-form";
 import { PlusIcon, UsersIcon, HomeIcon } from "@/components/ui/icons";
+
+/** Matches the auth.users trigger's fallback username, e.g. "user_a1b2c3d4"
+ * — the shape an OAuth signup gets since Google/Apple never collect one. */
+const AUTO_USERNAME_PATTERN = /^user_[0-9a-f]{8}$/;
 
 const STEPS = [
   {
@@ -47,6 +52,12 @@ export default async function WelcomePage() {
       <p className="mt-2 text-sm text-muted">
         The social platform for your build. Here&apos;s where to start.
       </p>
+
+      {profile?.username && AUTO_USERNAME_PATTERN.test(profile.username) && (
+        <div className="mt-6">
+          <ClaimUsernameForm />
+        </div>
+      )}
 
       <div className="mt-8 flex flex-col gap-3">
         {STEPS.map(({ href, icon: Icon, title, description }) => (

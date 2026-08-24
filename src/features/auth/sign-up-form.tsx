@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { signUp, type AuthActionState } from "@/features/auth/actions";
+import { OAuthButtons } from "@/features/auth/oauth-buttons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,18 @@ export function SignUpForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {state.error && <Callout tone="danger">{state.error}</Callout>}
+      <OAuthButtons />
+
+      {/* Honeypot — invisible to real users, tab-skipped, never
+          autofilled. A bot that blindly fills every input trips it. */}
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="absolute -left-[9999px] h-0 w-0 opacity-0"
+      />
 
       <div>
         <Label htmlFor="username">Username</Label>

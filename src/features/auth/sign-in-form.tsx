@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { signIn, type AuthActionState } from "@/features/auth/actions";
+import { OAuthButtons } from "@/features/auth/oauth-buttons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +20,7 @@ export function SignInForm({ next }: { next?: string }) {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {state.error && <Callout tone="danger">{state.error}</Callout>}
+      <OAuthButtons />
       <input type="hidden" name="next" value={next ?? "/feed"} />
 
       <div>

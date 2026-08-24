@@ -7,6 +7,14 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { validateUsername } from "@/lib/validation/username";
 import { trackEvent } from "@/lib/analytics/track";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { isUnderSignupRateLimit, recordSignupAttempt } from "@/lib/auth/signup-rate-limit";
+
+async function getClientIp(): Promise<string> {
+  const h = await headers();
+  const forwardedFor = h.get("x-forwarded-for");
+  if (forwardedFor) return forwardedFor.split(",")[0].trim();
+  return h.get("x-real-ip") ?? "unknown";
+}
 
 export interface AuthActionState {
   error: string | null;
@@ -26,6 +34,13 @@ export async function signUp(
   _prevState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
+  // Honeypot: a field real users never see or fill (hidden off-screen in
+  // the form). A simple bot that fills every input trips this — reject
+  // quietly, no hint that anything special happened.
+  if (String(formData.get("website") ?? "").length > 0) {
+    return { error: "Something went wrong. Try again." };
+  }
+
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const username = String(formData.get("username") ?? "").trim();
@@ -39,6 +54,12 @@ export async function signUp(
 
   const origin = (await headers()).get("origin");
   const supabase = await createClient();
+
+  const ip = await getClientIp();
+  if (!(await isUnderSignupRateLimit(supabase, ip))) {
+    return { error: "Too many signups from this network. Try again later." };
+  }
+  await recordSignupAttempt(supabase, ip);
 
   const { data, error } = await supabase.auth.signUp({
     email,
