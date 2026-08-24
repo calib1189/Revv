@@ -96,6 +96,19 @@ export async function updateProfileBio(
   return data;
 }
 
+export async function markProfileOnboarded(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ onboarded_at: new Date().toISOString() })
+    .eq("id", userId)
+    .is("onboarded_at", null);
+
+  if (error) throw error;
+}
+
 export async function updateProfileDisplayName(
   supabase: SupabaseClient<Database>,
   userId: string,

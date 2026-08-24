@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/client";
 // vehicles and posts are publicly readable), so a plain prefix match would
 // wrongly gate them.
 const PROTECTED_EXACT = [
+  "/welcome",
   "/garage",
   "/garage/new",
   "/feed/new",

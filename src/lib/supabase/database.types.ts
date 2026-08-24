@@ -21,6 +21,7 @@ export interface Database {
           bio: string | null;
           avatar_media_id: string | null;
           is_admin: boolean;
+          onboarded_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -30,6 +31,7 @@ export interface Database {
           bio?: string | null;
           avatar_media_id?: string | null;
           is_admin?: boolean;
+          onboarded_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -39,6 +41,7 @@ export interface Database {
           bio?: string | null;
           avatar_media_id?: string | null;
           is_admin?: boolean;
+          onboarded_at?: string | null;
           created_at?: string;
         };
         Relationships: never[];

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { validateUsername } from "@/lib/validation/username";
 import { trackEvent } from "@/lib/analytics/track";
+import { getProfileByUserId } from "@/lib/db/profiles";
 
 export interface AuthActionState {
   error: string | null;
@@ -70,12 +71,17 @@ export async function signIn(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) return { error: friendlyError(error.message) };
+
+  if (data.user) {
+    const profile = await getProfileByUserId(supabase, data.user.id);
+    if (!profile?.onboarded_at) redirect("/welcome");
+  }
 
   redirect(next.startsWith("/") ? next : "/feed");
 }
