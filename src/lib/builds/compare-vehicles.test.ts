@@ -17,7 +17,6 @@ function makeVehicle(overrides: Partial<Vehicle>): Vehicle {
     nickname: null,
     description: null,
     hero_media_id: null,
-    garage_cutout_media_id: null,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };

@@ -22,8 +22,6 @@ export interface Database {
           avatar_media_id: string | null;
           is_admin: boolean;
           onboarded_at: string | null;
-          garage_theme: string;
-          garage_layout: Json;
           created_at: string;
         };
         Insert: {
@@ -34,8 +32,6 @@ export interface Database {
           avatar_media_id?: string | null;
           is_admin?: boolean;
           onboarded_at?: string | null;
-          garage_theme?: string;
-          garage_layout?: Json;
           created_at?: string;
         };
         Update: {
@@ -46,8 +42,6 @@ export interface Database {
           avatar_media_id?: string | null;
           is_admin?: boolean;
           onboarded_at?: string | null;
-          garage_theme?: string;
-          garage_layout?: Json;
           created_at?: string;
         };
         Relationships: never[];
@@ -91,7 +85,6 @@ export interface Database {
           nickname: string | null;
           description: string | null;
           hero_media_id: string | null;
-          garage_cutout_media_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -108,7 +101,6 @@ export interface Database {
           nickname?: string | null;
           description?: string | null;
           hero_media_id?: string | null;
-          garage_cutout_media_id?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;

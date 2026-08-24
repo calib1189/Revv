@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Json } from "@/lib/supabase/database.types";
-import type { GarageLayout } from "@/lib/garage/layout";
+import type { Database } from "@/lib/supabase/database.types";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
@@ -134,41 +133,6 @@ export async function updateProfileDisplayName(
   const { data, error } = await supabase
     .from("profiles")
     .update({ display_name: displayName })
-    .eq("id", userId)
-    .select("*")
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-export const GARAGE_THEMES = ["workshop", "showroom", "midnight"] as const;
-export type GarageTheme = (typeof GARAGE_THEMES)[number];
-
-export async function updateProfileGarageTheme(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-  theme: GarageTheme,
-): Promise<Profile> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({ garage_theme: theme })
-    .eq("id", userId)
-    .select("*")
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-export async function updateProfileGarageLayout(
-  supabase: SupabaseClient<Database>,
-  userId: string,
-  layout: GarageLayout,
-): Promise<Profile> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({ garage_layout: layout as unknown as Json })
     .eq("id", userId)
     .select("*")
     .single();
