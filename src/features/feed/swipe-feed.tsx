@@ -46,13 +46,21 @@ export function SwipeFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, hasMore]);
 
+  // Full-bleed: the video runs from the very top of the screen (behind the
+  // now-transparent top nav) down to the top edge of the bottom nav — only
+  // the bottom nav's height is reserved, not the top's. The negative top
+  // margin is what pulls it up underneath the sticky header instead of
+  // starting below it.
   const feedHeight = isAuthenticated
-    ? "h-[calc(100dvh-56px-64px)]"
-    : "h-[calc(100dvh-56px)]";
+    ? "h-[calc(100dvh-4rem-env(safe-area-inset-bottom))]"
+    : "h-[100dvh]";
+  const pullBehindHeader = "-mt-[calc(3.5rem+env(safe-area-inset-top))]";
 
   if (posts.length === 0) {
     return (
-      <div className={`flex ${feedHeight} flex-col items-center justify-center gap-4 text-center`}>
+      <div
+        className={`flex ${feedHeight} ${pullBehindHeader} flex-col items-center justify-center gap-4 text-center`}
+      >
         <p className="text-lg font-medium">No posts yet</p>
         <p className="max-w-xs text-sm text-muted">
           {isAuthenticated
@@ -70,7 +78,7 @@ export function SwipeFeed({
   }
 
   return (
-    <div className="relative">
+    <div className={`relative ${pullBehindHeader}`}>
       <div className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}>
         {posts.map((post) => (
           <SwipeSlide key={post.post.id} data={post} slideHeight={feedHeight} />

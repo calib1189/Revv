@@ -9,10 +9,12 @@ export function SaveButton({
   postId,
   initialSaved,
   isAuthenticated,
+  iconClassName = "h-5 w-5",
 }: {
   postId: string;
   initialSaved: boolean;
   isAuthenticated: boolean;
+  iconClassName?: string;
 }) {
   const [saved, setSaved] = useState(initialSaved);
   const [, startTransition] = useTransition();
@@ -20,7 +22,7 @@ export function SaveButton({
   if (!isAuthenticated) {
     return (
       <Link href="/login" className="text-muted">
-        <BookmarkIcon className="h-5 w-5" />
+        <BookmarkIcon className={iconClassName} />
       </Link>
     );
   }
@@ -48,7 +50,7 @@ export function SaveButton({
         saved ? "text-foreground" : "text-muted hover:text-foreground"
       }`}
     >
-      <BookmarkIcon className="h-5 w-5" filled={saved} />
+      <BookmarkIcon className={iconClassName} filled={saved} />
     </button>
   );
 }

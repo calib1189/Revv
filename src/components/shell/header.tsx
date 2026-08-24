@@ -59,9 +59,7 @@ export async function Header() {
 
   return (
     <>
-      <header className="glass-raised sticky top-0 z-10 rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)]">
-        <TopTabBar />
-      </header>
+      <TopTabBar />
       <nav className="glass-raised fixed inset-x-0 bottom-0 z-10 rounded-none border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)]">
         <BottomTabBar username={username} unreadInboxCount={messageCount + notificationCount} />
       </nav>

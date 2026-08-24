@@ -12,23 +12,9 @@ import { CommentIcon, EyeIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import type { PostCardData } from "@/features/feed/post-card";
 
-function MuteIcon({ muted }: { muted: boolean }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="h-5 w-5">
-      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
-      {muted ? (
-        <path d="M17 9l4 6M21 9l-4 6" strokeLinecap="round" />
-      ) : (
-        <path d="M16 8.5a4 4 0 0 1 0 7" strokeLinecap="round" />
-      )}
-    </svg>
-  );
-}
-
 function VideoMedia({ url }: { url: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [muted, setMuted] = useState(true);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -54,21 +40,11 @@ function VideoMedia({ url }: { url: string }) {
       <video
         ref={videoRef}
         src={url}
-        muted={muted}
         loop
         playsInline
         preload="metadata"
-        onClick={() => setMuted((m) => !m)}
         className="h-full w-full object-contain"
       />
-      <button
-        type="button"
-        onClick={() => setMuted((m) => !m)}
-        aria-label={muted ? "Unmute" : "Mute"}
-        className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
-      >
-        <MuteIcon muted={muted} />
-      </button>
     </div>
   );
 }
@@ -155,65 +131,65 @@ export function SwipeSlide({
         ))}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 pb-6">
-        <div className="pointer-events-auto flex items-end justify-between gap-4">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
-            <Link href={`/u/${data.authorUsername}`} className="flex-shrink-0">
-              <RankFrame score={data.vehicleRatingScore} compact hideBadge className="rounded-full">
-                <Avatar
-                  username={data.authorUsername}
-                  avatarUrl={data.authorAvatarUrl}
-                  className="h-10 w-10 text-sm"
-                />
-              </RankFrame>
+        <div className="pointer-events-auto flex min-w-0 max-w-[calc(100%-4rem)] items-start gap-3">
+          <Link href={`/u/${data.authorUsername}`} className="flex-shrink-0">
+            <RankFrame score={data.vehicleRatingScore} compact hideBadge className="rounded-full">
+              <Avatar
+                username={data.authorUsername}
+                avatarUrl={data.authorAvatarUrl}
+                className="h-10 w-10 text-sm"
+              />
+            </RankFrame>
+          </Link>
+          <div className="min-w-0 flex-1 text-white">
+            <Link href={`/u/${data.authorUsername}`} className="text-sm font-semibold hover:underline">
+              @{data.authorUsername}
             </Link>
-            <div className="min-w-0 flex-1 text-white">
-              <Link href={`/u/${data.authorUsername}`} className="text-sm font-semibold hover:underline">
-                @{data.authorUsername}
+            {data.vehicleTitle && data.post.vehicle_id && (
+              <Link
+                href={`/garage/${data.post.vehicle_id}`}
+                className="block text-xs text-white/70 hover:text-white"
+              >
+                {data.vehicleTitle}
               </Link>
-              {data.vehicleTitle && data.post.vehicle_id && (
-                <Link
-                  href={`/garage/${data.post.vehicle_id}`}
-                  className="block text-xs text-white/70 hover:text-white"
-                >
-                  {data.vehicleTitle}
-                </Link>
-              )}
-              {data.post.caption && (
-                <CaptionText
-                  text={data.post.caption}
-                  className="mt-1 line-clamp-2 text-sm text-white/90"
-                />
-              )}
-              <p className="mt-1 flex items-center gap-1 text-xs text-white/60">
-                <EyeIcon className="h-3.5 w-3.5" />
-                {formatCompactNumber(data.viewCount)} view{data.viewCount === 1 ? "" : "s"}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-shrink-0 flex-col items-center gap-4 text-white">
-            <LikeButton
-              postId={data.post.id}
-              initialLiked={data.isLiked}
-              initialCount={data.likeCount}
-              isAuthenticated={data.isAuthenticated}
-            />
-            <Link
-              href={`/p/${data.post.id}`}
-              className="flex flex-col items-center gap-0.5 text-white/90 hover:text-white"
-            >
-              <CommentIcon className="h-5 w-5" />
-              {data.commentCount > 0 && (
-                <span className="text-xs">{data.commentCount}</span>
-              )}
-            </Link>
-            <SaveButton
-              postId={data.post.id}
-              initialSaved={data.isSaved}
-              isAuthenticated={data.isAuthenticated}
-            />
+            )}
+            {data.post.caption && (
+              <CaptionText
+                text={data.post.caption}
+                className="mt-1 line-clamp-2 text-sm text-white/90"
+              />
+            )}
+            <p className="mt-1 flex items-center gap-1 text-xs text-white/60">
+              <EyeIcon className="h-3.5 w-3.5" />
+              {formatCompactNumber(data.viewCount)} view{data.viewCount === 1 ? "" : "s"}
+            </p>
           </div>
         </div>
+      </div>
+
+      <div className="pointer-events-auto absolute right-3 top-1/2 flex -translate-y-1/2 flex-col items-center gap-6 text-white [&_svg]:drop-shadow-[0_1px_4px_rgb(0_0_0_/_0.6)]">
+        <LikeButton
+          postId={data.post.id}
+          initialLiked={data.isLiked}
+          initialCount={data.likeCount}
+          isAuthenticated={data.isAuthenticated}
+          iconClassName="h-8 w-8"
+        />
+        <Link
+          href={`/p/${data.post.id}`}
+          className="flex flex-col items-center gap-1 text-white/90 hover:text-white"
+        >
+          <CommentIcon className="h-8 w-8" />
+          {data.commentCount > 0 && (
+            <span className="text-xs font-medium">{data.commentCount}</span>
+          )}
+        </Link>
+        <SaveButton
+          postId={data.post.id}
+          initialSaved={data.isSaved}
+          isAuthenticated={data.isAuthenticated}
+          iconClassName="h-8 w-8"
+        />
       </div>
     </div>
   );

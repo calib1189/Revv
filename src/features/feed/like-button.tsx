@@ -10,11 +10,13 @@ export function LikeButton({
   initialLiked,
   initialCount,
   isAuthenticated,
+  iconClassName = "h-5 w-5",
 }: {
   postId: string;
   initialLiked: boolean;
   initialCount: number;
   isAuthenticated: boolean;
+  iconClassName?: string;
 }) {
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
@@ -26,7 +28,7 @@ export function LikeButton({
         href="/login"
         className="flex items-center gap-1.5 text-sm text-muted"
       >
-        <HeartIcon className="h-5 w-5" />
+        <HeartIcon className={iconClassName} />
         {count > 0 && <span>{count}</span>}
       </Link>
     );
@@ -57,7 +59,7 @@ export function LikeButton({
         liked ? "text-accent" : "text-muted hover:text-foreground"
       }`}
     >
-      <HeartIcon className="h-5 w-5" filled={liked} />
+      <HeartIcon className={iconClassName} filled={liked} />
       {count > 0 && <span>{count}</span>}
     </button>
   );
