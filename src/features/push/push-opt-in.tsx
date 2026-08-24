@@ -18,7 +18,20 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return array;
 }
 
-type Status = "loading" | "unsupported" | "denied" | "off" | "on";
+type Status = "loading" | "unsupported" | "ios-needs-install" | "denied" | "off" | "on";
+
+function isIos(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
+function isStandalone(): boolean {
+  // iOS Safari exposes this non-standard property instead of matching
+  // display-mode: standalone the way other browsers do.
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
 
 export function PushOptIn() {
   const [status, setStatus] = useState<Status>("loading");
@@ -28,7 +41,7 @@ export function PushOptIn() {
   useEffect(() => {
     (async () => {
       if (!VAPID_PUBLIC_KEY || !("serviceWorker" in navigator) || !("PushManager" in window)) {
-        setStatus("unsupported");
+        setStatus(isIos() && !isStandalone() ? "ios-needs-install" : "unsupported");
         return;
       }
       if (Notification.permission === "denied") {
@@ -95,7 +108,13 @@ export function PushOptIn() {
 
   return (
     <div>
-      {status === "denied" ? (
+      {status === "ios-needs-install" ? (
+        <p className="text-sm text-muted">
+          To get push notifications on iPhone, add REVV to your Home Screen
+          first: tap Share, then &quot;Add to Home Screen.&quot; Open it from
+          there to turn notifications on.
+        </p>
+      ) : status === "denied" ? (
         <p className="text-sm text-muted">
           Notifications are blocked for this site — enable them in your browser
           settings to turn this on.

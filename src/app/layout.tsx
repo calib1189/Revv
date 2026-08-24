@@ -20,6 +20,14 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "REVV",
   description: "The social platform for your build.",
+  // iOS only treats "Add to Home Screen" as a standalone app (full-screen,
+  // no Safari chrome) with this set — and push notifications only work
+  // from that standalone context on iOS, never in a plain Safari tab.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "REVV",
+  },
 };
 
 export const viewport: Viewport = {
