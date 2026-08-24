@@ -18,11 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
 import { VideoEditor } from "@/features/editor/video-editor";
+import { PhotoEditor } from "@/features/editor/photo-editor";
 import { CameraRecorder } from "@/features/editor/camera-recorder";
-import { CameraIcon } from "@/components/ui/icons";
+import { CameraIcon, UploadIcon } from "@/components/ui/icons";
 import type { Vehicle } from "@/lib/db/vehicles";
-
-type Mode = "photo" | "video";
 
 interface SelectedPhoto {
   file: File;
@@ -58,33 +57,34 @@ export function ComposePostForm({
   userId: string;
   vehicles: Vehicle[];
 }) {
-  const [mode, setMode] = useState<Mode>("photo");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
   const [video, setVideo] = useState<SelectedVideo | null>(null);
-  const [editorSource, setEditorSource] = useState<File | null>(null);
+  const [videoEditorSource, setVideoEditorSource] = useState<File | null>(null);
+  const [photoEditorSource, setPhotoEditorSource] = useState<File | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [caption, setCaption] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const photoInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const morePhotosInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  function switchMode(next: Mode) {
-    setError(null);
-    setMode(next);
-    if (next === "photo" && video) {
-      URL.revokeObjectURL(video.previewUrl);
-      setVideo(null);
-    }
-    if (next === "video" && photos.length > 0) {
-      photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-      setPhotos([]);
-    }
+  const mode: "photo" | "video" | null = video ? "video" : photos.length > 0 ? "photo" : null;
+
+  function clearVideo() {
+    if (video) URL.revokeObjectURL(video.previewUrl);
+    setVideo(null);
+  }
+
+  function clearPhotos() {
+    photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+    setPhotos([]);
   }
 
   function handleSelectPhotos(files: FileList) {
+    setError(null);
+    clearVideo();
     const next: SelectedPhoto[] = [...photos];
     for (const file of Array.from(files)) {
       const fileError = validateImageFile(file);
@@ -104,16 +104,47 @@ export function ComposePostForm({
     });
   }
 
-  function handleSelectVideo(file: File) {
+  function handleImportFiles(files: FileList) {
     setError(null);
-    // Raw picks/recordings go through the editor first — duration is
-    // checked against the *exported* (possibly trimmed) clip, not this
-    // source file, since trimming a too-long clip is the whole point.
-    setEditorSource(file);
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    if (fileArray.length === 1) {
+      const file = fileArray[0];
+      if (file.type.startsWith("video/")) {
+        clearPhotos();
+        setVideoEditorSource(file);
+      } else if (file.type.startsWith("image/")) {
+        setPhotoEditorSource(file);
+      } else {
+        setError("Choose a photo or a video.");
+      }
+      return;
+    }
+
+    // Multiple files at once only makes sense as a photo set — a post is
+    // either one video or a set of photos, never mixed.
+    const nonImages = fileArray.filter((f) => !f.type.startsWith("image/"));
+    if (nonImages.length > 0) {
+      setError("When picking more than one file, they all need to be photos.");
+      return;
+    }
+    handleSelectPhotos(files);
   }
 
-  async function handleEditorExported(file: File) {
-    setEditorSource(null);
+  function handleCameraCaptured(file: File, kind: "photo" | "video") {
+    setIsRecording(false);
+    setError(null);
+    if (kind === "video") {
+      clearPhotos();
+      setVideoEditorSource(file);
+    } else {
+      setPhotoEditorSource(file);
+    }
+  }
+
+  async function handleVideoEditorExported(file: File) {
+    setVideoEditorSource(null);
     setError(null);
     const fileError = validateVideoFile(file);
     if (fileError) return setError(fileError);
@@ -126,13 +157,18 @@ export function ComposePostForm({
       return setError("Couldn't read that video file.");
     }
 
-    if (video) URL.revokeObjectURL(video.previewUrl);
+    clearVideo();
     setVideo({ file, previewUrl: URL.createObjectURL(file) });
   }
 
-  function removeVideo() {
-    if (video) URL.revokeObjectURL(video.previewUrl);
-    setVideo(null);
+  function handlePhotoEditorExported(file: File) {
+    setPhotoEditorSource(null);
+    setError(null);
+    const fileError = validateImageFile(file);
+    if (fileError) return setError(fileError);
+
+    clearVideo();
+    setPhotos((prev) => [...prev, { file, previewUrl: URL.createObjectURL(file) }]);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -142,8 +178,10 @@ export function ComposePostForm({
     if (mode === "photo") {
       const photoError = validatePhotoCount(photos.length);
       if (photoError) return setError(photoError);
-    } else if (!video) {
-      return setError("Choose a video.");
+    } else if (mode === "video" && !video) {
+      return setError("Add a video.");
+    } else if (!mode) {
+      return setError("Record or import a photo or video first.");
     }
     const captionError = validateCaption(caption);
     if (captionError) return setError(captionError);
@@ -154,7 +192,7 @@ export function ComposePostForm({
       const post = await createPost(supabase, {
         author_id: userId,
         vehicle_id: vehicleId || null,
-        post_type: mode,
+        post_type: mode!,
         caption: caption.trim() || null,
       });
 
@@ -187,7 +225,7 @@ export function ComposePostForm({
 
       await trackEvent(supabase, userId, "post_created", {
         post_id: post.id,
-        post_type: mode,
+        post_type: mode!,
       });
 
       router.push(`/p/${post.id}`);
@@ -201,147 +239,140 @@ export function ComposePostForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && <Callout tone="danger">{error}</Callout>}
 
-      <div className="glass inline-flex w-fit rounded-full p-1">
-        {(["photo", "video"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => switchMode(m)}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium capitalize transition-colors ${
-              mode === m
-                ? "bg-accent text-accent-foreground"
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            {m}
-          </button>
-        ))}
-      </div>
+      <input
+        ref={importInputRef}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) handleImportFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={morePhotosInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) handleSelectPhotos(e.target.files);
+          e.target.value = "";
+        }}
+      />
 
-      {mode === "photo" ? (
+      {mode === null && (
+        <div>
+          <Label>Photo or video</Label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setIsRecording(true)}
+              className="glass flex flex-col items-center gap-2 rounded-2xl py-8 text-sm font-medium transition-opacity hover:opacity-90"
+            >
+              <CameraIcon className="h-6 w-6" />
+              Record
+            </button>
+            <button
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+              className="glass flex flex-col items-center gap-2 rounded-2xl py-8 text-sm font-medium transition-opacity hover:opacity-90"
+            >
+              <UploadIcon className="h-6 w-6" />
+              Import from device
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === "photo" && (
         <div>
           <Label>Photos</Label>
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files?.length) handleSelectPhotos(e.target.files);
-              e.target.value = "";
-            }}
-          />
-
-          {photos.length > 0 && (
-            <div className="mb-3 grid grid-cols-3 gap-2">
-              {photos.map((photo, i) => (
-                <div key={i} className="group relative aspect-square overflow-hidden rounded-lg bg-surface">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset */}
-                  <img
-                    src={photo.previewUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(i)}
-                    aria-label="Remove photo"
-                    className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <Button
-            type="button"
-            variant="secondary"
-            className="px-3 py-1.5 text-sm"
-            onClick={() => photoInputRef.current?.click()}
-          >
-            {photos.length > 0 ? "Add more photos" : "Choose photos"}
-          </Button>
-        </div>
-      ) : (
-        <div>
-          <Label>Video</Label>
-          <input
-            ref={videoInputRef}
-            type="file"
-            accept="video/mp4,video/webm,video/quicktime"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleSelectVideo(file);
-              e.target.value = "";
-            }}
-          />
-
-          {video ? (
-            <div className="relative mb-3 aspect-[9/16] max-h-96 w-fit overflow-hidden rounded-lg bg-black">
-              <video
-                src={video.previewUrl}
-                controls
-                playsInline
-                className="h-full w-full object-contain"
-              />
-              <button
-                type="button"
-                onClick={removeVideo}
-                aria-label="Remove video"
-                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
-              >
-                ×
-              </button>
-            </div>
-          ) : (
-            <p className="mb-3 text-xs text-muted">
-              MP4, WebM, or MOV — up to 100MB and 3 minutes.
-            </p>
-          )}
-
-          <div className="flex gap-2">
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            {photos.map((photo, i) => (
+              <div key={i} className="group relative aspect-square overflow-hidden rounded-lg bg-surface">
+                {/* eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset */}
+                <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(i)}
+                  aria-label="Remove photo"
+                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               variant="secondary"
               className="px-3 py-1.5 text-sm"
-              onClick={() => videoInputRef.current?.click()}
+              onClick={() => morePhotosInputRef.current?.click()}
             >
-              {video ? "Choose a different video" : "Choose video"}
+              Add more photos
             </Button>
             <Button
               type="button"
-              variant="secondary"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm"
-              onClick={() => setIsRecording(true)}
+              variant="ghost"
+              className="px-3 py-1.5 text-sm"
+              onClick={clearPhotos}
             >
-              <CameraIcon className="h-4 w-4" />
-              Record
+              Start over
             </Button>
           </div>
         </div>
       )}
 
-      {editorSource && (
+      {mode === "video" && video && (
+        <div>
+          <Label>Video</Label>
+          <div className="relative mb-3 aspect-[9/16] max-h-96 w-fit overflow-hidden rounded-lg bg-black">
+            <video
+              src={video.previewUrl}
+              controls
+              playsInline
+              className="h-full w-full object-contain"
+            />
+            <button
+              type="button"
+              onClick={clearVideo}
+              aria-label="Remove video"
+              className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
+            >
+              ×
+            </button>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="px-3 py-1.5 text-sm"
+            onClick={clearVideo}
+          >
+            Choose a different video
+          </Button>
+        </div>
+      )}
+
+      {videoEditorSource && (
         <VideoEditor
-          source={editorSource}
-          onCancel={() => setEditorSource(null)}
-          onExported={handleEditorExported}
+          source={videoEditorSource}
+          onCancel={() => setVideoEditorSource(null)}
+          onExported={handleVideoEditorExported}
         />
       )}
 
-      {isRecording && (
-        <CameraRecorder
-          onClose={() => setIsRecording(false)}
-          onCaptured={(file) => {
-            setIsRecording(false);
-            setEditorSource(file);
-          }}
+      {photoEditorSource && (
+        <PhotoEditor
+          source={photoEditorSource}
+          onCancel={() => setPhotoEditorSource(null)}
+          onExported={handlePhotoEditorExported}
         />
       )}
+
+      {isRecording && <CameraRecorder onClose={() => setIsRecording(false)} onCaptured={handleCameraCaptured} />}
 
       {vehicles.length > 0 && (
         <div>
@@ -374,7 +405,7 @@ export function ComposePostForm({
         />
       </div>
 
-      <Button type="submit" disabled={isSubmitting} className="self-start">
+      <Button type="submit" disabled={isSubmitting || !mode} className="self-start">
         {isSubmitting ? "Publishing…" : "Publish"}
       </Button>
     </form>
