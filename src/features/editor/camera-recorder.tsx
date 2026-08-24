@@ -503,7 +503,7 @@ export function CameraRecorder({
         </span>
       )}
 
-      <div className="relative z-10 flex items-center justify-between p-4">
+      <div className="relative z-10 flex items-center justify-between px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))]">
         <button
           type="button"
           onClick={onClose}

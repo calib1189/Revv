@@ -113,45 +113,65 @@ export function useVideoExport() {
 
         await waitForSeek(video, state.trimStart);
 
-        // --- Audio graph: mixes the original clip's own audio with an
-        // optional music track, each independently volume-controlled, into
-        // one destination stream fed to the recorder alongside the canvas. ---
-        const AudioContextCtor =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        audioCtx = new AudioContextCtor();
-        const destination = audioCtx.createMediaStreamDestination();
-
         const sourceStream = video.captureStream ? video.captureStream() : null;
         const originalTrack = sourceStream?.getAudioTracks()[0];
-        if (originalTrack && state.originalVolume > 0) {
-          const source = audioCtx.createMediaStreamSource(new MediaStream([originalTrack]));
-          const gain = audioCtx.createGain();
-          gain.gain.value = state.originalVolume;
-          source.connect(gain).connect(destination);
-        }
+        // Only build the WebAudio mixing graph when it's actually needed —
+        // mixing in music, or a non-default/non-zero volume. The common
+        // case (no music, untouched volume) instead feeds the recorder
+        // the original audio track directly, same as the camera recorder
+        // already does successfully. A canvas video track paired with a
+        // *synthetic* WebAudio-destination audio track is a much less
+        // battle-tested combination for Safari's MP4 muxer than a canvas
+        // track paired with a real captured track, and this export
+        // pipeline producing unreadable files while the camera recorder
+        // (which never touches WebAudio) doesn't is exactly the pattern
+        // that points at the mixing graph itself as the remaining cause.
+        const needsMixing = !!state.musicFile || (state.originalVolume !== 1 && state.originalVolume !== 0);
 
         let musicNode: AudioBufferSourceNode | null = null;
-        if (state.musicFile) {
-          try {
-            const arrayBuffer = await state.musicFile.arrayBuffer();
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            musicNode = audioCtx.createBufferSource();
-            musicNode.buffer = audioBuffer;
-            musicNode.loop = true;
+        let audioTracks: MediaStreamTrack[] = [];
+
+        if (needsMixing) {
+          // --- Audio graph: mixes the original clip's own audio with an
+          // optional music track, each independently volume-controlled,
+          // into one destination stream fed to the recorder. ---
+          const AudioContextCtor =
+            window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          audioCtx = new AudioContextCtor();
+          const destination = audioCtx.createMediaStreamDestination();
+
+          if (originalTrack && state.originalVolume > 0) {
+            const source = audioCtx.createMediaStreamSource(new MediaStream([originalTrack]));
             const gain = audioCtx.createGain();
-            gain.gain.value = state.musicVolume;
-            musicNode.connect(gain).connect(destination);
-          } catch {
-            musicNode = null;
+            gain.gain.value = state.originalVolume;
+            source.connect(gain).connect(destination);
           }
+
+          if (state.musicFile) {
+            try {
+              const arrayBuffer = await state.musicFile.arrayBuffer();
+              const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+              musicNode = audioCtx.createBufferSource();
+              musicNode.buffer = audioBuffer;
+              musicNode.loop = true;
+              const gain = audioCtx.createGain();
+              gain.gain.value = state.musicVolume;
+              musicNode.connect(gain).connect(destination);
+            } catch {
+              musicNode = null;
+            }
+          }
+
+          audioTracks = destination.stream.getAudioTracks();
+        } else if (originalTrack && state.originalVolume === 1) {
+          audioTracks = [originalTrack];
         }
+        // originalVolume === 0 and no music: no audio track at all —
+        // an intentionally silent export.
 
         canvasStream = canvas.captureStream(30);
-        combinedStream = new MediaStream([
-          ...canvasStream.getVideoTracks(),
-          ...destination.stream.getAudioTracks(),
-        ]);
+        combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
 
         const { mimeType, extension } = pickMimeType();
         // The Blob's own type drops the ;codecs=... suffix MediaRecorder
