@@ -15,6 +15,10 @@ export function NativeAppBridge() {
       const { Capacitor } = await import("@capacitor/core");
       if (!Capacitor.isNativePlatform()) return;
 
+      // Scopes the scrollbar-hiding CSS below to the native app only — a
+      // regular desktop browser should keep its normal scrollbar.
+      document.documentElement.classList.add("native-app");
+
       const [{ StatusBar, Style }, { SplashScreen }, { App }, { Browser }] = await Promise.all([
         import("@capacitor/status-bar"),
         import("@capacitor/splash-screen"),

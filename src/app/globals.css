@@ -120,6 +120,22 @@ body {
   display: none;
 }
 
+/* Hides the page's own scrollbar inside the native app shell — a bare
+   iOS scrollbar reads as "browser," not "app," and the equivalent native
+   scrollview setting (MainViewController.swift, iOS side) isn't enough
+   on its own to guarantee it's gone. Scoped to .native-app so a regular
+   desktop browser keeps its normal scrollbar. */
+html.native-app,
+html.native-app body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html.native-app::-webkit-scrollbar,
+html.native-app body::-webkit-scrollbar {
+  display: none;
+}
+
 @layer components {
   /* Liquid-glass surface: frosted, translucent, with a hairline border that
      catches light on its top edge. Two tiers — .glass for standard cards,
