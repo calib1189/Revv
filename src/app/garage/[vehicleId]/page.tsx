@@ -181,14 +181,36 @@ export default async function VehiclePage({
           </div>
         )}
 
-        {activeBuild?.ai_rating_score != null && activeBuild.ai_rating_summary && (
-          <div className="glass mb-6 rounded-2xl p-4">
-            <p className="text-sm font-medium">
-              AI rating: {activeBuild.ai_rating_score.toFixed(1)}/10
-            </p>
-            <p className="mt-1 text-sm text-muted">{activeBuild.ai_rating_summary}</p>
-          </div>
-        )}
+        {activeBuild?.ai_rating_score != null &&
+          (activeBuild.ai_rating_strengths || activeBuild.ai_rating_summary) && (
+            <div className="glass mb-6 rounded-2xl p-4">
+              <p className="text-sm font-medium">
+                AI rating: {activeBuild.ai_rating_score.toFixed(1)}/10
+              </p>
+              {activeBuild.ai_rating_strengths ? (
+                <div className="mt-3 flex flex-col gap-3">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                      Why this score
+                    </p>
+                    <p className="mt-1 text-sm text-muted">{activeBuild.ai_rating_strengths}</p>
+                  </div>
+                  {activeBuild.ai_rating_limiting_factors && (
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                        What&apos;s holding it back
+                      </p>
+                      <p className="mt-1 text-sm text-muted">
+                        {activeBuild.ai_rating_limiting_factors}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-1 text-sm text-muted">{activeBuild.ai_rating_summary}</p>
+              )}
+            </div>
+          )}
 
         <VehicleSpecs vehicle={vehicle} />
 

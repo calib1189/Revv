@@ -34,7 +34,12 @@ export function RateBuildPanel({ vehicleId }: { vehicleId: string }) {
     setIsConfirming(true);
     setError(null);
     try {
-      const result = await confirmBuildRatingAction(vehicleId, pending.score, pending.summary);
+      const result = await confirmBuildRatingAction(
+        vehicleId,
+        pending.score,
+        pending.strengths,
+        pending.limitingFactors,
+      );
       if (result.error) {
         setError(result.error);
       } else {
@@ -57,7 +62,20 @@ export function RateBuildPanel({ vehicleId }: { vehicleId: string }) {
             </span>
           )}
         </div>
-        <p className="mt-1 text-sm text-muted">{pending.summary}</p>
+        <div className="mt-3 flex flex-col gap-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Why this score
+            </p>
+            <p className="mt-1 text-sm">{pending.strengths}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              What&apos;s holding it back
+            </p>
+            <p className="mt-1 text-sm">{pending.limitingFactors}</p>
+          </div>
+        </div>
         {error && (
           <div className="mt-2">
             <Callout tone="danger">{error}</Callout>

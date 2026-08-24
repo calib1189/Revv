@@ -103,13 +103,14 @@ export async function updateBuildStatus(
 export async function updateBuildRating(
   supabase: SupabaseClient<Database>,
   id: string,
-  rating: { score: number; summary: string },
+  rating: { score: number; strengths: string; limitingFactors: string },
 ): Promise<Build> {
   const { data, error } = await supabase
     .from("builds")
     .update({
       ai_rating_score: rating.score,
-      ai_rating_summary: rating.summary,
+      ai_rating_strengths: rating.strengths,
+      ai_rating_limiting_factors: rating.limitingFactors,
       ai_rating_rated_at: new Date().toISOString(),
     })
     .eq("id", id)

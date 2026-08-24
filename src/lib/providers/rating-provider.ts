@@ -1,8 +1,10 @@
 export interface BuildRating {
   /** 0-10, one decimal. */
   score: number;
-  /** Short rationale, 1-2 sentences. */
-  summary: string;
+  /** What earned the score — specific things observed, 1-2 sentences. */
+  strengths: string;
+  /** What's specifically holding it back from a higher score, 1-2 sentences. */
+  limitingFactors: string;
   isMock: boolean;
 }
 

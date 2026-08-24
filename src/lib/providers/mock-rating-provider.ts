@@ -17,7 +17,8 @@ export class MockRatingProvider implements RatingProvider {
 
     return {
       score,
-      summary: "This is a mock rating — no real model reviewed your build.",
+      strengths: "This is a mock rating — no real model reviewed your build.",
+      limitingFactors: "Mock ratings don't identify real limiting factors.",
       isMock: true,
     };
   }

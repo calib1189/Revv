@@ -98,12 +98,20 @@ export interface ConfirmRatingState {
 export async function confirmBuildRatingAction(
   vehicleId: string,
   score: number,
-  summary: string,
+  strengths: string,
+  limitingFactors: string,
 ): Promise<ConfirmRatingState> {
   if (!Number.isFinite(score) || score < 0 || score > 10) {
     return { error: "Invalid rating." };
   }
-  if (typeof summary !== "string" || summary.length === 0 || summary.length > 500) {
+  if (typeof strengths !== "string" || strengths.length === 0 || strengths.length > 500) {
+    return { error: "Invalid rating." };
+  }
+  if (
+    typeof limitingFactors !== "string" ||
+    limitingFactors.length === 0 ||
+    limitingFactors.length > 500
+  ) {
     return { error: "Invalid rating." };
   }
 
@@ -111,7 +119,7 @@ export async function confirmBuildRatingAction(
   const build = await getOrCreateActiveBuild(supabase, vehicleId);
 
   try {
-    await updateBuildRating(supabase, build.id, { score, summary });
+    await updateBuildRating(supabase, build.id, { score, strengths, limitingFactors });
   } catch {
     return { error: "Couldn't save that rating. Try again." };
   }

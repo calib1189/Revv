@@ -11,20 +11,28 @@ const PROMPT =
   "interior for anything custom or modified, even if it isn't itemized in " +
   "the build details below. Custom paint, custom-fabricated panels, " +
   "widebody kits, and other bodywork are major modifications — weigh them " +
-  "at least as heavily as bolt-on parts. Then give an honest but " +
-  "encouraging score from 0 to 10 (one decimal), considering how coherent " +
-  "and well-executed the build looks and how clean the car presents in the " +
+  "at least as heavily as bolt-on parts. Give an honest but encouraging " +
+  "score from 0 to 10 (one decimal), considering how coherent and " +
+  "well-executed the build looks and how clean the car presents in the " +
   "photos. A bone-stock car isn't bad, it just scores lower than a " +
   "thoughtfully built one — but only call a car stock if the photos " +
   "actually look stock. Reserve 9+ for genuinely exceptional, heavily " +
   "customized builds and 10 for something truly showstopping — don't hand " +
   "it out easily, but don't withhold it from a build that clearly earns it " +
-  "either. Give a short, specific one-to-two sentence reason for the score " +
-  "that names what you actually see.";
+  "either.\n\n" +
+  "Then explain the score in two parts. `strengths`: one to two sentences " +
+  "naming the specific things you actually see that earned this score — " +
+  "particular mods, paint quality, how coherent the theme is. " +
+  "`limitingFactors`: one to two sentences naming the SPECIFIC, ACTIONABLE " +
+  "things holding the score back from being higher — what looks " +
+  "unfinished, inconsistent, or missing, or if the build is already " +
+  "excellent, what the very highest tier would still require. Never say " +
+  "something vague like 'needs more mods' without naming what kind.";
 
 interface GeminiRatingResponse {
   score: number;
-  summary: string;
+  strengths: string;
+  limitingFactors: string;
 }
 
 /**
@@ -60,9 +68,10 @@ export class GeminiRatingProvider implements RatingProvider {
             type: "OBJECT",
             properties: {
               score: { type: "NUMBER" },
-              summary: { type: "STRING" },
+              strengths: { type: "STRING" },
+              limitingFactors: { type: "STRING" },
             },
-            required: ["score", "summary"],
+            required: ["score", "strengths", "limitingFactors"],
           },
         },
       }),
@@ -82,6 +91,11 @@ export class GeminiRatingProvider implements RatingProvider {
     const parsed: GeminiRatingResponse = JSON.parse(text);
     const score = Math.round(Math.max(0, Math.min(10, parsed.score)) * 10) / 10;
 
-    return { score, summary: parsed.summary, isMock: false };
+    return {
+      score,
+      strengths: parsed.strengths,
+      limitingFactors: parsed.limitingFactors,
+      isMock: false,
+    };
   }
 }
