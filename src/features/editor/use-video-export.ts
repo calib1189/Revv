@@ -155,6 +155,13 @@ export function useVideoExport() {
       await video.play();
 
       const durationSeconds = Math.max(0.1, state.trimEnd - state.trimStart);
+      // Belt-and-suspenders: if playback ever stalls just short of trimEnd
+      // for a reason this loop's own exit checks don't catch — a stalled
+      // decode, a frame-timing mismatch between the duration read earlier
+      // and what actually plays back — this guarantees export still
+      // finishes with whatever was captured instead of hanging forever.
+      const startedAt = performance.now();
+      const stallTimeoutMs = durationSeconds * 3000 + 8000;
 
       await new Promise<void>((resolve) => {
         function tick() {
@@ -165,7 +172,11 @@ export function useVideoExport() {
           drawFrame(ctx!, video, canvas.width, canvas.height, state);
           setProgress(Math.min(1, (video.currentTime - state.trimStart) / durationSeconds));
 
-          if (video.currentTime >= state.trimEnd || video.ended) {
+          if (
+            video.currentTime >= state.trimEnd ||
+            video.ended ||
+            performance.now() - startedAt > stallTimeoutMs
+          ) {
             resolve();
             return;
           }

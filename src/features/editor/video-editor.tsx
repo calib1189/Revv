@@ -317,7 +317,17 @@ export function VideoEditor({
           any clip under 60s, so the browser's own auto-restart-on-end
           fired ahead of export's own "did we reach trimEnd" check, which
           could never observe the clip finishing. */}
-      <video ref={videoRef} src={sourceUrl} playsInline className="sr-only" />
+      {/* Real (if off-screen) size on purpose, not `sr-only` — `sr-only`
+          clips an element to 0 visible pixels (clip: rect(0,0,0,0)), and
+          WebKit/iOS Safari is known to throttle or fully stall video
+          decoding for a <video> with effectively zero visible area. That's
+          the likely reason export could still hang short of the finish
+          line on an actual iPhone even after the two fixes above: currentTime
+          would creep up and stall just under trimEnd because playback
+          itself stalled, not because of a loop race. Positioning off-
+          screen with a real, unclipped size keeps decoding fully live
+          while staying invisible to the user. */}
+      <video ref={videoRef} src={sourceUrl} playsInline className="fixed left-[-9999px] top-0 h-40 w-40" />
 
       <div className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <button
