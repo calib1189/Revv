@@ -370,7 +370,23 @@ export function CameraRecorder({
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col overflow-hidden bg-black">
-      <video ref={videoRef} autoPlay muted playsInline className="hidden" />
+      {/* Real (if off-screen) size on purpose, not `display:none` (Tailwind's
+          `hidden`) — WebKit/iOS Safari is documented to stop decoding a
+          `display:none` <video> entirely. This element is the actual
+          source the canvas below draws from every frame; if it stalls,
+          the canvas just keeps redrawing the same first frame forever.
+          That fits exactly what was reported: a photo (one snapshot of
+          whatever's currently on the canvas) still comes out fine even
+          off a frozen frame, but a recording — the canvas captured over
+          time — is static the whole way through. Positioning off-screen
+          with a real, unclipped size keeps decoding genuinely live. */}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        className="fixed left-[-9999px] top-0 h-40 w-40"
+      />
       <canvas
         ref={canvasRef}
         onPointerDown={handleViewfinderDown}
