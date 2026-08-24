@@ -192,18 +192,26 @@ export function useVideoExport() {
       });
 
       video.pause();
+      // Forces one last ondataavailable flush before stopping — cheap
+      // insurance that whatever's still buffered lands in `chunks` even
+      // if `onstop` itself is the part that's unreliable.
+      if (recorder.state !== "inactive") recorder.requestData();
       recorder.stop();
       musicNode?.stop();
       // recorder.onstop not firing (a real MediaRecorder flakiness on some
       // devices) would otherwise hang export forever right here, after the
       // progress bar already reads 100% — indistinguishable from the app
-      // being frozen even though it isn't. Falls back to whatever chunks
-      // were already collected via the timeslice above instead of waiting
-      // indefinitely for an event that might just never come.
+      // being frozen even though it isn't. On-device muxing/finalizing a
+      // real recording can legitimately take several seconds though, so
+      // this needs real headroom — too short and it fires before a
+      // perfectly healthy export finishes, handing back a Blob missing
+      // its finalization data (an unreadable file) instead of the real
+      // one that was moments away. 15s is a last-resort ceiling, not the
+      // expected path.
       const blob = await Promise.race([
         finished,
         new Promise<Blob>((resolve) => {
-          setTimeout(() => resolve(new Blob(chunks, { type: baseType })), 4000);
+          setTimeout(() => resolve(new Blob(chunks, { type: baseType })), 15000);
         }),
       ]);
 

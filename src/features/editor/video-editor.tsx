@@ -345,7 +345,7 @@ export function VideoEditor({
           className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-60"
         >
           {isExporting ? (
-            `Exporting ${Math.round(progress * 100)}%`
+            progress >= 1 ? "Finishing up…" : `Exporting ${Math.round(progress * 100)}%`
           ) : (
             <>
               <CheckIcon className="h-4 w-4" />
