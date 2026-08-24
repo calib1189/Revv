@@ -4,11 +4,13 @@ import type { Build } from "@/lib/db/builds";
 import { listVehiclesByIds } from "@/lib/db/vehicles";
 import { getProfilesByIds } from "@/lib/db/profiles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { isVehicleCategory, type VehicleCategory } from "@/lib/vehicles/category";
 
 export interface LeaderboardEntry {
   buildId: string;
   vehicleId: string;
   vehicleTitle: string;
+  category: VehicleCategory;
   heroUrl: string | null;
   score: number;
   ownerUsername: string;
@@ -57,6 +59,7 @@ export async function composeLeaderboard(
         buildId: build.id,
         vehicleId: vehicle.id,
         vehicleTitle: vehicle.nickname || `${vehicle.make} ${vehicle.model}`,
+        category: isVehicleCategory(vehicle.category) ? vehicle.category : "cars",
         heroUrl: vehicle.hero_media_id
           ? (urlByMediaId.get(vehicle.hero_media_id) ?? null)
           : null,

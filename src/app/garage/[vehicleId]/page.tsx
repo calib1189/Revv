@@ -174,7 +174,7 @@ export default async function VehiclePage({
                         className="truncate text-xl font-bold tracking-tight"
                         style={{ color: RANK_BADGE_COLORS[tier] }}
                       >
-                        {RANK_LABELS[tier]} · {activeBuild.ai_rating_score!.toFixed(1)}
+                        {RANK_LABELS[tier]} · {Math.round(activeBuild.ai_rating_score!)}
                       </p>
                     </div>
                   </div>

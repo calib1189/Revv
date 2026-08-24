@@ -2,9 +2,22 @@ import Link from "next/link";
 import Image from "next/image";
 import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
+import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
 import type { LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
 
-export function LeaderboardRow({ rank, entry }: { rank: number; entry: LeaderboardEntry }) {
+export function LeaderboardRow({
+  rank,
+  entry,
+  showCategory = false,
+}: {
+  rank: number;
+  entry: LeaderboardEntry;
+  /** Shows a small category badge next to the owner handle — only makes
+   * sense on the combined "All" view, where rows span multiple
+   * categories; a single-category board would just repeat the same tag
+   * on every row. */
+  showCategory?: boolean;
+}) {
   return (
     <Link
       href={`/garage/${entry.vehicleId}`}
@@ -35,11 +48,16 @@ export function LeaderboardRow({ rank, entry }: { rank: number; entry: Leaderboa
             />
           </RankFrame>
           <span className="truncate text-xs text-muted">@{entry.ownerUsername}</span>
+          {showCategory && (
+            <span className="glass flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium text-muted">
+              {VEHICLE_CATEGORY_LABELS[entry.category]}
+            </span>
+          )}
         </div>
       </div>
 
       <span className="flex-shrink-0 text-sm font-semibold text-accent">
-        {entry.score.toFixed(1)}
+        {Math.round(entry.score)}
       </span>
     </Link>
   );

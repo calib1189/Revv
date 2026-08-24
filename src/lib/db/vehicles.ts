@@ -30,6 +30,22 @@ export async function listVehiclesByIds(
   return data;
 }
 
+/** Vehicle ids in a given category — used to filter the leaderboard down
+ * to one category without a Postgres-side join, so it doesn't depend on
+ * PostgREST's embedded-resource relationship cache staying in sync. */
+export async function listVehicleIdsByCategory(
+  supabase: SupabaseClient<Database>,
+  category: string,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id")
+    .eq("category", category);
+
+  if (error) throw error;
+  return data.map((v) => v.id);
+}
+
 export async function getVehicleById(
   supabase: SupabaseClient<Database>,
   id: string,

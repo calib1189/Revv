@@ -39,16 +39,27 @@ export async function listActiveBuildsByVehicleIds(
 
 /** Highest-rated active builds across all vehicles, for the leaderboard.
  * Unrated builds (ai_rating_score null) are excluded rather than sorting
- * them to the bottom, since "unrated" isn't a rank. */
+ * them to the bottom, since "unrated" isn't a rank. Pass `vehicleIds` to
+ * scope this to one category's leaderboard (see
+ * listVehicleIdsByCategory) — omit it for the combined, all-categories
+ * view. */
 export async function listTopRatedBuilds(
   supabase: SupabaseClient<Database>,
   limit = 50,
+  vehicleIds?: string[],
 ): Promise<Build[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("builds")
     .select("*")
     .eq("status", "active")
-    .not("ai_rating_score", "is", null)
+    .not("ai_rating_score", "is", null);
+
+  if (vehicleIds) {
+    if (vehicleIds.length === 0) return [];
+    query = query.in("vehicle_id", vehicleIds);
+  }
+
+  const { data, error } = await query
     .order("ai_rating_score", { ascending: false })
     .limit(limit);
 

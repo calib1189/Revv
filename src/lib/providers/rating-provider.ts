@@ -1,5 +1,5 @@
 export interface BuildRating {
-  /** 0-10, one decimal. */
+  /** 0-100, whole number. */
   score: number;
   /** What earned the score — specific things observed, 1-2 sentences. */
   strengths: string;

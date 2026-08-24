@@ -85,6 +85,7 @@ export interface Database {
           nickname: string | null;
           description: string | null;
           hero_media_id: string | null;
+          category: string;
           created_at: string;
         };
         Insert: {
@@ -101,6 +102,7 @@ export interface Database {
           nickname?: string | null;
           description?: string | null;
           hero_media_id?: string | null;
+          category?: string;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;

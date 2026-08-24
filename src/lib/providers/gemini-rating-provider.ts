@@ -12,14 +12,14 @@ const PROMPT =
   "the build details below. Custom paint, custom-fabricated panels, " +
   "widebody kits, and other bodywork are major modifications — weigh them " +
   "at least as heavily as bolt-on parts. Give an honest but encouraging " +
-  "score from 0 to 10 (one decimal), considering how coherent and " +
+  "whole-number score from 0 to 100, considering how coherent and " +
   "well-executed the build looks and how clean the car presents in the " +
   "photos. A bone-stock car isn't bad, it just scores lower than a " +
   "thoughtfully built one — but only call a car stock if the photos " +
-  "actually look stock. Reserve 9+ for genuinely exceptional, heavily " +
-  "customized builds and 10 for something truly showstopping — don't hand " +
-  "it out easily, but don't withhold it from a build that clearly earns it " +
-  "either.\n\n" +
+  "actually look stock. Reserve 90+ for genuinely exceptional, heavily " +
+  "customized builds and 100 for something truly showstopping — don't " +
+  "hand it out easily, but don't withhold it from a build that clearly " +
+  "earns it either.\n\n" +
   "Then explain the score in two parts. `strengths`: one to two sentences " +
   "naming the specific things you actually see that earned this score — " +
   "particular mods, paint quality, how coherent the theme is. " +
@@ -89,7 +89,7 @@ export class GeminiRatingProvider implements RatingProvider {
     }
 
     const parsed: GeminiRatingResponse = JSON.parse(text);
-    const score = Math.round(Math.max(0, Math.min(10, parsed.score)) * 10) / 10;
+    const score = Math.round(Math.max(0, Math.min(100, parsed.score)));
 
     return {
       score,

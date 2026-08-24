@@ -13,7 +13,7 @@ export class MockRatingProvider implements RatingProvider {
   async rateBuild(): Promise<BuildRating> {
     await delay(900 + Math.random() * 600);
 
-    const score = Math.round((4 + Math.random() * 4) * 10) / 10;
+    const score = Math.round(40 + Math.random() * 40);
 
     return {
       score,

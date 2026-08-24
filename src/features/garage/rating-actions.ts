@@ -97,7 +97,7 @@ export async function confirmBuildRatingAction(
   strengths: string,
   limitingFactors: string,
 ): Promise<ConfirmRatingState> {
-  if (!Number.isFinite(score) || score < 0 || score > 10) {
+  if (!Number.isFinite(score) || score < 0 || score > 100) {
     return { error: "Invalid rating." };
   }
   if (typeof strengths !== "string" || strengths.length === 0 || strengths.length > 500) {

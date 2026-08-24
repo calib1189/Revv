@@ -8,6 +8,7 @@ import { validateVehicleForm } from "@/lib/validation/vehicle";
 import { validateImageFile } from "@/lib/validation/media";
 import { getVisionProvider } from "@/lib/providers/get-vision-provider";
 import { trackEvent } from "@/lib/analytics/track";
+import { isVehicleCategory } from "@/lib/vehicles/category";
 import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleInsert } from "@/lib/db/vehicles";
 
@@ -21,6 +22,7 @@ function readVehicleFields(formData: FormData) {
     make: String(formData.get("make") ?? ""),
     model: String(formData.get("model") ?? ""),
     trim: String(formData.get("trim") ?? ""),
+    category: String(formData.get("category") ?? ""),
     engine: String(formData.get("engine") ?? ""),
     drivetrain: String(formData.get("drivetrain") ?? ""),
     color: String(formData.get("color") ?? ""),
@@ -38,6 +40,7 @@ function toVehicleInput(
     make: fields.make.trim(),
     model: fields.model.trim(),
     trim: fields.trim.trim() || null,
+    category: isVehicleCategory(fields.category) ? fields.category : "cars",
     engine: fields.engine.trim() || null,
     drivetrain: fields.drivetrain.trim() || null,
     color: fields.color.trim() || null,
