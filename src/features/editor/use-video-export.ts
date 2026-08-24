@@ -150,7 +150,13 @@ export function useVideoExport() {
         recorder.onstop = () => resolve(new Blob(chunks, { type: baseType }));
       });
 
-      recorder.start();
+      // A timeslice, instead of calling start() with no argument, makes
+      // the recorder hand over chunks throughout the recording rather than
+      // only once at the very end when it stops — belt-and-suspenders with
+      // the stop-timeout fallback below: if `onstop` never fires on some
+      // device, there's still real recorded data in `chunks` to fall back
+      // to instead of an empty file.
+      recorder.start(1000);
       musicNode?.start(0);
       await video.play();
 
@@ -188,7 +194,18 @@ export function useVideoExport() {
       video.pause();
       recorder.stop();
       musicNode?.stop();
-      const blob = await finished;
+      // recorder.onstop not firing (a real MediaRecorder flakiness on some
+      // devices) would otherwise hang export forever right here, after the
+      // progress bar already reads 100% — indistinguishable from the app
+      // being frozen even though it isn't. Falls back to whatever chunks
+      // were already collected via the timeslice above instead of waiting
+      // indefinitely for an event that might just never come.
+      const blob = await Promise.race([
+        finished,
+        new Promise<Blob>((resolve) => {
+          setTimeout(() => resolve(new Blob(chunks, { type: baseType })), 4000);
+        }),
+      ]);
 
       combinedStream.getTracks().forEach((t) => t.stop());
       canvasStream.getTracks().forEach((t) => t.stop());
