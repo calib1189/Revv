@@ -9,7 +9,7 @@ import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirme
 import { likePost, unlikePost } from "@/lib/db/likes";
 import { savePost, unsavePost } from "@/lib/db/saves";
 import { recordPostView } from "@/lib/db/post-views";
-import { createComment, deleteComment } from "@/lib/db/comments";
+import { createComment, deleteComment, listCommentsByPost } from "@/lib/db/comments";
 import { deletePost, listFeedPosts, getPostById } from "@/lib/db/posts";
 import { createReport } from "@/lib/db/reports";
 import { getProfileByUserId } from "@/lib/db/profiles";
@@ -17,6 +17,7 @@ import { validateComment } from "@/lib/validation/comment";
 import { composePostCards } from "@/lib/feed/compose-post-cards";
 import { sendPushToUser } from "@/lib/push/send";
 import type { PostCardData } from "@/features/feed/post-card";
+import type { CommentWithAuthor } from "@/features/feed/comment-list";
 
 export async function loadMoreFeedPostsAction(
   before: string,
@@ -96,12 +97,43 @@ export async function toggleSaveAction(
   revalidatePath("/saved");
 }
 
+export interface CommentSheetData {
+  comments: CommentWithAuthor[];
+  currentUserId: string | null;
+}
+
+/** Loads a post's comments on demand for the feed's slide-up comment
+ * sheet — the feed itself only ever fetches counts, never full comment
+ * threads, for every post up front. */
+export async function listCommentsForSheetAction(postId: string): Promise<CommentSheetData> {
+  const supabase = await createClient();
+  const [user, comments] = await Promise.all([
+    getCurrentUser(),
+    listCommentsByPost(supabase, postId),
+  ]);
+
+  const authorIds = [...new Set(comments.map((c) => c.author_id))];
+  const authors = await Promise.all(authorIds.map((id) => getProfileByUserId(supabase, id)));
+  const usernameById = new Map(
+    authors.filter((a): a is NonNullable<typeof a> => Boolean(a)).map((a) => [a.id, a.username]),
+  );
+
+  return {
+    comments: comments.map((c) => ({
+      ...c,
+      authorUsername: usernameById.get(c.author_id) ?? "unknown",
+    })),
+    currentUserId: user?.id ?? null,
+  };
+}
+
 export interface CommentFormState {
   error: string | null;
 }
 
 export async function createCommentAction(
   postId: string,
+  parentId: string | null,
   _prevState: CommentFormState,
   formData: FormData,
 ): Promise<CommentFormState> {
@@ -111,7 +143,7 @@ export async function createCommentAction(
 
   const { supabase, user } = await requireUser();
   try {
-    await createComment(supabase, postId, user.id, body.trim());
+    await createComment(supabase, postId, user.id, body.trim(), parentId);
   } catch {
     return { error: "Couldn't post that comment. Try again in a bit." };
   }

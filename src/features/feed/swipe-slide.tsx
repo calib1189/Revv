@@ -2,19 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LikeButton } from "@/features/feed/like-button";
 import { SaveButton } from "@/features/feed/save-button";
+import { CommentSheet } from "@/features/feed/comment-sheet";
 import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { CaptionText } from "@/features/feed/caption-text";
 import { recordViewAction } from "@/features/feed/actions";
-import { CommentIcon, EyeIcon } from "@/components/ui/icons";
+import { usePostLike } from "@/features/feed/use-post-like";
+import { useDoubleTap } from "@/features/feed/use-double-tap";
+import { CommentIcon, EyeIcon, HeartIcon, PlayIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import type { PostCardData } from "@/features/feed/post-card";
 
-function VideoMedia({ url }: { url: string }) {
+function VideoMedia({ url, onDoubleTapLike }: { url: string; onDoubleTapLike: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [heartPop, setHeartPop] = useState(0);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -25,6 +29,7 @@ function VideoMedia({ url }: { url: string }) {
       ([entry]) => {
         if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
           el.play().catch(() => {});
+          setIsPaused(false);
         } else {
           el.pause();
         }
@@ -35,8 +40,25 @@ function VideoMedia({ url }: { url: string }) {
     return () => observer.disconnect();
   }, []);
 
+  function togglePlayPause() {
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.paused) {
+      el.play().catch(() => {});
+      setIsPaused(false);
+    } else {
+      el.pause();
+      setIsPaused(true);
+    }
+  }
+
+  const handleTap = useDoubleTap(togglePlayPause, () => {
+    setHeartPop((n) => n + 1);
+    onDoubleTapLike();
+  });
+
   return (
-    <div ref={containerRef} className="absolute inset-0">
+    <div ref={containerRef} className="absolute inset-0" onClick={handleTap}>
       <video
         ref={videoRef}
         src={url}
@@ -45,6 +67,19 @@ function VideoMedia({ url }: { url: string }) {
         preload="metadata"
         className="h-full w-full object-contain"
       />
+      {isPaused && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <PlayIcon className="h-16 w-16 text-white/85 drop-shadow-[0_2px_10px_rgb(0_0_0_/_0.6)]" />
+        </div>
+      )}
+      {heartPop > 0 && (
+        <div key={heartPop} className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <HeartIcon
+            filled
+            className="h-28 w-28 animate-heart-pop text-white drop-shadow-[0_2px_14px_rgb(0_0_0_/_0.6)]"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -95,6 +130,12 @@ export function SwipeSlide({
   const isVideo = data.media[0]?.kind === "video";
   const containerRef = useRef<HTMLDivElement>(null);
   const hasRecordedView = useRef(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const { liked, count: likeCount, toggle: toggleLike, like } = usePostLike(
+    data.post.id,
+    data.isLiked,
+    data.likeCount,
+  );
 
   useEffect(() => {
     if (!data.isAuthenticated) return;
@@ -125,7 +166,7 @@ export function SwipeSlide({
     >
       {data.media.length > 0 &&
         (isVideo ? (
-          <VideoMedia url={data.media[0].url} />
+          <VideoMedia url={data.media[0].url} onDoubleTapLike={like} />
         ) : (
           <PhotoMedia urls={data.media.map((m) => m.url)} />
         ))}
@@ -168,22 +209,37 @@ export function SwipeSlide({
       </div>
 
       <div className="pointer-events-auto absolute right-3 top-1/2 flex -translate-y-1/2 flex-col items-center gap-6 text-white [&_svg]:drop-shadow-[0_1px_4px_rgb(0_0_0_/_0.6)]">
-        <LikeButton
-          postId={data.post.id}
-          initialLiked={data.isLiked}
-          initialCount={data.likeCount}
-          isAuthenticated={data.isAuthenticated}
-          iconClassName="h-8 w-8"
-        />
-        <Link
-          href={`/p/${data.post.id}`}
+        {data.isAuthenticated ? (
+          <button
+            type="button"
+            onClick={toggleLike}
+            aria-pressed={liked}
+            aria-label={liked ? "Unlike" : "Like"}
+            className={`flex flex-col items-center gap-1 transition-colors ${
+              liked ? "text-accent" : "text-white hover:text-white/80"
+            }`}
+          >
+            <HeartIcon className="h-8 w-8" filled={liked} />
+            {likeCount > 0 && <span className="text-xs font-medium">{likeCount}</span>}
+          </button>
+        ) : (
+          <Link href="/login" className="flex flex-col items-center gap-1 text-white">
+            <HeartIcon className="h-8 w-8" />
+            {likeCount > 0 && <span className="text-xs font-medium">{likeCount}</span>}
+          </Link>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setCommentsOpen(true)}
           className="flex flex-col items-center gap-1 text-white/90 hover:text-white"
         >
           <CommentIcon className="h-8 w-8" />
           {data.commentCount > 0 && (
             <span className="text-xs font-medium">{data.commentCount}</span>
           )}
-        </Link>
+        </button>
+
         <SaveButton
           postId={data.post.id}
           initialSaved={data.isSaved}
@@ -191,6 +247,14 @@ export function SwipeSlide({
           iconClassName="h-8 w-8"
         />
       </div>
+
+      <CommentSheet
+        postId={data.post.id}
+        isOpen={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+        isAuthenticated={data.isAuthenticated}
+        initialCount={data.commentCount}
+      />
     </div>
   );
 }

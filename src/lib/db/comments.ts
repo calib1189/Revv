@@ -41,10 +41,11 @@ export async function createComment(
   postId: string,
   authorId: string,
   body: string,
+  parentId: string | null = null,
 ): Promise<Comment> {
   const { data, error } = await supabase
     .from("comments")
-    .insert({ post_id: postId, author_id: authorId, body })
+    .insert({ post_id: postId, author_id: authorId, body, parent_id: parentId })
     .select("*")
     .single();
 
