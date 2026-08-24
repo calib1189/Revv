@@ -19,6 +19,8 @@ import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ModificationList } from "@/features/builds/modification-list";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
+import { rankForScore, RANK_LABELS, RANK_BADGE_COLORS } from "@/lib/rating/rank";
+import { GemIcon } from "@/components/ui/icons";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { BudgetCard } from "@/features/builds/budget-card";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
@@ -141,34 +143,70 @@ export default async function VehiclePage({
 
       <div className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-6">
         {isOwner && (
-          <div className="mb-6 flex flex-wrap items-center gap-2">
-            <CoverPhotoUploader
+          <div className="mb-6">
+            <RateBuildPanel
               vehicleId={vehicle.id}
-              userId={user!.id}
-              hasPhoto={Boolean(vehicle.hero_media_id)}
+              currentScore={activeBuild?.ai_rating_score ?? null}
+              currentStrengths={activeBuild?.ai_rating_strengths ?? null}
+              currentLimitingFactors={activeBuild?.ai_rating_limiting_factors ?? null}
             />
-            <Link href={`/garage/${vehicle.id}/edit`}>
-              <Button variant="secondary" className="px-3 py-1.5 text-sm">
-                Edit details
-              </Button>
-            </Link>
-            <Link href={`/garage/${vehicle.id}/visualize`}>
-              <Button variant="secondary" className="px-3 py-1.5 text-sm">
-                Visualize a mod
-              </Button>
-            </Link>
-            <Link href="/tools/fitment">
-              <Button variant="secondary" className="px-3 py-1.5 text-sm">
-                Fitment calculator
-              </Button>
-            </Link>
-            <DeleteVehicleButton vehicleId={vehicle.id} />
           </div>
         )}
 
-        {isOwner && (
-          <div className="mb-6">
-            <RateBuildPanel vehicleId={vehicle.id} />
+        {!isOwner && activeBuild?.ai_rating_score != null && (
+          <div className="mb-6 glass-raised rounded-3xl p-6">
+            {(() => {
+              const tier = rankForScore(activeBuild.ai_rating_score!);
+              return (
+                <>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
+                      style={{ backgroundColor: `${RANK_BADGE_COLORS[tier]}26`, color: RANK_BADGE_COLORS[tier] }}
+                    >
+                      <GemIcon className="h-6 w-6" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                        Build rating
+                      </p>
+                      <p
+                        className="truncate text-xl font-bold tracking-tight"
+                        style={{ color: RANK_BADGE_COLORS[tier] }}
+                      >
+                        {RANK_LABELS[tier]} · {activeBuild.ai_rating_score!.toFixed(1)}
+                      </p>
+                    </div>
+                  </div>
+                  {(activeBuild.ai_rating_strengths || activeBuild.ai_rating_summary) && (
+                    <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
+                      {activeBuild.ai_rating_strengths ? (
+                        <>
+                          <div>
+                            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                              Why this score
+                            </p>
+                            <p className="mt-1 text-sm text-muted">{activeBuild.ai_rating_strengths}</p>
+                          </div>
+                          {activeBuild.ai_rating_limiting_factors && (
+                            <div>
+                              <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                                What&apos;s holding it back
+                              </p>
+                              <p className="mt-1 text-sm text-muted">
+                                {activeBuild.ai_rating_limiting_factors}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted">{activeBuild.ai_rating_summary}</p>
+                      )}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -181,43 +219,38 @@ export default async function VehiclePage({
           </div>
         )}
 
-        {activeBuild?.ai_rating_score != null &&
-          (activeBuild.ai_rating_strengths || activeBuild.ai_rating_summary) && (
-            <div className="glass mb-6 rounded-2xl p-4">
-              <p className="text-sm font-medium">
-                AI rating: {activeBuild.ai_rating_score.toFixed(1)}/10
-              </p>
-              {activeBuild.ai_rating_strengths ? (
-                <div className="mt-3 flex flex-col gap-3">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                      Why this score
-                    </p>
-                    <p className="mt-1 text-sm text-muted">{activeBuild.ai_rating_strengths}</p>
-                  </div>
-                  {activeBuild.ai_rating_limiting_factors && (
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                        What&apos;s holding it back
-                      </p>
-                      <p className="mt-1 text-sm text-muted">
-                        {activeBuild.ai_rating_limiting_factors}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="mt-1 text-sm text-muted">{activeBuild.ai_rating_summary}</p>
-              )}
-            </div>
-          )}
-
         <VehicleSpecs vehicle={vehicle} />
 
         {vehicle.description && (
           <p className="mt-6 max-w-2xl whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
             {vehicle.description}
           </p>
+        )}
+
+        {isOwner && (
+          <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-6">
+            <CoverPhotoUploader
+              vehicleId={vehicle.id}
+              userId={user!.id}
+              hasPhoto={Boolean(vehicle.hero_media_id)}
+            />
+            <Link href={`/garage/${vehicle.id}/edit`}>
+              <Button variant="ghost" className="px-3 py-1.5 text-sm">
+                Edit details
+              </Button>
+            </Link>
+            <Link href={`/garage/${vehicle.id}/visualize`}>
+              <Button variant="ghost" className="px-3 py-1.5 text-sm">
+                Visualize a mod
+              </Button>
+            </Link>
+            <Link href="/tools/fitment">
+              <Button variant="ghost" className="px-3 py-1.5 text-sm">
+                Fitment calculator
+              </Button>
+            </Link>
+            <DeleteVehicleButton vehicleId={vehicle.id} />
+          </div>
         )}
 
         <div className="mt-10">
