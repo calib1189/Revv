@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CameraFlipIcon, CloseIcon, CameraIcon, LockIcon, GalleryIcon } from "@/components/ui/icons";
+import { CameraFlipIcon, CloseIcon, CameraIcon, LockIcon, GalleryIcon, CheckIcon } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
 function pickVideoMimeType(): string {
@@ -59,6 +59,7 @@ export function CameraRecorder({
   const chunksRef = useRef<BlobPart[]>([]);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragStartXRef = useRef<number | null>(null);
+  const gestureConsumedRef = useRef(false);
   const zoomRef = useRef(1);
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchStartRef = useRef<{ distance: number; zoom: number } | null>(null);
@@ -69,6 +70,19 @@ export function CameraRecorder({
 
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const [isRecording, setIsRecording] = useState(false);
+  // True from the first segment's start until "Finished" is tapped — a
+  // multi-clip recording (Instagram/TikTok-style): record a bit, pause,
+  // record more, pause again, as many times as wanted, then finish. One
+  // continuous MediaRecorder session underneath via pause()/resume(),
+  // which produces a single valid combined file when eventually stopped
+  // — far more robust than recording separate clips and trying to
+  // concatenate compressed video files after the fact, which generally
+  // doesn't produce a valid file for the containers used here.
+  const [hasSession, setHasSession] = useState(false);
+  // Drag-to-lock only applies to the very first segment's hold — every
+  // segment after that is a plain tap to pause/resume, so there's no
+  // hold gesture left to lock in the first place.
+  const [isFirstSegment, setIsFirstSegment] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [seconds, setSeconds] = useState(0);
@@ -222,23 +236,46 @@ export function CameraRecorder({
       const extension = mimeType.includes("mp4") ? "mp4" : "webm";
       onCaptured(new File([blob], `recording.${extension}`, { type: baseType }), "video");
     };
-    recorder.start();
+    recorder.start(1000);
     recorderRef.current = recorder;
     setIsRecording(true);
+    setHasSession(true);
     setIsLocked(false);
     setDragOffset(0);
     setSeconds(0);
     timerRef.current = setInterval(() => {
       setSeconds((s) => {
-        if (s + 1 >= MAX_RECORD_SECONDS) stopRecording();
+        if (s + 1 >= MAX_RECORD_SECONDS) finishRecording();
         return s + 1;
       });
     }, 1000);
   }
 
-  function stopRecording() {
+  function pauseSegment() {
+    if (recorderRef.current?.state === "recording") recorderRef.current.pause();
+    setIsRecording(false);
+    setIsFirstSegment(false);
+    setIsLocked(false);
+    setDragOffset(0);
+    if (timerRef.current) clearInterval(timerRef.current);
+  }
+
+  function resumeSegment() {
+    if (recorderRef.current?.state === "paused") recorderRef.current.resume();
+    setIsRecording(true);
+    timerRef.current = setInterval(() => {
+      setSeconds((s) => {
+        if (s + 1 >= MAX_RECORD_SECONDS) finishRecording();
+        return s + 1;
+      });
+    }, 1000);
+  }
+
+  function finishRecording() {
     recorderRef.current?.stop();
     setIsRecording(false);
+    setHasSession(false);
+    setIsFirstSegment(true);
     setIsLocked(false);
     setDragOffset(0);
     if (timerRef.current) clearInterval(timerRef.current);
@@ -246,11 +283,21 @@ export function CameraRecorder({
 
   function handleShutterDown(e: React.PointerEvent<HTMLButtonElement>) {
     if (error) return;
-    if (isRecording) {
-      // A fresh press while already recording only happens once the
-      // finger has lifted after locking — that's the "press again to
-      // stop" gesture.
-      if (isLocked) stopRecording();
+    if (hasSession) {
+      // Once a session exists, a fresh press only happens after the
+      // finger has lifted from a locked first-segment hold — the
+      // remaining "press again to pause" case for that segment. Resuming
+      // a paused segment is handled as a plain tap on release instead
+      // (see handleShutterUp) — no hold/lock gesture on later segments.
+      if (isRecording && isLocked) {
+        pauseSegment();
+        // Without this, the pointerup that ends this same tap would see
+        // hasSession && !isRecording (now true, since pause just fired
+        // synchronously above) and immediately resume again — a single
+        // tap silently pausing and un-pausing in one motion instead of
+        // just pausing.
+        gestureConsumedRef.current = true;
+      }
       return;
     }
     dragStartXRef.current = e.clientX;
@@ -265,7 +312,7 @@ export function CameraRecorder({
   }
 
   function handleShutterMove(e: React.PointerEvent<HTMLButtonElement>) {
-    if (!isRecording || isLocked || dragStartXRef.current == null) return;
+    if (!isRecording || isLocked || !isFirstSegment || dragStartXRef.current == null) return;
     const dx = e.clientX - dragStartXRef.current;
     const clamped = Math.min(Math.max(dx, 0), LOCK_DRAG_PX);
     setDragOffset(clamped);
@@ -273,6 +320,15 @@ export function CameraRecorder({
   }
 
   function handleShutterUp() {
+    if (gestureConsumedRef.current) {
+      gestureConsumedRef.current = false;
+      return;
+    }
+    if (hasSession && !isRecording) {
+      // Tapped while paused between segments — resume.
+      resumeSegment();
+      return;
+    }
     if (holdTimerRef.current) {
       // Released before the hold threshold — a tap, not a hold.
       clearTimeout(holdTimerRef.current);
@@ -282,8 +338,9 @@ export function CameraRecorder({
       return;
     }
     dragStartXRef.current = null;
-    // Locked recordings ignore release — they only stop on the next tap.
-    if (isRecording && !isLocked) stopRecording();
+    // A locked first segment ignores release — it only pauses on the
+    // next tap (handled in handleShutterDown above).
+    if (isRecording && !isLocked) pauseSegment();
   }
 
   // Pinch-to-zoom and tap-to-focus share the same pointer stream on the
@@ -461,6 +518,10 @@ export function CameraRecorder({
             REC {formatTime(seconds)}
             {isLocked && <LockIcon className="h-3.5 w-3.5 text-white/60" />}
           </span>
+        ) : hasSession ? (
+          <span className="glass rounded-full px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70">
+            Paused {formatTime(seconds)} · tap to resume
+          </span>
         ) : (
           !error && (
             <span className="glass rounded-full px-3.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.15em] text-white/60">
@@ -471,7 +532,7 @@ export function CameraRecorder({
         <button
           type="button"
           onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
-          disabled={isRecording}
+          disabled={hasSession}
           aria-label="Flip camera"
           className="glass flex h-9 w-9 items-center justify-center rounded-full text-white disabled:opacity-40"
         >
@@ -489,17 +550,29 @@ export function CameraRecorder({
       )}
 
       <div className="relative z-10 mt-auto flex items-center justify-center pb-[calc(2rem+env(safe-area-inset-bottom))]">
-        {onImportRequested && !isRecording && (
+        {hasSession ? (
           <button
             type="button"
-            onClick={onImportRequested}
-            aria-label="Choose from your library"
-            className="glass absolute right-6 flex h-11 w-11 items-center justify-center rounded-xl text-white"
+            onClick={finishRecording}
+            aria-label="Finish recording"
+            className="absolute right-6 flex h-11 w-11 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg"
           >
-            <GalleryIcon className="h-5 w-5" />
+            <CheckIcon className="h-5 w-5" />
           </button>
+        ) : (
+          onImportRequested &&
+          !isRecording && (
+            <button
+              type="button"
+              onClick={onImportRequested}
+              aria-label="Choose from your library"
+              className="glass absolute right-6 flex h-11 w-11 items-center justify-center rounded-xl text-white"
+            >
+              <GalleryIcon className="h-5 w-5" />
+            </button>
+          )
         )}
-        {isRecording && !isLocked && (
+        {isRecording && !isLocked && isFirstSegment && (
           <div className="glass pointer-events-none absolute bottom-full left-1/2 mb-5 flex h-11 w-[140px] -translate-x-1/2 items-center rounded-full">
             <LockIcon className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
             <span
@@ -539,10 +612,10 @@ export function CameraRecorder({
                 holdTimerRef.current = null;
               }
               dragStartXRef.current = null;
-              if (isRecording && !isLocked) stopRecording();
+              if (isRecording && !isLocked) pauseSegment();
             }}
             disabled={!!error}
-            aria-label={isLocked ? "Stop recording" : "Tap for photo, hold for video"}
+            aria-label={isLocked ? "Pause recording" : "Tap for photo, hold for video"}
             className="relative z-10 flex h-[68px] w-[68px] select-none items-center justify-center rounded-full border-2 border-white/70 disabled:opacity-40"
             style={{
               touchAction: "none",
