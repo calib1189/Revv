@@ -43,6 +43,25 @@ export async function getSavedPostIds(
   return new Set(data.map((row) => row.post_id));
 }
 
+export async function getSaveCountsForPosts(
+  supabase: SupabaseClient<Database>,
+  postIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (postIds.length === 0) return counts;
+
+  const { data, error } = await supabase
+    .from("saves")
+    .select("post_id")
+    .in("post_id", postIds);
+  if (error) throw error;
+
+  for (const row of data) {
+    counts.set(row.post_id, (counts.get(row.post_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
 export async function listSavedPosts(
   supabase: SupabaseClient<Database>,
   userId: string,

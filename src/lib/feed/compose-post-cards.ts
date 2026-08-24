@@ -4,8 +4,9 @@ import type { Post } from "@/lib/db/posts";
 import { listPostMediaForPosts } from "@/lib/db/post-media";
 import { getLikeCountsForPosts, getLikedPostIds } from "@/lib/db/likes";
 import { getCommentCountsForPosts } from "@/lib/db/comments";
-import { getSavedPostIds } from "@/lib/db/saves";
+import { getSavedPostIds, getSaveCountsForPosts } from "@/lib/db/saves";
 import { getViewCountsForPosts } from "@/lib/db/post-views";
+import { listFollowingIds } from "@/lib/db/follows";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import type { Vehicle } from "@/lib/db/vehicles";
@@ -27,24 +28,40 @@ export async function composePostCards(
     ),
   ];
 
-  const [postMedia, likeCounts, commentCounts, viewCounts, likedIds, savedIds, authors, vehicles, activeBuildByVehicle] =
-    await Promise.all([
-      listPostMediaForPosts(supabase, postIds),
-      getLikeCountsForPosts(supabase, postIds),
-      getCommentCountsForPosts(supabase, postIds),
-      getViewCountsForPosts(supabase, postIds),
-      currentUserId
-        ? getLikedPostIds(supabase, currentUserId, postIds)
-        : Promise.resolve(new Set<string>()),
-      currentUserId
-        ? getSavedPostIds(supabase, currentUserId, postIds)
-        : Promise.resolve(new Set<string>()),
-      supabase.from("profiles").select("*").in("id", authorIds),
-      vehicleIds.length > 0
-        ? supabase.from("vehicles").select("*").in("id", vehicleIds)
-        : Promise.resolve({ data: [] as Vehicle[], error: null }),
-      listActiveBuildsByVehicleIds(supabase, vehicleIds),
-    ]);
+  const [
+    postMedia,
+    likeCounts,
+    commentCounts,
+    saveCounts,
+    viewCounts,
+    likedIds,
+    savedIds,
+    followingIds,
+    authors,
+    vehicles,
+    activeBuildByVehicle,
+  ] = await Promise.all([
+    listPostMediaForPosts(supabase, postIds),
+    getLikeCountsForPosts(supabase, postIds),
+    getCommentCountsForPosts(supabase, postIds),
+    getSaveCountsForPosts(supabase, postIds),
+    getViewCountsForPosts(supabase, postIds),
+    currentUserId
+      ? getLikedPostIds(supabase, currentUserId, postIds)
+      : Promise.resolve(new Set<string>()),
+    currentUserId
+      ? getSavedPostIds(supabase, currentUserId, postIds)
+      : Promise.resolve(new Set<string>()),
+    currentUserId
+      ? listFollowingIds(supabase, currentUserId)
+      : Promise.resolve<string[]>([]),
+    supabase.from("profiles").select("*").in("id", authorIds),
+    vehicleIds.length > 0
+      ? supabase.from("vehicles").select("*").in("id", vehicleIds)
+      : Promise.resolve({ data: [] as Vehicle[], error: null }),
+    listActiveBuildsByVehicleIds(supabase, vehicleIds),
+  ]);
+  const followingIdSet = new Set(followingIds);
 
   const authorById = new Map(
     (authors.data ?? []).map((a: Profile) => [a.id, a]),
@@ -77,6 +94,7 @@ export async function composePostCards(
     const author = authorById.get(post.author_id);
     return {
       post,
+      authorId: post.author_id,
       authorUsername: author?.username ?? "unknown",
       authorAvatarUrl: author?.avatar_media_id
         ? (avatarUrlByMediaId.get(author.avatar_media_id) ?? null)
@@ -90,9 +108,12 @@ export async function composePostCards(
       media: mediaByPost.get(post.id) ?? [],
       likeCount: likeCounts.get(post.id) ?? 0,
       commentCount: commentCounts.get(post.id) ?? 0,
+      saveCount: saveCounts.get(post.id) ?? 0,
       viewCount: viewCounts.get(post.id) ?? 0,
       isLiked: likedIds.has(post.id),
       isSaved: savedIds.has(post.id),
+      isFollowingAuthor: currentUserId ? followingIdSet.has(post.author_id) : null,
+      isOwnPost: currentUserId === post.author_id,
       isAuthenticated: Boolean(currentUserId),
     };
   });

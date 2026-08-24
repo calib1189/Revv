@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SaveButton } from "@/features/feed/save-button";
+import { FollowBadge } from "@/features/feed/follow-badge";
 import { CommentSheet } from "@/features/feed/comment-sheet";
 import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
@@ -172,43 +173,51 @@ export function SwipeSlide({
         ))}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 pb-6">
-        <div className="pointer-events-auto flex min-w-0 max-w-[calc(100%-4rem)] items-start gap-3">
-          <Link href={`/u/${data.authorUsername}`} className="flex-shrink-0">
+        <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.5rem)] text-white">
+          <Link href={`/u/${data.authorUsername}`} className="text-sm font-semibold hover:underline">
+            @{data.authorUsername}
+          </Link>
+          {data.vehicleTitle && data.post.vehicle_id && (
+            <Link
+              href={`/garage/${data.post.vehicle_id}`}
+              className="block text-xs text-white/70 hover:text-white"
+            >
+              {data.vehicleTitle}
+            </Link>
+          )}
+          {data.post.caption && (
+            <CaptionText
+              text={data.post.caption}
+              className="mt-1 line-clamp-2 text-sm text-white/90"
+            />
+          )}
+          <p className="mt-1 flex items-center gap-1 text-xs text-white/60">
+            <EyeIcon className="h-3.5 w-3.5" />
+            {formatCompactNumber(data.viewCount)} view{data.viewCount === 1 ? "" : "s"}
+          </p>
+        </div>
+      </div>
+
+      <div className="pointer-events-auto absolute bottom-6 right-3 flex flex-col items-center gap-5 text-white [&_svg]:drop-shadow-[0_1px_4px_rgb(0_0_0_/_0.6)]">
+        <div className="relative">
+          <Link href={`/u/${data.authorUsername}`}>
             <RankFrame score={data.vehicleRatingScore} compact hideBadge className="rounded-full">
               <Avatar
                 username={data.authorUsername}
                 avatarUrl={data.authorAvatarUrl}
-                className="h-10 w-10 text-sm"
+                className="h-11 w-11 border-2 border-white text-sm"
               />
             </RankFrame>
           </Link>
-          <div className="min-w-0 flex-1 text-white">
-            <Link href={`/u/${data.authorUsername}`} className="text-sm font-semibold hover:underline">
-              @{data.authorUsername}
-            </Link>
-            {data.vehicleTitle && data.post.vehicle_id && (
-              <Link
-                href={`/garage/${data.post.vehicle_id}`}
-                className="block text-xs text-white/70 hover:text-white"
-              >
-                {data.vehicleTitle}
-              </Link>
-            )}
-            {data.post.caption && (
-              <CaptionText
-                text={data.post.caption}
-                className="mt-1 line-clamp-2 text-sm text-white/90"
-              />
-            )}
-            <p className="mt-1 flex items-center gap-1 text-xs text-white/60">
-              <EyeIcon className="h-3.5 w-3.5" />
-              {formatCompactNumber(data.viewCount)} view{data.viewCount === 1 ? "" : "s"}
-            </p>
-          </div>
+          {data.isAuthenticated && !data.isOwnPost && data.isFollowingAuthor === false && (
+            <FollowBadge
+              authorId={data.authorId}
+              authorUsername={data.authorUsername}
+              initialIsFollowing={false}
+            />
+          )}
         </div>
-      </div>
 
-      <div className="pointer-events-auto absolute right-3 top-1/2 flex -translate-y-1/2 flex-col items-center gap-6 text-white [&_svg]:drop-shadow-[0_1px_4px_rgb(0_0_0_/_0.6)]">
         {data.isAuthenticated ? (
           <button
             type="button"
@@ -220,12 +229,16 @@ export function SwipeSlide({
             }`}
           >
             <HeartIcon className="h-8 w-8" filled={liked} />
-            {likeCount > 0 && <span className="text-xs font-medium">{likeCount}</span>}
+            {likeCount > 0 && (
+              <span className="text-xs font-medium">{formatCompactNumber(likeCount)}</span>
+            )}
           </button>
         ) : (
           <Link href="/login" className="flex flex-col items-center gap-1 text-white">
             <HeartIcon className="h-8 w-8" />
-            {likeCount > 0 && <span className="text-xs font-medium">{likeCount}</span>}
+            {likeCount > 0 && (
+              <span className="text-xs font-medium">{formatCompactNumber(likeCount)}</span>
+            )}
           </Link>
         )}
 
@@ -236,15 +249,17 @@ export function SwipeSlide({
         >
           <CommentIcon className="h-8 w-8" />
           {data.commentCount > 0 && (
-            <span className="text-xs font-medium">{data.commentCount}</span>
+            <span className="text-xs font-medium">{formatCompactNumber(data.commentCount)}</span>
           )}
         </button>
 
         <SaveButton
           postId={data.post.id}
           initialSaved={data.isSaved}
+          initialCount={data.saveCount}
           isAuthenticated={data.isAuthenticated}
           iconClassName="h-8 w-8"
+          className="flex flex-col items-center gap-1"
         />
       </div>
 

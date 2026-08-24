@@ -19,6 +19,7 @@ export interface PostMediaItem {
 
 export interface PostCardData {
   post: Post;
+  authorId: string;
   authorUsername: string;
   authorAvatarUrl: string | null;
   vehicleTitle: string | null;
@@ -26,9 +27,15 @@ export interface PostCardData {
   media: PostMediaItem[];
   likeCount: number;
   commentCount: number;
+  saveCount: number;
   viewCount: number;
   isLiked: boolean;
   isSaved: boolean;
+  /** Whether the current viewer already follows this post's author — null
+   * when there's no signed-in viewer to have a follow relationship at
+   * all, distinct from `false` (signed in, just not following yet). */
+  isFollowingAuthor: boolean | null;
+  isOwnPost: boolean;
   isAuthenticated: boolean;
 }
 
