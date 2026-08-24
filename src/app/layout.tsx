@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/shell/header";
 import { Footer } from "@/components/shell/footer";
+import { NativeAppBridge } from "@/components/shell/native-app-bridge";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { SITE_URL } from "@/lib/site-url";
 import "./globals.css";
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="flex min-h-full flex-col">
+        <NativeAppBridge />
         <Header />
         <div
           className={`flex flex-1 flex-col ${user ? "pb-[calc(4rem_+_env(safe-area-inset-bottom))]" : ""}`}

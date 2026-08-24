@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# iOS (Capacitor) — everything CocoaPods/Xcode regenerates locally.
+# Podfile.lock is intentionally NOT ignored: it pins plugin versions the
+# same way package-lock.json does, and should be committed.
+/ios/App/Pods
+/ios/App/build
+/ios/App/DerivedData
+/ios/**/xcuserdata
+*.xcworkspace/xcuserdata
