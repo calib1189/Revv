@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/shell/header";
 import { Footer } from "@/components/shell/footer";
@@ -20,6 +20,14 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "REVV",
   description: "The social platform for your build.",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
+  ],
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
@@ -45,7 +53,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <Header />
-        <div className={`flex flex-1 flex-col ${user ? "pb-16" : ""}`}>
+        <div
+          className={`flex flex-1 flex-col ${user ? "pb-[calc(4rem_+_env(safe-area-inset-bottom))]" : ""}`}
+        >
           <main className="flex flex-1 flex-col">{children}</main>
           <Footer />
         </div>

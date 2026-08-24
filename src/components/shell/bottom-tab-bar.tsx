@@ -23,7 +23,7 @@ export function BottomTabBar({
       <Link
         href="/feed"
         aria-label="Home"
-        className={`flex flex-col items-center gap-0.5 ${
+        className={`flex flex-col items-center gap-0.5 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
           isActive(pathname, "/feed") ? "text-foreground" : "text-muted"
         }`}
       >
@@ -33,7 +33,7 @@ export function BottomTabBar({
       <Link
         href="/friends"
         aria-label="Friends"
-        className={`flex flex-col items-center gap-0.5 ${
+        className={`flex flex-col items-center gap-0.5 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
           isActive(pathname, "/friends") ? "text-foreground" : "text-muted"
         }`}
       >
@@ -43,7 +43,7 @@ export function BottomTabBar({
       <Link
         href="/feed/new"
         aria-label="New post"
-        className="flex h-11 w-14 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255_/_0.25),0_8px_24px_-10px_rgb(255_68_51_/_0.55)]"
+        className="flex h-11 w-14 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255_/_0.25),0_8px_24px_-10px_rgb(255_68_51_/_0.55)] transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90"
       >
         <PlusIcon className="h-6 w-6" />
       </Link>
@@ -51,7 +51,7 @@ export function BottomTabBar({
       <Link
         href="/messages"
         aria-label="Inbox"
-        className={`relative flex flex-col items-center gap-0.5 ${
+        className={`relative flex flex-col items-center gap-0.5 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
           isActive(pathname, "/messages") || isActive(pathname, "/notifications")
             ? "text-foreground"
             : "text-muted"
@@ -68,7 +68,7 @@ export function BottomTabBar({
       <Link
         href={profileHref}
         aria-label="Profile"
-        className={`flex flex-col items-center gap-0.5 ${
+        className={`flex flex-col items-center gap-0.5 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
           isActive(pathname, profileHref) ? "text-foreground" : "text-muted"
         }`}
       >

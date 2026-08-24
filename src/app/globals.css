@@ -21,6 +21,11 @@
 
   --bg-glow-1: rgb(255 255 255 / 0.05);
   --bg-glow-2: rgb(255 68 51 / 0.04);
+
+  /* iOS-style deceleration curve — snappier start, soft landing. Used for
+     the interactions that should read as "native": button/card presses,
+     tab and sheet transitions. */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* Light mode — same restrained, premium language, just inverted. Dark

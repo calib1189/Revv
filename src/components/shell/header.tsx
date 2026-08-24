@@ -16,7 +16,7 @@ export async function Header() {
 
   if (!user) {
     return (
-      <header className="glass-raised sticky top-0 z-10 rounded-none border-x-0 border-t-0">
+      <header className="glass-raised sticky top-0 z-10 rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link href="/" aria-label="REVV">
             <Image src={logo} alt="" width={32} height={32} className="rounded-md" priority />
@@ -59,10 +59,10 @@ export async function Header() {
 
   return (
     <>
-      <header className="glass-raised sticky top-0 z-10 rounded-none border-x-0 border-t-0">
+      <header className="glass-raised sticky top-0 z-10 rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)]">
         <TopTabBar />
       </header>
-      <nav className="glass-raised fixed inset-x-0 bottom-0 z-10 rounded-none border-x-0 border-b-0">
+      <nav className="glass-raised fixed inset-x-0 bottom-0 z-10 rounded-none border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)]">
         <BottomTabBar username={username} unreadInboxCount={messageCount + notificationCount} />
       </nav>
     </>

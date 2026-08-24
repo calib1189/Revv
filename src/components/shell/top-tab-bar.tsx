@@ -28,7 +28,7 @@ export function TopTabBar() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex-shrink-0 whitespace-nowrap border-b-2 py-1 text-sm font-semibold transition-colors ${
+              className={`flex-shrink-0 whitespace-nowrap border-b-2 py-1 text-sm font-semibold transition-colors active:opacity-60 ${
                 active
                   ? "border-accent text-foreground"
                   : "border-transparent text-muted hover:text-foreground"
