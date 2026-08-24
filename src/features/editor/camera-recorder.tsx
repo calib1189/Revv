@@ -160,7 +160,21 @@ export function CameraRecorder({
     if (!ctx) return;
 
     let raf: number;
+    let lastDrawAt = 0;
+    // requestAnimationFrame runs at the display's own refresh rate
+    // (60-120Hz on a real phone) — drawing a full frame that often is
+    // wasted work for what's ultimately captured at 30fps
+    // (canvas.captureStream(30) below), and contends with the recorder
+    // for the same CPU budget. Throttling the actual draw to ~30fps
+    // leaves more headroom for encoding to keep up, for smoother output.
+    const frameIntervalMs = 1000 / 30;
     function draw() {
+      const now = performance.now();
+      if (now - lastDrawAt < frameIntervalMs) {
+        raf = requestAnimationFrame(draw);
+        return;
+      }
+      lastDrawAt = now;
       const vw = video!.videoWidth;
       const vh = video!.videoHeight;
       if (vw && vh) {

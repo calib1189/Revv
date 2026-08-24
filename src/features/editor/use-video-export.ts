@@ -5,16 +5,27 @@ import { drawFrame } from "@/features/editor/draw-frame";
 import { cropRectForAspect } from "@/features/editor/crop";
 import type { EditState } from "@/features/editor/types";
 
-const MAX_DIMENSION = 1080;
+// 720p, not 1080p — the same trade-off already made for camera capture
+// (see camera-recorder.tsx's pickVideoBitsPerSecond comment): exporting
+// composites every frame in real time on the main thread (drawImage, and
+// for any non-"original" filter, a full getImageData/per-pixel-math/
+// putImageData pass), and 1080x1920 of that per frame is enough to fall
+// behind on a real phone, which reads as choppy, dropped-looking
+// playback. 720p is still sharp for a social feed and gives the encoder
+// real headroom to keep up.
+const MAX_DIMENSION = 720;
+// Matches the canvas.captureStream(30) rate below — no point compositing
+// frames faster than what's actually being captured.
+const EXPORT_FPS = 30;
 
 function exportCanvasSize(
   aspect: EditState["aspect"],
   videoWidth: number,
   videoHeight: number,
 ): { width: number; height: number } {
-  if (aspect === "9:16") return { width: 1080, height: 1920 };
-  if (aspect === "1:1") return { width: 1080, height: 1080 };
-  if (aspect === "4:5") return { width: 1080, height: 1350 };
+  if (aspect === "9:16") return { width: 720, height: 1280 };
+  if (aspect === "1:1") return { width: 720, height: 720 };
+  if (aspect === "4:5") return { width: 720, height: 900 };
 
   const scale = Math.min(1, MAX_DIMENSION / Math.max(videoWidth, videoHeight));
   return {
@@ -103,18 +114,6 @@ export function useVideoExport() {
       // isExporting stuck true forever — cleanup always runs exactly once,
       // on every exit path.
       try {
-        video.muted = true;
-        // A looping element auto-restarts the instant it reaches its true
-        // end — which races ahead of the trimEnd check below for any clip
-        // where the trim's out-point is the clip's actual end (i.e. no trim
-        // was applied at all), the single most common case. That race is
-        // exactly what causes export to appear to loop forever.
-        video.loop = false;
-
-        await waitForSeek(video, state.trimStart);
-
-        const sourceStream = video.captureStream ? video.captureStream() : null;
-        const originalTrack = sourceStream?.getAudioTracks()[0];
         // Only build the WebAudio mixing graph when it's actually needed —
         // mixing in music, or a non-default/non-zero volume. The common
         // case (no music, untouched volume) instead feeds the recorder
@@ -127,6 +126,28 @@ export function useVideoExport() {
         // (which never touches WebAudio) doesn't is exactly the pattern
         // that points at the mixing graph itself as the remaining cause.
         const needsMixing = !!state.musicFile || (state.originalVolume !== 1 && state.originalVolume !== 0);
+
+        // Muting only makes sense when WebAudio is independently routing
+        // the (unmuted, internally-read) source audio to the recorder —
+        // otherwise this element's own captureStream() audio track is the
+        // one actually feeding the recording, and several WebKit versions
+        // are documented to stop producing real audio samples on a
+        // captureStream() track once its source element is muted. That's
+        // almost certainly why exports came out silent: this used to be
+        // unconditional, muting even the plain (no-mixing) path that now
+        // depends on that exact track carrying real audio.
+        video.muted = needsMixing;
+        // A looping element auto-restarts the instant it reaches its true
+        // end — which races ahead of the trimEnd check below for any clip
+        // where the trim's out-point is the clip's actual end (i.e. no trim
+        // was applied at all), the single most common case. That race is
+        // exactly what causes export to appear to loop forever.
+        video.loop = false;
+
+        await waitForSeek(video, state.trimStart);
+
+        const sourceStream = video.captureStream ? video.captureStream() : null;
+        const originalTrack = sourceStream?.getAudioTracks()[0];
 
         let musicNode: AudioBufferSourceNode | null = null;
         let audioTracks: MediaStreamTrack[] = [];
@@ -210,6 +231,8 @@ export function useVideoExport() {
         // hanging forever.
         const startedAt = performance.now();
         const stallTimeoutMs = durationSeconds * 3000 + 8000;
+        const frameIntervalMs = 1000 / EXPORT_FPS;
+        let lastDrawAt = 0;
 
         await new Promise<void>((resolve) => {
           function tick() {
@@ -217,7 +240,17 @@ export function useVideoExport() {
               resolve();
               return;
             }
-            drawFrame(ctx!, video, canvas.width, canvas.height, state);
+            // requestAnimationFrame runs at the display's own refresh rate
+            // (60-120Hz on a real phone) — compositing a full frame that
+            // often that fast is wasted work for a 30fps export and one of
+            // the things eating into the CPU budget that's supposed to go
+            // toward keeping up with encoding. Only actually draws at
+            // roughly the export's own target rate.
+            const now = performance.now();
+            if (now - lastDrawAt >= frameIntervalMs) {
+              lastDrawAt = now;
+              drawFrame(ctx!, video, canvas.width, canvas.height, state);
+            }
             setProgress(Math.min(1, (video.currentTime - state.trimStart) / durationSeconds));
 
             if (
