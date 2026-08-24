@@ -57,7 +57,7 @@ export function LeaderboardRow({
       </div>
 
       <span className="flex-shrink-0 text-sm font-semibold text-accent">
-        {Math.round(entry.score)}
+        {entry.score.toFixed(2)}
       </span>
     </Link>
   );

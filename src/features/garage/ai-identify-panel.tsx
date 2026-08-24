@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { identifyVehicleAction } from "@/features/garage/actions";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
+import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
 import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleFormValues } from "@/features/garage/vehicle-form";
 
@@ -69,7 +70,7 @@ export function AiIdentifyPanel({
         <div>
           <p className="text-sm font-medium">Identify with a photo</p>
           <p className="text-xs text-muted">
-            Upload a photo and REVV will guess year, make, model, and trim.
+            Upload a photo and REVV will guess year, make, model, trim, and category.
           </p>
         </div>
         <Button
@@ -115,6 +116,11 @@ export function AiIdentifyPanel({
                 <p className="mt-1 truncate text-sm font-medium">
                   {suggestionTitle}
                 </p>
+                {suggestion.category && (
+                  <span className="glass mt-1.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium text-muted">
+                    {VEHICLE_CATEGORY_LABELS[suggestion.category]}
+                  </span>
+                )}
                 <div className="mt-2 flex gap-3">
                   <button
                     type="button"
@@ -124,6 +130,7 @@ export function AiIdentifyPanel({
                         make: suggestion.make,
                         model: suggestion.model,
                         trim: suggestion.trim,
+                        category: suggestion.category,
                       })
                     }
                     className="text-sm font-medium text-accent hover:underline"

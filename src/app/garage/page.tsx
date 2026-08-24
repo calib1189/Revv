@@ -64,7 +64,7 @@ export default async function GaragePage() {
               <GemIcon className="h-3.5 w-3.5" style={{ color: RANK_BADGE_COLORS[bestTier] }} />
               Best:{" "}
               <span className="font-semibold" style={{ color: RANK_BADGE_COLORS[bestTier] }}>
-                {RANK_LABELS[bestTier]} · {Math.round(bestScore)}
+                {RANK_LABELS[bestTier]} · {bestScore.toFixed(2)}
               </span>
             </Link>
           )}

@@ -1,3 +1,4 @@
+import { VEHICLE_CATEGORIES, isVehicleCategory } from "@/lib/vehicles/category";
 import type { VehicleIdentification, VisionProvider } from "./vision-provider";
 
 // The lite variant is ~10x faster than the full model for this task with
@@ -7,14 +8,21 @@ const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODE
 
 const PROMPT =
   "Identify this vehicle's model year, make, model, and trim from the photo. " +
-  "If you cannot confidently determine a field, use null for it rather than guessing. " +
-  "Give an overall confidence score from 0 to 1 for your identification.";
+  "Also classify it into exactly one of these categories: " +
+  `${VEHICLE_CATEGORIES.join(", ")}. "cars" means an ordinary everyday car ` +
+  "with no strong enthusiast identity (a daily-driven sedan/SUV/crossover) " +
+  "— use it as the default when nothing more specific clearly applies. " +
+  "If you cannot confidently determine a field, use null for it rather " +
+  "than guessing — this includes category if the vehicle type genuinely " +
+  "isn't clear from the photo. Give an overall confidence score from 0 " +
+  "to 1 for your identification.";
 
 interface GeminiIdentifyResponse {
   year: number | null;
   make: string | null;
   model: string | null;
   trim: string | null;
+  category: string | null;
   confidence: number;
 }
 
@@ -53,9 +61,10 @@ export class GeminiVisionProvider implements VisionProvider {
               make: { type: "STRING", nullable: true },
               model: { type: "STRING", nullable: true },
               trim: { type: "STRING", nullable: true },
+              category: { type: "STRING", enum: VEHICLE_CATEGORIES, nullable: true },
               confidence: { type: "NUMBER" },
             },
-            required: ["year", "make", "model", "trim", "confidence"],
+            required: ["year", "make", "model", "trim", "category", "confidence"],
           },
         },
       }),
@@ -80,6 +89,7 @@ export class GeminiVisionProvider implements VisionProvider {
       make: parsed.make,
       model: parsed.model,
       trim: parsed.trim,
+      category: parsed.category && isVehicleCategory(parsed.category) ? parsed.category : null,
       confidence,
       isMock: false,
     };

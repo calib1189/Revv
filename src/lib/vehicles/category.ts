@@ -28,7 +28,7 @@ export const VEHICLE_CATEGORIES: VehicleCategory[] = [
 ];
 
 export const VEHICLE_CATEGORY_LABELS: Record<VehicleCategory, string> = {
-  cars: "Cars",
+  cars: "Regular Traffic",
   jdm: "JDM",
   muscle_pony: "Muscle & Pony",
   euro_performance: "Euro Performance / German",

@@ -78,7 +78,7 @@ export function RateBuildPanel({
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">New rating</p>
             <p className="text-xl font-bold tracking-tight" style={{ color: RANK_BADGE_COLORS[tier] }}>
-              {RANK_LABELS[tier]} · {Math.round(pending.score)}
+              {RANK_LABELS[tier]} · {pending.score.toFixed(2)}
             </p>
           </div>
           {pending.isMock && (
@@ -145,7 +145,7 @@ export function RateBuildPanel({
                 className="truncate text-xl font-bold tracking-tight"
                 style={{ color: RANK_BADGE_COLORS[tier] }}
               >
-                {RANK_LABELS[tier]} · {Math.round(currentScore)}
+                {RANK_LABELS[tier]} · {currentScore.toFixed(2)}
               </p>
             </div>
           </div>

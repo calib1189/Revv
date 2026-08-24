@@ -1,13 +1,13 @@
 import type { VehicleIdentification, VisionProvider } from "./vision-provider";
 
 const SAMPLE_GUESSES: Omit<VehicleIdentification, "confidence" | "isMock">[] = [
-  { year: 1998, make: "Toyota", model: "Supra", trim: "RZ" },
-  { year: 2015, make: "Subaru", model: "WRX STI", trim: null },
-  { year: 2020, make: "Mazda", model: "MX-5 Miata", trim: "Club" },
-  { year: 1993, make: "Mazda", model: "RX-7", trim: "FD" },
-  { year: 2018, make: "Honda", model: "Civic Type R", trim: null },
-  { year: 2009, make: "Nissan", model: "GT-R", trim: "Premium" },
-  { year: 2002, make: "BMW", model: "M3", trim: "E46" },
+  { year: 1998, make: "Toyota", model: "Supra", trim: "RZ", category: "jdm" },
+  { year: 2015, make: "Subaru", model: "WRX STI", trim: null, category: "jdm" },
+  { year: 2020, make: "Mazda", model: "MX-5 Miata", trim: "Club", category: "jdm" },
+  { year: 1993, make: "Mazda", model: "RX-7", trim: "FD", category: "jdm" },
+  { year: 2018, make: "Honda", model: "Civic Type R", trim: null, category: "jdm" },
+  { year: 2009, make: "Nissan", model: "GT-R", trim: "Premium", category: "jdm" },
+  { year: 2002, make: "BMW", model: "M3", trim: "E46", category: "euro_performance" },
 ];
 
 function delay(ms: number) {

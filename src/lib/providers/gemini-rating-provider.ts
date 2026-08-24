@@ -12,14 +12,16 @@ const PROMPT =
   "the build details below. Custom paint, custom-fabricated panels, " +
   "widebody kits, and other bodywork are major modifications — weigh them " +
   "at least as heavily as bolt-on parts. Give an honest but encouraging " +
-  "whole-number score from 0 to 100, considering how coherent and " +
-  "well-executed the build looks and how clean the car presents in the " +
-  "photos. A bone-stock car isn't bad, it just scores lower than a " +
-  "thoughtfully built one — but only call a car stock if the photos " +
-  "actually look stock. Reserve 90+ for genuinely exceptional, heavily " +
-  "customized builds and 100 for something truly showstopping — don't " +
-  "hand it out easily, but don't withhold it from a build that clearly " +
-  "earns it either.\n\n" +
+  "precise score from 0 to 100 with two decimal places (e.g. 87.50, " +
+  "72.25, 95.75) — use the decimals for real differentiation between " +
+  "similar builds rather than defaulting to whole numbers, considering " +
+  "how coherent and well-executed the build looks and how clean the car " +
+  "presents in the photos. A bone-stock car isn't bad, it just scores " +
+  "lower than a thoughtfully built one — but only call a car stock if " +
+  "the photos actually look stock. Reserve 90+ for genuinely " +
+  "exceptional, heavily customized builds and 100 for something truly " +
+  "showstopping — don't hand it out easily, but don't withhold it from " +
+  "a build that clearly earns it either.\n\n" +
   "Then explain the score in two parts. `strengths`: one to two sentences " +
   "naming the specific things you actually see that earned this score — " +
   "particular mods, paint quality, how coherent the theme is. " +
@@ -89,7 +91,7 @@ export class GeminiRatingProvider implements RatingProvider {
     }
 
     const parsed: GeminiRatingResponse = JSON.parse(text);
-    const score = Math.round(Math.max(0, Math.min(100, parsed.score)));
+    const score = Math.round(Math.max(0, Math.min(100, parsed.score)) * 100) / 100;
 
     return {
       score,

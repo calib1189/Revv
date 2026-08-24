@@ -7,7 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { VehicleFormState } from "@/features/garage/actions";
-import { VEHICLE_CATEGORIES, VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
+import {
+  VEHICLE_CATEGORIES,
+  VEHICLE_CATEGORY_LABELS,
+  type VehicleCategory,
+} from "@/lib/vehicles/category";
 
 const initialState: VehicleFormState = { error: null };
 
@@ -16,6 +20,7 @@ export interface VehicleFormValues {
   make?: string | null;
   model?: string | null;
   trim?: string | null;
+  category?: VehicleCategory | null;
 }
 
 interface VehicleFormProps {
@@ -82,7 +87,7 @@ export function VehicleForm({
           <select
             id="category"
             name="category"
-            defaultValue={vehicle?.category ?? "cars"}
+            defaultValue={values?.category ?? "cars"}
             className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
           >
             {VEHICLE_CATEGORIES.map((c) => (

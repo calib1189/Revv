@@ -53,9 +53,10 @@ export const RANK_BADGE_TEXT_COLORS: Record<RankTier, string> = {
 };
 
 /** Single source of truth for tier boundaries, highest first. Score is
- * 0-100 (whole numbers). Each tier spans a full ten-point band except ruby
- * and cosmic at the top, which split the last band in half (90-94 ruby,
- * 95-100 cosmic) so cosmic is reachable without requiring a literal
+ * 0-100 with two decimal places (e.g. 95.25). Boundaries themselves stay
+ * clean round numbers — each tier spans a full ten-point band except ruby
+ * and cosmic at the top, which split the last band in half (90-94.99
+ * ruby, 95-100 cosmic) so cosmic is reachable without requiring a literal
  * perfect 100. `rankForScore` and the leaderboard's tier ladder both
  * derive from this list so the two never drift apart. */
 export const RANK_TIERS: { tier: RankTier; min: number }[] = [
@@ -75,12 +76,12 @@ export function rankForScore(score: number): RankTier {
   return RANK_TIERS.find((t) => score >= t.min)!.tier;
 }
 
-/** "95 – 100", "90 – 94", etc. — the inclusive score range for a tier. */
+/** "95 – 100", "90 – 94.99", etc. — the inclusive score range for a tier. */
 export function rankRangeLabel(tier: RankTier): string {
   const index = RANK_TIERS.findIndex((t) => t.tier === tier);
   const { min } = RANK_TIERS[index];
   const prevTier = RANK_TIERS[index - 1];
   if (!prevTier) return `${min} – 100`;
-  const max = prevTier.min - 1;
+  const max = Math.round((prevTier.min - 0.01) * 100) / 100;
   return `${min} – ${max}`;
 }
