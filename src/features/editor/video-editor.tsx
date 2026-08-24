@@ -129,8 +129,17 @@ export function VideoEditor({
 
   // Live edit preview: loops playback within the trim bounds, drawing every
   // frame through the exact same compositor the final export uses.
+  //
+  // Must stay off while exporting — export plays and seeks this exact
+  // <video> element itself to drive its own frame-by-frame capture, and if
+  // this loop kept running at the same time it would race the export's
+  // own end-of-clip check: this loop's reset-to-trimStart fires every
+  // frame once playback reaches trimEnd, so it would win that race almost
+  // every time and export's `currentTime >= trimEnd` check would never
+  // observe a passing value — the clip would just visibly loop forever
+  // and the recording would never stop.
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || isExporting) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -157,7 +166,7 @@ export function VideoEditor({
       cancelAnimationFrame(raf);
       video.pause();
     };
-  }, [ready]);
+  }, [ready, isExporting]);
 
   // Preview canvas resolution follows the chosen aspect — modest size for
   // smooth live editing; the export pass renders at full target resolution

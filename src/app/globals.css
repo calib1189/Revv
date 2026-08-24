@@ -178,6 +178,32 @@ html.native-app body::-webkit-scrollbar {
   animation: heart-pop 900ms ease-out forwards;
 }
 
+/* Tap-to-focus reticle on the camera viewfinder — snaps in slightly big,
+   settles, then fades. Remounted via a changing `key` each tap so it
+   restarts rather than needing a mid-animation reset. */
+@keyframes focus-ring {
+  0% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+.animate-focus-ring {
+  animation: focus-ring 700ms ease-out forwards;
+}
+
 @layer components {
   /* Liquid-glass surface: frosted, translucent, with a hairline border that
      catches light on its top edge. Two tiers — .glass for standard cards,

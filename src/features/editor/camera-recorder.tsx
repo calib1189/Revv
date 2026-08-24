@@ -12,16 +12,18 @@ function pickVideoMimeType(): string {
   return "video/webm";
 }
 
-/** Scales target bitrate to whatever resolution the camera actually
- * negotiated (asking for 4K doesn't guarantee getting it — plenty of
- * front cameras and older devices cap out lower), so a 1080p stream
- * doesn't get an oversized bitrate and a 4K one doesn't get starved
- * down to the same default MediaRecorder would otherwise pick. */
-function pickVideoBitsPerSecond(stream: MediaStream): number {
-  const settings = stream.getVideoTracks()[0]?.getSettings();
-  const pixels = (settings?.width ?? 1920) * (settings?.height ?? 1080);
-  const bitsPerSecond = Math.round(pixels * 0.1 * 30);
-  return Math.min(Math.max(bitsPerSecond, 4_000_000), 30_000_000);
+/** Scales target bitrate to the actual capture resolution. 1080p is the
+ * ceiling this component asks the camera for (see the getUserMedia call
+ * below) — going higher (we tried 4K) overloads real-time encoding on
+ * mid-range phones, which is what caused dropped frames during recording
+ * and blocky, over-compressed-looking playback afterward: the encoder
+ * falls behind and has to sacrifice quality to keep up. 1080p at a solid
+ * bitrate is what every mainstream social app actually records at for
+ * exactly this reason. */
+function pickVideoBitsPerSecond(width: number, height: number): number {
+  const pixels = width * height;
+  const bitsPerSecond = Math.round(pixels * 0.14 * 30);
+  return Math.min(Math.max(bitsPerSecond, 4_000_000), 16_000_000);
 }
 
 const MAX_RECORD_SECONDS = 180;
@@ -33,6 +35,10 @@ const HOLD_THRESHOLD_MS = 300;
  * recording before it locks — past this the finger can lift and
  * recording keeps going until a subsequent tap stops it. */
 const LOCK_DRAG_PX = 80;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 4;
+const TAP_MAX_MOVE_PX = 12;
+const TAP_MAX_MS = 300;
 
 export function CameraRecorder({
   onCaptured,
@@ -42,18 +48,33 @@ export function CameraRecorder({
   onClose: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragStartXRef = useRef<number | null>(null);
+  const zoomRef = useRef(1);
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const pinchStartRef = useRef<{ distance: number; zoom: number } | null>(null);
+  const tapStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const focusHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const zoomHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const [isRecording, setIsRecording] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [zoomHintVisible, setZoomHintVisible] = useState(false);
+  const [focusPoint, setFocusPoint] = useState<{ x: number; y: number; id: number } | null>(null);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,9 +91,11 @@ export function CameraRecorder({
             facingMode,
             // Soft ("ideal") constraints — the browser picks the closest
             // resolution the camera actually supports rather than failing
-            // outright, so this still works on devices that can't do 4K.
-            width: { ideal: 3840 },
-            height: { ideal: 2160 },
+            // outright. Capped at 1080p on purpose: see
+            // pickVideoBitsPerSecond above for why higher isn't actually
+            // better here.
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
             frameRate: { ideal: 30 },
           },
           audio: true,
@@ -105,26 +128,58 @@ export function CameraRecorder({
     };
   }, [facingMode]);
 
+  // Continuously draws the (zoom-cropped, mirrored) camera frame onto the
+  // visible canvas — this is what the live preview shows AND what photo
+  // and video capture both read from, so pinch-zoom actually ends up baked
+  // into the captured output instead of being a preview-only visual trick
+  // that vanishes the moment you take the shot.
+  useEffect(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let raf: number;
+    function draw() {
+      const vw = video!.videoWidth;
+      const vh = video!.videoHeight;
+      if (vw && vh) {
+        if (canvas!.width !== vw || canvas!.height !== vh) {
+          canvas!.width = vw;
+          canvas!.height = vh;
+        }
+        const z = zoomRef.current;
+        const sw = vw / z;
+        const sh = vh / z;
+        const sx = (vw - sw) / 2;
+        const sy = (vh - sh) / 2;
+        ctx!.save();
+        if (facingMode === "user") {
+          ctx!.translate(canvas!.width, 0);
+          ctx!.scale(-1, 1);
+        }
+        ctx!.drawImage(video!, sx, sy, sw, sh, 0, 0, canvas!.width, canvas!.height);
+        ctx!.restore();
+      }
+      raf = requestAnimationFrame(draw);
+    }
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [facingMode]);
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+      if (focusHideTimerRef.current) clearTimeout(focusHideTimerRef.current);
+      if (zoomHintTimerRef.current) clearTimeout(zoomHintTimerRef.current);
     };
   }, []);
 
   function capturePhoto() {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    if (facingMode === "user") {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-    }
-    ctx.drawImage(video, 0, 0);
+    const canvas = canvasRef.current;
+    if (!canvas || !canvas.width) return;
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
@@ -137,19 +192,27 @@ export function CameraRecorder({
 
   function startRecording() {
     const stream = streamRef.current;
-    if (!stream) return;
+    const canvas = canvasRef.current;
+    if (!stream || !canvas) return;
+
+    const canvasStream = canvas.captureStream(30);
+    const combined = new MediaStream([
+      ...canvasStream.getVideoTracks(),
+      ...stream.getAudioTracks(),
+    ]);
 
     chunksRef.current = [];
     const mimeType = pickVideoMimeType();
     const baseType = mimeType.split(";")[0];
-    const recorder = new MediaRecorder(stream, {
+    const recorder = new MediaRecorder(combined, {
       mimeType,
-      videoBitsPerSecond: pickVideoBitsPerSecond(stream),
+      videoBitsPerSecond: pickVideoBitsPerSecond(canvas.width, canvas.height),
     });
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
     recorder.onstop = () => {
+      combined.getTracks().forEach((t) => t.stop());
       const blob = new Blob(chunksRef.current, { type: baseType });
       const extension = mimeType.includes("mp4") ? "mp4" : "webm";
       onCaptured(new File([blob], `recording.${extension}`, { type: baseType }), "video");
@@ -218,6 +281,79 @@ export function CameraRecorder({
     if (isRecording && !isLocked) stopRecording();
   }
 
+  // Pinch-to-zoom and tap-to-focus share the same pointer stream on the
+  // viewfinder canvas: one finger that stays put is a focus tap, two
+  // fingers moving apart or together is a pinch.
+  function handleViewfinderDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointersRef.current.size === 1) {
+      tapStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+    } else {
+      tapStartRef.current = null;
+      const pts = [...pointersRef.current.values()];
+      pinchStartRef.current = {
+        distance: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+        zoom: zoomRef.current,
+      };
+    }
+  }
+
+  function handleViewfinderMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointersRef.current.size >= 2 && pinchStartRef.current) {
+      const pts = [...pointersRef.current.values()];
+      const distance = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const next = Math.min(
+        MAX_ZOOM,
+        Math.max(MIN_ZOOM, pinchStartRef.current.zoom * (distance / pinchStartRef.current.distance)),
+      );
+      setZoom(next);
+      setZoomHintVisible(true);
+      if (zoomHintTimerRef.current) clearTimeout(zoomHintTimerRef.current);
+      zoomHintTimerRef.current = setTimeout(() => setZoomHintVisible(false), 900);
+    }
+  }
+
+  function handleViewfinderUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    const start = tapStartRef.current;
+    const wasTap =
+      pointersRef.current.size === 1 &&
+      !!start &&
+      Date.now() - start.time < TAP_MAX_MS &&
+      Math.hypot(e.clientX - start.x, e.clientY - start.y) < TAP_MAX_MOVE_PX;
+    pointersRef.current.delete(e.pointerId);
+    if (pointersRef.current.size < 2) pinchStartRef.current = null;
+    if (pointersRef.current.size === 0) tapStartRef.current = null;
+    if (wasTap) focusAt(e);
+  }
+
+  function focusAt(e: React.PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    setFocusPoint({ x: px, y: py, id: Date.now() });
+    if (focusHideTimerRef.current) clearTimeout(focusHideTimerRef.current);
+    focusHideTimerRef.current = setTimeout(() => setFocusPoint(null), 700);
+
+    // Real hardware refocus where the browser/device supports it — the
+    // reticle above shows regardless, since continuous autofocus means
+    // the camera is very likely already sharp there even when this isn't
+    // supported, but only this call can actually redirect the sensor's
+    // focus point on devices that do support it.
+    const track = streamRef.current?.getVideoTracks()[0];
+    const capabilities = track?.getCapabilities?.();
+    if (!track || !capabilities?.pointsOfInterest) return;
+    // The camera's own coordinate space isn't mirrored even when the
+    // preview is (front camera) — flip x back before handing it off.
+    const nx = facingMode === "user" ? 1 - px / rect.width : px / rect.width;
+    const ny = py / rect.height;
+    track.applyConstraints({ advanced: [{ pointsOfInterest: [{ x: nx, y: ny }] }] }).catch(() => {});
+  }
+
   function formatTime(total: number) {
     const m = Math.floor(total / 60);
     const s = total % 60;
@@ -225,16 +361,30 @@ export function CameraRecorder({
   }
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col bg-black">
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        className={`absolute inset-0 h-full w-full object-cover ${
-          facingMode === "user" ? "-scale-x-100" : ""
-        }`}
+    <div className="absolute inset-0 z-10 flex flex-col overflow-hidden bg-black">
+      <video ref={videoRef} autoPlay muted playsInline className="hidden" />
+      <canvas
+        ref={canvasRef}
+        onPointerDown={handleViewfinderDown}
+        onPointerMove={handleViewfinderMove}
+        onPointerUp={handleViewfinderUp}
+        onPointerCancel={handleViewfinderUp}
+        className="absolute inset-0 h-full w-full touch-none object-cover"
       />
+
+      {zoomHintVisible && (
+        <span className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-1.5 text-sm font-semibold text-white">
+          {zoom.toFixed(1)}x
+        </span>
+      )}
+
+      {focusPoint && (
+        <span
+          key={focusPoint.id}
+          className="animate-focus-ring pointer-events-none absolute z-10 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-white"
+          style={{ left: focusPoint.x, top: focusPoint.y }}
+        />
+      )}
 
       <div className="relative z-10 flex items-center justify-between p-4">
         <button
@@ -259,7 +409,7 @@ export function CameraRecorder({
         ) : (
           !error && (
             <span className="rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white/70">
-              Tap for photo · hold for video
+              Tap for photo · hold for video · pinch to zoom
             </span>
           )
         )}
