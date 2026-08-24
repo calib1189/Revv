@@ -20,7 +20,12 @@ const config: CapacitorConfig = {
     allowNavigation: ["*.supabase.co", "accounts.google.com", "appleid.apple.com"],
   },
   ios: {
-    contentInset: "always",
+    // The web app already insets itself around the notch/home-indicator
+    // via env(safe-area-inset-*) in its own CSS (added earlier for the
+    // PWA). "always" makes the native layer *also* push content down for
+    // the safe area on top of that — same gap applied twice, which is
+    // exactly the oversized empty strip under the status bar this fixes.
+    contentInset: "never",
   },
 };
 
