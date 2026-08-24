@@ -101,6 +101,18 @@ html {
   color-scheme: dark;
 }
 
+/* iOS Safari/WKWebView auto-zooms the whole page on focus for any input
+   under 16px, and nothing else un-does that zoom afterward — the page
+   just stays stuck zoomed in. The only real fix is never triggering it:
+   every focusable field has to render at 16px or larger. This has to
+   beat Tailwind's own text-size utilities (text-sm etc. are equal-or-
+   higher specificity class selectors), hence !important. */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
+
 body {
   background: var(--color-background);
   background-image:
