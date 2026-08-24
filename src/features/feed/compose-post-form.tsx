@@ -14,13 +14,11 @@ import {
 } from "@/lib/validation/media";
 import { validateCaption, validatePhotoCount } from "@/lib/validation/post";
 import { trackEvent } from "@/lib/analytics/track";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
 import { VideoEditor } from "@/features/editor/video-editor";
 import { PhotoEditor } from "@/features/editor/photo-editor";
 import { CameraRecorder } from "@/features/editor/camera-recorder";
-import { CameraIcon, UploadIcon } from "@/components/ui/icons";
+import { PostComposer, parseHashtags } from "@/features/feed/post-composer";
 import type { Vehicle } from "@/lib/db/vehicles";
 
 interface SelectedPhoto {
@@ -32,6 +30,8 @@ interface SelectedVideo {
   file: File;
   previewUrl: string;
 }
+
+type Step = "camera" | "compose";
 
 function readVideoDurationSeconds(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -57,17 +57,17 @@ export function ComposePostForm({
   userId: string;
   vehicles: Vehicle[];
 }) {
+  const [step, setStep] = useState<Step>("camera");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
   const [video, setVideo] = useState<SelectedVideo | null>(null);
   const [videoEditorSource, setVideoEditorSource] = useState<File | null>(null);
   const [photoEditorSource, setPhotoEditorSource] = useState<File | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
   const [caption, setCaption] = useState("");
+  const [hashtags, setHashtags] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
-  const morePhotosInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const mode: "photo" | "video" | null = video ? "video" : photos.length > 0 ? "photo" : null;
@@ -99,8 +99,11 @@ export function ComposePostForm({
 
   function removePhoto(index: number) {
     setPhotos((prev) => {
-      URL.revokeObjectURL(prev[index].previewUrl);
-      return prev.filter((_, i) => i !== index);
+      const removedUrl = prev[index]?.previewUrl;
+      const next = prev.filter((_, i) => i !== index);
+      if (removedUrl) URL.revokeObjectURL(removedUrl);
+      if (next.length === 0) setStep("camera");
+      return next;
     });
   }
 
@@ -130,10 +133,10 @@ export function ComposePostForm({
       return;
     }
     handleSelectPhotos(files);
+    setStep("compose");
   }
 
   function handleCameraCaptured(file: File, kind: "photo" | "video") {
-    setIsRecording(false);
     setError(null);
     if (kind === "video") {
       clearPhotos();
@@ -159,6 +162,7 @@ export function ComposePostForm({
 
     clearVideo();
     setVideo({ file, previewUrl: URL.createObjectURL(file) });
+    setStep("compose");
   }
 
   function handlePhotoEditorExported(file: File) {
@@ -169,6 +173,7 @@ export function ComposePostForm({
 
     clearVideo();
     setPhotos((prev) => [...prev, { file, previewUrl: URL.createObjectURL(file) }]);
+    setStep("compose");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -183,7 +188,10 @@ export function ComposePostForm({
     } else if (!mode) {
       return setError("Record or import a photo or video first.");
     }
-    const captionError = validateCaption(caption);
+    const finalCaption = [caption.trim(), parseHashtags(hashtags).join(" ")]
+      .filter(Boolean)
+      .join("\n\n");
+    const captionError = validateCaption(finalCaption);
     if (captionError) return setError(captionError);
 
     setIsSubmitting(true);
@@ -193,7 +201,7 @@ export function ComposePostForm({
         author_id: userId,
         vehicle_id: vehicleId || null,
         post_type: mode!,
-        caption: caption.trim() || null,
+        caption: finalCaption || null,
       });
 
       if (mode === "photo") {
@@ -236,9 +244,7 @@ export function ComposePostForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      {error && <Callout tone="danger">{error}</Callout>}
-
+    <>
       <input
         ref={importInputRef}
         type="file"
@@ -250,110 +256,40 @@ export function ComposePostForm({
           e.target.value = "";
         }}
       />
-      <input
-        ref={morePhotosInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          if (e.target.files?.length) handleSelectPhotos(e.target.files);
-          e.target.value = "";
-        }}
-      />
 
-      {mode === null && (
-        <div>
-          <Label>Photo or video</Label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setIsRecording(true)}
-              className="glass flex flex-col items-center gap-2 rounded-2xl py-8 text-sm font-medium transition-opacity hover:opacity-90"
-            >
-              <CameraIcon className="h-6 w-6" />
-              Record
-            </button>
-            <button
-              type="button"
-              onClick={() => importInputRef.current?.click()}
-              className="glass flex flex-col items-center gap-2 rounded-2xl py-8 text-sm font-medium transition-opacity hover:opacity-90"
-            >
-              <UploadIcon className="h-6 w-6" />
-              Import from device
-            </button>
-          </div>
-        </div>
+      {step === "camera" && (
+        <>
+          <CameraRecorder
+            onClose={() => router.back()}
+            onCaptured={handleCameraCaptured}
+            onImportRequested={() => importInputRef.current?.click()}
+          />
+          {error && (
+            <div className="fixed inset-x-4 z-[60] top-[calc(4.5rem+env(safe-area-inset-top))]">
+              <Callout tone="danger">{error}</Callout>
+            </div>
+          )}
+        </>
       )}
 
-      {mode === "photo" && (
-        <div>
-          <Label>Photos</Label>
-          <div className="mb-3 grid grid-cols-3 gap-2">
-            {photos.map((photo, i) => (
-              <div key={i} className="group relative aspect-square overflow-hidden rounded-lg bg-surface">
-                {/* eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset */}
-                <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removePhoto(i)}
-                  aria-label="Remove photo"
-                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="px-3 py-1.5 text-sm"
-              onClick={() => morePhotosInputRef.current?.click()}
-            >
-              Add more photos
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              className="px-3 py-1.5 text-sm"
-              onClick={clearPhotos}
-            >
-              Start over
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {mode === "video" && video && (
-        <div>
-          <Label>Video</Label>
-          <div className="relative mb-3 aspect-[9/16] max-h-96 w-fit overflow-hidden rounded-lg bg-black">
-            <video
-              src={video.previewUrl}
-              controls
-              playsInline
-              className="h-full w-full object-contain"
-            />
-            <button
-              type="button"
-              onClick={clearVideo}
-              aria-label="Remove video"
-              className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
-            >
-              ×
-            </button>
-          </div>
-          <Button
-            type="button"
-            variant="secondary"
-            className="px-3 py-1.5 text-sm"
-            onClick={clearVideo}
-          >
-            Choose a different video
-          </Button>
-        </div>
+      {step === "compose" && mode && (
+        <PostComposer
+          mode={mode}
+          photos={photos}
+          video={video}
+          vehicles={vehicles}
+          caption={caption}
+          onCaptionChange={setCaption}
+          hashtags={hashtags}
+          onHashtagsChange={setHashtags}
+          vehicleId={vehicleId}
+          onVehicleIdChange={setVehicleId}
+          onBack={() => setStep("camera")}
+          onRemovePhoto={removePhoto}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          error={error}
+        />
       )}
 
       {videoEditorSource && (
@@ -371,43 +307,6 @@ export function ComposePostForm({
           onExported={handlePhotoEditorExported}
         />
       )}
-
-      {isRecording && <CameraRecorder onClose={() => setIsRecording(false)} onCaptured={handleCameraCaptured} />}
-
-      {vehicles.length > 0 && (
-        <div>
-          <Label htmlFor="vehicle">Tag a vehicle</Label>
-          <select
-            id="vehicle"
-            value={vehicleId}
-            onChange={(e) => setVehicleId(e.target.value)}
-            className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
-          >
-            <option value="">None</option>
-            {vehicles.map((vehicle) => (
-              <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      <div>
-        <Label htmlFor="caption">Caption</Label>
-        <textarea
-          id="caption"
-          rows={4}
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          placeholder="What's the story?"
-          className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted transition-colors focus:border-accent/60 focus:outline-none"
-        />
-      </div>
-
-      <Button type="submit" disabled={isSubmitting || !mode} className="self-start">
-        {isSubmitting ? "Publishing…" : "Publish"}
-      </Button>
-    </form>
+    </>
   );
 }

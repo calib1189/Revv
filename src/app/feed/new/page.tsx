@@ -11,12 +11,5 @@ export default async function NewPostPage() {
   const supabase = await createClient();
   const vehicles = await listVehiclesByOwner(supabase, user.id);
 
-  return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
-      <h1 className="mb-8 text-2xl font-semibold tracking-tight">
-        New post
-      </h1>
-      <ComposePostForm userId={user.id} vehicles={vehicles} />
-    </div>
-  );
+  return <ComposePostForm userId={user.id} vehicles={vehicles} />;
 }

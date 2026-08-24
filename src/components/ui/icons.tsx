@@ -509,3 +509,38 @@ export function LockIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function GalleryIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <rect x="3" y="5" width="14" height="14" rx="2.5" strokeLinejoin="round" />
+      <circle cx="8" cy="10" r="1.4" fill="currentColor" stroke="none" />
+      <path d="M3 16l4-4 3.5 3.5L14 12l3 3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 9v8a2 2 0 0 1-2 2h-8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function HashtagIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <path
+        d="M9.5 4 7 20M17 4l-2.5 16M4 9h16M3 15h16"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

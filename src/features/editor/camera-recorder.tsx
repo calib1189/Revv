@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CameraFlipIcon, CloseIcon, CameraIcon, LockIcon } from "@/components/ui/icons";
+import { CameraFlipIcon, CloseIcon, CameraIcon, LockIcon, GalleryIcon } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
 function pickVideoMimeType(): string {
@@ -43,9 +43,14 @@ const TAP_MAX_MS = 300;
 export function CameraRecorder({
   onCaptured,
   onClose,
+  onImportRequested,
 }: {
   onCaptured: (file: File, kind: "photo" | "video") => void;
   onClose: () => void;
+  /** Opens the device's own photo/video picker — the small library
+   * shortcut button next to the shutter. Optional: a bare camera with no
+   * import path is still a valid use of this component. */
+  onImportRequested?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -468,6 +473,16 @@ export function CameraRecorder({
       )}
 
       <div className="relative z-10 mt-auto flex items-center justify-center pb-[calc(2rem+env(safe-area-inset-bottom))]">
+        {onImportRequested && !isRecording && (
+          <button
+            type="button"
+            onClick={onImportRequested}
+            aria-label="Choose from your library"
+            className="glass absolute right-6 flex h-11 w-11 items-center justify-center rounded-xl text-white"
+          >
+            <GalleryIcon className="h-5 w-5" />
+          </button>
+        )}
         {isRecording && !isLocked && (
           <div className="glass pointer-events-none absolute bottom-full left-1/2 mb-5 flex h-11 w-[140px] -translate-x-1/2 items-center rounded-full">
             <LockIcon className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
