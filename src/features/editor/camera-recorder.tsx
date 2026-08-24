@@ -360,6 +360,9 @@ export function CameraRecorder({
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
+  const recordProgress = Math.min(1, seconds / MAX_RECORD_SECONDS);
+  const ringCircumference = 2 * Math.PI * 36;
+
   return (
     <div className="absolute inset-0 z-10 flex flex-col overflow-hidden bg-black">
       <video ref={videoRef} autoPlay muted playsInline className="hidden" />
@@ -372,18 +375,54 @@ export function CameraRecorder({
         className="absolute inset-0 h-full w-full touch-none object-cover"
       />
 
+      {/* Targeting-frame corners — purely decorative, reads as a precision
+          instrument rather than a plain video feed. Kept clear of the
+          header/shutter regions so it never competes with real controls. */}
+      <div
+        className="pointer-events-none absolute inset-x-5 z-[5]"
+        style={{
+          top: "calc(4.75rem + env(safe-area-inset-top))",
+          bottom: "calc(7.5rem + env(safe-area-inset-bottom))",
+        }}
+      >
+        <span className="absolute left-0 top-0 h-5 w-5 border-l-2 border-t-2 border-white/25" />
+        <span className="absolute right-0 top-0 h-5 w-5 border-r-2 border-t-2 border-white/25" />
+        <span className="absolute bottom-0 left-0 h-5 w-5 border-b-2 border-l-2 border-white/25" />
+        <span className="absolute bottom-0 right-0 h-5 w-5 border-b-2 border-r-2 border-white/25" />
+      </div>
+
       {zoomHintVisible && (
-        <span className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-1.5 text-sm font-semibold text-white">
-          {zoom.toFixed(1)}x
-        </span>
+        <div className="pointer-events-none absolute right-4 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-2.5">
+          <div className="glass relative h-36 w-[3px] rounded-full">
+            <span
+              className="absolute left-1/2 h-3 w-3 rounded-full bg-accent"
+              style={{
+                bottom: `${((zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100}%`,
+                transform: "translate(-50%, 50%)",
+              }}
+            />
+          </div>
+          <span className="glass rounded-full px-2.5 py-1 font-mono text-xs tabular-nums text-white">
+            {zoom.toFixed(1)}×
+          </span>
+        </div>
       )}
 
       {focusPoint && (
         <span
           key={focusPoint.id}
-          className="animate-focus-ring pointer-events-none absolute z-10 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-lg border-2 border-white"
+          className="animate-focus-ring text-accent pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2"
           style={{ left: focusPoint.x, top: focusPoint.y }}
-        />
+        >
+          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+            <path
+              d="M4 15V6a2 2 0 0 1 2-2h9M56 15V6a2 2 0 0 0-2-2h-9M4 45v9a2 2 0 0 0 2 2h9M56 45v9a2 2 0 0 1-2 2h-9"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </span>
       )}
 
       <div className="relative z-10 flex items-center justify-between p-4">
@@ -391,25 +430,20 @@ export function CameraRecorder({
           type="button"
           onClick={onClose}
           aria-label="Close camera"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+          className="glass flex h-9 w-9 items-center justify-center rounded-full text-white"
         >
-          <CloseIcon className="h-5 w-5" />
+          <CloseIcon className="h-[18px] w-[18px]" />
         </button>
         {isRecording ? (
-          <span className="flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1 text-sm font-medium text-white">
-            <span className="h-2 w-2 rounded-full bg-accent" />
-            {formatTime(seconds)}
-            {isLocked && (
-              <>
-                <LockIcon className="ml-0.5 h-3.5 w-3.5 text-white/70" />
-                <span className="text-xs font-normal text-white/60">tap to stop</span>
-              </>
-            )}
+          <span className="glass flex items-center gap-2 rounded-full px-3.5 py-1.5 font-mono text-xs tracking-wider text-white">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+            REC {formatTime(seconds)}
+            {isLocked && <LockIcon className="h-3.5 w-3.5 text-white/60" />}
           </span>
         ) : (
           !error && (
-            <span className="rounded-full bg-black/50 px-3 py-1 text-xs font-medium text-white/70">
-              Tap for photo · hold for video · pinch to zoom
+            <span className="glass rounded-full px-3.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.15em] text-white/60">
+              Tap · Hold · Pinch
             </span>
           )
         )}
@@ -418,15 +452,15 @@ export function CameraRecorder({
           onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
           disabled={isRecording}
           aria-label="Flip camera"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white disabled:opacity-40"
+          className="glass flex h-9 w-9 items-center justify-center rounded-full text-white disabled:opacity-40"
         >
-          <CameraFlipIcon className="h-5 w-5" />
+          <CameraFlipIcon className="h-[18px] w-[18px]" />
         </button>
       </div>
 
       {error && (
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-white/60">
+          <span className="glass flex h-14 w-14 items-center justify-center rounded-full text-white/60">
             <CameraIcon className="h-7 w-7" />
           </span>
           <Callout tone="danger">{error}</Callout>
@@ -435,44 +469,63 @@ export function CameraRecorder({
 
       <div className="relative z-10 mt-auto flex items-center justify-center pb-[calc(2rem+env(safe-area-inset-bottom))]">
         {isRecording && !isLocked && (
-          <div className="pointer-events-none absolute bottom-full left-1/2 mb-4 h-12 w-[136px] -translate-x-1/2 rounded-full bg-black/40">
-            <LockIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60" />
+          <div className="glass pointer-events-none absolute bottom-full left-1/2 mb-5 flex h-11 w-[140px] -translate-x-1/2 items-center rounded-full">
+            <LockIcon className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
             <span
-              className="absolute top-1/2 left-2 flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow"
-              style={{ transform: `translate(${dragOffset}px, -50%)` }}
+              className="absolute flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg"
+              style={{ transform: `translate(${8 + dragOffset}px, 0)` }}
             >
               <CameraIcon className="h-4 w-4" />
             </span>
           </div>
         )}
-        <button
-          type="button"
-          onPointerDown={handleShutterDown}
-          onPointerMove={handleShutterMove}
-          onPointerUp={handleShutterUp}
-          onPointerCancel={() => {
-            if (holdTimerRef.current) {
-              clearTimeout(holdTimerRef.current);
-              holdTimerRef.current = null;
-            }
-            dragStartXRef.current = null;
-            if (isRecording && !isLocked) stopRecording();
-          }}
-          disabled={!!error}
-          aria-label={isLocked ? "Stop recording" : "Tap for photo, hold for video"}
-          className="relative z-10 flex h-20 w-20 select-none items-center justify-center rounded-full border-4 border-white disabled:opacity-40"
-          style={{
-            touchAction: "none",
-            WebkitUserSelect: "none",
-            WebkitTouchCallout: "none",
-          }}
-        >
-          <span
-            className={`bg-accent transition-all ${
-              isRecording ? "h-7 w-7 rounded-md" : "h-16 w-16 rounded-full"
-            }`}
-          />
-        </button>
+        <div className="relative flex h-20 w-20 items-center justify-center">
+          <svg viewBox="0 0 80 80" className="pointer-events-none absolute inset-0 h-full w-full -rotate-90">
+            <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+            {isRecording && (
+              <circle
+                cx="40"
+                cy="40"
+                r="36"
+                fill="none"
+                stroke="var(--color-accent)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeDasharray={ringCircumference}
+                strokeDashoffset={ringCircumference * (1 - recordProgress)}
+                style={{ transition: "stroke-dashoffset 1s linear" }}
+              />
+            )}
+          </svg>
+          <button
+            type="button"
+            onPointerDown={handleShutterDown}
+            onPointerMove={handleShutterMove}
+            onPointerUp={handleShutterUp}
+            onPointerCancel={() => {
+              if (holdTimerRef.current) {
+                clearTimeout(holdTimerRef.current);
+                holdTimerRef.current = null;
+              }
+              dragStartXRef.current = null;
+              if (isRecording && !isLocked) stopRecording();
+            }}
+            disabled={!!error}
+            aria-label={isLocked ? "Stop recording" : "Tap for photo, hold for video"}
+            className="relative z-10 flex h-[68px] w-[68px] select-none items-center justify-center rounded-full border-2 border-white/70 disabled:opacity-40"
+            style={{
+              touchAction: "none",
+              WebkitUserSelect: "none",
+              WebkitTouchCallout: "none",
+            }}
+          >
+            <span
+              className={`bg-accent transition-all ${
+                isRecording ? "h-6 w-6 rounded-md" : "h-[52px] w-[52px] rounded-full"
+              }`}
+            />
+          </button>
+        </div>
       </div>
     </div>
   );

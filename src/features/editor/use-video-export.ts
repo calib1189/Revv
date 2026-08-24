@@ -81,7 +81,14 @@ export function useVideoExport() {
       if (!ctx) throw new Error("Canvas not supported.");
 
       const wasMuted = video.muted;
+      const wasLooping = video.loop;
       video.muted = true;
+      // A looping element auto-restarts the instant it reaches its true
+      // end — which races ahead of the trimEnd check below for any clip
+      // where the trim's out-point is the clip's actual end (i.e. no trim
+      // was applied at all), the single most common case. That race is
+      // exactly what causes export to appear to loop forever.
+      video.loop = false;
 
       await waitForSeek(video, state.trimStart);
 
@@ -177,6 +184,7 @@ export function useVideoExport() {
       audioCtx.close().catch(() => {});
       cleanupFns.forEach((fn) => fn());
       video.muted = wasMuted;
+      video.loop = wasLooping;
 
       setIsExporting(false);
       setProgress(1);

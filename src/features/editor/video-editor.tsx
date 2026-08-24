@@ -310,7 +310,14 @@ export function VideoEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      <video ref={videoRef} src={sourceUrl} playsInline loop className="sr-only" />
+      {/* No `loop` attribute: the edit preview effect below already resets
+          currentTime itself once playback reaches trimEnd. The native
+          attribute doing the exact same thing independently is what
+          actually broke export — trimEnd equals the clip's true end for
+          any clip under 60s, so the browser's own auto-restart-on-end
+          fired ahead of export's own "did we reach trimEnd" check, which
+          could never observe the clip finishing. */}
+      <video ref={videoRef} src={sourceUrl} playsInline className="sr-only" />
 
       <div className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <button
