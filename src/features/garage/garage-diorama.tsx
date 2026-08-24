@@ -23,12 +23,21 @@ export function GarageDiorama({
 }) {
   return (
     <div data-garage-theme={theme} className="garage-scene garage-diorama">
-      <div className="garage-ceiling" />
-      {layout.lighting !== "none" && (
-        <div className={`garage-lighting garage-lighting-${layout.lighting}`} />
-      )}
-      <PlantDecor variant={layout.plant} />
-      <WallArtDecor variant={layout.wallArt} />
+      <div className="garage-ceiling">
+        <div className="garage-ceiling-lights">
+          <span className="garage-ceiling-light" />
+          <span className="garage-ceiling-light" />
+          <span className="garage-ceiling-light" />
+        </div>
+      </div>
+
+      <div className="garage-wall">
+        {layout.lighting !== "none" && (
+          <div className={`garage-lighting garage-lighting-${layout.lighting}`} />
+        )}
+        <PlantDecor variant={layout.plant} />
+        <WallArtDecor variant={layout.wallArt} />
+      </div>
 
       <div className="garage-floor">
         <div className={`garage-bays garage-bays-${GARAGE_TEMPLATES[layout.template]}`}>
