@@ -19,6 +19,17 @@ export async function listVehiclesByOwner(
   return data;
 }
 
+export async function listVehiclesByIds(
+  supabase: SupabaseClient<Database>,
+  ids: string[],
+): Promise<Vehicle[]> {
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabase.from("vehicles").select("*").in("id", ids);
+  if (error) throw error;
+  return data;
+}
+
 export async function getVehicleById(
   supabase: SupabaseClient<Database>,
   id: string,

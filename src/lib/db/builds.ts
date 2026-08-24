@@ -37,6 +37,25 @@ export async function listActiveBuildsByVehicleIds(
   return new Map(data.map((build) => [build.vehicle_id, build]));
 }
 
+/** Highest-rated active builds across all vehicles, for the leaderboard.
+ * Unrated builds (ai_rating_score null) are excluded rather than sorting
+ * them to the bottom, since "unrated" isn't a rank. */
+export async function listTopRatedBuilds(
+  supabase: SupabaseClient<Database>,
+  limit = 50,
+): Promise<Build[]> {
+  const { data, error } = await supabase
+    .from("builds")
+    .select("*")
+    .eq("status", "active")
+    .not("ai_rating_score", "is", null)
+    .order("ai_rating_score", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getBuildById(
   supabase: SupabaseClient<Database>,
   id: string,
