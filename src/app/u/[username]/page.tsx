@@ -163,6 +163,9 @@ export default async function ProfilePage({
           <Link href="/notifications" className="text-muted hover:text-foreground">
             Activity
           </Link>
+          <Link href="/settings" className="text-muted hover:text-foreground">
+            Settings
+          </Link>
           {profile.is_admin && (
             <Link href="/admin/reports" className="text-accent hover:underline">
               Admin

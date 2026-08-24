@@ -6,7 +6,6 @@ import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { EditAvatarForm } from "@/features/profile/edit-avatar-form";
 import { EditDisplayNameForm } from "@/features/profile/edit-display-name-form";
 import { EditBioForm } from "@/features/profile/edit-bio-form";
-import { DeleteAccountButton } from "@/features/auth/delete-account-button";
 import Link from "next/link";
 
 export default async function EditProfilePage() {
@@ -23,6 +22,9 @@ export default async function EditProfilePage() {
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
+      <Link href="/settings" className="mb-4 inline-block text-sm text-muted hover:text-foreground">
+        ← Settings
+      </Link>
       <h1 className="mb-8 text-2xl font-semibold tracking-tight">
         Edit profile
       </h1>
@@ -41,18 +43,6 @@ export default async function EditProfilePage() {
         <EditDisplayNameForm initialDisplayName={profile?.display_name ?? null} />
         <EditBioForm initialBio={profile?.bio ?? null} />
       </div>
-
-      <div className="mt-8 border-t border-border pt-6">
-        <Link href="/settings/billing" className="text-sm text-accent hover:underline">
-          Billing
-        </Link>
-      </div>
-
-      {profile && (
-        <div className="mt-8 border-t border-border pt-6">
-          <DeleteAccountButton username={profile.username} />
-        </div>
-      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { isBillingConfigured } from "@/lib/billing/config";
 import { getSubscriptionForUser } from "@/lib/db/subscriptions";
 import { SubscribeButton } from "@/features/billing/subscribe-button";
 import { Callout } from "@/components/ui/callout";
+import Link from "next/link";
 
 export default async function BillingPage({
   searchParams,
@@ -19,6 +20,9 @@ export default async function BillingPage({
   if (!isBillingConfigured()) {
     return (
       <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
+        <Link href="/settings" className="mb-4 inline-block text-sm text-muted hover:text-foreground">
+          ← Settings
+        </Link>
         <h1 className="mb-6 text-2xl font-semibold tracking-tight">
           Billing
         </h1>
@@ -42,6 +46,9 @@ export default async function BillingPage({
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
+      <Link href="/settings" className="mb-4 inline-block text-sm text-muted hover:text-foreground">
+        ← Settings
+      </Link>
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">Billing</h1>
 
       {success && (

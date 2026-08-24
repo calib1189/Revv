@@ -18,6 +18,63 @@
   --glass-border: rgb(var(--glass-tint) / 0.08);
   --glass-border-raised: rgb(var(--glass-tint) / 0.1);
   --glass-highlight: rgb(var(--glass-tint) / 0.1);
+
+  --bg-glow-1: rgb(255 255 255 / 0.05);
+  --bg-glow-2: rgb(255 68 51 / 0.04);
+}
+
+/* Light mode — same restrained, premium language, just inverted. Dark
+   stays the default (CLAUDE.md: dark-first); this only applies when the
+   user explicitly picks Light, or picks System on a light-preferring OS
+   (see the prefers-color-scheme block below). */
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #ffffff;
+  --surface: #f4f4f5;
+  --surface-raised: #ffffff;
+  --border: #e4e4e7;
+  --foreground: #0a0a0b;
+  --muted: #6b6b70;
+  --accent: #ff4433;
+  --accent-foreground: #ffffff;
+  --danger: #dc2626;
+  --success: #16a34a;
+
+  --glass-tint: 10 10 11;
+  --glass-bg: rgb(var(--glass-tint) / 0.035);
+  --glass-bg-raised: rgb(var(--glass-tint) / 0.05);
+  --glass-border: rgb(var(--glass-tint) / 0.1);
+  --glass-border-raised: rgb(var(--glass-tint) / 0.13);
+  --glass-highlight: rgb(255 255 255 / 0.7);
+
+  --bg-glow-1: rgb(0 0 0 / 0.025);
+  --bg-glow-2: rgb(255 68 51 / 0.05);
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme="system"] {
+    color-scheme: light;
+    --background: #ffffff;
+    --surface: #f4f4f5;
+    --surface-raised: #ffffff;
+    --border: #e4e4e7;
+    --foreground: #0a0a0b;
+    --muted: #6b6b70;
+    --accent: #ff4433;
+    --accent-foreground: #ffffff;
+    --danger: #dc2626;
+    --success: #16a34a;
+
+    --glass-tint: 10 10 11;
+    --glass-bg: rgb(var(--glass-tint) / 0.035);
+    --glass-bg-raised: rgb(var(--glass-tint) / 0.05);
+    --glass-border: rgb(var(--glass-tint) / 0.1);
+    --glass-border-raised: rgb(var(--glass-tint) / 0.13);
+    --glass-highlight: rgb(255 255 255 / 0.7);
+
+    --bg-glow-1: rgb(0 0 0 / 0.025);
+    --bg-glow-2: rgb(255 68 51 / 0.05);
+  }
 }
 
 @theme inline {
@@ -42,8 +99,8 @@ html {
 body {
   background: var(--color-background);
   background-image:
-    radial-gradient(ellipse 900px 500px at 15% -10%, rgb(255 255 255 / 0.05), transparent 60%),
-    radial-gradient(ellipse 700px 500px at 100% 0%, rgb(255 68 51 / 0.04), transparent 55%);
+    radial-gradient(ellipse 900px 500px at 15% -10%, var(--bg-glow-1), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, var(--bg-glow-2), transparent 55%);
   background-repeat: no-repeat;
   background-attachment: fixed;
   color: var(--color-foreground);
