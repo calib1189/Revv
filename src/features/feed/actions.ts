@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
+import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
 import { likePost, unlikePost } from "@/lib/db/likes";
 import { savePost, unsavePost } from "@/lib/db/saves";
 import { recordPostView } from "@/lib/db/post-views";
@@ -38,15 +39,6 @@ export async function recordViewAction(postId: string): Promise<void> {
   } catch {
     // best-effort only
   }
-}
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("You must be logged in.");
-  return { supabase, user };
 }
 
 export async function toggleLikeAction(

@@ -1,20 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
 import { followUser, unfollowUser } from "@/lib/db/follows";
 import { updateProfileBio, updateProfileDisplayName } from "@/lib/db/profiles";
 import { blockUser, unblockUser } from "@/lib/db/blocks";
 import { validateBio, validateDisplayName } from "@/lib/validation/profile";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("You must be logged in.");
-  return { supabase, user };
-}
 
 export async function toggleFollowAction(
   followeeId: string,

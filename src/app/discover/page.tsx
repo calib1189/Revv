@@ -42,5 +42,6 @@ export default async function DiscoverPage() {
     };
   });
 
-  return <MeetupsList items={items} currentUserId={user?.id ?? null} />;
+  const currentUserId = user?.email_confirmed_at ? user.id : null;
+  return <MeetupsList items={items} currentUserId={currentUserId} />;
 }

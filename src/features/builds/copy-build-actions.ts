@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
 import { getVehicleById } from "@/lib/db/vehicles";
 import {
   getActiveBuild,
@@ -12,15 +13,6 @@ import {
   deleteBuild,
 } from "@/lib/db/builds";
 import { listBuildParts, createBuildPart, deleteBuildPart } from "@/lib/db/build-parts";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("You must be logged in.");
-  return { supabase, user };
-}
 
 export interface CopyBuildResult {
   error?: string;

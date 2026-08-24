@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
 import { getVehicleById } from "@/lib/db/vehicles";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
@@ -15,11 +15,7 @@ const RATE_LIMIT_HOURS = 24;
 const MAX_PHOTOS = 4;
 
 async function requireOwner(vehicleId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("You must be logged in.");
+  const { supabase, user } = await requireConfirmedUser();
 
   const vehicle = await getVehicleById(supabase, vehicleId);
   if (!vehicle || vehicle.owner_id !== user.id) {

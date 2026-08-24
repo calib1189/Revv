@@ -2,19 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
 import { getOrCreateConversation } from "@/lib/db/conversations";
 import { sendMessage, markConversationRead } from "@/lib/db/messages";
 import { validateMessageBody } from "@/lib/validation/message";
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("You must be logged in.");
-  return { supabase, user };
-}
 
 export async function startConversationAction(
   otherUserId: string,

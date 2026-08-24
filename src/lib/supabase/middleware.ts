@@ -66,10 +66,19 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (isProtectedPath(request.nextUrl.pathname) && !user) {
-    const redirectUrl = new URL("/login", request.url);
-    redirectUrl.searchParams.set("next", request.nextUrl.pathname);
-    return NextResponse.redirect(redirectUrl);
+  if (isProtectedPath(request.nextUrl.pathname)) {
+    if (!user) {
+      const redirectUrl = new URL("/login", request.url);
+      redirectUrl.searchParams.set("next", request.nextUrl.pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+    // A session exists but the email was never confirmed — Supabase still
+    // hands back an active session in that case, so this is the actual
+    // gate keeping a fake/unconfirmed signup out of the app rather than
+    // just out of a login form.
+    if (!user.email_confirmed_at) {
+      return NextResponse.redirect(new URL("/signup/check-email", request.url));
+    }
   }
 
   return response;
