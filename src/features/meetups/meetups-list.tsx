@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MeetupCard } from "@/features/meetups/meetup-card";
 import { CreateMeetupForm } from "@/features/meetups/create-meetup-form";
-import { DiscoverTabs } from "@/features/discover/discover-tabs";
 import { haversineMiles } from "@/lib/geo/distance";
 import type { Meetup } from "@/lib/db/meetups";
 
@@ -69,8 +68,6 @@ export function MeetupsList({
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <DiscoverTabs active="meets" />
-
       <div className="mb-2 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Car meets near you</h1>
       </div>

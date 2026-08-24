@@ -52,18 +52,35 @@ export const RANK_BADGE_TEXT_COLORS: Record<RankTier, string> = {
   cosmic: "#f4f4f5",
 };
 
-/** Score is 0-10. Each tier spans a full point except ruby and cosmic at
- * the top, which split the last point in half (9-9.4 ruby, 9.5-10
- * cosmic) so cosmic is reachable without requiring a literal perfect 10. */
+/** Single source of truth for tier boundaries, highest first. Score is
+ * 0-10. Each tier spans a full point except ruby and cosmic at the top,
+ * which split the last point in half (9-9.4 ruby, 9.5-10 cosmic) so cosmic
+ * is reachable without requiring a literal perfect 10. `rankForScore` and
+ * the leaderboard's tier ladder both derive from this list so the two
+ * never drift apart. */
+export const RANK_TIERS: { tier: RankTier; min: number }[] = [
+  { tier: "cosmic", min: 9.5 },
+  { tier: "ruby", min: 9 },
+  { tier: "diamond", min: 8 },
+  { tier: "emerald", min: 7 },
+  { tier: "platinum", min: 6 },
+  { tier: "gold", min: 5 },
+  { tier: "silver", min: 4 },
+  { tier: "iron", min: 3 },
+  { tier: "copper", min: 2 },
+  { tier: "bronze", min: 0 },
+];
+
 export function rankForScore(score: number): RankTier {
-  if (score >= 9.5) return "cosmic";
-  if (score >= 9) return "ruby";
-  if (score >= 8) return "diamond";
-  if (score >= 7) return "emerald";
-  if (score >= 6) return "platinum";
-  if (score >= 5) return "gold";
-  if (score >= 4) return "silver";
-  if (score >= 3) return "iron";
-  if (score >= 2) return "copper";
-  return "bronze";
+  return RANK_TIERS.find((t) => score >= t.min)!.tier;
+}
+
+/** "9.5 – 10", "9 – 9.4", etc. — the inclusive score range for a tier. */
+export function rankRangeLabel(tier: RankTier): string {
+  const index = RANK_TIERS.findIndex((t) => t.tier === tier);
+  const { min } = RANK_TIERS[index];
+  const prevTier = RANK_TIERS[index - 1];
+  if (!prevTier) return `${min} – 10`;
+  const max = Math.round((prevTier.min - 0.1) * 10) / 10;
+  return `${min} – ${max}`;
 }

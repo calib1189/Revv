@@ -8,6 +8,7 @@ const TABS = [
   { href: "/garage", label: "Garage" },
   { href: "/feed", label: "For You" },
   { href: "/discover", label: "Discover" },
+  { href: "/leaderboard", label: "Leaderboard" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
