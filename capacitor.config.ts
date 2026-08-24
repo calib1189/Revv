@@ -12,6 +12,10 @@ const config: CapacitorConfig = {
   appId: "com.calib1189.revv",
   appName: "REVV",
   webDir: "public",
+  // Without this, the WKWebView's own background defaults to white — every
+  // overscroll/rubber-band bounce flashes white underneath the dark UI,
+  // which is exactly what makes a native app feel like a browser instead.
+  backgroundColor: "#0a0a0b",
   server: {
     url: "https://revv-eta.vercel.app",
     // Lets links that leave the app domain (e.g. an OAuth provider's own
