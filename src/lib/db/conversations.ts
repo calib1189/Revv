@@ -9,6 +9,20 @@ function orderPair(userId: string, otherUserId: string): [string, string] {
   return userId < otherUserId ? [userId, otherUserId] : [otherUserId, userId];
 }
 
+export async function getConversationById(
+  supabase: SupabaseClient<Database>,
+  conversationId: string,
+): Promise<Conversation | null> {
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("*")
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getConversationBetween(
   supabase: SupabaseClient<Database>,
   userId: string,

@@ -6,6 +6,7 @@ import { listNotifications } from "@/lib/db/notifications";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { Avatar } from "@/features/feed/avatar";
 import { MarkAllReadButton } from "@/features/notifications/mark-all-read-button";
+import { PushOptIn } from "@/features/push/push-opt-in";
 import { InboxTabs } from "@/features/shell/inbox-tabs";
 import { relativeTime } from "@/lib/format/relative-time";
 
@@ -47,6 +48,10 @@ export default async function NotificationsPage() {
         {hasUnread && <MarkAllReadButton />}
       </div>
       <InboxTabs current="activity" />
+
+      <div className="mb-4">
+        <PushOptIn />
+      </div>
 
       {notifications.length === 0 ? (
         <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-24 text-center">

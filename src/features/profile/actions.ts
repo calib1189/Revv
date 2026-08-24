@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
 import { followUser, unfollowUser } from "@/lib/db/follows";
-import { updateProfileBio, updateProfileDisplayName } from "@/lib/db/profiles";
+import { updateProfileBio, updateProfileDisplayName, getProfileByUserId } from "@/lib/db/profiles";
 import { blockUser, unblockUser } from "@/lib/db/blocks";
 import { validateBio, validateDisplayName } from "@/lib/validation/profile";
+import { sendPushToUser } from "@/lib/push/send";
 
 export async function toggleFollowAction(
   followeeId: string,
@@ -17,6 +19,14 @@ export async function toggleFollowAction(
     await unfollowUser(supabase, user.id, followeeId);
   } else {
     await followUser(supabase, user.id, followeeId);
+    after(async () => {
+      const actor = await getProfileByUserId(supabase, user.id);
+      await sendPushToUser(followeeId, {
+        title: "REVV",
+        body: `@${actor?.username ?? "Someone"} started following you`,
+        url: `/u/${actor?.username ?? ""}`,
+      });
+    });
   }
   revalidatePath(`/u/${followeeUsername}`);
 }

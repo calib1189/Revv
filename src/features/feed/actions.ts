@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
@@ -9,10 +10,12 @@ import { likePost, unlikePost } from "@/lib/db/likes";
 import { savePost, unsavePost } from "@/lib/db/saves";
 import { recordPostView } from "@/lib/db/post-views";
 import { createComment, deleteComment } from "@/lib/db/comments";
-import { deletePost, listFeedPosts } from "@/lib/db/posts";
+import { deletePost, listFeedPosts, getPostById } from "@/lib/db/posts";
 import { createReport } from "@/lib/db/reports";
+import { getProfileByUserId } from "@/lib/db/profiles";
 import { validateComment } from "@/lib/validation/comment";
 import { composePostCards } from "@/lib/feed/compose-post-cards";
+import { sendPushToUser } from "@/lib/push/send";
 import type { PostCardData } from "@/features/feed/post-card";
 
 export async function loadMoreFeedPostsAction(
@@ -50,9 +53,33 @@ export async function toggleLikeAction(
     await unlikePost(supabase, user.id, postId);
   } else {
     await likePost(supabase, user.id, postId);
+    after(() => notifyPostAuthor(supabase, postId, user.id, "liked your post"));
   }
   revalidatePath(`/p/${postId}`);
   revalidatePath("/feed");
+}
+
+/** Fire-and-forget push to a post's author — never blocks or fails the
+ * action that triggered it. Skips self-notifications the same way the
+ * database triggers that create the in-app notification rows already do. */
+async function notifyPostAuthor(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  postId: string,
+  actorId: string,
+  verb: string,
+): Promise<void> {
+  try {
+    const post = await getPostById(supabase, postId);
+    if (!post || post.author_id === actorId) return;
+    const actor = await getProfileByUserId(supabase, actorId);
+    await sendPushToUser(post.author_id, {
+      title: "REVV",
+      body: `@${actor?.username ?? "Someone"} ${verb}`,
+      url: `/p/${postId}`,
+    });
+  } catch {
+    // best-effort only
+  }
 }
 
 export async function toggleSaveAction(
@@ -88,6 +115,7 @@ export async function createCommentAction(
   } catch {
     return { error: "Couldn't post that comment. Try again in a bit." };
   }
+  after(() => notifyPostAuthor(supabase, postId, user.id, "commented on your post"));
   revalidatePath(`/p/${postId}`);
   return { error: null };
 }

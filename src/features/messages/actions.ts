@@ -2,10 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
-import { getOrCreateConversation } from "@/lib/db/conversations";
+import { getOrCreateConversation, getConversationById } from "@/lib/db/conversations";
 import { sendMessage, markConversationRead } from "@/lib/db/messages";
 import { validateMessageBody } from "@/lib/validation/message";
+import { getProfileByUserId } from "@/lib/db/profiles";
+import { sendPushToUser } from "@/lib/push/send";
 
 export async function startConversationAction(
   otherUserId: string,
@@ -47,6 +50,19 @@ export async function sendMessageAction(
   } catch {
     return { error: "Couldn't send that message." };
   }
+
+  after(async () => {
+    const conversation = await getConversationById(supabase, conversationId);
+    if (!conversation) return;
+    const otherUserId =
+      conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
+    const actor = await getProfileByUserId(supabase, user.id);
+    await sendPushToUser(otherUserId, {
+      title: "REVV",
+      body: `@${actor?.username ?? "Someone"} sent you a message`,
+      url: `/messages/${conversationId}`,
+    });
+  });
 
   revalidatePath(`/messages/${conversationId}`);
   revalidatePath("/messages");
