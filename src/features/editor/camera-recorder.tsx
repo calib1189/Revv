@@ -12,6 +12,18 @@ function pickVideoMimeType(): string {
   return "video/webm";
 }
 
+/** Scales target bitrate to whatever resolution the camera actually
+ * negotiated (asking for 4K doesn't guarantee getting it — plenty of
+ * front cameras and older devices cap out lower), so a 1080p stream
+ * doesn't get an oversized bitrate and a 4K one doesn't get starved
+ * down to the same default MediaRecorder would otherwise pick. */
+function pickVideoBitsPerSecond(stream: MediaStream): number {
+  const settings = stream.getVideoTracks()[0]?.getSettings();
+  const pixels = (settings?.width ?? 1920) * (settings?.height ?? 1080);
+  const bitsPerSecond = Math.round(pixels * 0.1 * 30);
+  return Math.min(Math.max(bitsPerSecond, 4_000_000), 30_000_000);
+}
+
 const MAX_RECORD_SECONDS = 180;
 /** Below this hold duration, a shutter press is a photo; at or past it,
  * it's a video recording — the standard Instagram/Snapchat gesture, so
@@ -54,7 +66,15 @@ export function CameraRecorder({
       try {
         streamRef.current?.getTracks().forEach((t) => t.stop());
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode },
+          video: {
+            facingMode,
+            // Soft ("ideal") constraints — the browser picks the closest
+            // resolution the camera actually supports rather than failing
+            // outright, so this still works on devices that can't do 4K.
+            width: { ideal: 3840 },
+            height: { ideal: 2160 },
+            frameRate: { ideal: 30 },
+          },
           audio: true,
         });
         if (cancelled) {
@@ -111,7 +131,7 @@ export function CameraRecorder({
         onCaptured(new File([blob], "photo.jpg", { type: "image/jpeg" }), "photo");
       },
       "image/jpeg",
-      0.92,
+      0.95,
     );
   }
 
@@ -122,7 +142,10 @@ export function CameraRecorder({
     chunksRef.current = [];
     const mimeType = pickVideoMimeType();
     const baseType = mimeType.split(";")[0];
-    const recorder = new MediaRecorder(stream, { mimeType });
+    const recorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: pickVideoBitsPerSecond(stream),
+    });
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
@@ -262,10 +285,7 @@ export function CameraRecorder({
 
       <div className="relative z-10 mt-auto flex items-center justify-center pb-[calc(2rem+env(safe-area-inset-bottom))]">
         {isRecording && !isLocked && (
-          <div
-            className="pointer-events-none absolute top-1/2 h-12 w-[136px] -translate-y-1/2 rounded-full bg-black/40"
-            style={{ left: "calc(50% + 24px)" }}
-          >
+          <div className="pointer-events-none absolute bottom-full left-1/2 mb-4 h-12 w-[136px] -translate-x-1/2 rounded-full bg-black/40">
             <LockIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/60" />
             <span
               className="absolute top-1/2 left-2 flex h-9 w-9 items-center justify-center rounded-full bg-white text-black shadow"
