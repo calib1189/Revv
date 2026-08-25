@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { SearchIcon } from "@/components/ui/icons";
 import { useTabSwipeNavigation } from "@/components/shell/use-tab-swipe-navigation";
+import { navigateWithTransition } from "@/components/shell/navigate-with-transition";
 
 const TABS = [
   { href: "/garage", label: "Garage" },
@@ -21,6 +22,7 @@ function isActive(pathname: string, href: string) {
 
 export function TopTabBar() {
   const pathname = usePathname();
+  const router = useRouter();
   useTabSwipeNavigation(TAB_HREFS, pathname);
   // For You is a full-bleed vertical video feed — the bar floats over the
   // video (text only, no background) instead of sitting above it, so the
@@ -48,6 +50,26 @@ export function TopTabBar() {
               <Link
                 key={tab.href}
                 href={tab.href}
+                onClick={(e) => {
+                  // Only hijack a plain left-click — a modified click
+                  // (cmd/ctrl/shift, middle-click) should still open in a
+                  // new tab exactly as a real <a href> would.
+                  if (
+                    active ||
+                    e.metaKey ||
+                    e.ctrlKey ||
+                    e.shiftKey ||
+                    e.altKey ||
+                    e.button !== 0
+                  ) {
+                    return;
+                  }
+                  e.preventDefault();
+                  const fromIndex = TAB_HREFS.findIndex((href) => isActive(pathname, href));
+                  const toIndex = TAB_HREFS.indexOf(tab.href);
+                  const direction = toIndex < fromIndex ? "backward" : "forward";
+                  navigateWithTransition(router, tab.href, direction);
+                }}
                 className={`flex-shrink-0 whitespace-nowrap border-b-2 py-1 text-[13px] font-semibold transition-colors active:opacity-60 ${
                   isImmersive ? "[text-shadow:0_1px_4px_rgb(0_0_0_/_0.7)]" : ""
                 } ${

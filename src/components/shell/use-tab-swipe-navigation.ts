@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { navigateWithTransition } from "@/components/shell/navigate-with-transition";
 
 export const SWIPE_THRESHOLD_PX = 70;
 /** How close to the screen edge a swipe has to start to count as a
@@ -66,7 +67,7 @@ export function useTabSwipeNavigation(tabHrefs: readonly string[], pathname: str
       const dy = e.clientY - start.y;
       start = null;
       const target = resolveSwipeTarget(pathname, dx, dy, tabHrefs);
-      if (target) router.push(target);
+      if (target) navigateWithTransition(router, target, dx < 0 ? "forward" : "backward");
     }
 
     function onPointerCancel() {
