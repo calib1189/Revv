@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      // Amazon product images, once real PA-API results start rendering
+      // (get-product-search-provider.ts) — m.media-amazon.com is what
+      // PA-API actually returns today; the ssl-images host is kept for
+      // any older-format URL that might still show up.
+      { protocol: "https", hostname: "m.media-amazon.com" },
+      { protocol: "https", hostname: "images-na.ssl-images-amazon.com" },
     ],
   },
 };

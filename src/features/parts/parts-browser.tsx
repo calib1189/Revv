@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { browseParts, searchParts } from "@/lib/db/parts";
 import { ProductCard } from "@/features/builds/product-card";
@@ -8,8 +9,10 @@ import { BuyButton } from "@/features/parts/buy-button";
 import { Input } from "@/components/ui/input";
 import { PART_CATEGORIES, getPartCategory } from "@/lib/parts/categories";
 import { buildPartSearchUrl } from "@/lib/affiliate/amazon-search-link";
+import { searchMarketplaceProductsAction } from "@/features/parts/marketplace-actions";
 import { SearchIcon, BackIcon, ShoppingBagIcon } from "@/components/ui/icons";
 import type { Part } from "@/lib/db/parts";
+import type { ProductSearchResult } from "@/lib/providers/product-search-provider";
 
 function CategoryGrid({ onSelect }: { onSelect: (id: string) => void }) {
   return (
@@ -34,9 +37,80 @@ function CategoryGrid({ onSelect }: { onSelect: (id: string) => void }) {
   );
 }
 
+function MarketplaceProductCard({ product }: { product: ProductSearchResult }) {
+  return (
+    <a
+      href={product.detailPageUrl}
+      target="_blank"
+      rel="noopener noreferrer sponsored"
+      className="glass flex flex-col gap-2 rounded-xl p-3 transition-colors hover:bg-white/[0.06]"
+    >
+      <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-surface-raised">
+        {product.imageUrl ? (
+          <Image
+            src={product.imageUrl}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 45vw, 200px"
+            className="object-contain p-2"
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-muted">
+            <ShoppingBagIcon className="h-6 w-6" />
+          </span>
+        )}
+      </div>
+      <p className="line-clamp-2 text-xs font-medium">{product.title}</p>
+      {product.displayPrice && (
+        <p className="text-sm font-semibold text-accent">{product.displayPrice}</p>
+      )}
+    </a>
+  );
+}
+
 function EmptyCategoryState({ categoryId }: { categoryId: string }) {
   const category = getPartCategory(categoryId);
   const label = category?.label ?? categoryId;
+  const searchKeyword = category?.searchKeyword ?? null;
+  const [products, setProducts] = useState<ProductSearchResult[] | null>(null);
+
+  useEffect(() => {
+    if (!searchKeyword) return;
+    let cancelled = false;
+    searchMarketplaceProductsAction(searchKeyword).then((response) => {
+      // Mock responses are always empty by design (see
+      // MockProductSearchProvider) — this check is what keeps a real
+      // PA-API result from ever being confused with one, not what makes
+      // the mock behave itself.
+      if (!cancelled && !response.isMock) setProducts(response.results);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchKeyword]);
+
+  if (products && products.length > 0 && searchKeyword) {
+    return (
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-medium">Shop {label} on Amazon</p>
+          <a
+            href={buildPartSearchUrl(searchKeyword)}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="text-xs text-accent hover:underline"
+          >
+            See more
+          </a>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {products.map((product) => (
+            <MarketplaceProductCard key={product.asin} product={product} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="glass flex flex-col items-center gap-3 rounded-2xl py-16 text-center">
@@ -149,7 +223,7 @@ export function PartsBrowser() {
           <p className="text-sm text-muted">Loading…</p>
         ) : parts.length === 0 ? (
           category ? (
-            <EmptyCategoryState categoryId={category} />
+            <EmptyCategoryState key={category} categoryId={category} />
           ) : (
             <div className="glass rounded-2xl py-16 text-center">
               <p className="text-sm font-medium">No matches in the catalog</p>

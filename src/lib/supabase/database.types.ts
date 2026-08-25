@@ -502,6 +502,12 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["signup_attempts"]["Insert"]>;
         Relationships: never[];
       };
+      marketplace_search_attempts: {
+        Row: { id: string; ip: string; created_at: string };
+        Insert: { id?: string; ip: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["marketplace_search_attempts"]["Insert"]>;
+        Relationships: never[];
+      };
       ai_identify_attempts: {
         Row: { id: string; user_id: string; created_at: string };
         Insert: { id?: string; user_id: string; created_at?: string };

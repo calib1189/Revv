@@ -8,13 +8,7 @@ import { validateUsername } from "@/lib/validation/username";
 import { trackEvent } from "@/lib/analytics/track";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { isUnderSignupRateLimit, recordSignupAttempt } from "@/lib/auth/signup-rate-limit";
-
-async function getClientIp(): Promise<string> {
-  const h = await headers();
-  const forwardedFor = h.get("x-forwarded-for");
-  if (forwardedFor) return forwardedFor.split(",")[0].trim();
-  return h.get("x-real-ip") ?? "unknown";
-}
+import { getClientIp } from "@/lib/http/get-client-ip";
 
 export interface AuthActionState {
   error: string | null;
