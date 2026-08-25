@@ -9,6 +9,7 @@ import { getViewCountsForPosts } from "@/lib/db/post-views";
 import { listFollowingIds } from "@/lib/db/follows";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
+import { listVehiclesByOwnerIds } from "@/lib/db/vehicles";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Profile } from "@/lib/db/profiles";
 import type { PostCardData, PostMediaItem } from "@/features/feed/post-card";
@@ -39,7 +40,7 @@ export async function composePostCards(
     followingIds,
     authors,
     vehicles,
-    activeBuildByVehicle,
+    authorVehicles,
   ] = await Promise.all([
     listPostMediaForPosts(supabase, postIds),
     getLikeCountsForPosts(supabase, postIds),
@@ -59,7 +60,12 @@ export async function composePostCards(
     vehicleIds.length > 0
       ? supabase.from("vehicles").select("*").in("id", vehicleIds)
       : Promise.resolve({ data: [] as Vehicle[], error: null }),
-    listActiveBuildsByVehicleIds(supabase, vehicleIds),
+    // The rank ring around an author's avatar reflects their single best
+    // build overall (same as their profile page), not just whichever
+    // vehicle happens to be tagged on this particular post — most posts
+    // aren't tagged to a vehicle at all, which would otherwise mean the
+    // ring almost never showed up in the feed.
+    listVehiclesByOwnerIds(supabase, authorIds),
   ]);
   const followingIdSet = new Set(followingIds);
 
@@ -69,6 +75,20 @@ export async function composePostCards(
   const vehicleById = new Map(
     (vehicles.data ?? []).map((v: Vehicle) => [v.id, v]),
   );
+
+  const authorActiveBuildByVehicle = await listActiveBuildsByVehicleIds(
+    supabase,
+    authorVehicles.map((v) => v.id),
+  );
+  const bestScoreByAuthor = new Map<string, number | null>();
+  for (const vehicle of authorVehicles) {
+    const score = authorActiveBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null;
+    if (score == null) continue;
+    const current = bestScoreByAuthor.get(vehicle.owner_id);
+    if (current == null || score > current) {
+      bestScoreByAuthor.set(vehicle.owner_id, score);
+    }
+  }
 
   const avatarMediaIds = (authors.data ?? [])
     .map((a: Profile) => a.avatar_media_id)
@@ -102,9 +122,7 @@ export async function composePostCards(
       vehicleTitle: vehicle
         ? vehicle.nickname || `${vehicle.make} ${vehicle.model}`
         : null,
-      vehicleRatingScore: post.vehicle_id
-        ? (activeBuildByVehicle.get(post.vehicle_id)?.ai_rating_score ?? null)
-        : null,
+      authorBestRatingScore: bestScoreByAuthor.get(post.author_id) ?? null,
       media: mediaByPost.get(post.id) ?? [],
       likeCount: likeCounts.get(post.id) ?? 0,
       commentCount: commentCounts.get(post.id) ?? 0,

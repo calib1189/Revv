@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { EyeIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
+import { VideoThumbnail } from "@/features/profile/video-thumbnail";
 
 export interface PostThumbnail {
   postId: string;
@@ -48,13 +49,7 @@ export function PostThumbnailGrid({ posts }: { posts: PostThumbnail[] }) {
             />
           )}
           {post.url && post.kind === "video" && (
-            <video
-              src={post.url}
-              muted
-              playsInline
-              preload="metadata"
-              className="h-full w-full object-cover"
-            />
+            <VideoThumbnail url={post.url} className="h-full w-full object-cover" />
           )}
           {post.kind === "video" && <PlayGlyph />}
 

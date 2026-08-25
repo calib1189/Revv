@@ -201,7 +201,7 @@ export function SwipeSlide({
       <div className="pointer-events-auto absolute bottom-6 right-3 flex flex-col items-center gap-5 text-white [&_svg]:drop-shadow-[0_1px_4px_rgb(0_0_0_/_0.6)]">
         <div className="relative">
           <Link href={`/u/${data.authorUsername}`}>
-            <RankFrame score={data.vehicleRatingScore} compact hideBadge className="rounded-full">
+            <RankFrame score={data.authorBestRatingScore} compact hideBadge className="rounded-full">
               <Avatar
                 username={data.authorUsername}
                 avatarUrl={data.authorAvatarUrl}

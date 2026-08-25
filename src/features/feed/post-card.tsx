@@ -23,7 +23,10 @@ export interface PostCardData {
   authorUsername: string;
   authorAvatarUrl: string | null;
   vehicleTitle: string | null;
-  vehicleRatingScore: number | null;
+  /** The author's single best build score across all their vehicles —
+   * same source as the rank ring on their profile page, not just
+   * whichever vehicle (if any) is tagged on this specific post. */
+  authorBestRatingScore: number | null;
   media: PostMediaItem[];
   likeCount: number;
   commentCount: number;
