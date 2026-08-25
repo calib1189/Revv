@@ -250,14 +250,17 @@ const CATEGORY_ICONS: { keywords: string[]; icon: IconComponent }[] = [
   { keywords: ["blow off valve", "bov", "diverter valve"], icon: BovIcon },
   { keywords: ["turbo", "supercharger", "intercooler", "boost"], icon: TurboIcon },
 
-  // Engine internals
+  // Engine internals — starter is checked ahead of the generic engine
+  // entry so "Starter Motor" doesn't get swallowed by the bare "motor"
+  // keyword below.
   { keywords: ["throttle body"], icon: ThrottleBodyIcon },
   { keywords: ["camshaft", "cam gear", "cams"], icon: CamshaftIcon },
   { keywords: ["valve cover"], icon: ValveCoverIcon },
   { keywords: ["oil pan"], icon: OilPanIcon },
   { keywords: ["spark plug", "spark plugs"], icon: SparkPlugIcon },
   { keywords: ["ignition coil", "coil pack"], icon: IgnitionCoilIcon },
-  { keywords: ["engine", "block", "piston", "head gasket"], icon: EngineIcon },
+  { keywords: ["starter motor", "starter"], icon: StarterIcon },
+  { keywords: ["engine", "motor", "block", "piston", "head gasket", "ls swap"], icon: EngineIcon },
 
   // Cooling
   { keywords: ["oil filter"], icon: OilFilterIcon },
@@ -270,7 +273,6 @@ const CATEGORY_ICONS: { keywords: string[]; icon: IconComponent }[] = [
   { keywords: ["timing belt", "timing chain"], icon: TimingBeltIcon },
   { keywords: ["serpentine belt", "drive belt", "accessory belt"], icon: DriveBeltIcon },
   { keywords: ["alternator"], icon: AlternatorIcon },
-  { keywords: ["starter motor", "starter"], icon: StarterIcon },
   { keywords: ["differential", "limited slip", "lsd"], icon: DifferentialIcon },
   { keywords: ["transfer case"], icon: TransferCaseIcon },
   { keywords: ["clutch"], icon: ClutchIcon },

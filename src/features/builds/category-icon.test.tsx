@@ -237,6 +237,8 @@ describe("getCategoryIcon", () => {
     [null, "Iridium Spark Plugs", SparkPlugIcon],
     [null, "Ignition Coil Packs", IgnitionCoilIcon],
     [null, "Engine Block Rebuild", EngineIcon],
+    [null, "LS3 Motor Swap", EngineIcon],
+    [null, "New Motor", EngineIcon],
 
     // Cooling
     [null, "Oil Filter", OilFilterIcon],
