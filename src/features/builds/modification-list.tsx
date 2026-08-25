@@ -11,6 +11,7 @@ import { ModificationPhotoUploader } from "@/features/builds/modification-photo-
 import { getCategoryIcon } from "@/features/builds/category-icon";
 import { ProductCard } from "@/features/builds/product-card";
 import { BuyButton } from "@/features/parts/buy-button";
+import { buildPartSearchUrl } from "@/lib/affiliate/amazon-search-link";
 import { Button } from "@/components/ui/button";
 import { SearchIcon } from "@/components/ui/icons";
 import { formatCents } from "@/lib/format/money";
@@ -142,9 +143,9 @@ function ModificationRow({
             </div>
           ) : (
             <a
-              href={`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`}
+              href={buildPartSearchUrl(searchQuery)}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener noreferrer sponsored"
               className="mt-2 inline-flex items-center gap-1 text-xs text-muted hover:text-foreground"
             >
               <SearchIcon className="h-3.5 w-3.5" />
