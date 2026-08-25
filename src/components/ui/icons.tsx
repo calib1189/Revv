@@ -1859,19 +1859,33 @@ export function HarnessIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-/** Verified-account marker — solid fill takes `currentColor` (wrap it
- * in text-accent), the checkmark is var(--accent-foreground) so it
- * keeps contrast against the fill in both light and dark theme, same
- * as an accent-colored button's own text. */
+/** Verified-account marker. The scalloped seal shape (not a plain
+ * circle) is two identical rounded squares, the second rotated 45°
+ * about the same center — same construction real verified badges use,
+ * since a square's 4-fold symmetry plus a 45°-offset copy gives 8 evenly
+ * spaced points with no hand-plotted (and easy to get subtly lopsided)
+ * star geometry. Solid fill takes `currentColor` (wrap it in
+ * text-accent), the checkmark is var(--accent-foreground) so it keeps
+ * contrast against the fill in both light and dark theme, same as an
+ * accent-colored button's own text. */
 export function VerifiedBadgeIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" {...props}>
-      <circle cx="12" cy="12" r="11" fill="currentColor" />
+      <rect x="4.75" y="4.75" width="14.5" height="14.5" rx="3.2" fill="currentColor" />
+      <rect
+        x="4.75"
+        y="4.75"
+        width="14.5"
+        height="14.5"
+        rx="3.2"
+        fill="currentColor"
+        transform="rotate(45 12 12)"
+      />
       <path
-        d="M7.5 12.5 10.3 15.3 16.5 8.7"
+        d="M7.3 12.5 10.4 15.6 17 8.6"
         fill="none"
         stroke="var(--accent-foreground)"
-        strokeWidth={2.25}
+        strokeWidth={2.4}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
