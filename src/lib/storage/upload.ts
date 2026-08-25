@@ -1,6 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
+// Supabase Storage's upload() defaults cache-control to 3600 (1 hour)
+// when not set explicitly. Every path here is a fresh
+// crypto.randomUUID() — nothing ever gets overwritten in place, so
+// whatever's behind a given URL today is what's behind it forever. A
+// 1-hour cache on content that never changes means every repeat view
+// past that hour (someone scrolling back to a post, a second viewer,
+// Next's own image optimizer re-fetching to regenerate a resized
+// variant) re-downloads the same bytes from Supabase Storage instead of
+// using a cached copy — pure wasted egress. A year is the standard
+// "immutable" cache lifetime for exactly this shape of content.
+const IMMUTABLE_CACHE_CONTROL = "31536000";
+
 interface ImageDimensions {
   width: number;
   height: number;
@@ -39,7 +51,7 @@ export async function uploadImage(
 
   const { error } = await supabase.storage
     .from("media")
-    .upload(storagePath, file, { contentType: file.type });
+    .upload(storagePath, file, { contentType: file.type, cacheControl: IMMUTABLE_CACHE_CONTROL });
 
   if (error) throw error;
 
@@ -89,7 +101,7 @@ export async function uploadVideo(
 
   const { error } = await supabase.storage
     .from("media")
-    .upload(storagePath, file, { contentType: file.type });
+    .upload(storagePath, file, { contentType: file.type, cacheControl: IMMUTABLE_CACHE_CONTROL });
 
   if (error) throw error;
 

@@ -17,6 +17,18 @@ const nextConfig: NextConfig = {
     // any other value down to it — the login logo needs 100 to actually
     // apply instead of being quietly re-coerced back to 75.
     qualities: [75, 100],
+    // Defaults to 60 seconds, which sounds harmless until you notice
+    // every post/profile/vehicle photo is a random-UUID storage path
+    // that's never overwritten in place (lib/storage/upload.ts) — the
+    // content behind a given URL genuinely never changes. A 60-second
+    // optimizer cache means Next re-fetches and re-processes the same
+    // full-size original from Supabase Storage on essentially every
+    // request once a minute, all day, for every image anyone views —
+    // that's real Supabase egress spent re-downloading bytes that were
+    // never going to be different. A year is safe specifically because
+    // these URLs are immutable; it would not be safe for a URL whose
+    // content can change without the URL changing.
+    minimumCacheTTL: 31536000,
     remotePatterns: [
       {
         protocol: "https",
