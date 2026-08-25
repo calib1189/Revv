@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SaveButton } from "@/features/feed/save-button";
+import { DeletePostButton } from "@/features/feed/delete-post-button";
 import { FollowBadge } from "@/features/feed/follow-badge";
 import { CommentSheet } from "@/features/feed/comment-sheet";
 import { Avatar } from "@/features/feed/avatar";
@@ -202,6 +203,12 @@ export function SwipeSlide({
         ) : (
           <PhotoMedia urls={data.media.map((m) => m.url)} />
         ))}
+
+      {data.isOwnPost && (
+        <div className="pointer-events-auto absolute right-3 top-4 z-10 rounded-lg bg-black/60 px-1">
+          <DeletePostButton postId={data.post.id} />
+        </div>
+      )}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 pb-6">
         <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.5rem)] text-white">

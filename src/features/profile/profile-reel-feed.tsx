@@ -17,8 +17,15 @@ export function ProfileReelFeed({
   isAuthenticated: boolean;
   backHref: string;
 }) {
+  // The bottom nav is fixed (removed from normal document flow), so its
+  // real height — 64px plus the home-indicator safe area on an iPhone
+  // without a physical home button — has to be subtracted explicitly or
+  // the last ~34px of every video sits behind it, unreachable. Missing
+  // that safe-area term (unlike tab-pager-shell.tsx's slotHeight, which
+  // already accounts for it) was exactly why the bottom of the video was
+  // cut off.
   const feedHeight = isAuthenticated
-    ? "h-[calc(100dvh-56px-64px)]"
+    ? "h-[calc(100dvh-56px-64px-env(safe-area-inset-bottom))]"
     : "h-[calc(100dvh-56px)]";
 
   return (
