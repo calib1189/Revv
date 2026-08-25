@@ -8,7 +8,7 @@ import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { VehicleCard } from "@/features/garage/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { GemIcon } from "@/components/ui/icons";
-import { rankForScore, RANK_LABELS, RANK_BADGE_COLORS } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 
 export default async function GaragePage() {
   const user = await getCurrentUser();
@@ -61,9 +61,9 @@ export default async function GaragePage() {
               href="/leaderboard"
               className="flex items-center gap-1.5 hover:text-foreground"
             >
-              <GemIcon className="h-3.5 w-3.5" style={{ color: RANK_BADGE_COLORS[bestTier] }} />
+              <GemIcon className="h-3.5 w-3.5" style={{ color: RANK_TEXT_COLORS[bestTier] }} />
               Best:{" "}
-              <span className="font-semibold" style={{ color: RANK_BADGE_COLORS[bestTier] }}>
+              <span className="font-semibold" style={{ color: RANK_TEXT_COLORS[bestTier] }}>
                 {RANK_LABELS[bestTier]} · {bestScore.toFixed(2)}
               </span>
             </Link>

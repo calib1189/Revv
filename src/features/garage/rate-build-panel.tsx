@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { generateBuildRatingAction, confirmBuildRatingAction } from "@/features/garage/rating-actions";
-import { rankForScore, RANK_LABELS, RANK_BADGE_COLORS } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { GemIcon } from "@/components/ui/icons";
@@ -71,13 +71,13 @@ export function RateBuildPanel({
         <div className="flex items-center gap-3">
           <span
             className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: `${RANK_BADGE_COLORS[tier]}26`, color: RANK_BADGE_COLORS[tier] }}
+            style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26`, color: RANK_TEXT_COLORS[tier] }}
           >
             <GemIcon className="h-6 w-6" />
           </span>
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">New rating</p>
-            <p className="text-xl font-bold tracking-tight" style={{ color: RANK_BADGE_COLORS[tier] }}>
+            <p className="text-xl font-bold tracking-tight" style={{ color: RANK_TEXT_COLORS[tier] }}>
               {RANK_LABELS[tier]} · {pending.score.toFixed(2)}
             </p>
           </div>
@@ -135,7 +135,7 @@ export function RateBuildPanel({
           <div className="flex min-w-0 items-center gap-3">
             <span
               className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
-              style={{ backgroundColor: `${RANK_BADGE_COLORS[tier]}26`, color: RANK_BADGE_COLORS[tier] }}
+              style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26`, color: RANK_TEXT_COLORS[tier] }}
             >
               <GemIcon className="h-6 w-6" />
             </span>
@@ -143,7 +143,7 @@ export function RateBuildPanel({
               <p className="text-xs font-medium uppercase tracking-wide text-muted">Build rating</p>
               <p
                 className="truncate text-xl font-bold tracking-tight"
-                style={{ color: RANK_BADGE_COLORS[tier] }}
+                style={{ color: RANK_TEXT_COLORS[tier] }}
               >
                 {RANK_LABELS[tier]} · {currentScore.toFixed(2)}
               </p>

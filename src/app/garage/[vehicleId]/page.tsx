@@ -19,7 +19,7 @@ import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ModificationList } from "@/features/builds/modification-list";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
-import { rankForScore, RANK_LABELS, RANK_BADGE_COLORS } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { GemIcon } from "@/components/ui/icons";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { BudgetCard } from "@/features/builds/budget-card";
@@ -162,7 +162,7 @@ export default async function VehiclePage({
                   <div className="flex items-center gap-3">
                     <span
                       className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
-                      style={{ backgroundColor: `${RANK_BADGE_COLORS[tier]}26`, color: RANK_BADGE_COLORS[tier] }}
+                      style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26`, color: RANK_TEXT_COLORS[tier] }}
                     >
                       <GemIcon className="h-6 w-6" />
                     </span>
@@ -172,7 +172,7 @@ export default async function VehiclePage({
                       </p>
                       <p
                         className="truncate text-xl font-bold tracking-tight"
-                        style={{ color: RANK_BADGE_COLORS[tier] }}
+                        style={{ color: RANK_TEXT_COLORS[tier] }}
                       >
                         {RANK_LABELS[tier]} · {activeBuild.ai_rating_score!.toFixed(2)}
                       </p>

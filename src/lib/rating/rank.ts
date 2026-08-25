@@ -52,6 +52,21 @@ export const RANK_BADGE_TEXT_COLORS: Record<RankTier, string> = {
   cosmic: "#f4f4f5",
 };
 
+/** Tier color for use as foreground text/icon color directly on the
+ * app's own dark background (rate-build-panel headings, the garage-list
+ * best-build badge) — a DIFFERENT use from RANK_BADGE_COLORS, which is a
+ * chip *background* meant to be paired with RANK_BADGE_TEXT_COLORS.
+ * Identical to RANK_BADGE_COLORS for every tier except cosmic: cosmic's
+ * badge color is near-black on purpose (it's a dark chip background),
+ * which reads as invisible text on the app's own near-black background.
+ * This swaps in a legible light lavender for that one case while keeping
+ * the "cosmic purple" identity, instead of just falling back to plain
+ * white. */
+export const RANK_TEXT_COLORS: Record<RankTier, string> = {
+  ...RANK_BADGE_COLORS,
+  cosmic: "#c9b6ff",
+};
+
 /** Single source of truth for tier boundaries, highest first. Score is
  * 0-100 with two decimal places (e.g. 95.25). Boundaries themselves stay
  * clean round numbers — each tier spans a full ten-point band except ruby
