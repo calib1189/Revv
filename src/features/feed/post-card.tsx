@@ -22,6 +22,7 @@ export interface PostCardData {
   authorId: string;
   authorUsername: string;
   authorAvatarUrl: string | null;
+  authorIsVerified: boolean;
   vehicleTitle: string | null;
   /** The author's single best build score across all their vehicles —
    * same source as the rank ring on their profile page, not just

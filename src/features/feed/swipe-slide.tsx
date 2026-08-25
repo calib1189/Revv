@@ -11,9 +11,40 @@ import { CaptionText } from "@/features/feed/caption-text";
 import { recordViewAction } from "@/features/feed/actions";
 import { usePostLike } from "@/features/feed/use-post-like";
 import { useDoubleTap } from "@/features/feed/use-double-tap";
-import { CommentIcon, EyeIcon, HeartIcon, PlayIcon } from "@/components/ui/icons";
+import { CommentIcon, EyeIcon, HeartIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
+import { SITE_URL } from "@/lib/site-url";
 import type { PostCardData } from "@/features/feed/post-card";
+
+function ShareButton({ postId }: { postId: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleShare() {
+    const url = `${SITE_URL}/p/${postId}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ url });
+      } catch {
+        // User dismissed the native share sheet — not an error.
+      }
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleShare}
+      className="flex flex-col items-center gap-1 text-white/90 hover:text-white"
+    >
+      <ShareIcon className="h-8 w-8" />
+      {copied && <span className="text-xs font-medium">Copied</span>}
+    </button>
+  );
+}
 
 function VideoMedia({ url, onDoubleTapLike }: { url: string; onDoubleTapLike: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -174,15 +205,21 @@ export function SwipeSlide({
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 pb-6">
         <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.5rem)] text-white">
-          <Link href={`/u/${data.authorUsername}`} className="text-sm font-semibold hover:underline">
+          <Link
+            href={`/u/${data.authorUsername}`}
+            className="flex items-center gap-1 text-sm font-semibold hover:underline"
+          >
             @{data.authorUsername}
+            {data.authorIsVerified && (
+              <VerifiedBadgeIcon className="h-4 w-4 flex-shrink-0 text-accent" />
+            )}
           </Link>
           {data.vehicleTitle && data.post.vehicle_id && (
             <Link
               href={`/garage/${data.post.vehicle_id}`}
               className="block text-xs text-white/70 hover:text-white"
             >
-              {data.vehicleTitle}
+              • {data.vehicleTitle}
             </Link>
           )}
           {data.post.caption && (
@@ -261,6 +298,8 @@ export function SwipeSlide({
           iconClassName="h-8 w-8"
           className="flex flex-col items-center gap-1"
         />
+
+        <ShareButton postId={data.post.id} />
       </div>
 
       <CommentSheet

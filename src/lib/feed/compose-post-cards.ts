@@ -119,6 +119,7 @@ export async function composePostCards(
       authorAvatarUrl: author?.avatar_media_id
         ? (avatarUrlByMediaId.get(author.avatar_media_id) ?? null)
         : null,
+      authorIsVerified: author?.is_verified ?? false,
       vehicleTitle: vehicle
         ? vehicle.nickname || `${vehicle.make} ${vehicle.model}`
         : null,

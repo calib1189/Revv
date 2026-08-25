@@ -42,7 +42,16 @@ export function TopTabBar() {
       }`}
     >
       <div className="mx-auto grid h-14 max-w-5xl grid-cols-[1fr_auto_1fr] items-center px-4">
-        <span />
+        <Link
+          href="/feed"
+          aria-label="REVV"
+          className={`flex-shrink-0 text-lg font-black italic tracking-tight ${
+            isImmersive ? "[text-shadow:0_1px_4px_rgb(0_0_0_/_0.7)]" : ""
+          }`}
+        >
+          <span className={isImmersive ? "text-white" : "text-foreground"}>RE</span>
+          <span className="text-accent">VV</span>
+        </Link>
         {/* min-w-0 is load-bearing: a grid item's default min-width is
             `auto` (its content's intrinsic width), not 0, so without this
             the nav can never shrink below fitting all five tabs on one
