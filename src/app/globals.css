@@ -226,50 +226,6 @@ html.native-app body::-webkit-scrollbar {
   animation: countdown-pulse 500ms ease-out forwards;
 }
 
-/* Top-tab-bar navigation (Garage/For You/Discover/Leaderboard/Marketplace)
-   uses the native View Transitions API so switching tabs — by swipe or by
-   tapping the tab label — visibly slides rather than jump-cutting.
-   navigate-with-transition.ts sets data-tab-transition on <html> right
-   before calling document.startViewTransition(), and clears it once the
-   transition settles; browsers without View Transitions support just
-   never see this attribute and get today's instant navigation, so this
-   is additive, not something anything else depends on. */
-[data-tab-transition="forward"]::view-transition-old(root) {
-  animation: tab-slide-out-left 280ms var(--ease-ios) both;
-}
-[data-tab-transition="forward"]::view-transition-new(root) {
-  animation: tab-slide-in-right 280ms var(--ease-ios) both;
-}
-[data-tab-transition="backward"]::view-transition-old(root) {
-  animation: tab-slide-out-right 280ms var(--ease-ios) both;
-}
-[data-tab-transition="backward"]::view-transition-new(root) {
-  animation: tab-slide-in-left 280ms var(--ease-ios) both;
-}
-
-@keyframes tab-slide-out-left {
-  to {
-    transform: translateX(-30%);
-    opacity: 0;
-  }
-}
-@keyframes tab-slide-in-right {
-  from {
-    transform: translateX(100%);
-  }
-}
-@keyframes tab-slide-out-right {
-  to {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-}
-@keyframes tab-slide-in-left {
-  from {
-    transform: translateX(-30%);
-  }
-}
-
 @layer components {
   /* Liquid-glass surface: frosted, translucent, with a hairline border that
      catches light on its top edge. Two tiers — .glass for standard cards,

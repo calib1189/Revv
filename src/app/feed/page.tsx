@@ -1,16 +1,5 @@
-import { getCurrentUser } from "@/lib/auth/get-user";
-import { createClient } from "@/lib/supabase/server";
-import { listFeedPosts } from "@/lib/db/posts";
-import { composePostCards } from "@/lib/feed/compose-post-cards";
-import { SwipeFeed } from "@/features/feed/swipe-feed";
+import { TabsShellContent } from "@/features/shell/tabs-shell-content";
 
-export default async function FeedPage() {
-  const supabase = await createClient();
-  const [user, posts] = await Promise.all([
-    getCurrentUser(),
-    listFeedPosts(supabase, { limit: 8 }),
-  ]);
-  const cards = await composePostCards(supabase, posts, user?.id ?? null);
-
-  return <SwipeFeed initialPosts={cards} isAuthenticated={Boolean(user)} />;
+export default function FeedPage() {
+  return <TabsShellContent initialHref="/feed" />;
 }
