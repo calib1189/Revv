@@ -111,8 +111,18 @@ export async function identifyVehicleAction(
 
   const provider = getVisionProvider();
   const bytes = await file.arrayBuffer();
-  const data = await provider.identifyVehicle(bytes, file.type);
-  return { data };
+  try {
+    const data = await provider.identifyVehicle(bytes, file.type);
+    return { data };
+  } catch (err) {
+    // A provider failure (bad API response, malformed JSON, network
+    // error) used to throw straight out of this server action, which
+    // the client only ever saw as an unhelpful generic error — logging
+    // it server-side at least makes future provider issues diagnosable
+    // instead of a black box.
+    console.error("identifyVehicleAction failed:", err);
+    return { error: "Couldn't identify that photo. Try again." };
+  }
 }
 
 export async function deleteVehicleAction(vehicleId: string): Promise<void> {

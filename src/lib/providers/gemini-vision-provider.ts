@@ -61,7 +61,7 @@ export class GeminiVisionProvider implements VisionProvider {
               make: { type: "STRING", nullable: true },
               model: { type: "STRING", nullable: true },
               trim: { type: "STRING", nullable: true },
-              category: { type: "STRING", enum: VEHICLE_CATEGORIES, nullable: true },
+              category: { type: "STRING", nullable: true },
               confidence: { type: "NUMBER" },
             },
             required: ["year", "make", "model", "trim", "category", "confidence"],
