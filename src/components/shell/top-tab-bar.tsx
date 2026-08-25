@@ -63,17 +63,28 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
                   e.preventDefault();
                   requestScrollToIndex(index);
                 }}
-                className={`flex-shrink-0 whitespace-nowrap border-b-[3px] py-1 text-[15px] transition-colors active:opacity-60 ${
+                className={`relative flex-shrink-0 whitespace-nowrap py-1 text-[15px] transition-colors active:opacity-60 ${
                   isImmersive ? "[text-shadow:0_1px_4px_rgb(0_0_0_/_0.7)]" : ""
                 } ${
                   active
-                    ? "border-accent font-extrabold text-foreground shadow-[0_4px_10px_-4px_rgb(255_68_51_/_0.9)]"
+                    ? "font-extrabold text-foreground"
                     : isImmersive
-                      ? "border-transparent font-semibold text-white/85 hover:text-white"
-                      : "border-transparent font-semibold text-muted hover:text-foreground"
+                      ? "font-semibold text-white/85 hover:text-white"
+                      : "font-semibold text-muted hover:text-foreground"
                 }`}
               >
                 {tab.label}
+                {/* A dedicated thin bar instead of a shadow on the whole
+                    link — a box-shadow on the text's own box (which
+                    includes its vertical padding) blurs outward on
+                    every side, not just downward, so it read as a stray
+                    glow beside the label instead of a glowing underline.
+                    Scoping the glow to a 3px bar sized to just this
+                    underline keeps it confined to where it's supposed
+                    to be. */}
+                {active && (
+                  <span className="absolute inset-x-0 -bottom-0.5 h-[3px] rounded-full bg-accent shadow-[0_0_8px_1px_rgb(255_68_51_/_0.7)]" />
+                )}
               </Link>
             );
           })}
