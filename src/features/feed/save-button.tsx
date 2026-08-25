@@ -13,6 +13,7 @@ export function SaveButton({
   iconClassName = "h-5 w-5",
   initialCount,
   className = "",
+  countClassName = "text-xs font-medium",
 }: {
   postId: string;
   initialSaved: boolean;
@@ -22,6 +23,7 @@ export function SaveButton({
    * icon-only button used in the feed grid card. */
   initialCount?: number;
   className?: string;
+  countClassName?: string;
 }) {
   const [saved, setSaved] = useState(initialSaved);
   const [count, setCount] = useState(initialCount ?? 0);
@@ -32,7 +34,7 @@ export function SaveButton({
       <Link href="/login" className={`text-muted ${className}`}>
         <BookmarkIcon className={iconClassName} />
         {initialCount !== undefined && count > 0 && (
-          <span className="text-xs font-medium">{formatCompactNumber(count)}</span>
+          <span className={countClassName}>{formatCompactNumber(count)}</span>
         )}
       </Link>
     );
@@ -65,7 +67,7 @@ export function SaveButton({
     >
       <BookmarkIcon className={iconClassName} filled={saved} />
       {initialCount !== undefined && count > 0 && (
-        <span className="text-xs font-medium">{formatCompactNumber(count)}</span>
+        <span className={countClassName}>{formatCompactNumber(count)}</span>
       )}
     </button>
   );

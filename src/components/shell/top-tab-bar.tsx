@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SearchIcon } from "@/components/ui/icons";
+import { SearchIcon, BellIcon } from "@/components/ui/icons";
 import { useTabPagerContext } from "@/components/shell/tab-pager-context";
 import { TAB_HREFS } from "@/components/shell/tab-order";
 
@@ -19,7 +19,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function TopTabBar() {
+export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationCount?: number }) {
   const pathname = usePathname();
   const { activeIndex, requestScrollToIndex } = useTabPagerContext();
   // Once the swipeable pager (tab-pager-shell.tsx) is mounted, it's the
@@ -63,14 +63,14 @@ export function TopTabBar() {
                   e.preventDefault();
                   requestScrollToIndex(index);
                 }}
-                className={`flex-shrink-0 whitespace-nowrap border-b-2 py-1 text-[13px] font-semibold transition-colors active:opacity-60 ${
+                className={`flex-shrink-0 whitespace-nowrap border-b-[3px] py-1 text-[15px] transition-colors active:opacity-60 ${
                   isImmersive ? "[text-shadow:0_1px_4px_rgb(0_0_0_/_0.7)]" : ""
                 } ${
                   active
-                    ? "border-accent text-foreground"
+                    ? "border-accent font-extrabold text-foreground shadow-[0_4px_10px_-4px_rgb(255_68_51_/_0.9)]"
                     : isImmersive
-                      ? "border-transparent text-white/85 hover:text-white"
-                      : "border-transparent text-muted hover:text-foreground"
+                      ? "border-transparent font-semibold text-white/85 hover:text-white"
+                      : "border-transparent font-semibold text-muted hover:text-foreground"
                 }`}
               >
                 {tab.label}
@@ -78,17 +78,33 @@ export function TopTabBar() {
             );
           })}
         </nav>
-        <Link
-          href="/search"
-          aria-label="Search"
-          className={`flex-shrink-0 justify-self-end ${
-            isImmersive
-              ? "text-white/85 [filter:drop-shadow(0_1px_3px_rgb(0_0_0_/_0.7))] hover:text-white"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          <SearchIcon className="h-5 w-5" />
-        </Link>
+        <div className="flex flex-shrink-0 items-center gap-4 justify-self-end">
+          <Link
+            href="/search"
+            aria-label="Search"
+            className={
+              isImmersive
+                ? "text-white/85 [filter:drop-shadow(0_1px_3px_rgb(0_0_0_/_0.7))] hover:text-white"
+                : "text-muted hover:text-foreground"
+            }
+          >
+            <SearchIcon className="h-5 w-5" />
+          </Link>
+          <Link
+            href="/notifications"
+            aria-label="Notifications"
+            className={`relative ${
+              isImmersive
+                ? "text-white/85 [filter:drop-shadow(0_1px_3px_rgb(0_0_0_/_0.7))] hover:text-white"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            <BellIcon className="h-5 w-5" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent shadow-[0_0_6px_1px_rgb(255_68_51_/_0.8)]" />
+            )}
+          </Link>
+        </div>
       </div>
     </header>
   );

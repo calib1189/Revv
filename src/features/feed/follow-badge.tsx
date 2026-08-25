@@ -41,9 +41,9 @@ export function FollowBadge({
       type="button"
       onClick={handleClick}
       aria-label={`Follow @${authorUsername}`}
-      className="absolute -bottom-1.5 left-1/2 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-[0_0_0_2px_rgb(0_0_0_/_0.85)]"
+      className="absolute -bottom-1 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-[0_0_0_2px_rgb(0_0_0_/_0.85),0_0_10px_1px_rgb(255_68_51_/_0.6)]"
     >
-      <PlusIcon className="h-3 w-3" strokeWidth={3} />
+      <PlusIcon className="h-3.5 w-3.5" strokeWidth={3} />
     </button>
   );
 }

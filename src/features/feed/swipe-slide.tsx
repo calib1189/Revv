@@ -207,11 +207,11 @@ export function SwipeSlide({
         <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.5rem)] text-white">
           <Link
             href={`/u/${data.authorUsername}`}
-            className="flex items-center gap-1 text-sm font-semibold hover:underline"
+            className="flex items-center gap-1.5 text-base font-bold hover:underline"
           >
             @{data.authorUsername}
             {data.authorIsVerified && (
-              <VerifiedBadgeIcon className="h-4 w-4 flex-shrink-0 text-accent" />
+              <VerifiedBadgeIcon className="h-4.5 w-4.5 flex-shrink-0 text-accent" />
             )}
           </Link>
           {data.vehicleTitle && data.post.vehicle_id && (
@@ -225,24 +225,29 @@ export function SwipeSlide({
           {data.post.caption && (
             <CaptionText
               text={data.post.caption}
-              className="mt-1 line-clamp-2 text-sm text-white/90"
+              className="mt-1.5 line-clamp-2 text-sm text-white/90"
             />
           )}
-          <p className="mt-1 flex items-center gap-1 text-xs text-white/60">
+          <p className="mt-1.5 flex items-center gap-1 text-xs text-white/60">
             <EyeIcon className="h-3.5 w-3.5" />
             {formatCompactNumber(data.viewCount)} view{data.viewCount === 1 ? "" : "s"}
           </p>
         </div>
       </div>
 
-      <div className="pointer-events-auto absolute bottom-6 right-3 flex flex-col items-center gap-5 text-white [&_svg]:drop-shadow-[0_1px_4px_rgb(0_0_0_/_0.6)]">
+      <div className="pointer-events-auto absolute bottom-6 right-3 flex flex-col items-center gap-6 text-white [&_svg]:drop-shadow-[0_1px_5px_rgb(0_0_0_/_0.7)]">
         <div className="relative">
           <Link href={`/u/${data.authorUsername}`}>
-            <RankFrame score={data.authorBestRatingScore} compact hideBadge className="rounded-full">
+            <RankFrame
+              score={data.authorBestRatingScore}
+              compact
+              hideBadge
+              className="rounded-full shadow-[0_0_0_2px_rgb(255_68_51_/_0.35),0_0_16px_2px_rgb(255_68_51_/_0.35)]"
+            >
               <Avatar
                 username={data.authorUsername}
                 avatarUrl={data.authorAvatarUrl}
-                className="h-11 w-11 border-2 border-white text-sm"
+                className="h-14 w-14 border-2 border-white text-base"
               />
             </RankFrame>
           </Link>
@@ -261,20 +266,20 @@ export function SwipeSlide({
             onClick={toggleLike}
             aria-pressed={liked}
             aria-label={liked ? "Unlike" : "Like"}
-            className={`flex flex-col items-center gap-1 transition-colors ${
+            className={`flex flex-col items-center gap-1.5 transition-colors ${
               liked ? "text-accent" : "text-white hover:text-white/80"
             }`}
           >
-            <HeartIcon className="h-8 w-8" filled={liked} />
+            <HeartIcon className="h-9 w-9" filled={liked} />
             {likeCount > 0 && (
-              <span className="text-xs font-medium">{formatCompactNumber(likeCount)}</span>
+              <span className="text-sm font-semibold">{formatCompactNumber(likeCount)}</span>
             )}
           </button>
         ) : (
-          <Link href="/login" className="flex flex-col items-center gap-1 text-white">
-            <HeartIcon className="h-8 w-8" />
+          <Link href="/login" className="flex flex-col items-center gap-1.5 text-white">
+            <HeartIcon className="h-9 w-9" />
             {likeCount > 0 && (
-              <span className="text-xs font-medium">{formatCompactNumber(likeCount)}</span>
+              <span className="text-sm font-semibold">{formatCompactNumber(likeCount)}</span>
             )}
           </Link>
         )}
@@ -282,11 +287,11 @@ export function SwipeSlide({
         <button
           type="button"
           onClick={() => setCommentsOpen(true)}
-          className="flex flex-col items-center gap-1 text-white/90 hover:text-white"
+          className="flex flex-col items-center gap-1.5 text-white/90 hover:text-white"
         >
-          <CommentIcon className="h-8 w-8" />
+          <CommentIcon className="h-9 w-9" />
           {data.commentCount > 0 && (
-            <span className="text-xs font-medium">{formatCompactNumber(data.commentCount)}</span>
+            <span className="text-sm font-semibold">{formatCompactNumber(data.commentCount)}</span>
           )}
         </button>
 
@@ -295,8 +300,9 @@ export function SwipeSlide({
           initialSaved={data.isSaved}
           initialCount={data.saveCount}
           isAuthenticated={data.isAuthenticated}
-          iconClassName="h-8 w-8"
-          className="flex flex-col items-center gap-1"
+          iconClassName="h-9 w-9"
+          className="flex flex-col items-center gap-1.5"
+          countClassName="text-sm font-semibold"
         />
 
         <ShareButton postId={data.post.id} />
