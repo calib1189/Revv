@@ -33,18 +33,6 @@ export async function browseParts(
   return data;
 }
 
-export async function listPartCategories(
-  supabase: SupabaseClient<Database>,
-): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("parts")
-    .select("category")
-    .not("category", "is", null);
-
-  if (error) throw error;
-  return [...new Set(data.map((row) => row.category as string))].sort();
-}
-
 export async function getPartById(
   supabase: SupabaseClient<Database>,
   id: string,
