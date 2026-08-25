@@ -220,6 +220,12 @@ export function useVideoExport() {
         // `chunks` to fall back to instead of an empty file.
         recorder.start(1000);
         musicNode?.start(0);
+        // currentTime still advances in source-time regardless of rate —
+        // the trimEnd check below stays correct unchanged — but the
+        // *wall-clock* time to get there scales inversely with it, which
+        // the stall timeout below has to account for or a genuine slow-
+        // motion export gets cut off mid-clip by its own safety net.
+        video.playbackRate = state.playbackRate;
         await video.play();
 
         const durationSeconds = Math.max(0.1, state.trimEnd - state.trimStart);
@@ -230,7 +236,7 @@ export function useVideoExport() {
         // export still finishes with whatever was captured instead of
         // hanging forever.
         const startedAt = performance.now();
-        const stallTimeoutMs = durationSeconds * 3000 + 8000;
+        const stallTimeoutMs = (durationSeconds / Math.max(state.playbackRate, 0.1)) * 3000 + 8000;
         const frameIntervalMs = 1000 / EXPORT_FPS;
         let lastDrawAt = 0;
 
@@ -297,6 +303,7 @@ export function useVideoExport() {
         audioCtx?.close().catch(() => {});
         video.muted = wasMuted;
         video.loop = wasLooping;
+        video.playbackRate = 1;
         canvas.remove();
         setIsExporting(false);
         setProgress(1);

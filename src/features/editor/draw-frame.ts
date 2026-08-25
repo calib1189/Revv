@@ -34,7 +34,8 @@ export function drawFrame(
   source: MediaSource,
   canvasWidth: number,
   canvasHeight: number,
-  state: Pick<EditState, "aspect" | "panOffset" | "filterId" | "textLayers">,
+  state: Pick<EditState, "aspect" | "panOffset" | "filterId" | "textLayers"> &
+    Partial<Pick<EditState, "drawStrokes">>,
 ): void {
   const { width, height } = sourceDimensions(source);
   if (!width || !height) return;
@@ -52,6 +53,22 @@ export function drawFrame(
     const frame = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
     applyFilter(frame, preset);
     ctx.putImageData(frame, 0, 0);
+  }
+
+  // Doodles render above the filtered frame but below text, so captions
+  // stay legible over a scribble instead of getting drawn under it.
+  for (const stroke of state.drawStrokes ?? []) {
+    if (stroke.points.length < 2) continue;
+    ctx.beginPath();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = stroke.color;
+    ctx.lineWidth = stroke.width * (canvasWidth / 1080);
+    ctx.moveTo(stroke.points[0].x * canvasWidth, stroke.points[0].y * canvasHeight);
+    for (const point of stroke.points.slice(1)) {
+      ctx.lineTo(point.x * canvasWidth, point.y * canvasHeight);
+    }
+    ctx.stroke();
   }
 
   for (const layer of state.textLayers) {

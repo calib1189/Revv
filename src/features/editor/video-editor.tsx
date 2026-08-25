@@ -9,9 +9,11 @@ import { aspectNeedsPan } from "@/features/editor/crop";
 import {
   DEFAULT_EDIT_STATE,
   TEXT_FONTS,
+  SPEED_PRESETS,
   type EditState,
   type AspectRatioId,
   type TextLayer,
+  type DrawStroke,
 } from "@/features/editor/types";
 import {
   BackIcon,
@@ -23,10 +25,12 @@ import {
   FilterIcon,
   TrashIcon,
   PlusIcon,
+  BrushIcon,
+  SpeedIcon,
 } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
-type Tool = "trim" | "crop" | "filter" | "text" | "music" | null;
+type Tool = "trim" | "crop" | "filter" | "text" | "draw" | "speed" | "music" | null;
 
 const ASPECTS: { id: AspectRatioId; label: string }[] = [
   { id: "9:16", label: "9:16" },
@@ -36,12 +40,15 @@ const ASPECTS: { id: AspectRatioId; label: string }[] = [
 ];
 
 const TEXT_COLORS = ["#ffffff", "#ff4433", "#ffd166", "#06d6a0", "#4cc9f0", "#000000"];
+const DRAW_WIDTHS = [6, 12, 22];
 
 const TOOLS: { id: Exclude<Tool, null>; label: string; icon: typeof ScissorsIcon }[] = [
   { id: "trim", label: "Trim", icon: ScissorsIcon },
   { id: "crop", label: "Crop", icon: CropIcon },
+  { id: "speed", label: "Speed", icon: SpeedIcon },
   { id: "filter", label: "Filters", icon: FilterIcon },
   { id: "text", label: "Text", icon: TextToolIcon },
+  { id: "draw", label: "Draw", icon: BrushIcon },
   { id: "music", label: "Music", icon: MusicIcon },
 ];
 
@@ -77,6 +84,8 @@ export function VideoEditor({
   });
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [newTextDraft, setNewTextDraft] = useState("");
+  const [drawColor, setDrawColor] = useState(TEXT_COLORS[1]);
+  const [drawWidth, setDrawWidth] = useState(DRAW_WIDTHS[1]);
   const [error, setError] = useState<string | null>(null);
 
   const stateRef = useRef(state);
@@ -158,6 +167,7 @@ export function VideoEditor({
         el.currentTime = s.trimStart;
       }
       el.volume = s.originalVolume;
+      el.playbackRate = s.playbackRate;
       drawFrame(ctx!, el, canvas!.width, canvas!.height, s);
       raf = requestAnimationFrame(loop);
     }
@@ -255,11 +265,59 @@ export function VideoEditor({
     if (selectedTextId === id) setSelectedTextId(null);
   }
 
+  function addDrawStroke(strokeId: string, fracX: number, fracY: number) {
+    setState((s) => {
+      const point = { x: fracX, y: fracY };
+      const existing = s.drawStrokes.find((st) => st.id === strokeId);
+      const drawStrokes: DrawStroke[] = existing
+        ? s.drawStrokes.map((st) =>
+            st.id === strokeId ? { ...st, points: [...st.points, point] } : st,
+          )
+        : [...s.drawStrokes, { id: strokeId, color: drawColor, width: drawWidth, points: [point] }];
+      return { ...s, drawStrokes };
+    });
+  }
+
+  function undoDrawStroke() {
+    setState((s) => ({ ...s, drawStrokes: s.drawStrokes.slice(0, -1) }));
+  }
+
+  function clearDrawStrokes() {
+    setState((s) => ({ ...s, drawStrokes: [] }));
+  }
+
   function handlePreviewPointerDown(e: React.PointerEvent) {
     const container = previewRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const dragTextId = selectedTextId;
+
+    if (tool === "draw") {
+      e.preventDefault();
+      const strokeId = crypto.randomUUID();
+      const point = (ev: { clientX: number; clientY: number }) => ({
+        x: clamp((ev.clientX - rect.left) / rect.width, 0, 1),
+        y: clamp((ev.clientY - rect.top) / rect.height, 0, 1),
+      });
+      const first = point(e);
+      addDrawStroke(strokeId, first.x, first.y);
+      function move(ev: PointerEvent) {
+        const p = point(ev);
+        addDrawStroke(strokeId, p.x, p.y);
+      }
+      function up() {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+      }
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      return;
+    }
+
+    // Gated on the active tool, not just whether a text layer happens to
+    // be selected — otherwise switching to another tool (crop, say) while
+    // a text layer was still selected would keep dragging that text
+    // instead of doing whatever the newly-selected tool is for.
+    const dragTextId = tool === "text" ? selectedTextId : null;
     const cropPanEnabled =
       tool === "crop" && aspectNeedsPan(state.aspect, videoDims.width, videoDims.height);
     if (!dragTextId && !cropPanEnabled) return;
@@ -424,6 +482,25 @@ export function VideoEditor({
           </div>
         )}
 
+        {tool === "speed" && (
+          <div className="flex items-center justify-center gap-2 py-4">
+            {SPEED_PRESETS.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => updateState({ playbackRate: p.value })}
+                className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${
+                  state.playbackRate === p.value
+                    ? "bg-accent text-accent-foreground"
+                    : "bg-white/10 text-white/80"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {tool === "filter" && (
           <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 py-4">
             {FILTER_PRESETS.map((f) => (
@@ -531,6 +608,69 @@ export function VideoEditor({
                 Tap a dot on the preview to drag or restyle it.
               </p>
             )}
+          </div>
+        )}
+
+        {tool === "draw" && (
+          <div className="flex flex-col gap-3 px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {TEXT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setDrawColor(c)}
+                    className={`h-6 w-6 rounded-full border-2 ${
+                      drawColor === c ? "border-accent" : "border-white/20"
+                    }`}
+                    style={{ backgroundColor: c }}
+                    aria-label={`Draw color ${c}`}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={undoDrawStroke}
+                  disabled={state.drawStrokes.length === 0}
+                  className="text-xs text-white/70 disabled:opacity-40"
+                >
+                  Undo
+                </button>
+                <button
+                  type="button"
+                  onClick={clearDrawStrokes}
+                  disabled={state.drawStrokes.length === 0}
+                  aria-label="Clear drawing"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70 disabled:opacity-40"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {DRAW_WIDTHS.map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setDrawWidth(w)}
+                  aria-label={`Brush size ${w}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                    drawWidth === w ? "bg-accent" : "bg-white/10"
+                  }`}
+                >
+                  <span
+                    className="rounded-full"
+                    style={{
+                      width: Math.round(w / 2),
+                      height: Math.round(w / 2),
+                      backgroundColor: drawWidth === w ? "var(--color-accent-foreground)" : "white",
+                    }}
+                  />
+                </button>
+              ))}
+              <span className="text-xs text-white/50">Draw right on the preview</span>
+            </div>
           </div>
         )}
 

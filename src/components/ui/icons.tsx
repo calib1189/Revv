@@ -545,6 +545,72 @@ export function HashtagIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function TimerIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 13V9" strokeLinecap="round" />
+      <path d="M9 2h6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function GridIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <rect x="3" y="3" width="18" height="18" rx="1.5" />
+      <path d="M9 3v18M15 3v18M3 9h18M3 15h18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function BrushIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <path
+        d="M9 15c-1.5-1.5-1.5-3 0-4.5l7-7c1-1 2.5-1 3.5 0s1 2.5 0 3.5l-7 7c-1.5 1.5-3 1.5-4.5 0Z"
+        strokeLinejoin="round"
+      />
+      <path d="M9 15 4.5 19.5" strokeLinecap="round" />
+      <circle cx="6" cy="18" r="2" />
+    </svg>
+  );
+}
+
+export function SpeedIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 13 16 9" strokeLinecap="round" />
+      <path d="M8 13h.01M12 6h.01M16 13h.01" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // --- Modification-category icons — the automatic (no-upload-required)
 // placeholder shown next to a mod until/unless the owner adds a real
 // photo. Deliberately generic category glyphs, never claiming to depict

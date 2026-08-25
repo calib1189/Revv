@@ -1,8 +1,35 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CameraFlipIcon, CloseIcon, CameraIcon, LockIcon, GalleryIcon, CheckIcon } from "@/components/ui/icons";
+import {
+  CameraFlipIcon,
+  CloseIcon,
+  CameraIcon,
+  LockIcon,
+  GalleryIcon,
+  CheckIcon,
+  BoltIcon,
+  TimerIcon,
+  GridIcon,
+} from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
+
+/** Torch/flash is part of the (still non-standard, Chrome-on-Android-
+ * only-in-practice) MediaTrackConstraints "Image Capture" API —
+ * TypeScript's built-in lib.dom types don't know about it, so both the
+ * capability check and the constraint itself go through this cast rather
+ * than widening the real DOM types used everywhere else in the file. */
+function getTorchCapability(track: MediaStreamTrack | undefined): boolean {
+  const capabilities = track?.getCapabilities?.() as ({ torch?: boolean } | undefined);
+  return !!capabilities?.torch;
+}
+
+const COUNTDOWN_OPTIONS = [0, 3, 10] as const;
+const DURATION_OPTIONS: { seconds: number; label: string }[] = [
+  { seconds: 15, label: "15s" },
+  { seconds: 60, label: "60s" },
+  { seconds: 180, label: "3m" },
+];
 
 function pickVideoMimeType(): string {
   // Must declare an audio codec, not just video (avc1 alone) — the stream
@@ -39,7 +66,7 @@ function pickVideoBitsPerSecond(width: number, height: number): number {
   return Math.min(Math.max(bitsPerSecond, 4_000_000), 16_000_000);
 }
 
-const MAX_RECORD_SECONDS = 180;
+const DEFAULT_MAX_SECONDS = 180;
 /** Below this hold duration, a shutter press is a photo; at or past it,
  * it's a video recording — the standard Instagram/Snapchat gesture, so
  * there's no separate photo/video mode to pick before you even shoot. */
@@ -80,9 +107,17 @@ export function CameraRecorder({
   const focusHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const zoomHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pendingActionRef = useRef<(() => void) | null>(null);
 
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
   const [isRecording, setIsRecording] = useState(false);
+  const [countdownSeconds, setCountdownSeconds] = useState<(typeof COUNTDOWN_OPTIONS)[number]>(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [gridEnabled, setGridEnabled] = useState(false);
+  const [maxSeconds, setMaxSeconds] = useState(DEFAULT_MAX_SECONDS);
   // True from the first segment's start until "Finished" is tapped — a
   // multi-clip recording (Instagram/TikTok-style): record a bit, pause,
   // record more, pause again, as many times as wanted, then finish. One
@@ -146,6 +181,12 @@ export function CameraRecorder({
           // though the stream itself is live.
           el.play().catch(() => {});
         }
+        // Torch is a rear-camera-only, mostly-Chrome-on-Android feature —
+        // reset on every stream (including a facing-mode flip) rather than
+        // trusting stale state, since the new stream's track is a fresh
+        // object with its own capabilities.
+        setTorchSupported(getTorchCapability(stream.getVideoTracks()[0]));
+        setTorchOn(false);
         setError(null);
       } catch {
         setError(
@@ -220,8 +261,57 @@ export function CameraRecorder({
       if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       if (focusHideTimerRef.current) clearTimeout(focusHideTimerRef.current);
       if (zoomHintTimerRef.current) clearTimeout(zoomHintTimerRef.current);
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     };
   }, []);
+
+  async function toggleTorch() {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    const next = !torchOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next } as MediaTrackConstraintSet] });
+      setTorchOn(next);
+    } catch {
+      // Device advertised torch support but rejected the constraint —
+      // leave the toggle in its previous state rather than lying about it.
+    }
+  }
+
+  // Self-timer: delays a photo or the start of a recording by the chosen
+  // number of seconds, showing a countdown overlay. Only ever wraps the
+  // gesture that starts something new (a fresh photo tap, or the very
+  // first hold-to-record) — never a mid-session pause/resume tap, which
+  // would be a jarring few-second delay every single time you wanted to
+  // resume.
+  function runWithCountdown(action: () => void) {
+    if (countdownSeconds === 0) {
+      action();
+      return;
+    }
+    pendingActionRef.current = action;
+    setCountdown(countdownSeconds);
+    countdownTimerRef.current = setInterval(() => {
+      setCountdown((c) => {
+        if (c === null || c <= 1) {
+          if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+          const fn = pendingActionRef.current;
+          pendingActionRef.current = null;
+          if (fn) setTimeout(fn, 0);
+          return null;
+        }
+        return c - 1;
+      });
+    }, 1000);
+  }
+
+  function cancelCountdown() {
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    countdownTimerRef.current = null;
+    pendingActionRef.current = null;
+    setCountdown(null);
+  }
 
   function capturePhoto() {
     const canvas = canvasRef.current;
@@ -272,7 +362,7 @@ export function CameraRecorder({
     setSeconds(0);
     timerRef.current = setInterval(() => {
       setSeconds((s) => {
-        if (s + 1 >= MAX_RECORD_SECONDS) finishRecording();
+        if (s + 1 >= maxSeconds) finishRecording();
         return s + 1;
       });
     }, 1000);
@@ -292,7 +382,7 @@ export function CameraRecorder({
     setIsRecording(true);
     timerRef.current = setInterval(() => {
       setSeconds((s) => {
-        if (s + 1 >= MAX_RECORD_SECONDS) finishRecording();
+        if (s + 1 >= maxSeconds) finishRecording();
         return s + 1;
       });
     }, 1000);
@@ -309,7 +399,7 @@ export function CameraRecorder({
   }
 
   function handleShutterDown(e: React.PointerEvent<HTMLButtonElement>) {
-    if (error) return;
+    if (error || countdown !== null) return;
     if (hasSession) {
       // Once a session exists, a fresh press only happens after the
       // finger has lifted from a locked first-segment hold — the
@@ -334,7 +424,7 @@ export function CameraRecorder({
     e.currentTarget.setPointerCapture(e.pointerId);
     holdTimerRef.current = setTimeout(() => {
       holdTimerRef.current = null;
-      startRecording();
+      runWithCountdown(startRecording);
     }, HOLD_THRESHOLD_MS);
   }
 
@@ -351,6 +441,7 @@ export function CameraRecorder({
       gestureConsumedRef.current = false;
       return;
     }
+    if (countdown !== null) return;
     if (hasSession && !isRecording) {
       // Tapped while paused between segments — resume.
       resumeSegment();
@@ -361,7 +452,7 @@ export function CameraRecorder({
       clearTimeout(holdTimerRef.current);
       holdTimerRef.current = null;
       dragStartXRef.current = null;
-      capturePhoto();
+      runWithCountdown(capturePhoto);
       return;
     }
     dragStartXRef.current = null;
@@ -449,7 +540,7 @@ export function CameraRecorder({
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
 
-  const recordProgress = Math.min(1, seconds / MAX_RECORD_SECONDS);
+  const recordProgress = Math.min(1, seconds / maxSeconds);
   const ringCircumference = 2 * Math.PI * 36;
 
   return (
@@ -495,6 +586,32 @@ export function CameraRecorder({
         <span className="absolute bottom-0 left-0 h-5 w-5 border-b-2 border-l-2 border-white/25" />
         <span className="absolute bottom-0 right-0 h-5 w-5 border-b-2 border-r-2 border-white/25" />
       </div>
+
+      {gridEnabled && (
+        <div className="pointer-events-none absolute inset-0 z-[4]">
+          <span className="absolute left-1/3 top-0 h-full w-px bg-white/25" />
+          <span className="absolute left-2/3 top-0 h-full w-px bg-white/25" />
+          <span className="absolute top-1/3 left-0 h-px w-full bg-white/25" />
+          <span className="absolute top-2/3 left-0 h-px w-full bg-white/25" />
+        </div>
+      )}
+
+      {countdown !== null && (
+        <button
+          type="button"
+          onClick={cancelCountdown}
+          aria-label="Cancel countdown"
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/40"
+        >
+          <span
+            key={countdown}
+            className="animate-countdown-pulse font-mono text-7xl font-bold text-white"
+          >
+            {countdown}
+          </span>
+          <span className="glass rounded-full px-3 py-1 text-xs text-white/70">Tap to cancel</span>
+        </button>
+      )}
 
       {zoomHintVisible && (
         <div className="pointer-events-none absolute right-4 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-2.5">
@@ -566,6 +683,61 @@ export function CameraRecorder({
           <CameraFlipIcon className="h-[18px] w-[18px]" />
         </button>
       </div>
+
+      {!hasSession && !error && (
+        <div className="relative z-10 flex items-center justify-center gap-2 px-4 pb-2">
+          {torchSupported && (
+            <button
+              type="button"
+              onClick={toggleTorch}
+              aria-label={torchOn ? "Turn off flash" : "Turn on flash"}
+              className={`glass flex h-8 w-8 items-center justify-center rounded-full ${
+                torchOn ? "bg-accent text-accent-foreground" : "text-white"
+              }`}
+            >
+              <BoltIcon className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() =>
+              setCountdownSeconds(
+                (s) => COUNTDOWN_OPTIONS[(COUNTDOWN_OPTIONS.indexOf(s) + 1) % COUNTDOWN_OPTIONS.length],
+              )
+            }
+            aria-label="Self-timer"
+            className={`glass flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium ${
+              countdownSeconds > 0 ? "bg-accent text-accent-foreground" : "text-white"
+            }`}
+          >
+            <TimerIcon className="h-4 w-4" />
+            {countdownSeconds > 0 ? `${countdownSeconds}s` : "Off"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setGridEnabled((g) => !g)}
+            aria-label={gridEnabled ? "Hide grid" : "Show grid"}
+            className={`glass flex h-8 w-8 items-center justify-center rounded-full ${
+              gridEnabled ? "bg-accent text-accent-foreground" : "text-white"
+            }`}
+          >
+            <GridIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setMaxSeconds((current) => {
+                const idx = DURATION_OPTIONS.findIndex((d) => d.seconds === current);
+                return DURATION_OPTIONS[(idx + 1) % DURATION_OPTIONS.length].seconds;
+              })
+            }
+            aria-label="Max clip length"
+            className="glass flex h-8 items-center rounded-full px-2.5 text-xs font-medium text-white"
+          >
+            {DURATION_OPTIONS.find((d) => d.seconds === maxSeconds)?.label ?? "3m"}
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">

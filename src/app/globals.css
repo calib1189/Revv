@@ -204,6 +204,28 @@ html.native-app body::-webkit-scrollbar {
   animation: focus-ring 700ms ease-out forwards;
 }
 
+/* Camera self-timer countdown digit — pops in and holds (unlike
+   focus-ring, which fades out) since each number needs to stay legible
+   for the full second before the next one remounts over it. */
+@keyframes countdown-pulse {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-countdown-pulse {
+  animation: countdown-pulse 500ms ease-out forwards;
+}
+
 @layer components {
   /* Liquid-glass surface: frosted, translucent, with a hairline border that
      catches light on its top edge. Two tiers — .glass for standard cards,

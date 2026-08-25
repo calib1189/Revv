@@ -36,6 +36,19 @@ export interface TextLayer {
 
 export type AspectRatioId = "9:16" | "1:1" | "4:5" | "original";
 
+export interface DrawStroke {
+  id: string;
+  color: string;
+  /** Line width in the same 1080-relative units as TextLayer.fontSize —
+   * scaled by canvasWidth / 1080 wherever it's actually drawn, so a
+   * stroke looks the same weight regardless of preview vs. export
+   * resolution. */
+  width: number;
+  /** Normalized 0-1 points, canvas-relative — same coordinate space as
+   * TextLayer.x/y, for the same reason (resolution-independent). */
+  points: { x: number; y: number }[];
+}
+
 export interface EditState {
   trimStart: number;
   trimEnd: number;
@@ -45,17 +58,34 @@ export interface EditState {
   panOffset: number;
   filterId: string;
   textLayers: TextLayer[];
+  drawStrokes: DrawStroke[];
   musicFile: File | null;
   musicVolume: number;
   originalVolume: number;
+  /** HTMLMediaElement.playbackRate applied during both preview and
+   * export — a value here changes how much source timeline plays back
+   * per second, not the frame-composite math itself, so drawFrame
+   * doesn't need to know about it at all. */
+  playbackRate: number;
 }
+
+export const SPEED_PRESETS: { value: number; label: string }[] = [
+  { value: 0.3, label: "0.3×" },
+  { value: 0.5, label: "0.5×" },
+  { value: 1, label: "1×" },
+  { value: 1.5, label: "1.5×" },
+  { value: 2, label: "2×" },
+  { value: 3, label: "3×" },
+];
 
 export const DEFAULT_EDIT_STATE: Omit<EditState, "trimStart" | "trimEnd"> = {
   aspect: "9:16",
   panOffset: 0.5,
   filterId: "original",
   textLayers: [],
+  drawStrokes: [],
   musicFile: null,
   musicVolume: 0.8,
   originalVolume: 1,
+  playbackRate: 1,
 };

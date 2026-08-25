@@ -30,7 +30,7 @@ export async function generateVisualizationAction(
   // unauthenticated, unlimited way to spend real money.
   if (!user) return { error: "You must be logged in." };
   if (!(await isUnderVisualizeRateLimit(supabase, user.id))) {
-    return { error: "Too many visualizations — try again in a bit." };
+    return { error: "You've used all 3 AI visualizations for today — try again tomorrow." };
   }
 
   const file = formData.get("photo");
