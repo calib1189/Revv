@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import {
   VEHICLE_CATEGORY_LABELS,
   type VehicleCategory,
 } from "@/lib/vehicles/category";
+import { guessVehicleCategory } from "@/lib/vehicles/guess-category";
 
 const initialState: VehicleFormState = { error: null };
 
@@ -46,6 +47,41 @@ export function VehicleForm({
 
   const values = { ...vehicle, ...initialValues };
 
+  const [make, setMake] = useState(values?.make ?? "");
+  const [model, setModel] = useState(values?.model ?? "");
+  const [category, setCategory] = useState<VehicleCategory>(
+    (values?.category as VehicleCategory) ??
+      guessVehicleCategory(values?.make ?? "", values?.model ?? "") ??
+      "cars",
+  );
+  // Editing an existing vehicle already has an intentional, previously-
+  // confirmed category — typing in make/model there shouldn't silently
+  // change it. Adding a new one starts free to guess as you type, until
+  // you touch the dropdown yourself, at which point your choice wins for
+  // the rest of the session (typing further doesn't fight you over it).
+  const categoryTouchedRef = useRef(Boolean(vehicle));
+
+  function handleMakeChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const next = e.target.value;
+    setMake(next);
+    if (!categoryTouchedRef.current) {
+      setCategory(guessVehicleCategory(next, model) ?? "cars");
+    }
+  }
+
+  function handleModelChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const next = e.target.value;
+    setModel(next);
+    if (!categoryTouchedRef.current) {
+      setCategory(guessVehicleCategory(make, next) ?? "cars");
+    }
+  }
+
+  function handleCategoryChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    categoryTouchedRef.current = true;
+    setCategory(e.target.value as VehicleCategory);
+  }
+
   return (
     <form
       key={JSON.stringify(initialValues ?? {})}
@@ -67,14 +103,15 @@ export function VehicleForm({
         </div>
         <div>
           <Label htmlFor="make">Make</Label>
-          <Input id="make" name="make" defaultValue={values?.make ?? ""} required />
+          <Input id="make" name="make" value={make} onChange={handleMakeChange} required />
         </div>
         <div>
           <Label htmlFor="model">Model</Label>
           <Input
             id="model"
             name="model"
-            defaultValue={values?.model ?? ""}
+            value={model}
+            onChange={handleModelChange}
             required
           />
         </div>
@@ -87,7 +124,8 @@ export function VehicleForm({
           <select
             id="category"
             name="category"
-            defaultValue={values?.category ?? "cars"}
+            value={category}
+            onChange={handleCategoryChange}
             className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
           >
             {VEHICLE_CATEGORIES.map((c) => (
