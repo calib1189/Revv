@@ -18,6 +18,23 @@ export default async function SettingsPage() {
     <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
       <h1 className="mb-8 text-2xl font-semibold tracking-tight">Settings</h1>
 
+      <div className="mb-8 flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border">
+        <Link
+          href="/saved"
+          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
+        >
+          <span className="text-sm font-medium">Saved</span>
+          <span className="text-xs text-muted">Posts you&apos;ve bookmarked</span>
+        </Link>
+        <Link
+          href="/notifications"
+          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
+        >
+          <span className="text-sm font-medium">Activity</span>
+          <span className="text-xs text-muted">Likes, comments, follows, and messages</span>
+        </Link>
+      </div>
+
       <div className="mb-8">
         <p className="mb-2 text-sm font-medium">Appearance</p>
         <ThemeToggle />
@@ -45,6 +62,15 @@ export default async function SettingsPage() {
           <span className="text-sm font-medium">Billing</span>
           <span className="text-xs text-muted">Manage your subscription</span>
         </Link>
+        {profile?.is_admin && (
+          <Link
+            href="/admin/reports"
+            className="flex flex-col gap-0.5 px-4 py-3.5 text-accent transition-opacity hover:opacity-80"
+          >
+            <span className="text-sm font-medium">Admin</span>
+            <span className="text-xs text-accent/70">Reports, audit log, parts moderation</span>
+          </Link>
+        )}
       </div>
 
       <div className="mt-8 border-t border-border pt-6">

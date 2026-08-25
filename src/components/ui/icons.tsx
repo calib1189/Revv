@@ -1858,3 +1858,23 @@ export function HarnessIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** Verified-account marker — solid fill takes `currentColor` (wrap it
+ * in text-accent), the checkmark is var(--accent-foreground) so it
+ * keeps contrast against the fill in both light and dark theme, same
+ * as an accent-colored button's own text. */
+export function VerifiedBadgeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" {...props}>
+      <circle cx="12" cy="12" r="11" fill="currentColor" />
+      <path
+        d="M7.5 12.5 10.3 15.3 16.5 8.7"
+        fill="none"
+        stroke="var(--accent-foreground)"
+        strokeWidth={2.25}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

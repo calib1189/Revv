@@ -21,6 +21,7 @@ export interface Database {
           bio: string | null;
           avatar_media_id: string | null;
           is_admin: boolean;
+          is_verified: boolean;
           onboarded_at: string | null;
           created_at: string;
         };
@@ -31,6 +32,7 @@ export interface Database {
           bio?: string | null;
           avatar_media_id?: string | null;
           is_admin?: boolean;
+          is_verified?: boolean;
           onboarded_at?: string | null;
           created_at?: string;
         };
@@ -41,6 +43,7 @@ export interface Database {
           bio?: string | null;
           avatar_media_id?: string | null;
           is_admin?: boolean;
+          is_verified?: boolean;
           onboarded_at?: string | null;
           created_at?: string;
         };
