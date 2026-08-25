@@ -14,6 +14,7 @@ function makePart(overrides: Partial<BuildPart>): BuildPart {
     install_cost_cents: null,
     installed_at: null,
     notes: null,
+    media_id: null,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };

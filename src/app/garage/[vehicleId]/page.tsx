@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getVehicleById } from "@/lib/db/vehicles";
 import { getProfileByUserId } from "@/lib/db/profiles";
-import { getMediaById, publicMediaUrl } from "@/lib/db/media";
+import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
 import { getActiveBuild } from "@/lib/db/builds";
 import { listBuildParts } from "@/lib/db/build-parts";
@@ -87,6 +87,15 @@ export default async function VehiclePage({
       .filter((id): id is string => Boolean(id)),
   );
   const partsById = new Map(linkedParts.map((p) => [p.id, p]));
+  const partMedia = await getMediaByIds(
+    supabase,
+    buildParts
+      .map((p) => p.media_id)
+      .filter((id): id is string => Boolean(id)),
+  );
+  const partMediaUrlById = new Map(
+    partMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
+  );
 
   const isOwner = user?.id === vehicle.owner_id;
   const maintenanceRecords = isOwner
@@ -293,7 +302,9 @@ export default async function VehiclePage({
           <ModificationList
             buildParts={buildParts}
             partsById={partsById}
+            partMediaUrlById={partMediaUrlById}
             vehicleId={vehicle.id}
+            userId={user?.id ?? null}
             isOwner={isOwner}
           />
         </div>

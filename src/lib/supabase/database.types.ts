@@ -198,6 +198,7 @@ export interface Database {
           install_cost_cents: number | null;
           installed_at: string | null;
           notes: string | null;
+          media_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -211,6 +212,7 @@ export interface Database {
           install_cost_cents?: number | null;
           installed_at?: string | null;
           notes?: string | null;
+          media_id?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["build_parts"]["Insert"]>;
