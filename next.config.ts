@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Server Actions cap request bodies at 1MB by default — identifyVehicleAction
+  // (garage/actions.ts) receives the raw photo as FormData directly, and
+  // validateImageFile allows images up to 15MB, so any real phone photo
+  // was getting rejected by Next.js itself before ever reaching that
+  // action's code. This is almost certainly the actual, longstanding
+  // cause of "couldn't identify that photo" for real (non-tiny) images.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "20mb",
+    },
+  },
   images: {
     // Next 16 defaults to only allowing quality=75 and silently coerces
     // any other value down to it — the login logo needs 100 to actually
