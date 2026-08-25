@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SearchIcon } from "@/components/ui/icons";
+import { useTabSwipeNavigation } from "@/components/shell/use-tab-swipe-navigation";
 
 const TABS = [
   { href: "/garage", label: "Garage" },
@@ -12,12 +13,15 @@ const TABS = [
   { href: "/parts", label: "Marketplace" },
 ] as const;
 
+const TAB_HREFS = TABS.map((t) => t.href);
+
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function TopTabBar() {
   const pathname = usePathname();
+  useTabSwipeNavigation(TAB_HREFS, pathname);
   // For You is a full-bleed vertical video feed — the bar floats over the
   // video (text only, no background) instead of sitting above it, so the
   // video can run edge to edge behind it.
