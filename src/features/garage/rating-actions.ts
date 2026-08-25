@@ -116,7 +116,12 @@ export async function confirmBuildRatingAction(
 
   try {
     await updateBuildRating(supabase, build.id, { score, strengths, limitingFactors });
-  } catch {
+  } catch (err) {
+    // No logging here before meant a failed save was a total black box —
+    // same fix as identifyVehicleAction's equivalent catch: log the real
+    // error server-side so a future failure here is diagnosable from
+    // Vercel logs instead of another guessing round.
+    console.error("confirmBuildRatingAction failed:", err);
     return { error: "Couldn't save that rating. Try again." };
   }
 
