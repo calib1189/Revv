@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
 export type Part = Database["public"]["Tables"]["parts"]["Row"];
+export type PartInsert = Database["public"]["Tables"]["parts"]["Insert"];
+export type PartUpdate = Database["public"]["Tables"]["parts"]["Update"];
 
 export async function searchParts(
   supabase: SupabaseClient<Database>,
@@ -59,4 +61,59 @@ export async function getPartsByIds(
 
   if (error) throw error;
   return data;
+}
+
+/** Admin catalog management — RLS restricts insert/update/delete on
+ * `parts` to is_admin profiles (0036), so these are only reachable
+ * through an action that's already called requireAdmin(). */
+export async function listAllParts(
+  supabase: SupabaseClient<Database>,
+  limit = 200,
+): Promise<Part[]> {
+  const { data, error } = await supabase
+    .from("parts")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createPart(
+  supabase: SupabaseClient<Database>,
+  input: PartInsert,
+): Promise<Part> {
+  const { data, error } = await supabase
+    .from("parts")
+    .insert(input)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updatePart(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  patch: PartUpdate,
+): Promise<Part> {
+  const { data, error } = await supabase
+    .from("parts")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deletePart(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase.from("parts").delete().eq("id", id);
+  if (error) throw error;
 }
