@@ -304,6 +304,7 @@ export default async function VehiclePage({
             partsById={partsById}
             partMediaUrlById={partMediaUrlById}
             vehicleId={vehicle.id}
+            vehicleLabel={[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")}
             userId={user?.id ?? null}
             isOwner={isOwner}
           />

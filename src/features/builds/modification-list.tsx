@@ -34,6 +34,7 @@ function ModificationRow({
   linkedPart,
   photoUrl,
   vehicleId,
+  vehicleLabel,
   userId,
   isOwner,
 }: {
@@ -41,6 +42,7 @@ function ModificationRow({
   linkedPart: Part | null;
   photoUrl: string | null;
   vehicleId: string;
+  vehicleLabel: string;
   userId: string | null;
   isOwner: boolean;
 }) {
@@ -61,7 +63,17 @@ function ModificationRow({
     );
   }
 
-  const searchQuery = [part.category, part.raw_name].filter(Boolean).join(" ");
+  // Wheels are sold by their own size/bolt-pattern spec, not "for a
+  // specific car" the way an exhaust or intake is — adding the vehicle
+  // to a wheel search narrows toward OEM-fitment results and away from
+  // the aftermarket wheel the mod probably actually is. Everything else
+  // benefits from the vehicle in the query so the search actually lands
+  // on the version that fits this car, not a generic/wrong-application
+  // listing.
+  const isWheelCategory = part.category?.toLowerCase().includes("wheel") ?? false;
+  const searchQuery = [part.category, part.raw_name, !isWheelCategory && vehicleLabel]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <li className="flex items-start justify-between gap-4 border-b border-border py-4 last:border-b-0">
@@ -143,6 +155,7 @@ export function ModificationList({
   partsById,
   partMediaUrlById,
   vehicleId,
+  vehicleLabel,
   userId,
   isOwner,
 }: {
@@ -150,6 +163,7 @@ export function ModificationList({
   partsById: Map<string, Part>;
   partMediaUrlById: Map<string, string>;
   vehicleId: string;
+  vehicleLabel: string;
   userId: string | null;
   isOwner: boolean;
 }) {
@@ -192,6 +206,7 @@ export function ModificationList({
               linkedPart={part.part_id ? (partsById.get(part.part_id) ?? null) : null}
               photoUrl={part.media_id ? (partMediaUrlById.get(part.media_id) ?? null) : null}
               vehicleId={vehicleId}
+              vehicleLabel={vehicleLabel}
               userId={userId}
               isOwner={isOwner}
             />
