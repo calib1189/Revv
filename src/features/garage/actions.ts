@@ -9,6 +9,7 @@ import { validateImageFile } from "@/lib/validation/media";
 import { getVisionProvider } from "@/lib/providers/get-vision-provider";
 import { trackEvent } from "@/lib/analytics/track";
 import { isVehicleCategory } from "@/lib/vehicles/category";
+import { isUnderIdentifyRateLimit, recordIdentifyAttempt } from "@/lib/vehicles/identify-rate-limit";
 import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleInsert } from "@/lib/db/vehicles";
 
@@ -101,6 +102,20 @@ export interface IdentifyVehicleResult {
 export async function identifyVehicleAction(
   formData: FormData,
 ): Promise<IdentifyVehicleResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  // This action calls a real (billed) external API and doesn't insert
+  // into any table itself, so there's no RLS policy to hang auth or a
+  // rate limit off of the way posts/comments/signup do — both have to
+  // be enforced explicitly here instead, or this Server Action is an
+  // open, unauthenticated, unlimited way to spend Gemini API budget.
+  if (!user) return { error: "You must be logged in." };
+  if (!(await isUnderIdentifyRateLimit(supabase, user.id))) {
+    return { error: "Too many photo lookups — try again in a bit." };
+  }
+
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Choose a photo first." };
@@ -112,6 +127,7 @@ export async function identifyVehicleAction(
   const provider = getVisionProvider();
   const bytes = await file.arrayBuffer();
   try {
+    await recordIdentifyAttempt(supabase, user.id);
     const data = await provider.identifyVehicle(bytes, file.type);
     return { data };
   } catch (err) {
