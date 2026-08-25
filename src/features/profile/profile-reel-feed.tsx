@@ -17,16 +17,19 @@ export function ProfileReelFeed({
   isAuthenticated: boolean;
   backHref: string;
 }) {
-  // The bottom nav is fixed (removed from normal document flow), so its
-  // real height — 64px plus the home-indicator safe area on an iPhone
-  // without a physical home button — has to be subtracted explicitly or
-  // the last ~34px of every video sits behind it, unreachable. Missing
-  // that safe-area term (unlike tab-pager-shell.tsx's slotHeight, which
-  // already accounts for it) was exactly why the bottom of the video was
-  // cut off.
+  // The top bar's real height isn't just its 56px of content — it also
+  // has pt-[env(safe-area-inset-top)] for the notch/Dynamic Island
+  // (top-tab-bar.tsx), and the bottom nav (fixed, so out of normal
+  // document flow entirely) is 64px plus env(safe-area-inset-bottom) for
+  // the home-indicator area. The previous fix only added the bottom
+  // inset and missed the top one — on any notched iPhone that's another
+  // 44-59px this box was too tall by, which is exactly enough to still
+  // push the bottom of the video behind the fixed nav. Both insets are
+  // zero on a device with no notch and no home-indicator gesture area,
+  // so this doesn't change anything there.
   const feedHeight = isAuthenticated
-    ? "h-[calc(100dvh-56px-64px-env(safe-area-inset-bottom))]"
-    : "h-[calc(100dvh-56px)]";
+    ? "h-[calc(100dvh-56px-env(safe-area-inset-top)-64px-env(safe-area-inset-bottom))]"
+    : "h-[calc(100dvh-56px-env(safe-area-inset-top))]";
 
   return (
     <div className="relative">

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SaveButton } from "@/features/feed/save-button";
-import { DeletePostButton } from "@/features/feed/delete-post-button";
+import { VideoOptionsMenu } from "@/features/feed/video-options-menu";
 import { FollowBadge } from "@/features/feed/follow-badge";
 import { CommentSheet } from "@/features/feed/comment-sheet";
 import { Avatar } from "@/features/feed/avatar";
@@ -205,8 +205,8 @@ export function SwipeSlide({
         ))}
 
       {data.isOwnPost && (
-        <div className="pointer-events-auto absolute right-3 top-4 z-10 rounded-lg bg-black/60 px-1">
-          <DeletePostButton postId={data.post.id} />
+        <div className="pointer-events-auto absolute right-3 top-4 z-10">
+          <VideoOptionsMenu postId={data.post.id} />
         </div>
       )}
 
