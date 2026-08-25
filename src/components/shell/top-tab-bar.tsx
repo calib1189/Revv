@@ -31,14 +31,20 @@ export function TopTabBar() {
     >
       <div className="mx-auto grid h-14 max-w-5xl grid-cols-[1fr_auto_1fr] items-center px-4">
         <span />
-        <nav className="no-scrollbar flex items-center gap-5 overflow-x-auto">
+        {/* min-w-0 is load-bearing: a grid item's default min-width is
+            `auto` (its content's intrinsic width), not 0, so without this
+            the nav can never shrink below fitting all five tabs on one
+            line — overflow-x-auto below silently does nothing and the
+            header just gets wider than the viewport instead of scrolling.
+            This is the actual "too big" bug, not just a sizing tweak. */}
+        <nav className="no-scrollbar flex min-w-0 items-center gap-4 overflow-x-auto">
           {TABS.map((tab) => {
             const active = isActive(pathname, tab.href);
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex-shrink-0 whitespace-nowrap border-b-2 py-1 text-sm font-semibold transition-colors active:opacity-60 ${
+                className={`flex-shrink-0 whitespace-nowrap border-b-2 py-1 text-[13px] font-semibold transition-colors active:opacity-60 ${
                   isImmersive ? "[text-shadow:0_1px_4px_rgb(0_0_0_/_0.7)]" : ""
                 } ${
                   active
