@@ -506,6 +506,18 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["ai_identify_attempts"]["Insert"]>;
         Relationships: never[];
       };
+      ai_visualize_attempts: {
+        Row: { id: string; user_id: string; created_at: string };
+        Insert: { id?: string; user_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["ai_visualize_attempts"]["Insert"]>;
+        Relationships: never[];
+      };
+      ai_assistant_messages: {
+        Row: { id: string; user_id: string; created_at: string };
+        Insert: { id?: string; user_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["ai_assistant_messages"]["Insert"]>;
+        Relationships: never[];
+      };
       blocks: {
         Row: { blocker_id: string; blocked_id: string; created_at: string };
         Insert: {

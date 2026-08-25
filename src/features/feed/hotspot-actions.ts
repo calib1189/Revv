@@ -42,6 +42,15 @@ export async function deleteHotspotAction(
   postId: string,
 ): Promise<void> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  // RLS already blocks an unauthorized delete (post_hotspots' delete
+  // policy requires posts.author_id = auth.uid()), so this couldn't
+  // actually succeed for the wrong caller — this check just fails fast
+  // with a clear no-op instead of relying entirely on that, and matches
+  // createHotspotAction right above it in this same file.
+  if (!user) return;
   await deleteHotspot(supabase, hotspotId);
   revalidatePath(`/p/${postId}`);
 }
