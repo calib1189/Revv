@@ -544,3 +544,144 @@ export function HashtagIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+// --- Modification-category icons — the automatic (no-upload-required)
+// placeholder shown next to a mod until/unless the owner adds a real
+// photo. Deliberately generic category glyphs, never claiming to depict
+// the actual product. ---
+
+export function WrenchIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <path
+        d="M14.7 6.3a4 4 0 0 0-5.4 4.9L4 16.5V20h3.5l5.3-5.3a4 4 0 0 0 4.9-5.4l-2.8 2.8-2.1-2.1 2.9-2.8Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function WheelIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v6M12 15v6M4.5 7.5l5.2 3M14.3 13.5l5.2 3M19.5 7.5l-5.2 3M9.7 13.5l-5.2 3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ExhaustIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <path d="M3 9h9a4 4 0 0 1 4 4v0" strokeLinecap="round" />
+      <ellipse cx="19" cy="15" rx="2.5" ry="4" />
+      <path d="M3 7v4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function SuspensionIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <path d="M12 2v3M12 19v3" strokeLinecap="round" />
+      <path
+        d="M12 5c-3 0-3 3 0 3s3 3 0 3-3 3 0 3-3 3 0 3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function TurboIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path
+        d="M12 12 8 8m4 4 4-4m-4 4-4 4m4-4 4 4"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function BrakeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="9" strokeDasharray="2 3.2" />
+      <rect x="8.5" y="8.5" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+export function EngineIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <rect x="3" y="10" width="13" height="8" rx="1.5" />
+      <path d="M6 10V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3M9 4v3M16 13h3a2 2 0 0 1 2 2v3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.5 13.5h3M6.5 15.5h3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function TuningIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <rect x="6" y="6" width="12" height="12" rx="2" />
+      <rect x="9.5" y="9.5" width="5" height="5" rx="1" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function SeatIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <path
+        d="M7 4h6a2 2 0 0 1 2 2v6H9a2 2 0 0 1-2-2V4Z"
+        strokeLinejoin="round"
+      />
+      <path d="M7 12v4a2 2 0 0 0 2 2h8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 4v14M20 16v2a2 2 0 0 1-2 2h-1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function BodyKitIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <path
+        d="M3.5 15 5 9.5A2 2 0 0 1 6.9 8h10.2a2 2 0 0 1 1.9 1.5L20.5 15"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M3.5 15h17v2.5a1 1 0 0 1-1 1H16M3.5 15v2.5a1 1 0 0 0 1 1H8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="7.5" cy="15" r="1.8" />
+      <circle cx="16.5" cy="15" r="1.8" />
+      <path d="M8 11.5h8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function SpeakerIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <rect x="6" y="3" width="12" height="18" rx="2" />
+      <circle cx="12" cy="8.5" r="2.2" />
+      <circle cx="12" cy="15.5" r="3.2" />
+      <circle cx="12" cy="15.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function BoltIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

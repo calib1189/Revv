@@ -8,6 +8,7 @@ import {
 import { ModificationForm } from "@/features/builds/modification-form";
 import { DeleteModificationButton } from "@/features/builds/delete-modification-button";
 import { ModificationPhotoUploader } from "@/features/builds/modification-photo-uploader";
+import { getCategoryIcon } from "@/features/builds/category-icon";
 import { ProductCard } from "@/features/builds/product-card";
 import { BuyButton } from "@/features/parts/buy-button";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,35 @@ const STATUS_CLASS: Record<BuildPart["status"], string> = {
   ordered: "text-foreground",
   installed: "text-accent",
 };
+
+/** Read-only equivalent of ModificationPhotoUploader for a viewer who
+ * isn't the owner — same automatic-icon-until-there's-a-real-photo
+ * behavior, just without the upload control. */
+function ModificationIcon({
+  photoUrl,
+  category,
+  rawName,
+}: {
+  photoUrl: string | null;
+  category: string | null;
+  rawName: string;
+}) {
+  return (
+    <div className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-raised text-muted">
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- decorative thumbnail in a list; not worth a sized-ancestor Image setup here
+        <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+      ) : (
+        // Invoked as a plain function rather than <CategoryIcon /> — it's
+        // always one of a fixed, stable set of icons under the hood, but
+        // resolving *which* one happens at render time, which the
+        // react-hooks/static-components rule (rightly, in the general
+        // case) won't allow as a JSX tag.
+        getCategoryIcon(category, rawName)({ className: "h-6 w-6" })
+      )}
+    </div>
+  );
+}
 
 function ModificationRow({
   part,
@@ -83,14 +113,11 @@ function ModificationRow({
             buildPartId={part.id}
             userId={userId}
             photoUrl={photoUrl}
+            category={part.category}
+            rawName={part.raw_name}
           />
         ) : (
-          photoUrl && (
-            <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-surface-raised">
-              {/* eslint-disable-next-line @next/next/no-img-element -- decorative thumbnail in a list; not worth a sized-ancestor Image setup here */}
-              <img src={photoUrl} alt="" className="h-full w-full object-cover" />
-            </div>
-          )
+          <ModificationIcon photoUrl={photoUrl} category={part.category} rawName={part.raw_name} />
         )}
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">{part.raw_name}</p>

@@ -7,22 +7,32 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { validateImageFile } from "@/lib/validation/media";
-import { CameraIcon } from "@/components/ui/icons";
+import { getCategoryIcon } from "@/features/builds/category-icon";
 
 /** One photo per modification — same single-FK pattern as a vehicle's
  * cover photo (CoverPhotoUploader), not a gallery, since a mod only
  * needs one reference shot. Writes straight from the browser client
  * (upload -> media row -> update the build_part's media_id), same as
  * every other owner-photo flow in the garage — build_parts' existing RLS
- * policy already covers this column, no server action needed. */
+ * policy already covers this column, no server action needed.
+ *
+ * Automatic by default: until a real photo is added, this shows a
+ * category-matched icon (no upload required, no cost, never claims to
+ * be an actual photo of the part) — clicking it still opens the picker
+ * so the owner can swap in a real photo of their exact part whenever
+ * they want to. */
 export function ModificationPhotoUploader({
   buildPartId,
   userId,
   photoUrl,
+  category,
+  rawName,
 }: {
   buildPartId: string;
   userId: string;
   photoUrl: string | null;
+  category: string | null;
+  rawName: string;
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,13 +89,15 @@ export function ModificationPhotoUploader({
         type="button"
         disabled={isUploading}
         onClick={() => inputRef.current?.click()}
-        aria-label={photoUrl ? "Change photo" : "Add a photo"}
+        aria-label={photoUrl ? "Change photo" : "Add a real photo of this part"}
         className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-surface-raised text-muted disabled:opacity-60"
       >
         {photoUrl ? (
           <Image src={photoUrl} alt="" fill sizes="56px" className="object-cover" />
         ) : (
-          <CameraIcon className="h-5 w-5" />
+          // Invoked as a plain function, not <CategoryIcon /> — see the
+          // matching comment in modification-list.tsx's ModificationIcon.
+          getCategoryIcon(category, rawName)({ className: "h-6 w-6" })
         )}
       </button>
       {error && <p className="mt-1 max-w-[7rem] text-[11px] text-danger">{error}</p>}
