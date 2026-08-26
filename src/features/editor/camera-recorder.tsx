@@ -96,6 +96,7 @@ export function CameraRecorder({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragStartXRef = useRef<number | null>(null);
@@ -332,9 +333,26 @@ export function CameraRecorder({
     if (!stream || !canvas) return;
 
     const canvasStream = canvas.captureStream(30);
+
+    // Feeding the mic's own MediaStreamTrack straight into a MediaStream
+    // built alongside an unrelated canvas video track is a known WebKit
+    // (WKWebView, i.e. the iOS app) combination that records video-only —
+    // the track is live and already driving the muted preview <video>
+    // fine, but WKWebView's MediaRecorder silently fails to encode audio
+    // that didn't originate from the same capture session as the video
+    // track it's paired with. Routing it through a real Web Audio graph
+    // first and recording *that* destination's track instead is the
+    // standard workaround, and the same technique use-video-export.ts
+    // already relies on for its own audio mixing.
+    const audioCtx = new (window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const audioDestination = audioCtx.createMediaStreamDestination();
+    audioCtx.createMediaStreamSource(stream).connect(audioDestination);
+    audioCtxRef.current = audioCtx;
+
     const combined = new MediaStream([
       ...canvasStream.getVideoTracks(),
-      ...stream.getAudioTracks(),
+      ...audioDestination.stream.getAudioTracks(),
     ]);
 
     chunksRef.current = [];
@@ -349,6 +367,8 @@ export function CameraRecorder({
     };
     recorder.onstop = () => {
       combined.getTracks().forEach((t) => t.stop());
+      audioCtxRef.current?.close().catch(() => {});
+      audioCtxRef.current = null;
       const blob = new Blob(chunksRef.current, { type: baseType });
       const extension = mimeType.includes("mp4") ? "mp4" : "webm";
       onCaptured(new File([blob], `recording.${extension}`, { type: baseType }), "video");
