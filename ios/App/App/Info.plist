@@ -28,6 +28,8 @@
 	<string>REVV uses your camera to record videos and photos of your build for posts.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>REVV uses your microphone to record audio with videos you post.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>REVV uses your location to show car meets and shops near you.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
