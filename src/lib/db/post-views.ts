@@ -1,20 +1,32 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
-/** Records a view — a no-op if this viewer already viewed this post
- * (unique constraint), so repeat scrolls past the same post don't inflate
- * the count. Not an error case; swallow the conflict. */
+/** Every rewatch counts (like TikTok/YouTube), not just the first —
+ * but only once this viewer's last recorded view of this post is older
+ * than the cooldown, so scrolling past (or a looping video re-crossing
+ * the visibility threshold) can't spam a view per second. */
+const VIEW_COOLDOWN_SECONDS = 30;
+
 export async function recordPostView(
   supabase: SupabaseClient<Database>,
   postId: string,
   viewerId: string,
 ): Promise<void> {
+  const cooldownCutoff = new Date(Date.now() - VIEW_COOLDOWN_SECONDS * 1000).toISOString();
+  const { data: recent, error: recentError } = await supabase
+    .from("post_views")
+    .select("id")
+    .eq("post_id", postId)
+    .eq("viewer_id", viewerId)
+    .gte("created_at", cooldownCutoff)
+    .limit(1);
+  if (recentError) throw recentError;
+  if (recent.length > 0) return;
+
   const { error } = await supabase
     .from("post_views")
     .insert({ post_id: postId, viewer_id: viewerId });
-
-  // 23505 = unique_violation (already viewed) — expected, not a failure.
-  if (error && error.code !== "23505") throw error;
+  if (error) throw error;
 }
 
 export async function getViewCount(

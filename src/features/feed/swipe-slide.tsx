@@ -169,7 +169,6 @@ export function SwipeSlide({
 }) {
   const isVideo = data.media[0]?.kind === "video";
   const containerRef = useRef<HTMLDivElement>(null);
-  const hasRecordedView = useRef(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const { liked, count: likeCount, toggle: toggleLike, like } = usePostLike(
     data.post.id,
@@ -182,14 +181,15 @@ export function SwipeSlide({
     const el = containerRef.current;
     if (!el) return;
 
+    // Fires once per crossing into >60% visible — not continuously while
+    // it stays visible — so scrolling away and back (or a post the user
+    // returns to later) attempts a new view each time. The cooldown that
+    // actually prevents over-counting lives server-side now
+    // (recordPostView, lib/db/post-views.ts), since every rewatch is
+    // meant to count, just not unboundedly.
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (
-          entry.isIntersecting &&
-          entry.intersectionRatio > 0.6 &&
-          !hasRecordedView.current
-        ) {
-          hasRecordedView.current = true;
+        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
           recordViewAction(data.post.id);
         }
       },

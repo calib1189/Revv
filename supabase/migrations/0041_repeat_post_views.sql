@@ -1,0 +1,12 @@
+-- View counts previously counted unique viewers only — one row per
+-- (post, viewer), enforced by a unique constraint, so replaying the
+-- same post never moved the number past 1. Switching to counting every
+-- rewatch (still logged-in-viewers-only, still one row per view, no
+-- denormalized counter — just no longer capped at one row per viewer)
+-- to match how TikTok/YouTube-style view counters actually behave.
+-- Anti-gaming now lives in application code instead of this constraint:
+-- recordPostView (lib/db/post-views.ts) only inserts a new row if the
+-- same viewer's last recorded view of this post is outside a cooldown
+-- window, rather than relying on the database to silently reject an
+-- outright duplicate.
+alter table post_views drop constraint if exists post_views_post_id_viewer_id_key;
