@@ -97,12 +97,15 @@ export function ShopsBrowser() {
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Shops near you</h1>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Shops near you</h1>
+          <p className="mt-1 text-sm text-muted">Mechanics, tint, body work — real local shops, real reviews.</p>
+        </div>
         <button
           type="button"
           onClick={() => setIsPromotePanelOpen(true)}
-          className="flex-shrink-0 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
+          className="self-start flex-shrink-0 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
         >
           Promote your shop
         </button>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { MeetupCard } from "@/features/meetups/meetup-card";
 import { CreateMeetupForm } from "@/features/meetups/create-meetup-form";
+import { CompassIcon } from "@/components/ui/icons";
 import { haversineMiles } from "@/lib/geo/distance";
 import type { Meetup } from "@/lib/db/meetups";
 
@@ -74,9 +76,13 @@ export function MeetupsList({
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Car meets near you</h1>
+        <p className="mt-1 text-sm text-muted">
+          Cars &amp; coffee, cruises, track days — real meets happening close by.
+        </p>
       </div>
+
       {locationDenied && (
         <p className="mb-4 text-sm text-muted">
           Turn on location to sort these by distance — showing upcoming meets by date instead.
@@ -90,16 +96,29 @@ export function MeetupsList({
       )}
 
       {sorted.length === 0 ? (
-        <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-24 text-center">
-          <p className="text-lg font-medium">No upcoming meets</p>
-          <p className="max-w-xs text-sm text-muted">
-            {currentUserId
-              ? "Be the first to post one."
-              : "Log in to post one, or check back later."}
-          </p>
+        <div className="glass flex flex-col items-center gap-3 rounded-2xl px-6 py-20 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-raised text-accent">
+            <CompassIcon className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="text-lg font-medium">No upcoming meets yet</p>
+            <p className="mt-1 max-w-xs text-sm text-muted">
+              {currentUserId
+                ? "Be the first to post one — a cars & coffee, a cruise, a track day."
+                : "Log in to post one, or check back later."}
+            </p>
+          </div>
+          {!currentUserId && (
+            <Link
+              href="/login"
+              className="mt-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
+            >
+              Log in
+            </Link>
+          )}
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           {sorted.map(({ meetup, hostUsername, photoUrl, photoCount }) => (
             <MeetupCard
               key={meetup.id}

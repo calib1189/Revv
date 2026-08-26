@@ -11,8 +11,8 @@ export type MeetupTier = Meetup["tier"];
  * distance (see listUpcomingMeetups) — it's the same "pay for more
  * visibility" idea as an ad campaign, just for a listing. */
 export const MEETUP_TIERS: Record<MeetupTier, { label: string; priceCents: number }> = {
-  standard: { label: "Standard", priceCents: 300 },
-  promoted: { label: "Promoted", priceCents: 1000 },
+  standard: { label: "Standard", priceCents: 1000 },
+  promoted: { label: "Promoted", priceCents: 2500 },
 };
 
 export function isMeetupTier(value: string): value is MeetupTier {

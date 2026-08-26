@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { PinIcon } from "@/components/ui/icons";
+import { PinIcon, CompassIcon, TimerIcon } from "@/components/ui/icons";
 import { formatDateTime } from "@/lib/format/date";
 import { formatDistance } from "@/lib/geo/distance";
 import type { Meetup } from "@/lib/db/meetups";
@@ -23,9 +23,9 @@ export function MeetupCard({
   return (
     <Link
       href={`/discover/${meetup.id}`}
-      className="glass block overflow-hidden rounded-2xl transition-opacity hover:opacity-90"
+      className="glass block overflow-hidden rounded-2xl transition-transform duration-200 hover:scale-[1.01] hover:opacity-95"
     >
-      {photoUrl && (
+      {photoUrl ? (
         <div className="relative aspect-[16/9] w-full bg-surface">
           <Image
             src={photoUrl}
@@ -40,6 +40,14 @@ export function MeetupCard({
             </span>
           )}
         </div>
+      ) : (
+        // No photo yet — a plain title block would read as an
+        // unfinished/broken card next to every photo-backed one, so this
+        // gives every meetup the same visual anchor instead of leaving a
+        // blank gap where the image would be.
+        <div className="flex aspect-[21/9] w-full items-center justify-center bg-surface-raised">
+          <CompassIcon className="h-7 w-7 text-muted/60" />
+        </div>
       )}
 
       <div className="p-4">
@@ -53,7 +61,10 @@ export function MeetupCard({
                 </span>
               )}
             </div>
-            <p className="text-sm text-muted">{formatDateTime(meetup.starts_at)}</p>
+            <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted">
+              <TimerIcon className="h-3.5 w-3.5 flex-shrink-0" />
+              {formatDateTime(meetup.starts_at)}
+            </p>
           </div>
           {distanceMiles != null && (
             <span className="flex-shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-xs font-medium text-accent">
