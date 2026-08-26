@@ -9,7 +9,7 @@ export interface TabPagerTab {
   content: ReactNode;
 }
 
-const HEADER_HEIGHT = "calc(3.5rem + env(safe-area-inset-top))";
+export const HEADER_HEIGHT = "calc(3.5rem + env(safe-area-inset-top))";
 
 /** The actual swipeable pager behind all five top-level tabs (Garage, For
  * You, Discover, Leaderboard, Marketplace) — every panel is mounted

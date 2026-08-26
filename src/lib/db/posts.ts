@@ -6,8 +6,14 @@ export type PostInsert = Database["public"]["Tables"]["posts"]["Insert"];
 
 export async function listFeedPosts(
   supabase: SupabaseClient<Database>,
-  { before, limit = 12 }: { before?: string; limit?: number } = {},
+  {
+    before,
+    limit = 12,
+    vehicleIds,
+  }: { before?: string; limit?: number; vehicleIds?: string[] } = {},
 ): Promise<Post[]> {
+  if (vehicleIds && vehicleIds.length === 0) return [];
+
   let query = supabase
     .from("posts")
     .select("*")
@@ -15,6 +21,7 @@ export async function listFeedPosts(
     .limit(limit);
 
   if (before) query = query.lt("created_at", before);
+  if (vehicleIds) query = query.in("vehicle_id", vehicleIds);
 
   const { data, error } = await query;
   if (error) throw error;

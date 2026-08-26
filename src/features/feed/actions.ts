@@ -13,20 +13,50 @@ import { createComment, deleteComment, listCommentsByPost } from "@/lib/db/comme
 import { deletePost, listFeedPosts, getPostById } from "@/lib/db/posts";
 import { createReport } from "@/lib/db/reports";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { listVehicleIdsByCategory } from "@/lib/db/vehicles";
 import { validateComment } from "@/lib/validation/comment";
 import { composePostCards } from "@/lib/feed/compose-post-cards";
 import { sendPushToUser } from "@/lib/push/send";
+import { isVehicleCategory, type VehicleCategory } from "@/lib/vehicles/category";
 import type { PostCardData } from "@/features/feed/post-card";
 import type { CommentWithAuthor } from "@/features/feed/comment-list";
 
+async function resolveCategoryVehicleIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  category: VehicleCategory | null,
+): Promise<string[] | undefined> {
+  if (!category) return undefined;
+  return listVehicleIdsByCategory(supabase, category);
+}
+
 export async function loadMoreFeedPostsAction(
   before: string,
+  category?: string | null,
 ): Promise<PostCardData[]> {
   const supabase = await createClient();
-  const [user, posts] = await Promise.all([
+  const resolvedCategory = category && isVehicleCategory(category) ? category : null;
+  const [user, vehicleIds] = await Promise.all([
     getCurrentUser(),
-    listFeedPosts(supabase, { before, limit: 8 }),
+    resolveCategoryVehicleIds(supabase, resolvedCategory),
   ]);
+  const posts = await listFeedPosts(supabase, { before, limit: 8, vehicleIds });
+
+  return composePostCards(supabase, posts, user?.id ?? null);
+}
+
+/** Switching the FYP's category filter (category-filter-bar.tsx) replaces
+ * the whole post list rather than appending to it — this is the initial
+ * fetch for a newly-selected category, not pagination. */
+export async function loadFeedByCategoryAction(
+  category: string | null,
+): Promise<PostCardData[]> {
+  const supabase = await createClient();
+  const resolvedCategory = category && isVehicleCategory(category) ? category : null;
+  const [user, vehicleIds] = await Promise.all([
+    getCurrentUser(),
+    resolveCategoryVehicleIds(supabase, resolvedCategory),
+  ]);
+  const posts = await listFeedPosts(supabase, { limit: 8, vehicleIds });
 
   return composePostCards(supabase, posts, user?.id ?? null);
 }
