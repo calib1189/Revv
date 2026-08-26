@@ -98,7 +98,7 @@ function VideoMedia({ url, onDoubleTapLike }: { url: string; onDoubleTapLike: ()
         loop
         playsInline
         preload="metadata"
-        className="h-full w-full object-contain"
+        className="h-full w-full object-cover"
       />
       {isPaused && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -140,7 +140,7 @@ function PhotoMedia({ urls }: { urls: string[] }) {
             key={i}
             src={url}
             alt=""
-            className="h-full w-full flex-shrink-0 snap-center object-contain"
+            className="h-full w-full flex-shrink-0 snap-center object-cover"
           />
         ))}
       </div>
