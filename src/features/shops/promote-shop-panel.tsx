@@ -48,6 +48,10 @@ export function PromoteShopPanel({
         setSearchError("Shop lookup isn't set up yet — check back soon.");
         return;
       }
+      if (response.rateLimited) {
+        setSearchError("You've searched a lot just now — give it a few minutes and try again.");
+        return;
+      }
       setResults(response.shops);
     } catch {
       setSearchError("Couldn't search. Try again.");

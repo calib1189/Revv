@@ -19,6 +19,7 @@ export function ShopsBrowser() {
   const [category, setCategory] = useState<ShopCategoryId>(SHOP_CATEGORIES[0].id);
   const [shops, setShops] = useState<ShopResult[] | null>(null);
   const [isMock, setIsMock] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPromotePanelOpen, setIsPromotePanelOpen] = useState(false);
 
@@ -53,11 +54,13 @@ export function ShopsBrowser() {
       if (cancelled) return;
       setShops(null);
       setError(null);
+      setIsRateLimited(false);
     });
     searchNearbyShopsAction({ lat: location.coords.lat, lng: location.coords.lng, category })
       .then((response) => {
         if (cancelled) return;
         setIsMock(response.isMock);
+        setIsRateLimited(response.rateLimited);
         setShops(response.shops);
       })
       .catch(() => {
@@ -163,7 +166,17 @@ export function ShopsBrowser() {
             <p className="text-sm text-muted">Loading shops…</p>
           )}
 
-          {!isMock && !error && shops !== null && shops.length === 0 && (
+          {!isMock && !error && shops !== null && shops.length === 0 && isRateLimited && (
+            <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
+              <p className="text-sm font-medium">You&apos;ve searched a lot just now</p>
+              <p className="max-w-xs text-xs text-muted">
+                Give it a few minutes and try again — this isn&apos;t a sign there are no real
+                shops nearby.
+              </p>
+            </div>
+          )}
+
+          {!isMock && !error && shops !== null && shops.length === 0 && !isRateLimited && (
             <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
               <p className="text-sm font-medium">No {categoryLabel.toLowerCase()} nearby</p>
               <p className="max-w-xs text-xs text-muted">Try a different category.</p>

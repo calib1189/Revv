@@ -21,6 +21,11 @@ export interface ShopResult extends Shop {
 export interface ShopSearchActionResponse {
   shops: ShopResult[];
   isMock: boolean;
+  /** True when this came back empty specifically because the rate limit
+   * was hit — kept separate from a genuine zero-result search so the UI
+   * can tell someone "you've searched a lot, try again shortly" instead
+   * of the misleading "nothing nearby." */
+  rateLimited: boolean;
 }
 
 /** Cross-references raw Places results against shop_promotions and sorts
@@ -35,7 +40,7 @@ async function withPromotionStatus(
   supabase: SupabaseClient<Database>,
   { shops, isMock }: ShopSearchResponse,
 ): Promise<ShopSearchActionResponse> {
-  if (shops.length === 0) return { shops: [], isMock };
+  if (shops.length === 0) return { shops: [], isMock, rateLimited: false };
 
   const promotedIds = await getActivePromotedPlaceIds(
     supabase,
@@ -47,7 +52,7 @@ async function withPromotionStatus(
   }));
   withPromotion.sort((a, b) => Number(b.isPromoted) - Number(a.isPromoted));
 
-  return { shops: withPromotion, isMock };
+  return { shops: withPromotion, isMock, rateLimited: false };
 }
 
 /**
@@ -66,14 +71,16 @@ export async function searchNearbyShopsAction({
   lng: number;
   category: string;
 }): Promise<ShopSearchActionResponse> {
-  if (!isShopCategoryId(category)) return { shops: [], isMock: false };
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { shops: [], isMock: false };
+  if (!isShopCategoryId(category)) return { shops: [], isMock: false, rateLimited: false };
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return { shops: [], isMock: false, rateLimited: false };
+  }
 
   const supabase = await createClient();
   const ip = await getClientIp();
 
   if (!(await isUnderShopsSearchRateLimit(supabase, ip))) {
-    return { shops: [], isMock: false };
+    return { shops: [], isMock: false, rateLimited: true };
   }
 
   try {
@@ -82,7 +89,7 @@ export async function searchNearbyShopsAction({
     return await withPromotionStatus(supabase, response);
   } catch (err) {
     console.error("searchNearbyShopsAction failed:", err);
-    return { shops: [], isMock: false };
+    return { shops: [], isMock: false, rateLimited: false };
   }
 }
 
@@ -105,14 +112,18 @@ export async function searchShopsByQueryAction({
   query: string;
 }): Promise<ShopSearchActionResponse> {
   const trimmed = query.trim();
-  if (!trimmed || trimmed.length > MAX_QUERY_LENGTH) return { shops: [], isMock: false };
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { shops: [], isMock: false };
+  if (!trimmed || trimmed.length > MAX_QUERY_LENGTH) {
+    return { shops: [], isMock: false, rateLimited: false };
+  }
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return { shops: [], isMock: false, rateLimited: false };
+  }
 
   const supabase = await createClient();
   const ip = await getClientIp();
 
   if (!(await isUnderShopsSearchRateLimit(supabase, ip))) {
-    return { shops: [], isMock: false };
+    return { shops: [], isMock: false, rateLimited: true };
   }
 
   try {
@@ -121,7 +132,7 @@ export async function searchShopsByQueryAction({
     return await withPromotionStatus(supabase, response);
   } catch (err) {
     console.error("searchShopsByQueryAction failed:", err);
-    return { shops: [], isMock: false };
+    return { shops: [], isMock: false, rateLimited: false };
   }
 }
 
