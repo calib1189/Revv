@@ -10,6 +10,7 @@ import { PhotoCarousel } from "@/features/feed/photo-carousel";
 import { Avatar } from "@/features/feed/avatar";
 import { PinIcon } from "@/components/ui/icons";
 import { MeetupDetailDeleteButton } from "@/features/meetups/meetup-detail-delete-button";
+import { Callout } from "@/components/ui/callout";
 import { formatDateTime } from "@/lib/format/date";
 
 export default async function MeetupDetailPage({
@@ -41,6 +42,15 @@ export default async function MeetupDetailPage({
       <Link href="/discover" className="mb-4 inline-block text-sm text-muted hover:text-foreground">
         ← Back to meets
       </Link>
+
+      {isHost && meetup.status === "pending_payment" && (
+        <div className="mb-4">
+          <Callout tone="danger">
+            This meetup is only visible to you until payment finishes — it
+            won&apos;t show up for anyone else yet.
+          </Callout>
+        </div>
+      )}
 
       <div className="glass overflow-hidden rounded-2xl">
         {photos.length > 0 && <PhotoCarousel photos={photos} />}

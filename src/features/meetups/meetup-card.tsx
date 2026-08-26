@@ -45,7 +45,14 @@ export function MeetupCard({
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-medium">{meetup.title}</p>
+            <div className="flex items-center gap-2">
+              <p className="truncate font-medium">{meetup.title}</p>
+              {meetup.tier === "promoted" && (
+                <span className="flex-shrink-0 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-accent-foreground">
+                  Promoted
+                </span>
+              )}
+            </div>
             <p className="text-sm text-muted">{formatDateTime(meetup.starts_at)}</p>
           </div>
           {distanceMiles != null && (

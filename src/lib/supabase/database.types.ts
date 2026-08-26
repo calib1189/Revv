@@ -434,6 +434,10 @@ export interface Database {
           lng: number | null;
           starts_at: string;
           created_at: string;
+          status: "pending_payment" | "active";
+          tier: "standard" | "promoted";
+          price_cents: number;
+          stripe_checkout_session_id: string | null;
         };
         Insert: {
           id?: string;
@@ -445,6 +449,10 @@ export interface Database {
           lng?: number | null;
           starts_at: string;
           created_at?: string;
+          status?: "pending_payment" | "active";
+          tier?: "standard" | "promoted";
+          price_cents?: number;
+          stripe_checkout_session_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["meetups"]["Insert"]>;
         Relationships: never[];

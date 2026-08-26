@@ -33,14 +33,16 @@ export function NativeAppBridge() {
       // this WebView (OAuth — Google outright refuses to show its login
       // page inside an embedded WebView — and Stripe Checkout, which a
       // WebView can't complete either) hands control back to the app via
-      // a revv://<destination>?... custom-scheme URL. oauth-buttons.tsx
-      // and ad-campaign-form.tsx are the other half of each: they open
-      // the provider's URL via Browser.open() with one of these as the
-      // redirect target. Routed by host rather than one hardcoded path,
-      // since there's more than one destination now.
+      // a revv://<destination>?... custom-scheme URL. oauth-buttons.tsx,
+      // ad-campaign-form.tsx, and create-meetup-form.tsx are the other
+      // half of each: they open the provider's URL via Browser.open()
+      // with one of these as the redirect target. Routed by host rather
+      // than one hardcoded path, since there's more than one destination
+      // now.
       const REVV_SCHEME_ROUTES: Record<string, string> = {
         auth: "/auth/callback",
         "ad-checkout": "/advertise",
+        "meetup-checkout": "/discover",
       };
 
       const listener = await App.addListener("appUrlOpen", async ({ url }) => {

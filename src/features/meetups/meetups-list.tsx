@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { MeetupCard } from "@/features/meetups/meetup-card";
 import { CreateMeetupForm } from "@/features/meetups/create-meetup-form";
 import { haversineMiles } from "@/lib/geo/distance";
@@ -21,7 +20,6 @@ export function MeetupsList({
   items: MeetupListItem[];
   currentUserId: string | null;
 }) {
-  const router = useRouter();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
 
@@ -47,8 +45,16 @@ export function MeetupsList({
   }, []);
 
   const sorted = useMemo(() => {
-    if (!userLocation) return items;
     return [...items].sort((a, b) => {
+      // Promoted meets always sort ahead of standard ones, regardless of
+      // distance — the paid-for visibility bump. Only once both are the
+      // same tier does distance (or, with no location, list order) break
+      // the tie.
+      const promotedA = a.meetup.tier === "promoted" ? 0 : 1;
+      const promotedB = b.meetup.tier === "promoted" ? 0 : 1;
+      if (promotedA !== promotedB) return promotedA - promotedB;
+
+      if (!userLocation) return 0;
       const distA =
         a.meetup.lat != null && a.meetup.lng != null
           ? haversineMiles(userLocation, { lat: a.meetup.lat, lng: a.meetup.lng })
@@ -79,7 +85,7 @@ export function MeetupsList({
 
       {currentUserId && (
         <div className="mb-6">
-          <CreateMeetupForm userId={currentUserId} onCreated={() => router.refresh()} />
+          <CreateMeetupForm userId={currentUserId} />
         </div>
       )}
 

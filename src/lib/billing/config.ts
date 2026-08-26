@@ -13,3 +13,9 @@ export function isBillingConfigured(): boolean {
 export function isAdBillingConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
+
+/** Same reasoning as isAdBillingConfigured — meetup checkout also uses
+ * dynamic price_data keyed by tier, not STRIPE_PRICE_ID. */
+export function isMeetupBillingConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY);
+}

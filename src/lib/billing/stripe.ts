@@ -100,6 +100,46 @@ export async function createAdCheckoutSession({
 }
 
 /**
+ * A single one-time charge for a meetup listing — mirrors
+ * createAdCheckoutSession exactly (dynamic price_data by tier, no fixed
+ * STRIPE_PRICE_ID) since the price depends on which tier (standard vs.
+ * promoted) the host picked, looked up server-side in meetups.ts's
+ * MEETUP_TIERS.
+ */
+export async function createMeetupCheckoutSession({
+  meetupId,
+  title,
+  priceCents,
+  customerEmail,
+  successUrl,
+  cancelUrl,
+}: {
+  meetupId: string;
+  title: string;
+  priceCents: number;
+  customerEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ url: string | null }> {
+  const session = await stripeRequest<{ url: string | null }>(
+    "/checkout/sessions",
+    {
+      mode: "payment",
+      "line_items[0][price_data][currency]": "usd",
+      "line_items[0][price_data][product_data][name]": `REVV meetup: ${title}`,
+      "line_items[0][price_data][unit_amount]": String(priceCents),
+      "line_items[0][quantity]": "1",
+      customer_email: customerEmail,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      "metadata[type]": "meetup",
+      "metadata[meetup_id]": meetupId,
+    },
+  );
+  return session;
+}
+
+/**
  * Verifies the Stripe-Signature header per Stripe's documented webhook
  * signing scheme: HMAC-SHA256 of "{timestamp}.{payload}" using the
  * webhook signing secret, compared with a constant-time check.

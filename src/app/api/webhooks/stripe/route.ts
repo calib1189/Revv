@@ -49,6 +49,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    if (metadata?.type === "meetup") {
+      // Payment confirmed — straight to 'active', no review step. A
+      // meetup is a normal community listing (title/description/location/
+      // time), not paid content interspersed into the main feed the way
+      // an ad campaign is, so the existing reports system is the
+      // moderation backstop here rather than a pre-publish gate.
+      const meetupId = metadata.meetup_id;
+      if (meetupId) {
+        const { error } = await supabase
+          .from("meetups")
+          .update({
+            status: "active",
+            stripe_checkout_session_id: (session.id as string) ?? null,
+          })
+          .eq("id", meetupId);
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
     const userId = metadata?.user_id;
     const customerId = session.customer as string | undefined;
     const subscriptionId = session.subscription as string | undefined;

@@ -2,37 +2,34 @@
 
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { createMeetup } from "@/lib/db/meetups";
 import { addMeetupMedia } from "@/lib/db/meetup-media";
 import { createMedia } from "@/lib/db/media";
 import { uploadImage } from "@/lib/storage/upload";
 import { validateImageFile } from "@/lib/validation/media";
 import { validateMeetup } from "@/lib/validation/meetup";
+import { createMeetupDraftAction, createMeetupCheckoutAction } from "@/features/meetups/actions";
+import { MEETUP_TIERS, type MeetupTier } from "@/lib/db/meetups";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
 
 const MAX_PHOTOS = 5;
+const TIER_ORDER: MeetupTier[] = ["standard", "promoted"];
 
 interface SelectedPhoto {
   file: File;
   previewUrl: string;
 }
 
-export function CreateMeetupForm({
-  userId,
-  onCreated,
-}: {
-  userId: string;
-  onCreated: () => void;
-}) {
+export function CreateMeetupForm({ userId }: { userId: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "loading" | "denied">("idle");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
+  const [tier, setTier] = useState<MeetupTier>("standard");
   const formRef = useRef<HTMLFormElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,6 +37,7 @@ export function CreateMeetupForm({
     photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     setPhotos([]);
     setCoords(null);
+    setTier("standard");
     setError(null);
     formRef.current?.reset();
     setIsOpen(false);
@@ -97,17 +95,22 @@ export function CreateMeetupForm({
 
     setIsPending(true);
     try {
-      const supabase = createClient();
-      const meetup = await createMeetup(supabase, {
-        host_id: userId,
-        title: title.trim(),
-        description: description || null,
-        location_name: locationName.trim(),
-        starts_at: new Date(startsAt).toISOString(),
+      const draft = await createMeetupDraftAction({
+        title,
+        description,
+        locationName,
+        startsAt,
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
+        tier,
       });
+      if (draft.error || !draft.meetupId) {
+        setError(draft.error ?? "Couldn't create that meetup. Try again.");
+        return;
+      }
+      const meetupId = draft.meetupId;
 
+      const supabase = createClient();
       let position = 0;
       for (const photo of photos) {
         const uploaded = await uploadImage(supabase, userId, photo.file);
@@ -118,12 +121,27 @@ export function CreateMeetupForm({
           width: uploaded.width,
           height: uploaded.height,
         });
-        await addMeetupMedia(supabase, meetup.id, media.id, position);
+        await addMeetupMedia(supabase, meetupId, media.id, position);
         position += 1;
       }
 
-      resetAndClose();
-      onCreated();
+      const { Capacitor } = await import("@capacitor/core");
+      const isNative = Capacitor.isNativePlatform();
+      const checkout = await createMeetupCheckoutAction({ meetupId, isNative });
+      if (checkout.error || !checkout.url) {
+        setError(checkout.error ?? "Couldn't start checkout. Try again.");
+        return;
+      }
+
+      // Checkout has to run in the system browser on native — same
+      // reasoning as ad-campaign-form.tsx and oauth-buttons.tsx.
+      if (isNative) {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url: checkout.url });
+        resetAndClose();
+      } else {
+        window.location.href = checkout.url;
+      }
     } catch {
       setError("Couldn't create that meetup. Try again.");
     } finally {
@@ -248,9 +266,43 @@ export function CreateMeetupForm({
         </p>
       </div>
 
+      <div>
+        <Label>Plan</Label>
+        <div className="flex flex-col gap-2">
+          {TIER_ORDER.map((t) => {
+            const info = MEETUP_TIERS[t];
+            return (
+              <label
+                key={t}
+                className={`flex cursor-pointer items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors ${
+                  tier === t ? "border-accent bg-accent/10" : "border-border"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="tier"
+                    checked={tier === t}
+                    onChange={() => setTier(t)}
+                  />
+                  <span className="font-medium">{info.label}</span>
+                </span>
+                <span className="text-muted">${(info.priceCents / 100).toFixed(0)}</span>
+              </label>
+            );
+          })}
+        </div>
+        <p className="mt-1.5 text-xs text-muted">
+          Promoted meets sort ahead of every standard one, regardless of
+          distance.
+        </p>
+      </div>
+
       <div className="flex gap-3">
         <Button type="submit" disabled={isPending} className="px-4 py-2.5 text-sm">
-          {isPending ? "Posting…" : "Post meetup"}
+          {isPending
+            ? "Starting checkout…"
+            : `Continue to payment · $${(MEETUP_TIERS[tier].priceCents / 100).toFixed(0)}`}
         </Button>
         <button
           type="button"
