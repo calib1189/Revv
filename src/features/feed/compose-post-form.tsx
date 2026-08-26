@@ -18,6 +18,7 @@ import { Callout } from "@/components/ui/callout";
 import { VideoEditor } from "@/features/editor/video-editor";
 import { PhotoEditor } from "@/features/editor/photo-editor";
 import { CameraRecorder } from "@/features/editor/camera-recorder";
+import { ClipCombiner } from "@/features/editor/clip-combiner";
 import { PostComposer, parseHashtags } from "@/features/feed/post-composer";
 import type { Vehicle } from "@/lib/db/vehicles";
 
@@ -62,6 +63,7 @@ export function ComposePostForm({
   const [video, setVideo] = useState<SelectedVideo | null>(null);
   const [videoEditorSource, setVideoEditorSource] = useState<File | null>(null);
   const [photoEditorSource, setPhotoEditorSource] = useState<File | null>(null);
+  const [multiClipSources, setMultiClipSources] = useState<File[] | null>(null);
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [vehicleId, setVehicleId] = useState("");
@@ -125,11 +127,23 @@ export function ComposePostForm({
       return;
     }
 
-    // Multiple files at once only makes sense as a photo set — a post is
-    // either one video or a set of photos, never mixed.
+    // Multiple videos at once means "stitch these into one clip" — the
+    // record studio's own multi-segment recording already produces a
+    // single combined file this same way (record, pause, record more),
+    // so picking several clips from the camera roll instead of shooting
+    // them in-app should end up in the same place.
+    const allVideos = fileArray.every((f) => f.type.startsWith("video/"));
+    if (allVideos) {
+      clearPhotos();
+      setMultiClipSources(fileArray);
+      return;
+    }
+
+    // Otherwise, multiple files at once only makes sense as a photo set —
+    // a post is either one video or a set of photos, never mixed.
     const nonImages = fileArray.filter((f) => !f.type.startsWith("image/"));
     if (nonImages.length > 0) {
-      setError("When picking more than one file, they all need to be photos.");
+      setError("When picking more than one file, they all need to be photos, or all need to be videos.");
       return;
     }
     handleSelectPhotos(files);
@@ -305,6 +319,17 @@ export function ComposePostForm({
           source={photoEditorSource}
           onCancel={() => setPhotoEditorSource(null)}
           onExported={handlePhotoEditorExported}
+        />
+      )}
+
+      {multiClipSources && (
+        <ClipCombiner
+          sources={multiClipSources}
+          onCancel={() => setMultiClipSources(null)}
+          onCombined={(file) => {
+            setMultiClipSources(null);
+            setVideoEditorSource(file);
+          }}
         />
       )}
     </>
