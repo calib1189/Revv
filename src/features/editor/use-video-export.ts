@@ -114,29 +114,28 @@ export function useVideoExport() {
       // isExporting stuck true forever — cleanup always runs exactly once,
       // on every exit path.
       try {
-        // Only build the WebAudio mixing graph when it's actually needed —
-        // mixing in music, or a non-default/non-zero volume. The common
-        // case (no music, untouched volume) instead feeds the recorder
-        // the original audio track directly, same as the camera recorder
-        // already does successfully. A canvas video track paired with a
-        // *synthetic* WebAudio-destination audio track is a much less
-        // battle-tested combination for Safari's MP4 muxer than a canvas
-        // track paired with a real captured track, and this export
-        // pipeline producing unreadable files while the camera recorder
-        // (which never touches WebAudio) doesn't is exactly the pattern
-        // that points at the mixing graph itself as the remaining cause.
-        const needsMixing = !!state.musicFile || (state.originalVolume !== 1 && state.originalVolume !== 0);
+        // Original audio always goes through a Web Audio graph before it's
+        // combined with the canvas's video track — even with no music and
+        // untouched volume. Pairing canvas.captureStream()'s video track
+        // directly with an audio track from this element's own
+        // captureStream() (two different capture sessions) is a WKWebView
+        // combination that silently drops the audio, the exact bug already
+        // found and fixed in camera-recorder.tsx for live recording. This
+        // export pipeline had the same bug hiding in its "no mixing needed"
+        // fast path: recording the mic already works, but posts made from
+        // it still came out silent because the *export* step re-introduced
+        // the same raw-track-plus-canvas combination once music/volume
+        // mixing wasn't in play to route it through Web Audio instead.
+        // A real MediaStreamAudioDestinationNode's track doesn't have that
+        // problem regardless of whether anything is actually being mixed.
 
-        // Muting only makes sense when WebAudio is independently routing
-        // the (unmuted, internally-read) source audio to the recorder —
-        // otherwise this element's own captureStream() audio track is the
-        // one actually feeding the recording, and several WebKit versions
-        // are documented to stop producing real audio samples on a
-        // captureStream() track once its source element is muted. That's
-        // almost certainly why exports came out silent: this used to be
-        // unconditional, muting even the plain (no-mixing) path that now
-        // depends on that exact track carrying real audio.
-        video.muted = needsMixing;
+        // Muting only makes sense when nothing downstream still needs this
+        // element's own captureStream() audio track carrying real samples
+        // — several WebKit versions are documented to stop producing real
+        // audio samples on that track once its source element is muted.
+        // The Web Audio graph below always taps that same track, so it
+        // has to stay unmuted whenever there's any audio to route at all.
+        video.muted = false;
         // A looping element auto-restarts the instant it reaches its true
         // end — which races ahead of the trimEnd check below for any clip
         // where the trim's out-point is the clip's actual end (i.e. no trim
@@ -152,10 +151,14 @@ export function useVideoExport() {
         let musicNode: AudioBufferSourceNode | null = null;
         let audioTracks: MediaStreamTrack[] = [];
 
-        if (needsMixing) {
+        const needsAudio = (!!originalTrack && state.originalVolume > 0) || !!state.musicFile;
+        if (needsAudio) {
           // --- Audio graph: mixes the original clip's own audio with an
           // optional music track, each independently volume-controlled,
-          // into one destination stream fed to the recorder. ---
+          // into one destination stream fed to the recorder. Built even
+          // when there's no music and volume is untouched — see the
+          // comment above on why the original track never goes straight
+          // into the recorder's stream unmixed. ---
           const AudioContextCtor =
             window.AudioContext ||
             (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -185,8 +188,6 @@ export function useVideoExport() {
           }
 
           audioTracks = destination.stream.getAudioTracks();
-        } else if (originalTrack && state.originalVolume === 1) {
-          audioTracks = [originalTrack];
         }
         // originalVolume === 0 and no music: no audio track at all —
         // an intentionally silent export.
