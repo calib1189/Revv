@@ -266,11 +266,6 @@ export default async function VehiclePage({
                 Edit details
               </Button>
             </Link>
-            <Link href={`/garage/${vehicle.id}/visualize`}>
-              <Button variant="ghost" className="px-3 py-1.5 text-sm">
-                Visualize a mod
-              </Button>
-            </Link>
             <Link href="/tools/fitment">
               <Button variant="ghost" className="px-3 py-1.5 text-sm">
                 Fitment calculator

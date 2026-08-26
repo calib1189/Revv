@@ -11,7 +11,6 @@ const LABELS: Record<(typeof TAB_HREFS)[number], string> = {
   "/feed": "For You",
   "/discover": "Discover",
   "/leaderboard": "Leaderboard",
-  "/parts": "Marketplace",
 };
 const TABS = TAB_HREFS.map((href) => ({ href, label: LABELS[href] }));
 
