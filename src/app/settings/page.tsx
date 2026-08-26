@@ -62,13 +62,20 @@ export default async function SettingsPage() {
           <span className="text-sm font-medium">Billing</span>
           <span className="text-xs text-muted">Manage your subscription</span>
         </Link>
+        <Link
+          href="/advertise"
+          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
+        >
+          <span className="text-sm font-medium">Advertise on REVV</span>
+          <span className="text-xs text-muted">Put your shop or brand in front of real builders</span>
+        </Link>
         {profile?.is_admin && (
           <Link
             href="/admin/reports"
             className="flex flex-col gap-0.5 px-4 py-3.5 text-accent transition-opacity hover:opacity-80"
           >
             <span className="text-sm font-medium">Admin</span>
-            <span className="text-xs text-accent/70">Reports, audit log, parts moderation</span>
+            <span className="text-xs text-accent/70">Reports, verifications, ads, audit log, parts moderation</span>
           </Link>
         )}
       </div>
