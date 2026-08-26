@@ -356,7 +356,7 @@ export function VideoEditor({
     if (!video) return;
     setError(null);
     try {
-      const { blob, extension } = await exportVideo(video, state);
+      const { blob, extension } = await exportVideo(video, source, state);
       const file = new File([blob], `revv-clip.${extension}`, { type: blob.type });
       onExported(file);
     } catch {

@@ -137,29 +137,36 @@ export function useClipCombiner() {
     let audioCtx: AudioContext | null = null;
     let canvasStream: MediaStream | null = null;
     let combinedStream: MediaStream | null = null;
+    let destination: MediaStreamAudioDestinationNode | null = null;
 
     try {
       if (!ctx) throw new Error("Canvas not supported.");
 
-      // One persistent mixing graph for the whole sequence, same pattern
-      // as the export pass's needsMixing path — a source node only ever
-      // emits samples while its own <video> element is actually playing,
-      // so wiring every clip's node to the same destination up front
-      // works without needing to connect/disconnect anything as clips
-      // change.
       const AudioContextCtor =
         window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       audioCtx = new AudioContextCtor();
-      const destination = audioCtx.createMediaStreamDestination();
-      for (const { video } of loaded) {
-        try {
-          audioCtx.createMediaElementSource(video).connect(destination);
-        } catch {
-          // A clip with no audio track (or one WebAudio can't tap) just
-          // contributes silence for its segment — not fatal.
-        }
-      }
+      destination = audioCtx.createMediaStreamDestination();
+
+      // Each clip's audio is decoded straight from its own File bytes,
+      // not tapped from the playing <video> element via
+      // createMediaElementSource() — on-device testing showed that
+      // doesn't reliably carry real samples in the iOS app's WKWebView
+      // (see use-video-export.ts for the full story; this hit the exact
+      // same failure mode). decodeAudioData has no dependency on a live
+      // media element at all, so it isn't affected either way.
+      const audioBuffers = await Promise.all(
+        files.map(async (file) => {
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+            return await audioCtx!.decodeAudioData(arrayBuffer);
+          } catch {
+            // A clip with no audio track (or one this browser can't
+            // decode) just contributes silence for its segment.
+            return null;
+          }
+        }),
+      );
 
       canvasStream = canvas.captureStream(EXPORT_FPS);
       combinedStream = new MediaStream([
@@ -188,6 +195,19 @@ export function useClipCombiner() {
       for (let i = 0; i < loaded.length; i++) {
         if (cancelRef.current) break;
         const { video, duration } = loaded[i];
+        const buffer = audioBuffers[i];
+        if (buffer) {
+          // Scheduled for "now" (0 in AudioContext time means immediately)
+          // in the same tick as video.play() below, so this clip's audio
+          // starts right alongside its video segment. Left to stop on its
+          // own at `duration` rather than tracked for an explicit .stop()
+          // — closing audioCtx in the outer finally silences everything
+          // regardless of how the loop above it exits.
+          const clipAudio = audioCtx.createBufferSource();
+          clipAudio.buffer = buffer;
+          clipAudio.connect(destination);
+          clipAudio.start(0, 0, duration);
+        }
         video.currentTime = 0;
         await video.play().catch(() => {});
 

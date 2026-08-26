@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { drawFrame } from "@/features/editor/draw-frame";
 import { cropRectForAspect } from "@/features/editor/crop";
 import type { EditState } from "@/features/editor/types";
@@ -70,34 +70,15 @@ export interface ExportResult {
   extension: string;
 }
 
-interface AudioGraph {
-  video: HTMLVideoElement;
-  audioCtx: AudioContext;
-  source: MediaElementAudioSourceNode;
-}
-
 export function useVideoExport() {
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const cancelRef = useRef(false);
-  // createMediaElementSource() can only ever be called once per <video>
-  // element for its whole lifetime — a second call throws. Retrying a
-  // failed export, or exporting more than once, reuses the same video
-  // element (video-editor.tsx keeps one for its whole mount), so the
-  // node has to be cached rather than recreated on every exportVideo()
-  // call.
-  const graphRef = useRef<AudioGraph | null>(null);
-
-  useEffect(() => {
-    return () => {
-      graphRef.current?.audioCtx.close().catch(() => {});
-      graphRef.current = null;
-    };
-  }, []);
 
   const exportVideo = useCallback(
     async (
       video: HTMLVideoElement,
+      source: File,
       state: EditState,
     ): Promise<ExportResult> => {
       setIsExporting(true);
@@ -123,14 +104,17 @@ export function useVideoExport() {
       }
 
       const wasLooping = video.loop;
+      let audioCtx: AudioContext | null = null;
       let canvasStream: MediaStream | null = null;
       let combinedStream: MediaStream | null = null;
+      let originalNode: AudioBufferSourceNode | null = null;
+      let musicNode: AudioBufferSourceNode | null = null;
 
       // Wrapped in try/finally so a thrown error partway through (a codec
       // that turns out unsupported, decodeAudioData rejecting, anything)
-      // can't leave the detached canvas/streams dangling or isExporting
-      // stuck true forever — cleanup always runs exactly once, on every
-      // exit path.
+      // can't leave the detached canvas/streams/audio context dangling or
+      // isExporting stuck true forever — cleanup always runs exactly once,
+      // on every exit path.
       try {
         // A looping element auto-restarts the instant it reaches its true
         // end — which races ahead of the trimEnd check below for any clip
@@ -141,58 +125,49 @@ export function useVideoExport() {
 
         await waitForSeek(video, state.trimStart);
 
-        // The original clip's audio is tapped via createMediaElementSource,
-        // never video.captureStream() — WebKit (the iOS app's WKWebView)
-        // has never reliably supported captureStream() on a plain <video>
-        // element the way it does on <canvas>, so originalTrack silently
-        // came back empty there and every export produced a video with no
-        // audio, no matter how the resulting track was combined downstream.
-        // createMediaElementSource doesn't depend on captureStream() at
-        // all — it taps the element's actual decoded output directly, and
-        // is supported everywhere a Web Audio graph exists. It can only be
-        // created once per element for that element's whole lifetime, so
-        // it's cached in graphRef and reused on retry instead of recreated.
-        let graph = graphRef.current;
-        if (!graph || graph.video !== video) {
-          graph?.audioCtx.close().catch(() => {});
+        let audioTracks: MediaStreamTrack[] = [];
+        const needsAudio = state.originalVolume > 0 || !!state.musicFile;
+        if (needsAudio) {
           const AudioContextCtor =
             window.AudioContext ||
             (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-          const audioCtx = new AudioContextCtor();
-          const source = audioCtx.createMediaElementSource(video);
-          graph = { video, audioCtx, source };
-          graphRef.current = graph;
-        }
-        const { audioCtx, source } = graph;
-        // Clears whatever this source was routed to on a previous export
-        // attempt (a fresh gain/destination gets wired below) — otherwise
-        // a retry would leave it fanned out to both the old, abandoned
-        // destination and the new one.
-        source.disconnect();
-        // Also routed to the real speakers, not just the recording
-        // destination — createMediaElementSource takes over this
-        // element's audio output entirely and permanently once created,
-        // so without this, a failed export would leave the live edit
-        // preview silently muted from then on if the user goes back to
-        // keep editing (the disconnect() above severs this exact
-        // connection too, so it has to be re-added on every export call,
-        // not just the first).
-        source.connect(audioCtx.destination);
-
-        let musicNode: AudioBufferSourceNode | null = null;
-        let audioTracks: MediaStreamTrack[] = [];
-
-        const needsAudio = state.originalVolume > 0 || !!state.musicFile;
-        if (needsAudio) {
-          // --- Audio graph: mixes the original clip's own audio with an
-          // optional music track, each independently volume-controlled,
-          // into one destination stream fed to the recorder. ---
+          audioCtx = new AudioContextCtor();
           const destination = audioCtx.createMediaStreamDestination();
 
           if (state.originalVolume > 0) {
-            const gain = audioCtx.createGain();
-            gain.gain.value = state.originalVolume;
-            source.connect(gain).connect(destination);
+            // The original clip's audio is decoded straight from the
+            // source File's own bytes — not tapped from the playing
+            // <video> element via captureStream() or
+            // createMediaElementSource(). Both of those depend on
+            // WebKit reliably exposing a live media element's audio as a
+            // MediaStreamTrack, which repeated on-device testing showed
+            // it doesn't do in the iOS app's WKWebView (editing preview,
+            // plain <video> playback with no track-tapping involved, always
+            // had sound; every export attempt that depended on tapping
+            // the element's audio came out silent regardless of how the
+            // resulting track was wired downstream). decodeAudioData reads
+            // the file's real samples directly and has no dependency on
+            // any of that — it's the exact same technique already proven
+            // reliable here for mixing in a separate music file, just
+            // applied to the clip's own audio track instead.
+            try {
+              const arrayBuffer = await source.arrayBuffer();
+              const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+              originalNode = audioCtx.createBufferSource();
+              originalNode.buffer = audioBuffer;
+              // Keeps the original audio's pitch/speed matched to the
+              // sped-up or slowed-down video — playbackRate scales an
+              // AudioBufferSourceNode exactly like it does the <video>
+              // element below.
+              originalNode.playbackRate.value = state.playbackRate;
+              const gain = audioCtx.createGain();
+              gain.gain.value = state.originalVolume;
+              originalNode.connect(gain).connect(destination);
+            } catch {
+              // A clip with no audio track at all (or one this browser
+              // can't decode) just contributes silence — not fatal.
+              originalNode = null;
+            }
           }
 
           if (state.musicFile) {
@@ -243,6 +218,13 @@ export function useVideoExport() {
         // never fires on some device, there's still real recorded data in
         // `chunks` to fall back to instead of an empty file.
         recorder.start(1000);
+        // Started in the same tick as video.play() below so the decoded
+        // original-audio buffer and the video frames stay in sync. The
+        // offset/duration args are in the *original* buffer's own time
+        // units (unaffected by playbackRate) — exactly the units
+        // trimStart/trimEnd are already expressed in everywhere else.
+        const durationSeconds = Math.max(0.1, state.trimEnd - state.trimStart);
+        originalNode?.start(0, state.trimStart, durationSeconds);
         musicNode?.start(0);
         // currentTime still advances in source-time regardless of rate —
         // the trimEnd check below stays correct unchanged — but the
@@ -252,7 +234,6 @@ export function useVideoExport() {
         video.playbackRate = state.playbackRate;
         await video.play();
 
-        const durationSeconds = Math.max(0.1, state.trimEnd - state.trimStart);
         // Belt-and-suspenders: if playback ever stalls just short of
         // trimEnd for a reason this loop's own exit checks don't catch —
         // a stalled decode, a frame-timing mismatch between the duration
@@ -302,6 +283,7 @@ export function useVideoExport() {
         // if `onstop` itself is the part that's unreliable.
         if (recorder.state !== "inactive") recorder.requestData();
         recorder.stop();
+        originalNode?.stop();
         musicNode?.stop();
         // recorder.onstop not firing (a real MediaRecorder flakiness on
         // some devices) would otherwise hang export forever right here,
@@ -324,9 +306,7 @@ export function useVideoExport() {
       } finally {
         combinedStream?.getTracks().forEach((t) => t.stop());
         canvasStream?.getTracks().forEach((t) => t.stop());
-        // The audio context itself is intentionally NOT closed here — it's
-        // cached in graphRef for reuse on a retry (see above) and closed
-        // only when this hook's owning component unmounts.
+        audioCtx?.close().catch(() => {});
         video.loop = wasLooping;
         video.playbackRate = 1;
         canvas.remove();
