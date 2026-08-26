@@ -19,3 +19,9 @@ export function isAdBillingConfigured(): boolean {
 export function isMeetupBillingConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
+
+/** Same reasoning again — shop promotion checkout is a flat dynamic
+ * price_data charge, not STRIPE_PRICE_ID. */
+export function isShopPromotionBillingConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY);
+}

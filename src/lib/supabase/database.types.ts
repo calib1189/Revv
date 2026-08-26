@@ -529,6 +529,34 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["shops_search_attempts"]["Insert"]>;
         Relationships: never[];
       };
+      shop_promotions: {
+        Row: {
+          id: string;
+          promoter_id: string;
+          place_id: string;
+          place_name: string;
+          price_cents: number;
+          status: "pending_payment" | "active";
+          stripe_checkout_session_id: string | null;
+          starts_at: string | null;
+          ends_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          promoter_id: string;
+          place_id: string;
+          place_name: string;
+          price_cents: number;
+          status?: "pending_payment" | "active";
+          stripe_checkout_session_id?: string | null;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["shop_promotions"]["Insert"]>;
+        Relationships: never[];
+      };
       ai_identify_attempts: {
         Row: { id: string; user_id: string; created_at: string };
         Insert: { id?: string; user_id: string; created_at?: string };

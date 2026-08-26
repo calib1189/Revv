@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ShopCard } from "@/features/shops/shop-card";
-import { searchNearbyShopsAction } from "@/features/shops/actions";
+import { searchNearbyShopsAction, type ShopResult } from "@/features/shops/actions";
 import { SHOP_CATEGORIES, getShopCategory } from "@/lib/shops/categories";
 import { haversineMiles } from "@/lib/geo/distance";
 import { Callout } from "@/components/ui/callout";
-import type { Shop, ShopCategoryId } from "@/lib/providers/places-provider";
+import type { ShopCategoryId } from "@/lib/providers/places-provider";
 
 type LocationState =
   | { status: "loading" }
@@ -16,7 +16,7 @@ type LocationState =
 export function ShopsBrowser() {
   const [location, setLocation] = useState<LocationState>({ status: "loading" });
   const [category, setCategory] = useState<ShopCategoryId>(SHOP_CATEGORIES[0].id);
-  const [shops, setShops] = useState<Shop[] | null>(null);
+  const [shops, setShops] = useState<ShopResult[] | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,16 +67,26 @@ export function ShopsBrowser() {
   }, [location, category]);
 
   const sorted = useMemo(() => {
-    if (location.status !== "ready" || !shops) return shops ?? [];
-    const { coords } = location;
-    return [...shops].sort(
-      (a, b) =>
+    if (!shops) return [];
+    return [...shops].sort((a, b) => {
+      // Promoted shops always sort ahead of everything else, regardless
+      // of distance — searchNearbyShopsAction already returns them in
+      // this order, but re-sorting by pure distance below would destroy
+      // that grouping if this comparator didn't check it first.
+      const promotedA = a.isPromoted ? 0 : 1;
+      const promotedB = b.isPromoted ? 0 : 1;
+      if (promotedA !== promotedB) return promotedA - promotedB;
+
+      if (location.status !== "ready") return 0;
+      const { coords } = location;
+      return (
         haversineMiles(coords, { lat: a.lat, lng: a.lng }) -
-        haversineMiles(coords, { lat: b.lat, lng: b.lng }),
-    );
+        haversineMiles(coords, { lat: b.lat, lng: b.lng })
+      );
+    });
   }, [shops, location]);
 
-  function distanceFor(shop: Shop): number | null {
+  function distanceFor(shop: ShopResult): number | null {
     if (location.status !== "ready") return null;
     return haversineMiles(location.coords, { lat: shop.lat, lng: shop.lng });
   }

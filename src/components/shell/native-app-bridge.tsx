@@ -43,6 +43,7 @@ export function NativeAppBridge() {
         auth: "/auth/callback",
         "ad-checkout": "/advertise",
         "meetup-checkout": "/discover",
+        "shop-promotion-checkout": "/discover",
       };
 
       const listener = await App.addListener("appUrlOpen", async ({ url }) => {

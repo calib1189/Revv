@@ -1,9 +1,15 @@
+"use client";
+
+import { useState } from "react";
 import { PinIcon, StarIcon } from "@/components/ui/icons";
 import { formatDistance } from "@/lib/geo/distance";
 import { getShopCategory } from "@/lib/shops/categories";
-import type { Shop, ShopCategoryId } from "@/lib/providers/places-provider";
+import { createShopPromotionAction } from "@/features/shops/actions";
+import { SHOP_PROMOTION_PRICE_CENTS } from "@/lib/db/shop-promotions";
+import type { ShopCategoryId } from "@/lib/providers/places-provider";
+import type { ShopResult } from "@/features/shops/actions";
 
-function buildAppleMapsUrl(shop: Shop): string {
+function buildAppleMapsUrl(shop: ShopResult): string {
   const params = new URLSearchParams({ q: shop.name, ll: `${shop.lat},${shop.lng}` });
   return `https://maps.apple.com/?${params.toString()}`;
 }
@@ -13,16 +19,48 @@ export function ShopCard({
   category,
   distanceMiles,
 }: {
-  shop: Shop;
+  shop: ShopResult;
   category: ShopCategoryId;
   distanceMiles: number | null;
 }) {
   const { icon: CategoryIcon, label: categoryLabel } = getShopCategory(category);
+  const [isPromoting, setIsPromoting] = useState(false);
+  const [promoteError, setPromoteError] = useState<string | null>(null);
+
+  async function handlePromote(e: React.MouseEvent) {
+    e.stopPropagation();
+    setPromoteError(null);
+    setIsPromoting(true);
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      const isNative = Capacitor.isNativePlatform();
+      const result = await createShopPromotionAction({
+        placeId: shop.placeId,
+        placeName: shop.name,
+        isNative,
+      });
+      if (result.error || !result.url) {
+        setPromoteError(result.error ?? "Couldn't start checkout. Try again.");
+        return;
+      }
+      if (isNative) {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url: result.url });
+      } else {
+        window.location.href = result.url;
+      }
+    } catch {
+      setPromoteError("Couldn't start checkout. Try again.");
+    } finally {
+      setIsPromoting(false);
+    }
+  }
 
   return (
-    // A plain div, not an <a>, because it needs a real nested link
-    // (Google Maps) inside it — two <a> tags can't nest in valid HTML.
-    // The div's own onClick does a real top-level navigation (not
+    // A plain div, not an <a>, because it needs real nested interactive
+    // elements inside it (the Google Maps link, the Promote button) —
+    // neither an <a> nor a <button> can nest inside another <a>. The
+    // div's own onClick does a real top-level navigation (not
     // window.open), the same as clicking a plain link would, which is
     // what lets iOS hand off to the native Maps app before this WebView
     // ever loads anything at maps.apple.com.
@@ -43,7 +81,14 @@ export function ShopCard({
             <CategoryIcon className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <p className="truncate font-medium">{shop.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="truncate font-medium">{shop.name}</p>
+              {shop.isPromoted && (
+                <span className="flex-shrink-0 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-accent-foreground">
+                  Promoted
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted">{categoryLabel}</p>
           </div>
         </div>
@@ -78,15 +123,29 @@ export function ShopCard({
         </div>
       )}
 
-      <a
-        href={shop.googleMapsUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="mt-1 self-start text-xs text-accent hover:underline"
-      >
-        Open in Google Maps
-      </a>
+      {promoteError && <p className="text-xs text-danger">{promoteError}</p>}
+
+      <div className="mt-1 flex items-center justify-between gap-3">
+        <a
+          href={shop.googleMapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-xs text-accent hover:underline"
+        >
+          Open in Google Maps
+        </a>
+        {!shop.isPromoted && (
+          <button
+            type="button"
+            onClick={handlePromote}
+            disabled={isPromoting}
+            className="flex-shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-foreground disabled:opacity-60"
+          >
+            {isPromoting ? "Starting…" : `Promote · $${(SHOP_PROMOTION_PRICE_CENTS / 100).toFixed(0)}`}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyStripeSignature } from "@/lib/billing/stripe";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { SHOP_PROMOTION_DURATION_DAYS } from "@/lib/db/shop-promotions";
 import type { Subscription } from "@/lib/db/subscriptions";
 
 interface StripeEvent {
@@ -64,6 +65,30 @@ export async function POST(request: NextRequest) {
             stripe_checkout_session_id: (session.id as string) ?? null,
           })
           .eq("id", meetupId);
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
+    if (metadata?.type === "shop_promotion") {
+      // Payment confirmed — straight to 'active' for a fixed 30-day
+      // window starting now, no review step (this is a paid placement
+      // over Google's own listing data, not REVV-hosted content).
+      const promotionId = metadata.promotion_id;
+      if (promotionId) {
+        const now = new Date();
+        const endsAt = new Date(now.getTime() + SHOP_PROMOTION_DURATION_DAYS * 24 * 60 * 60 * 1000);
+        const { error } = await supabase
+          .from("shop_promotions")
+          .update({
+            status: "active",
+            starts_at: now.toISOString(),
+            ends_at: endsAt.toISOString(),
+            stripe_checkout_session_id: (session.id as string) ?? null,
+          })
+          .eq("id", promotionId);
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 500 });
         }

@@ -140,6 +140,45 @@ export async function createMeetupCheckoutSession({
 }
 
 /**
+ * A single one-time charge to promote a shop listing to the top of its
+ * category on the Discover page — same dynamic price_data shape as the
+ * ad campaign and meetup checkouts, just a flat price/duration instead
+ * of a tier lookup (see SHOP_PROMOTION_PRICE_CENTS in shop-promotions.ts).
+ */
+export async function createShopPromotionCheckoutSession({
+  promotionId,
+  placeName,
+  priceCents,
+  customerEmail,
+  successUrl,
+  cancelUrl,
+}: {
+  promotionId: string;
+  placeName: string;
+  priceCents: number;
+  customerEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ url: string | null }> {
+  const session = await stripeRequest<{ url: string | null }>(
+    "/checkout/sessions",
+    {
+      mode: "payment",
+      "line_items[0][price_data][currency]": "usd",
+      "line_items[0][price_data][product_data][name]": `REVV shop promotion: ${placeName}`,
+      "line_items[0][price_data][unit_amount]": String(priceCents),
+      "line_items[0][quantity]": "1",
+      customer_email: customerEmail,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      "metadata[type]": "shop_promotion",
+      "metadata[promotion_id]": promotionId,
+    },
+  );
+  return session;
+}
+
+/**
  * Verifies the Stripe-Signature header per Stripe's documented webhook
  * signing scheme: HMAC-SHA256 of "{timestamp}.{payload}" using the
  * webhook signing secret, compared with a constant-time check.
