@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { PinIcon, StarIcon } from "@/components/ui/icons";
 import { formatDistance } from "@/lib/geo/distance";
 import { getShopCategory } from "@/lib/shops/categories";
-import { createShopPromotionAction } from "@/features/shops/actions";
-import { SHOP_PROMOTION_PRICE_CENTS } from "@/lib/db/shop-promotions";
 import type { ShopCategoryId } from "@/lib/providers/places-provider";
 import type { ShopResult } from "@/features/shops/actions";
 
@@ -24,43 +21,11 @@ export function ShopCard({
   distanceMiles: number | null;
 }) {
   const { icon: CategoryIcon, label: categoryLabel } = getShopCategory(category);
-  const [isPromoting, setIsPromoting] = useState(false);
-  const [promoteError, setPromoteError] = useState<string | null>(null);
-
-  async function handlePromote(e: React.MouseEvent) {
-    e.stopPropagation();
-    setPromoteError(null);
-    setIsPromoting(true);
-    try {
-      const { Capacitor } = await import("@capacitor/core");
-      const isNative = Capacitor.isNativePlatform();
-      const result = await createShopPromotionAction({
-        placeId: shop.placeId,
-        placeName: shop.name,
-        isNative,
-      });
-      if (result.error || !result.url) {
-        setPromoteError(result.error ?? "Couldn't start checkout. Try again.");
-        return;
-      }
-      if (isNative) {
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url: result.url });
-      } else {
-        window.location.href = result.url;
-      }
-    } catch {
-      setPromoteError("Couldn't start checkout. Try again.");
-    } finally {
-      setIsPromoting(false);
-    }
-  }
 
   return (
-    // A plain div, not an <a>, because it needs real nested interactive
-    // elements inside it (the Google Maps link, the Promote button) —
-    // neither an <a> nor a <button> can nest inside another <a>. The
-    // div's own onClick does a real top-level navigation (not
+    // A plain div, not an <a>, because it needs a real nested link
+    // (Google Maps) inside it — two <a> tags can't nest in valid HTML.
+    // The div's own onClick does a real top-level navigation (not
     // window.open), the same as clicking a plain link would, which is
     // what lets iOS hand off to the native Maps app before this WebView
     // ever loads anything at maps.apple.com.
@@ -123,29 +88,15 @@ export function ShopCard({
         </div>
       )}
 
-      {promoteError && <p className="text-xs text-danger">{promoteError}</p>}
-
-      <div className="mt-1 flex items-center justify-between gap-3">
-        <a
-          href={shop.googleMapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="text-xs text-accent hover:underline"
-        >
-          Open in Google Maps
-        </a>
-        {!shop.isPromoted && (
-          <button
-            type="button"
-            onClick={handlePromote}
-            disabled={isPromoting}
-            className="flex-shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-foreground disabled:opacity-60"
-          >
-            {isPromoting ? "Starting…" : `Promote · $${(SHOP_PROMOTION_PRICE_CENTS / 100).toFixed(0)}`}
-          </button>
-        )}
-      </div>
+      <a
+        href={shop.googleMapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="mt-1 self-start text-xs text-accent hover:underline"
+      >
+        Open in Google Maps
+      </a>
     </div>
   );
 }

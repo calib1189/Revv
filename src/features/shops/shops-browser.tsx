@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ShopCard } from "@/features/shops/shop-card";
+import { PromoteShopPanel } from "@/features/shops/promote-shop-panel";
 import { searchNearbyShopsAction, type ShopResult } from "@/features/shops/actions";
 import { SHOP_CATEGORIES, getShopCategory } from "@/lib/shops/categories";
 import { haversineMiles } from "@/lib/geo/distance";
@@ -19,6 +20,7 @@ export function ShopsBrowser() {
   const [shops, setShops] = useState<ShopResult[] | null>(null);
   const [isMock, setIsMock] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPromotePanelOpen, setIsPromotePanelOpen] = useState(false);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -95,7 +97,23 @@ export function ShopsBrowser() {
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <h1 className="mb-4 text-2xl font-semibold tracking-tight">Shops near you</h1>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Shops near you</h1>
+        <button
+          type="button"
+          onClick={() => setIsPromotePanelOpen(true)}
+          className="flex-shrink-0 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
+        >
+          Promote your shop
+        </button>
+      </div>
+
+      {isPromotePanelOpen && (
+        <PromoteShopPanel
+          coords={location.status === "ready" ? location.coords : null}
+          onClose={() => setIsPromotePanelOpen(false)}
+        />
+      )}
 
       <div className="no-scrollbar mb-6 flex gap-2 overflow-x-auto pb-1">
         {SHOP_CATEGORIES.map((c) => (

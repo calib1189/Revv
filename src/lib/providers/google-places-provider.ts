@@ -53,8 +53,18 @@ export class GooglePlacesProvider implements PlacesProvider {
     lng,
     category,
   }: Parameters<PlacesProvider["searchNearbyShops"]>[0]): Promise<ShopSearchResponse> {
-    const { searchQuery } = getShopCategory(category);
+    return this.textSearch(getShopCategory(category).searchQuery, lat, lng);
+  }
 
+  async searchShopsByQuery({
+    lat,
+    lng,
+    query,
+  }: Parameters<PlacesProvider["searchShopsByQuery"]>[0]): Promise<ShopSearchResponse> {
+    return this.textSearch(query, lat, lng);
+  }
+
+  private async textSearch(textQuery: string, lat: number, lng: number): Promise<ShopSearchResponse> {
     const response = await fetch(SEARCH_URL, {
       method: "POST",
       headers: {
@@ -63,7 +73,7 @@ export class GooglePlacesProvider implements PlacesProvider {
         "X-Goog-FieldMask": FIELD_MASK,
       },
       body: JSON.stringify({
-        textQuery: searchQuery,
+        textQuery,
         locationBias: {
           circle: {
             center: { latitude: lat, longitude: lng },

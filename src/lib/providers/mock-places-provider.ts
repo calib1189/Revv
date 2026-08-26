@@ -13,4 +13,8 @@ export class MockPlacesProvider implements PlacesProvider {
   async searchNearbyShops(): Promise<ShopSearchResponse> {
     return { shops: [], isMock: true };
   }
+
+  async searchShopsByQuery(): Promise<ShopSearchResponse> {
+    return { shops: [], isMock: true };
+  }
 }

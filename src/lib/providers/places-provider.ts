@@ -38,4 +38,8 @@ export interface PlacesProvider {
     lng: number;
     category: ShopCategoryId;
   }): Promise<ShopSearchResponse>;
+
+  /** Free-text lookup — backs "Promote your shop": someone types their own
+   * shop's name to find and promote it, rather than browsing by category. */
+  searchShopsByQuery(params: { lat: number; lng: number; query: string }): Promise<ShopSearchResponse>;
 }

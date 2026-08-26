@@ -10,7 +10,9 @@ import { isShopCategoryId } from "@/lib/shops/categories";
 import { isShopPromotionBillingConfigured } from "@/lib/billing/config";
 import { createShopPromotionCheckoutSession } from "@/lib/billing/stripe";
 import { createShopPromotion, getActivePromotedPlaceIds, SHOP_PROMOTION_PRICE_CENTS } from "@/lib/db/shop-promotions";
-import type { Shop } from "@/lib/providers/places-provider";
+import type { Shop, ShopSearchResponse } from "@/lib/providers/places-provider";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.types";
 
 export interface ShopResult extends Shop {
   isPromoted: boolean;
@@ -21,16 +23,39 @@ export interface ShopSearchActionResponse {
   isMock: boolean;
 }
 
+/** Cross-references raw Places results against shop_promotions and sorts
+ * promoted ones first — shared by both search actions below, since
+ * "promote your shop" needs to show the same "already promoted" state a
+ * category browse would. Distance sort within each group happens
+ * client-side (shops-browser.tsx already computes distance from the
+ * viewer's own coordinates for display), so this only needs to guarantee
+ * the promoted/not-promoted grouping survives that later sort, which a
+ * stable sort here does. */
+async function withPromotionStatus(
+  supabase: SupabaseClient<Database>,
+  { shops, isMock }: ShopSearchResponse,
+): Promise<ShopSearchActionResponse> {
+  if (shops.length === 0) return { shops: [], isMock };
+
+  const promotedIds = await getActivePromotedPlaceIds(
+    supabase,
+    shops.map((s) => s.placeId),
+  );
+  const withPromotion: ShopResult[] = shops.map((shop) => ({
+    ...shop,
+    isPromoted: promotedIds.has(shop.placeId),
+  }));
+  withPromotion.sort((a, b) => Number(b.isPromoted) - Number(a.isPromoted));
+
+  return { shops: withPromotion, isMock };
+}
+
 /**
  * Backs the Discover page's "Shops near you" browser — public, so this
  * has to be safe for anonymous callers, same as
  * searchMarketplaceProductsAction. IP-based rate limiting instead of a
  * logged-in-user gate, and tighter than the marketplace one since this
  * one bills per call (see shops_search_attempts, 0044).
- *
- * Promoted-first ordering is computed here rather than in the UI: this
- * is the one place that already has both the raw Places results and a
- * real Supabase client to check shop_promotions against.
  */
 export async function searchNearbyShopsAction({
   lat,
@@ -53,28 +78,49 @@ export async function searchNearbyShopsAction({
 
   try {
     await recordShopsSearchAttempt(supabase, ip);
-    const { shops, isMock } = await getPlacesProvider().searchNearbyShops({ lat, lng, category });
-    if (shops.length === 0) return { shops: [], isMock };
-
-    const promotedIds = await getActivePromotedPlaceIds(
-      supabase,
-      shops.map((s) => s.placeId),
-    );
-    const withPromotion: ShopResult[] = shops.map((shop) => ({
-      ...shop,
-      isPromoted: promotedIds.has(shop.placeId),
-    }));
-    // Promoted first; distance sort within each group happens client-side
-    // (shops-browser.tsx already computes distance from the viewer's own
-    // coordinates for display, so re-deriving it here would be
-    // duplicated work for no benefit — this only needs to guarantee the
-    // promoted/not-promoted grouping survives that later sort, which a
-    // stable sort here does).
-    withPromotion.sort((a, b) => Number(b.isPromoted) - Number(a.isPromoted));
-
-    return { shops: withPromotion, isMock };
+    const response = await getPlacesProvider().searchNearbyShops({ lat, lng, category });
+    return await withPromotionStatus(supabase, response);
   } catch (err) {
     console.error("searchNearbyShopsAction failed:", err);
+    return { shops: [], isMock: false };
+  }
+}
+
+const MAX_QUERY_LENGTH = 200;
+
+/**
+ * Backs "Promote your shop" — a free-text lookup so someone can find
+ * their own business by name instead of browsing by category. Same
+ * rate limit bucket as searchNearbyShopsAction (shared cost control, not
+ * a separate allowance) since this is the same billed Places API call
+ * under the hood, just with a different query.
+ */
+export async function searchShopsByQueryAction({
+  lat,
+  lng,
+  query,
+}: {
+  lat: number;
+  lng: number;
+  query: string;
+}): Promise<ShopSearchActionResponse> {
+  const trimmed = query.trim();
+  if (!trimmed || trimmed.length > MAX_QUERY_LENGTH) return { shops: [], isMock: false };
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { shops: [], isMock: false };
+
+  const supabase = await createClient();
+  const ip = await getClientIp();
+
+  if (!(await isUnderShopsSearchRateLimit(supabase, ip))) {
+    return { shops: [], isMock: false };
+  }
+
+  try {
+    await recordShopsSearchAttempt(supabase, ip);
+    const response = await getPlacesProvider().searchShopsByQuery({ lat, lng, query: trimmed });
+    return await withPromotionStatus(supabase, response);
+  } catch (err) {
+    console.error("searchShopsByQueryAction failed:", err);
     return { shops: [], isMock: false };
   }
 }
