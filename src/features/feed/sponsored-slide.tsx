@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { recordAdImpressionAction, recordAdClickAction } from "@/features/ads/actions";
-import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 
 export interface SponsoredSlideData {
   campaignId: string;
@@ -59,15 +58,18 @@ export function SponsoredSlide({
         <img src={data.photoUrl} alt="" className="h-full w-full object-cover" />
       )}
 
-      <div
-        className="pointer-events-none absolute inset-x-0 left-3 z-10 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white"
-        style={{ top: `calc(${HEADER_HEIGHT} + 0.5rem)`, width: "fit-content" }}
-      >
+      {/* Bottom-right rather than the top corner — the top strip is
+          already spoken for (the real header, plus the category filter
+          bar that floats over it on the FYP specifically), and a
+          sponsored slide has no like/comment/save rail claiming the
+          bottom-right the way a real post's does, so it's clear space
+          here. */}
+      <div className="pointer-events-none absolute bottom-6 right-3 z-10 w-fit rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white">
         Sponsored
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-4 pb-8">
-        <div className="pointer-events-auto max-w-[calc(100%-1rem)] text-white">
+        <div className="pointer-events-auto max-w-[calc(100%-4.5rem)] text-white">
           <p className="text-lg font-bold leading-snug">{data.headline}</p>
           {data.caption && (
             <p className="mt-1 line-clamp-2 text-sm text-white/85">{data.caption}</p>
