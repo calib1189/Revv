@@ -1,7 +1,6 @@
 "use server";
 
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { isAdBillingConfigured } from "@/lib/billing/config";
@@ -21,6 +20,7 @@ import { revalidatePath } from "next/cache";
 
 export interface CreateAdResult {
   error?: string;
+  url?: string;
 }
 
 export async function createAdCampaignAction({
@@ -29,12 +29,19 @@ export async function createAdCampaignAction({
   caption,
   destinationUrl,
   tier,
+  isNative,
 }: {
   mediaId: string;
   headline: string;
   caption: string;
   destinationUrl: string;
   tier: string;
+  /** The native app shell can't follow a plain https:// redirect back
+   * to itself — Checkout has to run in the system browser there (same
+   * reason OAuth does, see oauth-buttons.tsx/native-app-bridge.tsx), so
+   * success/cancel need the revv:// custom scheme instead of a normal
+   * URL when this request is coming from the native app. */
+  isNative: boolean;
 }): Promise<CreateAdResult> {
   if (!isAdBillingConfigured()) {
     return { error: "Ad billing isn't set up yet." };
@@ -81,6 +88,9 @@ export async function createAdCampaignAction({
   }
 
   const origin = (await headers()).get("origin");
+  const successUrl = isNative ? "revv://ad-checkout?success=1" : `${origin}/advertise?success=1`;
+  const cancelUrl = isNative ? "revv://ad-checkout" : `${origin}/advertise`;
+
   let url: string | null;
   try {
     const session = await createAdCheckoutSession({
@@ -88,8 +98,8 @@ export async function createAdCampaignAction({
       headline: campaign.headline,
       priceCents,
       customerEmail: user.email,
-      successUrl: `${origin}/advertise?success=1`,
-      cancelUrl: `${origin}/advertise`,
+      successUrl,
+      cancelUrl,
     });
     url = session.url;
   } catch {
@@ -97,7 +107,11 @@ export async function createAdCampaignAction({
   }
 
   if (!url) return { error: "Couldn't start checkout. Try again." };
-  redirect(url);
+  // The caller (ad-campaign-form.tsx) opens this itself instead of a
+  // server-side redirect() — it has to choose between a plain browser
+  // navigation and Browser.open() (native), and only the client knows
+  // which one it's running in.
+  return { url };
 }
 
 export async function approveAdCampaignAction(campaignId: string): Promise<void> {

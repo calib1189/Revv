@@ -42,6 +42,9 @@ export function AdCampaignForm({ userId }: { userId: string }) {
     setError(null);
     setIsSubmitting(true);
     try {
+      const { Capacitor } = await import("@capacitor/core");
+      const isNative = Capacitor.isNativePlatform();
+
       const supabase = createClient();
       const uploaded = await uploadImage(supabase, userId, file);
       const media = await createMedia(supabase, {
@@ -57,10 +60,26 @@ export function AdCampaignForm({ userId }: { userId: string }) {
         caption,
         destinationUrl,
         tier,
+        isNative,
       });
-      if (result?.error) setError(result.error);
-      // On success the action itself redirects to Stripe — nothing left
-      // to do here.
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      if (!result?.url) {
+        setError("Couldn't start checkout. Try again.");
+        return;
+      }
+      // Checkout has to run in the system browser on native — a
+      // WebView can't complete Stripe Checkout itself, same reasoning
+      // as Google/Apple sign-in (oauth-buttons.tsx). Plain navigation
+      // works fine everywhere else.
+      if (isNative) {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.open({ url: result.url });
+      } else {
+        window.location.href = result.url;
+      }
     } catch {
       setError("Couldn't submit that. Try again.");
     } finally {

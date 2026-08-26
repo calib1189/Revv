@@ -29,21 +29,32 @@ export function NativeAppBridge() {
       await StatusBar.setStyle({ style: Style.Dark });
       await SplashScreen.hide();
 
-      // OAuth (Google/Apple) has to run in the system browser view, not
-      // this WebView — Google outright refuses to show its login page
-      // inside an embedded WebView. See oauth-buttons.tsx for the other
-      // half: it opens the provider's login URL via Browser.open() with a
-      // custom-scheme redirect ("revv://..."), which is what lands here
-      // once the provider hands control back to the app.
+      // Anything that has to run in the system browser view rather than
+      // this WebView (OAuth — Google outright refuses to show its login
+      // page inside an embedded WebView — and Stripe Checkout, which a
+      // WebView can't complete either) hands control back to the app via
+      // a revv://<destination>?... custom-scheme URL. oauth-buttons.tsx
+      // and ad-campaign-form.tsx are the other half of each: they open
+      // the provider's URL via Browser.open() with one of these as the
+      // redirect target. Routed by host rather than one hardcoded path,
+      // since there's more than one destination now.
+      const REVV_SCHEME_ROUTES: Record<string, string> = {
+        auth: "/auth/callback",
+        "ad-checkout": "/advertise",
+      };
+
       const listener = await App.addListener("appUrlOpen", async ({ url }) => {
         if (!url.startsWith("revv://")) return;
         await Browser.close().catch(() => {});
-        const params = url.split("?")[1] ?? "";
-        // A real full-page navigation, not client routing — /auth/callback
-        // is a Route Handler that exchanges the code and sets session
-        // cookies server-side; router.push() wouldn't hit it the same way.
+        const parsed = new URL(url);
+        const targetPath = REVV_SCHEME_ROUTES[parsed.hostname];
+        if (!targetPath) return;
+        // A real full-page navigation, not client routing — these are
+        // real routes/Route Handlers that need a genuine request (e.g.
+        // /auth/callback exchanges the code and sets session cookies
+        // server-side); router.push() wouldn't hit them the same way.
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-        window.location.href = `${window.location.origin}/auth/callback?${params}`;
+        window.location.href = `${window.location.origin}${targetPath}${parsed.search}`;
       });
 
       if (cancelled) {
