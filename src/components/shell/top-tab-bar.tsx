@@ -40,15 +40,20 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
         isImmersive ? "border-none bg-transparent" : "glass-raised border-x-0 border-t-0"
       }`}
     >
-      <div className="mx-auto grid h-14 max-w-5xl grid-cols-[1fr_auto_1fr] items-center px-4">
-        <span />
-        {/* min-w-0 is load-bearing: a grid item's default min-width is
-            `auto` (its content's intrinsic width), not 0, so without this
-            the nav can never shrink below fitting all five tabs on one
-            line — overflow-x-auto below silently does nothing and the
-            header just gets wider than the viewport instead of scrolling.
-            This is the actual "too big" bug, not just a sizing tweak. */}
-        <nav className="no-scrollbar flex min-w-0 items-center gap-4 overflow-x-auto">
+      {/* flex, not grid, for the same "nav needs to actually shrink"
+          reason as before — but the real cause of "Leaderboard" crowding
+          the search icon (measured directly: nav.scrollWidth 311px vs.
+          the ~271px actually available on a 375px phone) was simpler
+          than that: four tabs' worth of gap-4 spacing plus px-4 padding
+          just didn't fit anymore once there were only 4 tabs to size
+          around instead of 5, and overflow-x-auto correctly clipped the
+          overflow, but clipped "Leaderboard" right at the edge next to
+          the icons with no breathing room. Tightened gaps/padding
+          (verified empirically, including with a tab bolded for active
+          state — the worst case) until all four fit with zero clipping
+          on a standard phone width instead of relying on scroll. */}
+      <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-3">
+        <nav className="no-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
           {TABS.map((tab, index) => {
             const active = onPager ? activeIndex === index : isActive(pathname, tab.href);
             return (
@@ -88,7 +93,7 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
             );
           })}
         </nav>
-        <div className="flex flex-shrink-0 items-center gap-4 justify-self-end">
+        <div className="flex flex-shrink-0 items-center gap-2.5">
           <Link
             href="/search"
             aria-label="Search"

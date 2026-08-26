@@ -101,7 +101,7 @@ export default async function ProfilePage({
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="flex min-w-0 items-center gap-1.5 truncate text-2xl font-bold tracking-tight">
             <span className="truncate">{profile.display_name || `@${profile.username}`}</span>
@@ -132,7 +132,7 @@ export default async function ProfilePage({
         </div>
 
         <RankFrame score={bestRatingScore} compact hideBadge className="flex-shrink-0 rounded-full">
-          <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-20 w-20 text-2xl" />
+          <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-24 w-24 text-3xl" />
         </RankFrame>
       </div>
 

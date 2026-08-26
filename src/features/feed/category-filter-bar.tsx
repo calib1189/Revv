@@ -20,7 +20,15 @@ export function CategoryFilterBar({
   disabled?: boolean;
 }) {
   return (
-    <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-3 py-2">
+    // This overlay floats as a sibling of the vertically-scrolling video
+    // (see swipe-feed.tsx), not a descendant of it — a vertical drag
+    // starting here has no scrollable ancestor to fall back to, so
+    // without an explicit touch-action the browser was letting it
+    // drag/pan this row itself instead of the video underneath.
+    // touch-pan-x tells it this element only ever handles horizontal
+    // gestures; vertical ones are left for whatever's actually meant to
+    // handle them.
+    <div className="no-scrollbar flex touch-pan-x items-center gap-2 overflow-x-auto px-3 py-2">
       <button
         type="button"
         aria-label="Reset filter"
