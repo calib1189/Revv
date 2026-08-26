@@ -4,7 +4,8 @@ import { listUpcomingMeetups } from "@/lib/db/meetups";
 import { listMeetupMediaForMeetups } from "@/lib/db/meetup-media";
 import { publicMediaUrl } from "@/lib/db/media";
 import { getProfileByUserId } from "@/lib/db/profiles";
-import { MeetupsList, type MeetupListItem } from "@/features/meetups/meetups-list";
+import { DiscoverTabs } from "@/features/discover/discover-tabs";
+import type { MeetupListItem } from "@/features/meetups/meetups-list";
 
 export async function DiscoverPageContent() {
   const supabase = await createClient();
@@ -43,5 +44,5 @@ export async function DiscoverPageContent() {
   });
 
   const currentUserId = user?.email_confirmed_at ? user.id : null;
-  return <MeetupsList items={items} currentUserId={currentUserId} />;
+  return <DiscoverTabs meetupItems={items} currentUserId={currentUserId} />;
 }

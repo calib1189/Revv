@@ -1,0 +1,158 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { ShopCard } from "@/features/shops/shop-card";
+import { searchNearbyShopsAction } from "@/features/shops/actions";
+import { SHOP_CATEGORIES, getShopCategory } from "@/lib/shops/categories";
+import { haversineMiles } from "@/lib/geo/distance";
+import { Callout } from "@/components/ui/callout";
+import type { Shop, ShopCategoryId } from "@/lib/providers/places-provider";
+
+type LocationState =
+  | { status: "loading" }
+  | { status: "ready"; coords: { lat: number; lng: number } }
+  | { status: "denied" };
+
+export function ShopsBrowser() {
+  const [location, setLocation] = useState<LocationState>({ status: "loading" });
+  const [category, setCategory] = useState<ShopCategoryId>(SHOP_CATEGORIES[0].id);
+  const [shops, setShops] = useState<Shop[] | null>(null);
+  const [isMock, setIsMock] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      // Deferred to a microtask rather than called directly in the effect
+      // body — same value either way, but avoids a synchronous setState
+      // during the render-commit phase (same reasoning as
+      // meetups-list.tsx's identical case).
+      Promise.resolve().then(() => setLocation({ status: "denied" }));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          status: "ready",
+          coords: { lat: position.coords.latitude, lng: position.coords.longitude },
+        });
+      },
+      () => setLocation({ status: "denied" }),
+      { timeout: 8000 },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (location.status !== "ready") return;
+    let cancelled = false;
+    // Same microtask-deferral reasoning as above — resets to a loading
+    // state for the new category/location before the fetch below
+    // resolves, without setState synchronously in the effect body itself.
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      setShops(null);
+      setError(null);
+    });
+    searchNearbyShopsAction({ lat: location.coords.lat, lng: location.coords.lng, category })
+      .then((response) => {
+        if (cancelled) return;
+        setIsMock(response.isMock);
+        setShops(response.shops);
+      })
+      .catch(() => {
+        if (!cancelled) setError("Couldn't load shops. Try again.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [location, category]);
+
+  const sorted = useMemo(() => {
+    if (location.status !== "ready" || !shops) return shops ?? [];
+    const { coords } = location;
+    return [...shops].sort(
+      (a, b) =>
+        haversineMiles(coords, { lat: a.lat, lng: a.lng }) -
+        haversineMiles(coords, { lat: b.lat, lng: b.lng }),
+    );
+  }, [shops, location]);
+
+  function distanceFor(shop: Shop): number | null {
+    if (location.status !== "ready") return null;
+    return haversineMiles(location.coords, { lat: shop.lat, lng: shop.lng });
+  }
+
+  const categoryLabel = getShopCategory(category).label;
+
+  return (
+    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
+      <h1 className="mb-4 text-2xl font-semibold tracking-tight">Shops near you</h1>
+
+      <div className="no-scrollbar mb-6 flex gap-2 overflow-x-auto pb-1">
+        {SHOP_CATEGORIES.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => setCategory(c.id)}
+            className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              category === c.id ? "bg-accent text-accent-foreground" : "glass text-muted"
+            }`}
+          >
+            <c.icon className="h-3.5 w-3.5" />
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {location.status === "loading" && <p className="text-sm text-muted">Finding your location…</p>}
+
+      {location.status === "denied" && (
+        <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
+          <p className="text-sm font-medium">Turn on location to see shops near you</p>
+          <p className="max-w-xs text-xs text-muted">
+            REVV needs your location to find local shops — check your device or browser settings.
+          </p>
+        </div>
+      )}
+
+      {location.status === "ready" && (
+        <>
+          {error && <Callout tone="danger">{error}</Callout>}
+
+          {isMock && (
+            <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
+              <p className="text-sm font-medium">Shops aren&apos;t set up yet</p>
+              <p className="max-w-xs text-xs text-muted">
+                This needs a Google Places connection REVV hasn&apos;t configured yet — check back
+                soon.
+              </p>
+            </div>
+          )}
+
+          {!isMock && !error && shops === null && (
+            <p className="text-sm text-muted">Loading shops…</p>
+          )}
+
+          {!isMock && !error && shops !== null && shops.length === 0 && (
+            <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
+              <p className="text-sm font-medium">No {categoryLabel.toLowerCase()} nearby</p>
+              <p className="max-w-xs text-xs text-muted">Try a different category.</p>
+            </div>
+          )}
+
+          {!isMock && shops !== null && shops.length > 0 && (
+            <div className="flex flex-col gap-3">
+              {sorted.map((shop) => (
+                <ShopCard
+                  key={shop.placeId}
+                  shop={shop}
+                  category={category}
+                  distanceMiles={distanceFor(shop)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
