@@ -1,6 +1,7 @@
 "use client";
 
-import { BackIcon, HashtagIcon, CloseIcon } from "@/components/ui/icons";
+import { useState } from "react";
+import { BackIcon, HashtagIcon, CloseIcon, VolumeIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
@@ -62,6 +63,11 @@ export function PostComposer({
   error: string | null;
 }) {
   const hashtagChips = parseHashtags(hashtags);
+  // Starts muted so the background preview can autoplay the instant this
+  // screen mounts — unmuted autoplay without a fresh tap gets blocked on
+  // iOS. The toggle below lets you actually hear it here instead of only
+  // finding out once it's posted.
+  const [isMuted, setIsMuted] = useState(true);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-black">
@@ -71,7 +77,7 @@ export function PostComposer({
             src={video.previewUrl}
             autoPlay
             loop
-            muted
+            muted={isMuted}
             playsInline
             className="h-full w-full object-cover"
           />
@@ -95,6 +101,16 @@ export function PostComposer({
           <span className="glass rounded-full px-3 py-1.5 text-xs font-medium text-white">
             {photos.length} photos
           </span>
+        )}
+        {mode === "video" && (
+          <button
+            type="button"
+            onClick={() => setIsMuted((m) => !m)}
+            aria-label={isMuted ? "Unmute preview" : "Mute preview"}
+            className="glass flex h-9 w-9 items-center justify-center rounded-full text-white"
+          >
+            <VolumeIcon muted={isMuted} className="h-[18px] w-[18px]" />
+          </button>
         )}
       </div>
 
