@@ -110,7 +110,12 @@ export function SwipeFeed({
       ) : (
         <div className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}>
           {posts.map((post) => (
-            <SwipeSlide key={post.post.id} data={post} slideHeight={feedHeight} />
+            <SwipeSlide
+              key={post.post.id}
+              data={post}
+              slideHeight={feedHeight}
+              extraTopInset="3rem"
+            />
           ))}
           {hasMore && <div ref={sentinelRef} className="h-1" />}
         </div>

@@ -15,6 +15,7 @@ import { useDoubleTap } from "@/features/feed/use-double-tap";
 import { CommentIcon, EyeIcon, HeartIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { SITE_URL } from "@/lib/site-url";
+import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 import type { PostCardData } from "@/features/feed/post-card";
 
 function ShareButton({ postId }: { postId: string }) {
@@ -156,9 +157,15 @@ function PhotoMedia({ urls }: { urls: string[] }) {
 export function SwipeSlide({
   data,
   slideHeight = "h-[calc(100dvh-56px-64px)]",
+  extraTopInset = "0px",
 }: {
   data: PostCardData;
   slideHeight?: string;
+  /** Extra space to clear below the real header before the "..." menu
+   * starts — the main FYP passes its category-filter-bar's height here
+   * (swipe-feed.tsx) since that floats in the same top strip; the
+   * profile reel view (no filter bar) just uses the default. */
+  extraTopInset?: string;
 }) {
   const isVideo = data.media[0]?.kind === "video";
   const containerRef = useRef<HTMLDivElement>(null);
@@ -205,7 +212,10 @@ export function SwipeSlide({
         ))}
 
       {data.isOwnPost && (
-        <div className="pointer-events-auto absolute right-3 top-4 z-10">
+        <div
+          className="pointer-events-auto absolute right-3 z-10"
+          style={{ top: `calc(${HEADER_HEIGHT} + ${extraTopInset} + 0.5rem)` }}
+        >
           <VideoOptionsMenu postId={data.post.id} />
         </div>
       )}
