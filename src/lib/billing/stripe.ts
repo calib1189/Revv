@@ -60,6 +60,46 @@ export async function createCheckoutSession({
 }
 
 /**
+ * A single one-time charge (mode: "payment", not "subscription") for an
+ * ad campaign — no STRIPE_PRICE_ID involved, since the price is
+ * per-campaign (its tier's price_cents, looked up server-side in
+ * ad-campaigns.ts's AD_TIERS, never trusted from the client) rather
+ * than one fixed recurring price like the Pro subscription.
+ */
+export async function createAdCheckoutSession({
+  campaignId,
+  headline,
+  priceCents,
+  customerEmail,
+  successUrl,
+  cancelUrl,
+}: {
+  campaignId: string;
+  headline: string;
+  priceCents: number;
+  customerEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ url: string | null }> {
+  const session = await stripeRequest<{ url: string | null }>(
+    "/checkout/sessions",
+    {
+      mode: "payment",
+      "line_items[0][price_data][currency]": "usd",
+      "line_items[0][price_data][product_data][name]": `REVV ad: ${headline}`,
+      "line_items[0][price_data][unit_amount]": String(priceCents),
+      "line_items[0][quantity]": "1",
+      customer_email: customerEmail,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      "metadata[type]": "ad_campaign",
+      "metadata[campaign_id]": campaignId,
+    },
+  );
+  return session;
+}
+
+/**
  * Verifies the Stripe-Signature header per Stripe's documented webhook
  * signing scheme: HMAC-SHA256 of "{timestamp}.{payload}" using the
  * webhook signing secret, compared with a constant-time check.

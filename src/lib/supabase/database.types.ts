@@ -607,6 +607,60 @@ export interface Database {
         >;
         Relationships: never[];
       };
+      ad_campaigns: {
+        Row: {
+          id: string;
+          advertiser_id: string;
+          headline: string;
+          caption: string | null;
+          media_id: string;
+          destination_url: string;
+          tier: "starter" | "standard" | "featured";
+          price_cents: number;
+          duration_days: number;
+          status: "pending_payment" | "pending_review" | "active" | "rejected" | "ended";
+          stripe_checkout_session_id: string | null;
+          starts_at: string | null;
+          ends_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          advertiser_id: string;
+          headline: string;
+          caption?: string | null;
+          media_id: string;
+          destination_url: string;
+          tier: "starter" | "standard" | "featured";
+          price_cents: number;
+          duration_days: number;
+          status?: "pending_payment" | "pending_review" | "active" | "rejected" | "ended";
+          stripe_checkout_session_id?: string | null;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ad_campaigns"]["Insert"]>;
+        Relationships: never[];
+      };
+      ad_events: {
+        Row: {
+          id: string;
+          campaign_id: string;
+          kind: "impression" | "click";
+          viewer_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_id: string;
+          kind: "impression" | "click";
+          viewer_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ad_events"]["Insert"]>;
+        Relationships: never[];
+      };
       audit_logs: {
         Row: {
           id: string;

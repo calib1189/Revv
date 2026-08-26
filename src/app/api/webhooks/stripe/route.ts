@@ -25,8 +25,31 @@ export async function POST(request: NextRequest) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const userId = (session.metadata as Record<string, string> | undefined)
-      ?.user_id;
+    const metadata = session.metadata as Record<string, string> | undefined;
+
+    if (metadata?.type === "ad_campaign") {
+      // Payment confirmed — moves the campaign into the admin review
+      // queue. Deliberately not straight to "active": a real charge
+      // going through doesn't mean the ad content itself has been
+      // looked at yet, and this is the only gate between "anyone with a
+      // card" and something actually appearing in the public feed.
+      const campaignId = metadata.campaign_id;
+      if (campaignId) {
+        const { error } = await supabase
+          .from("ad_campaigns")
+          .update({
+            status: "pending_review",
+            stripe_checkout_session_id: (session.id as string) ?? null,
+          })
+          .eq("id", campaignId);
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
+    const userId = metadata?.user_id;
     const customerId = session.customer as string | undefined;
     const subscriptionId = session.subscription as string | undefined;
 

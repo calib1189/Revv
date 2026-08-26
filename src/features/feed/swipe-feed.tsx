@@ -4,16 +4,25 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { loadMoreFeedPostsAction, loadFeedByCategoryAction } from "@/features/feed/actions";
 import { SwipeSlide } from "@/features/feed/swipe-slide";
+import { SponsoredSlide, type SponsoredSlideData } from "@/features/feed/sponsored-slide";
 import { CategoryFilterBar } from "@/features/feed/category-filter-bar";
 import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 import type { VehicleCategory } from "@/lib/vehicles/category";
 import type { PostCardData } from "@/features/feed/post-card";
 
+// Fixed position rather than one per N posts loaded — this app has one
+// ad slot's worth of inventory to fill at a time, not a real pacing
+// system, so showing it once per session (not re-injected as more
+// posts load) is the honest amount of "ad load" to claim credit for.
+const AD_INJECTION_INDEX = 3;
+
 export function SwipeFeed({
   initialPosts,
+  ad,
   isAuthenticated,
 }: {
   initialPosts: PostCardData[];
+  ad: SponsoredSlideData | null;
   isAuthenticated: boolean;
 }) {
   const [category, setCategory] = useState<VehicleCategory | null>(null);
@@ -109,13 +118,17 @@ export function SwipeFeed({
         </div>
       ) : (
         <div className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}>
-          {posts.map((post) => (
-            <SwipeSlide
-              key={post.post.id}
-              data={post}
-              slideHeight={feedHeight}
-              extraTopInset="3rem"
-            />
+          {posts.map((post, index) => (
+            <div key={post.post.id} className="contents">
+              {/* Only on the unfiltered view — the one ad fetched for
+                  this session has no relationship to whichever category
+                  someone filtered to, so showing it there would just be
+                  an irrelevant interruption rather than a placement. */}
+              {ad && category === null && index === AD_INJECTION_INDEX && (
+                <SponsoredSlide data={ad} slideHeight={feedHeight} />
+              )}
+              <SwipeSlide data={post} slideHeight={feedHeight} extraTopInset="3rem" />
+            </div>
           ))}
           {hasMore && <div ref={sentinelRef} className="h-1" />}
         </div>
