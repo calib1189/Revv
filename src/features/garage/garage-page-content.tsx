@@ -23,7 +23,7 @@ export async function GaragePageContent() {
   if (!user) {
     return (
       <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-        <h1 className="mb-2 text-3xl font-bold tracking-tight">Your garage</h1>
+        <h1 className="mb-2 text-3xl font-bold tracking-tight">Garage</h1>
         <div className="glass mt-6 flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
           <p className="text-lg font-medium">Log in to see your garage</p>
           <p className="max-w-xs text-sm text-muted">
@@ -60,7 +60,7 @@ export async function GaragePageContent() {
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
       <div className="mb-2 flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Your garage</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Garage</h1>
         <div className="flex items-center gap-2">
           <Link href="/assistant">
             <Button variant="secondary" className="px-3 py-1.5 text-sm">
