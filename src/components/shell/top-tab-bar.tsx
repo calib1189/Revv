@@ -20,7 +20,7 @@ function isActive(pathname: string, href: string) {
 
 export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationCount?: number }) {
   const pathname = usePathname();
-  const { activeIndex, requestScrollToIndex } = useTabPagerContext();
+  const { activeIndex, requestScrollToIndex, requestRefresh } = useTabPagerContext();
   // Once the swipeable pager (tab-pager-shell.tsx) is mounted, it's the
   // authority on which panel is actually showing — a slow drag settles
   // on a neighboring panel via pure scrolling, with no Next.js
@@ -60,10 +60,19 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
                 key={tab.href}
                 href={tab.href}
                 onClick={(e) => {
-                  if (!onPager || active) return;
+                  if (!onPager) return;
+                  e.preventDefault();
+                  // Tapping the tab you're already on is a refresh
+                  // gesture (TikTok/Instagram convention), not a no-op —
+                  // requestRefresh is itself a no-op for any tab that
+                  // hasn't registered a handler (Garage, Leaderboard),
+                  // so this is safe to call unconditionally.
+                  if (active) {
+                    requestRefresh(tab.href);
+                    return;
+                  }
                   // The pager is already mounted with every panel's real
                   // content — this is a scroll, never a page navigation.
-                  e.preventDefault();
                   requestScrollToIndex(index);
                 }}
                 className={`relative flex-shrink-0 whitespace-nowrap py-1 text-sm transition-colors active:opacity-60 ${

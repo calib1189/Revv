@@ -7,6 +7,7 @@ import { SwipeSlide } from "@/features/feed/swipe-slide";
 import { SponsoredSlide, type SponsoredSlideData } from "@/features/feed/sponsored-slide";
 import { CategoryFilterBar } from "@/features/feed/category-filter-bar";
 import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
+import { useTabPagerContext } from "@/components/shell/tab-pager-context";
 import type { VehicleCategory } from "@/lib/vehicles/category";
 import type { PostCardData } from "@/features/feed/post-card";
 
@@ -30,6 +31,28 @@ export function SwipeFeed({
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(initialPosts.length > 0);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { registerRefreshHandler } = useTabPagerContext();
+
+  // Tapping the already-active "For You" tab (top-tab-bar.tsx) is a
+  // refresh gesture — back to the unfiltered view, latest posts, top of
+  // the list. Registered once: it always resets to the same unfiltered
+  // state regardless of whatever category is selected when it fires, so
+  // it doesn't need to depend on `category`.
+  useEffect(() => {
+    registerRefreshHandler("/feed", () => {
+      setCategory(null);
+      setIsLoading(true);
+      loadFeedByCategoryAction(null)
+        .then((fresh) => {
+          setPosts(fresh);
+          setHasMore(fresh.length > 0);
+          scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+        })
+        .finally(() => setIsLoading(false));
+    });
+    return () => registerRefreshHandler("/feed", null);
+  }, [registerRefreshHandler]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -117,7 +140,10 @@ export function SwipeFeed({
           )}
         </div>
       ) : (
-        <div className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}>
+        <div
+          ref={scrollContainerRef}
+          className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}
+        >
           {posts.map((post, index) => (
             <div key={post.post.id} className="contents">
               {/* Only on the unfiltered view — the one ad fetched for
