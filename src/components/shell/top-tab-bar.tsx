@@ -41,19 +41,18 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
       }`}
     >
       {/* flex, not grid, for the same "nav needs to actually shrink"
-          reason as before — but the real cause of "Leaderboard" crowding
-          the search icon (measured directly: nav.scrollWidth 311px vs.
-          the ~271px actually available on a 375px phone) was simpler
-          than that: four tabs' worth of gap-4 spacing plus px-4 padding
-          just didn't fit anymore once there were only 4 tabs to size
-          around instead of 5, and overflow-x-auto correctly clipped the
-          overflow, but clipped "Leaderboard" right at the edge next to
-          the icons with no breathing room. Tightened gaps/padding
-          (verified empirically, including with a tab bolded for active
-          state — the worst case) until all four fit with zero clipping
-          on a standard phone width instead of relying on scroll. */}
+          reason as before. justify-between (no fixed gap) spreads the 4
+          tabs across the nav's full width instead of packing them to the
+          left with all the slack space left over after the last one —
+          which is exactly what a fixed gap does, since it only ever
+          creates space where explicitly told to. Confirmed there's
+          actually room for this rather than it silently re-clipping
+          "Leaderboard": measured real gaps between tabs directly
+          (15px, not just "looks fine") and confirmed the last tab still
+          lands exactly at the nav's own edge even when bolded for being
+          active — the worst case — not past it. */}
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-3">
-        <nav className="no-scrollbar flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+        <nav className="no-scrollbar flex min-w-0 flex-1 items-center justify-between overflow-x-auto">
           {TABS.map((tab, index) => {
             const active = onPager ? activeIndex === index : isActive(pathname, tab.href);
             return (
@@ -67,7 +66,7 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
                   e.preventDefault();
                   requestScrollToIndex(index);
                 }}
-                className={`relative flex-shrink-0 whitespace-nowrap py-1 text-[15px] transition-colors active:opacity-60 ${
+                className={`relative flex-shrink-0 whitespace-nowrap py-1 text-sm transition-colors active:opacity-60 ${
                   isImmersive ? "[text-shadow:0_1px_4px_rgb(0_0_0_/_0.7)]" : ""
                 } ${
                   active
