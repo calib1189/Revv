@@ -57,6 +57,38 @@ export async function listVehicleIdsByCategory(
   return data.map((v) => v.id);
 }
 
+/** Vehicle ids with an admin-approved ownership verification photo — the
+ * leaderboard's eligibility gate, filtered the same way
+ * listVehicleIdsByCategory is (a plain id list, not a Postgres-side
+ * join) for the same reason: it doesn't depend on PostgREST's
+ * embedded-resource relationship cache staying in sync. */
+export async function listVerifiedVehicleIds(
+  supabase: SupabaseClient<Database>,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id")
+    .eq("ownership_verification_status", "approved");
+
+  if (error) throw error;
+  return data.map((v) => v.id);
+}
+
+/** Vehicles currently awaiting admin review — the ownership-verification
+ * queue's source list. */
+export async function listPendingVerifications(
+  supabase: SupabaseClient<Database>,
+): Promise<Vehicle[]> {
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("*")
+    .eq("ownership_verification_status", "pending")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getVehicleById(
   supabase: SupabaseClient<Database>,
   id: string,

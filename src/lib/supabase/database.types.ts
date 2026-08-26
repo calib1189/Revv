@@ -89,6 +89,8 @@ export interface Database {
           description: string | null;
           hero_media_id: string | null;
           category: string;
+          ownership_verification_status: "none" | "pending" | "approved" | "rejected";
+          ownership_verification_media_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -106,6 +108,8 @@ export interface Database {
           description?: string | null;
           hero_media_id?: string | null;
           category?: string;
+          ownership_verification_status?: "none" | "pending" | "approved" | "rejected";
+          ownership_verification_media_id?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;

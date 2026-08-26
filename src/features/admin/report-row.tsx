@@ -58,7 +58,9 @@ export function ReportRow({
         >
           Dismiss
         </button>
-        {(report.target_type === "post" || report.target_type === "comment") && (
+        {(report.target_type === "post" ||
+          report.target_type === "comment" ||
+          report.target_type === "vehicle") && (
           <button
             type="button"
             disabled={isPending}
@@ -74,7 +76,7 @@ export function ReportRow({
             }
             className="text-sm text-danger hover:underline disabled:opacity-60"
           >
-            Remove content
+            {report.target_type === "vehicle" ? "Remove vehicle" : "Remove content"}
           </button>
         )}
       </div>

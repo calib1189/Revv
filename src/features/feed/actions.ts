@@ -168,7 +168,13 @@ export async function deletePostAction(postId: string): Promise<void> {
   redirect("/feed");
 }
 
-const REPORT_REASONS = ["spam", "harassment", "inappropriate", "other"] as const;
+const REPORT_REASONS = [
+  "spam",
+  "harassment",
+  "inappropriate",
+  "fake_ownership",
+  "other",
+] as const;
 
 export interface ReportFormState {
   error: string | null;
@@ -176,7 +182,7 @@ export interface ReportFormState {
 }
 
 export async function createReportAction(
-  targetType: "post" | "comment",
+  targetType: "post" | "comment" | "vehicle",
   targetId: string,
   _prevState: ReportFormState,
   formData: FormData,

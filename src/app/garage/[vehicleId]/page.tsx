@@ -16,6 +16,8 @@ import { CoverPhotoUploader } from "@/features/garage/cover-photo-uploader";
 import { GalleryUploader } from "@/features/garage/gallery-uploader";
 import { GalleryGrid } from "@/features/garage/gallery-grid";
 import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
+import { ReportButton } from "@/features/feed/report-button";
+import { OwnershipVerification } from "@/features/garage/ownership-verification";
 import { ModificationList } from "@/features/builds/modification-list";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
@@ -151,8 +153,19 @@ export default async function VehiclePage({
       </RankFrame>
 
       <div className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-6">
+        {!isOwner && user && (
+          <div className="mb-4 flex justify-end">
+            <ReportButton targetType="vehicle" targetId={vehicle.id} />
+          </div>
+        )}
+
         {isOwner && (
-          <div className="mb-6">
+          <div className="mb-6 flex flex-col gap-4">
+            <OwnershipVerification
+              vehicleId={vehicle.id}
+              userId={vehicle.owner_id}
+              status={vehicle.ownership_verification_status}
+            />
             <RateBuildPanel
               vehicleId={vehicle.id}
               currentScore={activeBuild?.ai_rating_score ?? null}

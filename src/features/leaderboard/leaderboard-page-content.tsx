@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { listTopRatedBuilds } from "@/lib/db/builds";
-import { listVehicleIdsByCategory } from "@/lib/db/vehicles";
+import { listVehicleIdsByCategory, listVerifiedVehicleIds } from "@/lib/db/vehicles";
 import { composeLeaderboard } from "@/lib/leaderboard/compose-leaderboard";
 import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
 import { RatingExplainer } from "@/features/leaderboard/rating-explainer";
@@ -23,9 +23,19 @@ export async function LeaderboardPageContent({
   initialCategory?: VehicleCategory | null;
 }) {
   const supabase = await createClient();
-  const vehicleIds = initialCategory
-    ? await listVehicleIdsByCategory(supabase, initialCategory)
-    : undefined;
+  // Leaderboard eligibility gate: only builds on a vehicle with an
+  // admin-approved ownership-verification photo count. Intersected with
+  // the category filter (rather than a Postgres-side join) the same
+  // reason listVehicleIdsByCategory itself avoids one — no dependency on
+  // PostgREST's embedded-resource relationship cache staying in sync.
+  const [verifiedVehicleIds, categoryVehicleIds] = await Promise.all([
+    listVerifiedVehicleIds(supabase),
+    initialCategory ? listVehicleIdsByCategory(supabase, initialCategory) : Promise.resolve(null),
+  ]);
+  const verifiedSet = new Set(verifiedVehicleIds);
+  const vehicleIds = categoryVehicleIds
+    ? categoryVehicleIds.filter((id) => verifiedSet.has(id))
+    : verifiedVehicleIds;
   const builds = await listTopRatedBuilds(supabase, 50, vehicleIds);
   const entries = await composeLeaderboard(supabase, builds);
 
@@ -64,11 +74,11 @@ export async function LeaderboardPageContent({
 
       {entries.length === 0 ? (
         <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-24 text-center">
-          <p className="text-lg font-medium">No rated builds yet</p>
+          <p className="text-lg font-medium">No verified builds yet</p>
           <p className="max-w-xs text-sm text-muted">
             {initialCategory
-              ? `Rate a ${VEHICLE_CATEGORY_LABELS[initialCategory]} build from your garage to be the first on this board.`
-              : "Rate your build from your garage to be the first on the board."}
+              ? `Rate and verify ownership of a ${VEHICLE_CATEGORY_LABELS[initialCategory]} build from your garage to be the first on this board.`
+              : "Rate your build and verify ownership from your garage to be the first on the board."}
           </p>
         </div>
       ) : (

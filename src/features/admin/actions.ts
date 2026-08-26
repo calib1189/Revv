@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 import { updateReportStatus, type Report } from "@/lib/db/reports";
 import { deletePost } from "@/lib/db/posts";
 import { deleteComment } from "@/lib/db/comments";
+import { deleteVehicle, updateVehicle } from "@/lib/db/vehicles";
 import { createAuditLog } from "@/lib/db/audit-logs";
 
 export async function dismissReportAction(reportId: string): Promise<void> {
@@ -30,10 +31,12 @@ export async function removeReportedContentAction(
     await deletePost(supabase, targetId);
   } else if (targetType === "comment") {
     await deleteComment(supabase, targetId);
+  } else if (targetType === "vehicle") {
+    await deleteVehicle(supabase, targetId);
   }
-  // profile/vehicle reports: no admin removal action built yet — the
-  // report can still be dismissed/resolved below, content just isn't
-  // auto-deleted (deliberately out of scope for this slice).
+  // profile reports: no admin removal action built yet — the report can
+  // still be dismissed/resolved below, content just isn't auto-deleted
+  // (deliberately out of scope for this slice).
 
   await updateReportStatus(supabase, reportId, "reviewed");
   await createAuditLog(supabase, {
@@ -44,4 +47,20 @@ export async function removeReportedContentAction(
     metadata: { reportId },
   });
   revalidatePath("/admin/reports");
+}
+
+export async function setOwnershipVerificationStatusAction(
+  vehicleId: string,
+  status: "approved" | "rejected",
+): Promise<void> {
+  const { supabase, userId } = await requireAdmin();
+  await updateVehicle(supabase, vehicleId, { ownership_verification_status: status });
+  await createAuditLog(supabase, {
+    actorId: userId,
+    action: status === "approved" ? "vehicle.verification_approved" : "vehicle.verification_rejected",
+    targetType: "vehicle",
+    targetId: vehicleId,
+  });
+  revalidatePath("/admin/verifications");
+  revalidatePath("/leaderboard");
 }
