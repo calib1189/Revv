@@ -18,6 +18,7 @@ import { GalleryGrid } from "@/features/garage/gallery-grid";
 import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ReportButton } from "@/features/feed/report-button";
 import { OwnershipVerification } from "@/features/garage/ownership-verification";
+import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
 import { ModificationList } from "@/features/builds/modification-list";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
@@ -128,6 +129,10 @@ export default async function VehiclePage({
             </div>
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+
+          <div className="absolute right-4 top-4 sm:right-6">
+            <VehicleShareButton vehicleId={vehicle.id} />
+          </div>
 
           <div className="absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-5xl items-end justify-between gap-4 px-4 py-6 sm:px-6">
             <div>

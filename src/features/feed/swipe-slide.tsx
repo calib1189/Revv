@@ -19,7 +19,7 @@ import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 import type { PostCardData } from "@/features/feed/post-card";
 
 function ShareButton({ postId }: { postId: string }) {
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   async function handleShare() {
     const url = `${SITE_URL}/p/${postId}`;
@@ -31,9 +31,17 @@ function ShareButton({ postId }: { postId: string }) {
       }
       return;
     }
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(url);
+      setStatus("copied");
+    } catch {
+      // Clipboard access can be denied (browser settings, an insecure
+      // context) even when navigator.clipboard exists — silently doing
+      // nothing here would leave someone tapping Share with zero
+      // feedback and no way to know it didn't work.
+      setStatus("failed");
+    }
+    setTimeout(() => setStatus("idle"), 1500);
   }
 
   return (
@@ -43,7 +51,8 @@ function ShareButton({ postId }: { postId: string }) {
       className="flex flex-col items-center gap-1 text-white/90 hover:text-white"
     >
       <ShareIcon className="h-8 w-8" />
-      {copied && <span className="text-xs font-medium">Copied</span>}
+      {status === "copied" && <span className="text-xs font-medium">Copied</span>}
+      {status === "failed" && <span className="text-xs font-medium text-danger">Couldn&apos;t copy</span>}
     </button>
   );
 }
