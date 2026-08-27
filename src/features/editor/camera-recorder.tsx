@@ -11,17 +11,33 @@ import {
   BoltIcon,
   TimerIcon,
   GridIcon,
+  SettingsIcon,
 } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
-/** Torch/flash is part of the (still non-standard, Chrome-on-Android-
- * only-in-practice) MediaTrackConstraints "Image Capture" API —
- * TypeScript's built-in lib.dom types don't know about it, so both the
- * capability check and the constraint itself go through this cast rather
- * than widening the real DOM types used everywhere else in the file. */
-function getTorchCapability(track: MediaStreamTrack | undefined): boolean {
-  const capabilities = track?.getCapabilities?.() as ({ torch?: boolean } | undefined);
-  return !!capabilities?.torch;
+/** Exposure/white-balance/focus manual control and torch are all part of
+ * the same still-non-standard, inconsistently-implemented MediaTrackConstraints
+ * "Image Capture" extensions — TypeScript's built-in lib.dom types don't
+ * know about any of them, so every capability check and constraint in
+ * this file goes through this one cast rather than widening the real DOM
+ * types used everywhere else. Real device support (especially on iOS
+ * Safari/WKWebView) is sparse — every control built on this is feature-
+ * detected and hidden entirely when unsupported, never shown as a control
+ * that silently does nothing. */
+interface ExtendedTrackCapabilities {
+  torch?: boolean;
+  exposureCompensation?: { min: number; max: number; step: number };
+  exposureMode?: string[];
+  whiteBalanceMode?: string[];
+  colorTemperature?: { min: number; max: number; step: number };
+  focusMode?: string[];
+}
+interface ExtendedTrackSettings {
+  exposureCompensation?: number;
+  colorTemperature?: number;
+}
+function getExtendedCapabilities(track: MediaStreamTrack | undefined): ExtendedTrackCapabilities {
+  return (track?.getCapabilities?.() as ExtendedTrackCapabilities | undefined) ?? {};
 }
 
 const COUNTDOWN_OPTIONS = [0, 3, 10] as const;
@@ -30,6 +46,21 @@ const DURATION_OPTIONS: { seconds: number; label: string }[] = [
   { seconds: 60, label: "60s" },
   { seconds: 180, label: "3m" },
 ];
+
+type ResolutionPreset = "720p" | "1080p" | "4k";
+const RESOLUTION_PRESETS: Record<ResolutionPreset, { width: number; height: number; label: string }> = {
+  "720p": { width: 1280, height: 720, label: "720p" },
+  "1080p": { width: 1920, height: 1080, label: "1080p" },
+  "4k": { width: 3840, height: 2160, label: "4K" },
+};
+// 120 is included because it was explicitly asked for, not because it's
+// guaranteed — see the getUserMedia call below. frameRate is always an
+// "ideal" hint the browser is free to fall short of, so asking for it is
+// harmless; what it actually delivers depends entirely on the device.
+const FPS_PRESETS = [30, 60, 120] as const;
+type FpsPreset = (typeof FPS_PRESETS)[number];
+const DEFAULT_RESOLUTION: ResolutionPreset = "720p";
+const DEFAULT_FPS: FpsPreset = 60;
 
 function pickVideoMimeType(): string {
   // Must declare an audio codec, not just video (avc1 alone) — the stream
@@ -52,31 +83,22 @@ function pickVideoMimeType(): string {
   return "video/webm";
 }
 
-// 720p @ 60fps instead of the old 1080p @ 30fps — chosen so the actual
-// per-second workload (pixels drawn/encoded per second) comes out roughly
-// the same or lower (1280×720×60 ≈ 1920×1080×30), while frame rate — the
-// thing that actually reads as "smooth" motion — doubles. True 120fps
-// isn't on the table at all: it depends on hardware capture formats
-// (AVFoundation's high-frame-rate modes) that getUserMedia doesn't expose
-// on iOS, so requesting it wouldn't do anything but get silently clamped
-// to whatever the device's normal ceiling actually is. This is the real,
-// deliverable version of "smoother" — not a bigger number that the
-// platform can't back up, and not something that makes the actual
-// dropped-frame problem worse by asking for more pixels *and* more
-// frames per second at the same time.
-const CAPTURE_FPS = 60;
-
-/** Scales target bitrate to the actual capture resolution and frame rate.
- * 720p is the ceiling this component asks the camera for (see the
- * getUserMedia call below) — going higher (we tried 4K at 1080p/30fps)
- * overloads real-time encoding on mid-range phones, which is what caused
- * dropped frames during recording and blocky, over-compressed-looking
- * playback afterward: the encoder falls behind and has to sacrifice
- * quality to keep up. */
+/** Scales target bitrate to the actual capture resolution and frame rate
+ * — both now user-selectable (see the Settings panel), defaulting to
+ * 720p/60fps: chosen so the default per-second workload (pixels drawn/
+ * encoded per second) comes out roughly the same or lower than the old
+ * fixed 1080p/30fps (1280×720×60 ≈ 1920×1080×30), while frame rate — the
+ * thing that actually reads as "smooth" motion — doubles. 4K and 120fps
+ * are offered as explicit opt-ins, not the default, because they trade
+ * that smoothness away: higher resolution/frame rate is strictly more
+ * pixels to draw and encode per second, which is what caused dropped
+ * frames and blocky playback the last time this app tried 4K. The
+ * in-app copy next to those options says so rather than hiding the
+ * trade-off. */
 function pickVideoBitsPerSecond(width: number, height: number, fps: number): number {
   const pixels = width * height;
   const bitsPerSecond = Math.round(pixels * 0.14 * fps);
-  return Math.min(Math.max(bitsPerSecond, 4_000_000), 16_000_000);
+  return Math.min(Math.max(bitsPerSecond, 4_000_000), 24_000_000);
 }
 
 const DEFAULT_MAX_SECONDS = 180;
@@ -132,6 +154,16 @@ export function CameraRecorder({
   const [torchSupported, setTorchSupported] = useState(false);
   const [gridEnabled, setGridEnabled] = useState(false);
   const [maxSeconds, setMaxSeconds] = useState(DEFAULT_MAX_SECONDS);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [resolution, setResolution] = useState<ResolutionPreset>(DEFAULT_RESOLUTION);
+  const [fps, setFps] = useState<FpsPreset>(DEFAULT_FPS);
+  const [exposureRange, setExposureRange] = useState<{ min: number; max: number; step: number } | null>(null);
+  const [exposureCompensation, setExposureCompensation] = useState(0);
+  const [colorTempRange, setColorTempRange] = useState<{ min: number; max: number; step: number } | null>(null);
+  const [whiteBalanceMode, setWhiteBalanceMode] = useState<"continuous" | "manual">("continuous");
+  const [colorTemperature, setColorTemperature] = useState<number | null>(null);
+  const [aeAfLockSupported, setAeAfLockSupported] = useState(false);
+  const [aeAfLocked, setAeAfLocked] = useState(false);
   // True from the first segment's start until "Finished" is tapped — a
   // multi-clip recording (Instagram/TikTok-style): record a bit, pause,
   // record more, pause again, as many times as wanted, then finish. One
@@ -167,16 +199,18 @@ export function CameraRecorder({
       }
       try {
         streamRef.current?.getTracks().forEach((t) => t.stop());
+        const { width, height } = RESOLUTION_PRESETS[resolution];
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode,
             // Soft ("ideal") constraints — the browser picks the closest
             // resolution/frame rate the camera actually supports rather
-            // than failing outright. Capped at 720p/60fps on purpose: see
-            // pickVideoBitsPerSecond and CAPTURE_FPS above for why.
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: CAPTURE_FPS },
+            // than failing outright. Both are user-selectable from the
+            // Settings panel now; see pickVideoBitsPerSecond above for
+            // why 720p/60fps is the default rather than the ceiling.
+            width: { ideal: width },
+            height: { ideal: height },
+            frameRate: { ideal: fps },
           },
           audio: true,
         });
@@ -194,12 +228,38 @@ export function CameraRecorder({
           // though the stream itself is live.
           el.play().catch(() => {});
         }
-        // Torch is a rear-camera-only, mostly-Chrome-on-Android feature —
-        // reset on every stream (including a facing-mode flip) rather than
-        // trusting stale state, since the new stream's track is a fresh
-        // object with its own capabilities.
-        setTorchSupported(getTorchCapability(stream.getVideoTracks()[0]));
+        // Every one of these is a rear-camera-only-in-practice, sparsely
+        // supported feature — reset on every stream (including a facing-
+        // mode flip or a resolution/fps change, both of which force a new
+        // getUserMedia call) rather than trusting stale state, since the
+        // new stream's track is a fresh object with its own capabilities
+        // that may not match the old one's.
+        const track = stream.getVideoTracks()[0];
+        const caps = getExtendedCapabilities(track);
+
+        setTorchSupported(!!caps.torch);
         setTorchOn(false);
+
+        if (caps.exposureCompensation) {
+          setExposureRange(caps.exposureCompensation);
+          const settings = track?.getSettings?.() as ExtendedTrackSettings | undefined;
+          setExposureCompensation(settings?.exposureCompensation ?? 0);
+        } else {
+          setExposureRange(null);
+          setExposureCompensation(0);
+        }
+
+        if (caps.whiteBalanceMode?.includes("manual") && caps.colorTemperature) {
+          setColorTempRange(caps.colorTemperature);
+        } else {
+          setColorTempRange(null);
+        }
+        setWhiteBalanceMode("continuous");
+        setColorTemperature(null);
+
+        setAeAfLockSupported(!!caps.focusMode?.includes("manual") || !!caps.exposureMode?.includes("manual"));
+        setAeAfLocked(false);
+
         setError(null);
       } catch {
         setError(
@@ -212,7 +272,7 @@ export function CameraRecorder({
       cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, [facingMode]);
+  }, [facingMode, resolution, fps]);
 
   // Continuously draws the (zoom-cropped, mirrored) camera frame onto the
   // visible canvas — this is what the live preview shows AND what photo
@@ -230,11 +290,11 @@ export function CameraRecorder({
     let lastDrawAt = 0;
     // requestAnimationFrame runs at the display's own refresh rate
     // (60-120Hz on a real phone) — drawing a full frame that often is
-    // wasted work for what's ultimately captured at CAPTURE_FPS
-    // (canvas.captureStream(CAPTURE_FPS) below), and contends with the
-    // recorder for the same CPU budget. Throttling the actual draw to
-    // match leaves more headroom for encoding to keep up.
-    const frameIntervalMs = 1000 / CAPTURE_FPS;
+    // wasted work for what's ultimately captured at the chosen fps
+    // (canvas.captureStream(fps) in startRecording below), and contends
+    // with the recorder for the same CPU budget. Throttling the actual
+    // draw to match leaves more headroom for encoding to keep up.
+    const frameIntervalMs = 1000 / fps;
     function draw() {
       const now = performance.now();
       if (now - lastDrawAt < frameIntervalMs) {
@@ -266,7 +326,7 @@ export function CameraRecorder({
     }
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [facingMode]);
+  }, [facingMode, fps]);
 
   useEffect(() => {
     return () => {
@@ -288,6 +348,55 @@ export function CameraRecorder({
     } catch {
       // Device advertised torch support but rejected the constraint —
       // leave the toggle in its previous state rather than lying about it.
+    }
+  }
+
+  // Optimistic — a live slider that reverted mid-drag on a rejected
+  // constraint would feel broken, and this is a best-effort hardware
+  // control on an already-feature-detected capability, not something
+  // that needs the same "don't lie about the resulting state" treatment
+  // as a discrete on/off toggle like torch.
+  function applyExposureCompensation(value: number) {
+    setExposureCompensation(value);
+    const track = streamRef.current?.getVideoTracks()[0];
+    track?.applyConstraints({ advanced: [{ exposureCompensation: value } as MediaTrackConstraintSet] }).catch(() => {});
+  }
+
+  function setWhiteBalanceManualTemp(temp: number) {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    setWhiteBalanceMode("manual");
+    setColorTemperature(temp);
+    track
+      .applyConstraints({
+        advanced: [{ whiteBalanceMode: "manual", colorTemperature: temp } as MediaTrackConstraintSet],
+      })
+      .catch(() => {});
+  }
+
+  function setWhiteBalanceAuto() {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    setWhiteBalanceMode("continuous");
+    setColorTemperature(null);
+    track.applyConstraints({ advanced: [{ whiteBalanceMode: "continuous" } as MediaTrackConstraintSet] }).catch(() => {});
+  }
+
+  async function toggleAeAfLock() {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    const next = !aeAfLocked;
+    try {
+      await track.applyConstraints({
+        advanced: [
+          { focusMode: next ? "manual" : "continuous", exposureMode: next ? "manual" : "continuous" } as MediaTrackConstraintSet,
+        ],
+      });
+      setAeAfLocked(next);
+    } catch {
+      // Device advertised manual focus/exposure mode but rejected the
+      // constraint — leave the toggle in its previous state, same
+      // reasoning as toggleTorch.
     }
   }
 
@@ -344,7 +453,7 @@ export function CameraRecorder({
     const canvas = canvasRef.current;
     if (!stream || !canvas) return;
 
-    const canvasStream = canvas.captureStream(CAPTURE_FPS);
+    const canvasStream = canvas.captureStream(fps);
 
     // Feeding the mic's own MediaStreamTrack straight into a MediaStream
     // built alongside an unrelated canvas video track is a known WebKit
@@ -372,7 +481,7 @@ export function CameraRecorder({
     const baseType = mimeType.split(";")[0];
     const recorder = new MediaRecorder(combined, {
       mimeType,
-      videoBitsPerSecond: pickVideoBitsPerSecond(canvas.width, canvas.height, CAPTURE_FPS),
+      videoBitsPerSecond: pickVideoBitsPerSecond(canvas.width, canvas.height, fps),
     });
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -732,42 +841,222 @@ export function CameraRecorder({
           )}
           <button
             type="button"
-            onClick={() =>
-              setCountdownSeconds(
-                (s) => COUNTDOWN_OPTIONS[(COUNTDOWN_OPTIONS.indexOf(s) + 1) % COUNTDOWN_OPTIONS.length],
-              )
-            }
-            aria-label="Self-timer"
-            className={`glass flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium ${
-              countdownSeconds > 0 ? "bg-accent text-accent-foreground" : "text-white"
-            }`}
+            onClick={() => setIsSettingsOpen(true)}
+            aria-label="Camera settings"
+            className="glass flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white"
           >
-            <TimerIcon className="h-4 w-4" />
-            {countdownSeconds > 0 ? `${countdownSeconds}s` : "Off"}
+            <SettingsIcon className="h-4 w-4" />
+            Settings
           </button>
-          <button
-            type="button"
-            onClick={() => setGridEnabled((g) => !g)}
-            aria-label={gridEnabled ? "Hide grid" : "Show grid"}
-            className={`glass flex h-8 w-8 items-center justify-center rounded-full ${
-              gridEnabled ? "bg-accent text-accent-foreground" : "text-white"
-            }`}
+        </div>
+      )}
+
+      {isSettingsOpen && !hasSession && !error && (
+        <div
+          className="absolute inset-0 z-30 flex flex-col justify-end bg-black/60"
+          onClick={() => setIsSettingsOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="glass-raised max-h-[75vh] overflow-y-auto rounded-t-[2rem] p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
           >
-            <GridIcon className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setMaxSeconds((current) => {
-                const idx = DURATION_OPTIONS.findIndex((d) => d.seconds === current);
-                return DURATION_OPTIONS[(idx + 1) % DURATION_OPTIONS.length].seconds;
-              })
-            }
-            aria-label="Max clip length"
-            className="glass flex h-8 items-center rounded-full px-2.5 text-xs font-medium text-white"
-          >
-            {DURATION_OPTIONS.find((d) => d.seconds === maxSeconds)?.label ?? "3m"}
-          </button>
+            <div className="mx-auto -mt-1 mb-4 h-1 w-10 rounded-full bg-white/15" />
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-white">Camera settings</h2>
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(false)}
+                aria-label="Close settings"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-white/60"
+              >
+                <CloseIcon className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-5">
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">Quality</p>
+                <div className="flex gap-2">
+                  {(Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[]).map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setResolution(key)}
+                      className={`flex-1 rounded-xl py-2 text-sm font-medium ${
+                        resolution === key ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
+                      }`}
+                    >
+                      {RESOLUTION_PRESETS[key].label}
+                    </button>
+                  ))}
+                </div>
+                {resolution === "4k" && (
+                  <p className="mt-1.5 text-xs text-white/50">
+                    4K asks for real recording quality most phones can&apos;t encode in real time
+                    without dropping frames — 720p or 1080p will feel smoother.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">Frame rate</p>
+                <div className="flex gap-2">
+                  {FPS_PRESETS.map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setFps(f)}
+                      className={`flex-1 rounded-xl py-2 text-sm font-medium ${
+                        fps === f ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
+                      }`}
+                    >
+                      {f} fps
+                    </button>
+                  ))}
+                </div>
+                {fps === 120 && (
+                  <p className="mt-1.5 text-xs text-white/50">
+                    Most phones cap real capture around 30-60fps through the web camera even when
+                    120 is requested — REVV will use whatever your device actually delivers.
+                  </p>
+                )}
+              </div>
+
+              {exposureRange && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Exposure</p>
+                    <span className="font-mono text-xs text-white/70">
+                      {exposureCompensation > 0 ? "+" : ""}
+                      {exposureCompensation.toFixed(1)}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={exposureRange.min}
+                    max={exposureRange.max}
+                    step={exposureRange.step || 0.1}
+                    value={exposureCompensation}
+                    onChange={(e) => applyExposureCompensation(Number(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+              )}
+
+              {colorTempRange && (
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
+                      White balance
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        whiteBalanceMode === "manual"
+                          ? setWhiteBalanceAuto()
+                          : setWhiteBalanceManualTemp(
+                              colorTemperature ?? Math.round((colorTempRange.min + colorTempRange.max) / 2),
+                            )
+                      }
+                      className="text-xs text-accent"
+                    >
+                      {whiteBalanceMode === "manual" ? "Switch to auto" : "Set manually"}
+                    </button>
+                  </div>
+                  {whiteBalanceMode === "manual" && (
+                    <>
+                      <input
+                        type="range"
+                        min={colorTempRange.min}
+                        max={colorTempRange.max}
+                        step={colorTempRange.step || 100}
+                        value={colorTemperature ?? colorTempRange.min}
+                        onChange={(e) => setWhiteBalanceManualTemp(Number(e.target.value))}
+                        className="w-full"
+                      />
+                      <p className="mt-1 text-center font-mono text-xs text-white/70">{colorTemperature}K</p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {aeAfLockSupported && (
+                <button
+                  type="button"
+                  onClick={toggleAeAfLock}
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium ${
+                    aeAfLocked ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
+                  }`}
+                >
+                  <span>Lock focus &amp; exposure</span>
+                  {aeAfLocked && <LockIcon className="h-4 w-4" />}
+                </button>
+              )}
+
+              <div>
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white/50">
+                  <TimerIcon className="h-3.5 w-3.5" />
+                  Self-timer
+                </p>
+                <div className="flex gap-2">
+                  {COUNTDOWN_OPTIONS.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setCountdownSeconds(s)}
+                      className={`flex-1 rounded-xl py-2 text-sm font-medium ${
+                        countdownSeconds === s ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
+                      }`}
+                    >
+                      {s === 0 ? "Off" : `${s}s`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setGridEnabled((g) => !g)}
+                className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 text-sm font-medium text-white"
+              >
+                <span className="flex items-center gap-2">
+                  <GridIcon className="h-4 w-4" />
+                  Grid
+                </span>
+                <span
+                  className={`block h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
+                    gridEnabled ? "bg-accent" : "bg-white/20"
+                  }`}
+                >
+                  <span
+                    className={`block h-5 w-5 translate-y-0.5 rounded-full bg-white transition-transform ${
+                      gridEnabled ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </span>
+              </button>
+
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">
+                  Max clip length
+                </p>
+                <div className="flex gap-2">
+                  {DURATION_OPTIONS.map((d) => (
+                    <button
+                      key={d.seconds}
+                      type="button"
+                      onClick={() => setMaxSeconds(d.seconds)}
+                      className={`flex-1 rounded-xl py-2 text-sm font-medium ${
+                        maxSeconds === d.seconds ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
