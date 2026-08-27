@@ -68,11 +68,6 @@ export async function GaragePageContent() {
           <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">Your Garage</h1>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/assistant">
-            <Button variant="secondary" className="px-3 py-1.5 text-sm">
-              Ask assistant
-            </Button>
-          </Link>
           <Link href="/garage/new">
             <Button className="px-3 py-1.5 text-sm">Add vehicle</Button>
           </Link>

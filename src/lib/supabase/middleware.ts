@@ -15,10 +15,8 @@ const PROTECTED_EXACT = [
   "/settings",
   "/settings/profile",
   "/settings/notifications",
-  "/settings/billing",
   "/messages",
   "/friends",
-  "/assistant",
   "/admin/reports",
   "/admin/audit-log",
   "/admin/analytics",
@@ -26,7 +24,6 @@ const PROTECTED_EXACT = [
 ];
 const PROTECTED_PATTERNS = [
   /^\/garage\/[^/]+\/edit$/,
-  /^\/garage\/[^/]+\/visualize$/,
   /^\/garage\/[^/]+\/builds\/[^/]+\/review$/,
   /^\/messages\/[^/]+$/,
 ];
