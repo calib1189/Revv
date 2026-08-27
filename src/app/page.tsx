@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { SupabaseNotConfigured } from "@/components/ui/supabase-not-configured";
-import { WrenchIcon, PinIcon, GemIcon } from "@/components/ui/icons";
+import { WrenchIcon, GemIcon, CompassIcon } from "@/components/ui/icons";
 
 type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
 
@@ -16,9 +16,9 @@ const FEATURES: { icon: IconComponent; title: string; description: string }[] = 
     description: "Every mod logged as structured data — part, price, install date — not just a caption.",
   },
   {
-    icon: PinIcon,
-    title: "Tap to shop",
-    description: "Tag the exact parts in your photos, so anyone can see — and shop — what's actually on your car.",
+    icon: CompassIcon,
+    title: "Local car culture",
+    description: "Real car meets and local shops — mechanics, tint, body work — happening near you.",
   },
   {
     icon: GemIcon,
@@ -52,8 +52,8 @@ export default async function LandingPage() {
       </h1>
       <p className="mt-5 max-w-lg text-balance text-lg text-muted">
         REVV is the social platform built for your garage — log every mod as
-        real build data, tag the exact parts in your photos, and share it to
-        a feed that actually gets what a build is.
+        real build data, get an AI-rated score, and find the meets and shops
+        happening near you.
       </p>
 
       <div className="mt-8 flex gap-3">

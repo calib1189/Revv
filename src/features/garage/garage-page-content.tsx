@@ -23,7 +23,7 @@ export async function GaragePageContent() {
   if (!user) {
     return (
       <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-        <h1 className="mb-2 text-3xl font-bold tracking-tight">Garage</h1>
+        <h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl">Your Garage</h1>
         <div className="glass mt-6 flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
           <p className="text-lg font-medium">Log in to see your garage</p>
           <p className="max-w-xs text-sm text-muted">
@@ -64,8 +64,8 @@ export async function GaragePageContent() {
             button group starts, so justify-center here centers "Garage"
             in exactly that span — not across the whole row (which would
             pull it right, off-center, once "Add vehicle" is factored in). */}
-        <div className="flex flex-1 justify-center">
-          <h1 className="text-3xl font-bold tracking-tight">Garage</h1>
+        <div className="flex min-w-0 flex-1 justify-center px-2">
+          <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">Your Garage</h1>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/assistant">

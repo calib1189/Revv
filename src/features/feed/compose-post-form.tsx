@@ -39,12 +39,45 @@ function readVideoDurationSeconds(file: File): Promise<number> {
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
     video.preload = "metadata";
-    video.onloadedmetadata = () => {
+    video.muted = true;
+    video.playsInline = true;
+    // Real (if off-screen) size, not left fully detached from the
+    // document — WebKit is documented to stop reliably decoding a
+    // <video> element that was never actually attached to the page at
+    // all, the same bug already found and fixed twice elsewhere in this
+    // feature area (camera-recorder.tsx's preview video, video-editor.tsx's
+    // decode video). This was the third instance of it, just never
+    // exercised until now.
+    video.style.cssText = "position:fixed;left:-9999px;top:0;width:160px;height:160px;";
+    document.body.appendChild(video);
+
+    function cleanup() {
       URL.revokeObjectURL(url);
-      resolve(video.duration);
+      video.remove();
+    }
+
+    video.onloadedmetadata = () => {
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        const duration = video.duration;
+        cleanup();
+        resolve(duration);
+        return;
+      }
+      // The file being read here is always a just-exported/recorded
+      // clip, which commonly reports a bogus duration (Infinity, NaN)
+      // until something forces a seek near the true end — same fix
+      // already applied in video-editor.tsx and use-clip-combiner.ts.
+      const onFixed = () => {
+        video.removeEventListener("durationchange", onFixed);
+        const duration = video.duration;
+        cleanup();
+        resolve(duration);
+      };
+      video.addEventListener("durationchange", onFixed);
+      video.currentTime = 1e10;
     };
     video.onerror = () => {
-      URL.revokeObjectURL(url);
+      cleanup();
       reject(new Error("Could not read video."));
     };
     video.src = url;
