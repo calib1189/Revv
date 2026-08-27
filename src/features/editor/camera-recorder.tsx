@@ -52,17 +52,30 @@ function pickVideoMimeType(): string {
   return "video/webm";
 }
 
-/** Scales target bitrate to the actual capture resolution. 1080p is the
- * ceiling this component asks the camera for (see the getUserMedia call
- * below) — going higher (we tried 4K) overloads real-time encoding on
- * mid-range phones, which is what caused dropped frames during recording
- * and blocky, over-compressed-looking playback afterward: the encoder
- * falls behind and has to sacrifice quality to keep up. 1080p at a solid
- * bitrate is what every mainstream social app actually records at for
- * exactly this reason. */
-function pickVideoBitsPerSecond(width: number, height: number): number {
+// 720p @ 60fps instead of the old 1080p @ 30fps — chosen so the actual
+// per-second workload (pixels drawn/encoded per second) comes out roughly
+// the same or lower (1280×720×60 ≈ 1920×1080×30), while frame rate — the
+// thing that actually reads as "smooth" motion — doubles. True 120fps
+// isn't on the table at all: it depends on hardware capture formats
+// (AVFoundation's high-frame-rate modes) that getUserMedia doesn't expose
+// on iOS, so requesting it wouldn't do anything but get silently clamped
+// to whatever the device's normal ceiling actually is. This is the real,
+// deliverable version of "smoother" — not a bigger number that the
+// platform can't back up, and not something that makes the actual
+// dropped-frame problem worse by asking for more pixels *and* more
+// frames per second at the same time.
+const CAPTURE_FPS = 60;
+
+/** Scales target bitrate to the actual capture resolution and frame rate.
+ * 720p is the ceiling this component asks the camera for (see the
+ * getUserMedia call below) — going higher (we tried 4K at 1080p/30fps)
+ * overloads real-time encoding on mid-range phones, which is what caused
+ * dropped frames during recording and blocky, over-compressed-looking
+ * playback afterward: the encoder falls behind and has to sacrifice
+ * quality to keep up. */
+function pickVideoBitsPerSecond(width: number, height: number, fps: number): number {
   const pixels = width * height;
-  const bitsPerSecond = Math.round(pixels * 0.14 * 30);
+  const bitsPerSecond = Math.round(pixels * 0.14 * fps);
   return Math.min(Math.max(bitsPerSecond, 4_000_000), 16_000_000);
 }
 
@@ -158,13 +171,12 @@ export function CameraRecorder({
           video: {
             facingMode,
             // Soft ("ideal") constraints — the browser picks the closest
-            // resolution the camera actually supports rather than failing
-            // outright. Capped at 1080p on purpose: see
-            // pickVideoBitsPerSecond above for why higher isn't actually
-            // better here.
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30 },
+            // resolution/frame rate the camera actually supports rather
+            // than failing outright. Capped at 720p/60fps on purpose: see
+            // pickVideoBitsPerSecond and CAPTURE_FPS above for why.
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: CAPTURE_FPS },
           },
           audio: true,
         });
@@ -218,11 +230,11 @@ export function CameraRecorder({
     let lastDrawAt = 0;
     // requestAnimationFrame runs at the display's own refresh rate
     // (60-120Hz on a real phone) — drawing a full frame that often is
-    // wasted work for what's ultimately captured at 30fps
-    // (canvas.captureStream(30) below), and contends with the recorder
-    // for the same CPU budget. Throttling the actual draw to ~30fps
-    // leaves more headroom for encoding to keep up, for smoother output.
-    const frameIntervalMs = 1000 / 30;
+    // wasted work for what's ultimately captured at CAPTURE_FPS
+    // (canvas.captureStream(CAPTURE_FPS) below), and contends with the
+    // recorder for the same CPU budget. Throttling the actual draw to
+    // match leaves more headroom for encoding to keep up.
+    const frameIntervalMs = 1000 / CAPTURE_FPS;
     function draw() {
       const now = performance.now();
       if (now - lastDrawAt < frameIntervalMs) {
@@ -332,7 +344,7 @@ export function CameraRecorder({
     const canvas = canvasRef.current;
     if (!stream || !canvas) return;
 
-    const canvasStream = canvas.captureStream(30);
+    const canvasStream = canvas.captureStream(CAPTURE_FPS);
 
     // Feeding the mic's own MediaStreamTrack straight into a MediaStream
     // built alongside an unrelated canvas video track is a known WebKit
@@ -360,7 +372,7 @@ export function CameraRecorder({
     const baseType = mimeType.split(";")[0];
     const recorder = new MediaRecorder(combined, {
       mimeType,
-      videoBitsPerSecond: pickVideoBitsPerSecond(canvas.width, canvas.height),
+      videoBitsPerSecond: pickVideoBitsPerSecond(canvas.width, canvas.height, CAPTURE_FPS),
     });
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
