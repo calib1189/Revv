@@ -557,6 +557,12 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["shop_promotions"]["Insert"]>;
         Relationships: never[];
       };
+      places_search_cache: {
+        Row: { cache_key: string; response: Json; created_at: string };
+        Insert: { cache_key: string; response: Json; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["places_search_cache"]["Insert"]>;
+        Relationships: never[];
+      };
       ai_identify_attempts: {
         Row: { id: string; user_id: string; created_at: string };
         Insert: { id?: string; user_id: string; created_at?: string };

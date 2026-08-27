@@ -10,6 +10,7 @@ import { isShopCategoryId } from "@/lib/shops/categories";
 import { isShopPromotionBillingConfigured } from "@/lib/billing/config";
 import { createShopPromotionCheckoutSession } from "@/lib/billing/stripe";
 import { createShopPromotion, getActivePromotedPlaceIds, SHOP_PROMOTION_PRICE_CENTS } from "@/lib/db/shop-promotions";
+import { buildPlacesCacheKey, getCachedPlacesSearch, setCachedPlacesSearch } from "@/lib/db/places-cache";
 import type { Shop, ShopSearchResponse } from "@/lib/providers/places-provider";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
@@ -77,8 +78,16 @@ export async function searchNearbyShopsAction({
   }
 
   const supabase = await createClient();
-  const ip = await getClientIp();
 
+  // Checked before the rate limit, and a hit bypasses it entirely — a
+  // cached answer costs nothing and didn't call Google at all, so there's
+  // no reason to burn someone's limited quota (or make them wait) for a
+  // search someone else already ran for the same category/area today.
+  const cacheKey = buildPlacesCacheKey("category", category, lat, lng);
+  const cached = await getCachedPlacesSearch(supabase, cacheKey);
+  if (cached) return await withPromotionStatus(supabase, cached);
+
+  const ip = await getClientIp();
   if (!(await isUnderShopsSearchRateLimit(supabase, ip))) {
     return { shops: [], isMock: false, rateLimited: true };
   }
@@ -86,6 +95,10 @@ export async function searchNearbyShopsAction({
   try {
     await recordShopsSearchAttempt(supabase, ip);
     const response = await getPlacesProvider().searchNearbyShops({ lat, lng, category });
+    // Never cache a mock (not-configured) response — there's no cost to
+    // save from it, and caching it would just serve a stale "not set up
+    // yet" placeholder after the real key gets configured.
+    if (!response.isMock) await setCachedPlacesSearch(cacheKey, response);
     return await withPromotionStatus(supabase, response);
   } catch (err) {
     console.error("searchNearbyShopsAction failed:", err);
@@ -120,8 +133,16 @@ export async function searchShopsByQueryAction({
   }
 
   const supabase = await createClient();
-  const ip = await getClientIp();
 
+  // Same cache-before-rate-limit reasoning as searchNearbyShopsAction —
+  // a repeat lookup for the same business name in the same area (someone
+  // re-opening "Promote your shop" a day later, or two different people
+  // searching the same shop) reuses the answer instead of paying again.
+  const cacheKey = buildPlacesCacheKey("query", trimmed, lat, lng);
+  const cached = await getCachedPlacesSearch(supabase, cacheKey);
+  if (cached) return await withPromotionStatus(supabase, cached);
+
+  const ip = await getClientIp();
   if (!(await isUnderShopsSearchRateLimit(supabase, ip))) {
     return { shops: [], isMock: false, rateLimited: true };
   }
@@ -129,6 +150,7 @@ export async function searchShopsByQueryAction({
   try {
     await recordShopsSearchAttempt(supabase, ip);
     const response = await getPlacesProvider().searchShopsByQuery({ lat, lng, query: trimmed });
+    if (!response.isMock) await setCachedPlacesSearch(cacheKey, response);
     return await withPromotionStatus(supabase, response);
   } catch (err) {
     console.error("searchShopsByQueryAction failed:", err);
