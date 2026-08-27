@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { verifyStripeSignature } from "@/lib/billing/stripe";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { SHOP_PROMOTION_DURATION_DAYS } from "@/lib/db/shop-promotions";
-import type { Subscription } from "@/lib/db/subscriptions";
 
 interface StripeEvent {
   type: string;
@@ -94,49 +93,6 @@ export async function POST(request: NextRequest) {
         }
       }
       return NextResponse.json({ received: true });
-    }
-
-    const userId = metadata?.user_id;
-    const customerId = session.customer as string | undefined;
-    const subscriptionId = session.subscription as string | undefined;
-
-    if (userId && customerId) {
-      const { error } = await supabase.from("subscriptions").upsert(
-        {
-          user_id: userId,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: subscriptionId ?? null,
-          status: "active",
-        },
-        { onConflict: "user_id" },
-      );
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-    }
-  } else if (
-    event.type === "customer.subscription.updated" ||
-    event.type === "customer.subscription.deleted"
-  ) {
-    const subscription = event.data.object;
-    const subscriptionId = subscription.id as string;
-    const periodEnd = subscription.current_period_end as number | undefined;
-    const status: Subscription["status"] =
-      event.type === "customer.subscription.deleted"
-        ? "canceled"
-        : (subscription.status as Subscription["status"]);
-
-    const { error } = await supabase
-      .from("subscriptions")
-      .update({
-        status,
-        current_period_end: periodEnd
-          ? new Date(periodEnd * 1000).toISOString()
-          : null,
-      })
-      .eq("stripe_subscription_id", subscriptionId);
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
     }
   }
 

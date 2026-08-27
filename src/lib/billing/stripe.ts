@@ -30,41 +30,12 @@ async function stripeRequest<T>(
   return response.json() as Promise<T>;
 }
 
-export async function createCheckoutSession({
-  customerEmail,
-  userId,
-  successUrl,
-  cancelUrl,
-}: {
-  customerEmail: string;
-  userId: string;
-  successUrl: string;
-  cancelUrl: string;
-}): Promise<{ url: string | null }> {
-  const priceId = process.env.STRIPE_PRICE_ID;
-  if (!priceId) throw new Error("STRIPE_PRICE_ID is not configured.");
-
-  const session = await stripeRequest<{ url: string | null }>(
-    "/checkout/sessions",
-    {
-      mode: "subscription",
-      "line_items[0][price]": priceId,
-      "line_items[0][quantity]": "1",
-      customer_email: customerEmail,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      "metadata[user_id]": userId,
-    },
-  );
-  return session;
-}
-
 /**
  * A single one-time charge (mode: "payment", not "subscription") for an
- * ad campaign — no STRIPE_PRICE_ID involved, since the price is
- * per-campaign (its tier's price_cents, looked up server-side in
- * ad-campaigns.ts's AD_TIERS, never trusted from the client) rather
- * than one fixed recurring price like the Pro subscription.
+ * ad campaign — the price is per-campaign (its tier's price_cents,
+ * looked up server-side in ad-campaigns.ts's AD_TIERS, never trusted
+ * from the client), via Stripe's dynamic price_data rather than a fixed
+ * STRIPE_PRICE_ID.
  */
 export async function createAdCheckoutSession({
   campaignId,
