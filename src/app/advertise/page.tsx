@@ -106,7 +106,12 @@ export default async function AdvertisePage({
           it.
         </Callout>
       ) : (
-        <AdCampaignForm userId={user.id} />
+        <div className="flex flex-col gap-4">
+          {campaigns.length > 0 && (
+            <h2 className="text-sm font-medium text-muted">New campaign</h2>
+          )}
+          <AdCampaignForm userId={user.id} />
+        </div>
       )}
 
       <Link href="/feed" className="mt-8 inline-block text-sm text-muted hover:text-foreground">
