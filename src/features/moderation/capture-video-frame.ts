@@ -25,34 +25,51 @@ export function captureVideoFrame(file: File): Promise<File> {
       video.remove();
     }
 
-    video.onloadedmetadata = () => {
-      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+    function seekToMidpointAndCapture(duration: number) {
+      video.onseeked = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth || 320;
+        canvas.height = video.videoHeight || 320;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          cleanup();
+          reject(new Error("Could not create a canvas context."));
+          return;
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => {
+            cleanup();
+            if (!blob) {
+              reject(new Error("Could not capture a video frame."));
+              return;
+            }
+            resolve(new File([blob], "frame.jpg", { type: "image/jpeg" }));
+          },
+          "image/jpeg",
+          0.85,
+        );
+      };
       video.currentTime = duration > 0 ? duration / 2 : 0;
-    };
+    }
 
-    video.onseeked = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth || 320;
-      canvas.height = video.videoHeight || 320;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        cleanup();
-        reject(new Error("Could not create a canvas context."));
+    video.onloadedmetadata = () => {
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        seekToMidpointAndCapture(video.duration);
         return;
       }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => {
-          cleanup();
-          if (!blob) {
-            reject(new Error("Could not capture a video frame."));
-            return;
-          }
-          resolve(new File([blob], "frame.jpg", { type: "image/jpeg" }));
-        },
-        "image/jpeg",
-        0.85,
-      );
+      // The file here is always a just-exported/recorded clip, which
+      // commonly reports a bogus duration (Infinity/NaN) until something
+      // forces a seek near the true end — same fix already applied in
+      // compose-post-form.tsx's readVideoDurationSeconds, video-editor.tsx,
+      // and use-clip-combiner.ts. Missing this the first time around is
+      // exactly what broke video moderation for real recorded clips.
+      const onFixed = () => {
+        video.removeEventListener("durationchange", onFixed);
+        seekToMidpointAndCapture(video.duration);
+      };
+      video.addEventListener("durationchange", onFixed);
+      video.currentTime = 1e10;
     };
 
     video.onerror = () => {
