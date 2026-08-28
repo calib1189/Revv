@@ -9,14 +9,21 @@ import { getPlacesProvider } from "@/lib/providers/get-places-provider";
 import { isShopCategoryId } from "@/lib/shops/categories";
 import { isShopPromotionBillingConfigured } from "@/lib/billing/config";
 import { createShopPromotionCheckoutSession } from "@/lib/billing/stripe";
-import { createShopPromotion, getActivePromotedPlaceIds, SHOP_PROMOTION_PRICE_CENTS } from "@/lib/db/shop-promotions";
+import {
+  createShopPromotion,
+  getActivePromotionTiers,
+  isShopPromotionTier,
+  SHOP_PROMOTION_TIERS,
+  type ShopPromotionTier,
+} from "@/lib/db/shop-promotions";
 import { buildPlacesCacheKey, getCachedPlacesSearch, setCachedPlacesSearch } from "@/lib/db/places-cache";
 import type { Shop, ShopSearchResponse } from "@/lib/providers/places-provider";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
 export interface ShopResult extends Shop {
-  isPromoted: boolean;
+  /** Null when this shop has no active promotion. */
+  promotionTier: ShopPromotionTier | null;
 }
 
 export interface ShopSearchActionResponse {
@@ -29,29 +36,37 @@ export interface ShopSearchActionResponse {
   rateLimited: boolean;
 }
 
+// Higher first — used to rank tiers against each other, and against "no
+// promotion" (rank 0), when sorting search results.
+const TIER_RANK: Record<ShopPromotionTier, number> = { featured: 2, standard: 1 };
+
 /** Cross-references raw Places results against shop_promotions and sorts
- * promoted ones first — shared by both search actions below, since
- * "promote your shop" needs to show the same "already promoted" state a
- * category browse would. Distance sort within each group happens
- * client-side (shops-browser.tsx already computes distance from the
- * viewer's own coordinates for display), so this only needs to guarantee
- * the promoted/not-promoted grouping survives that later sort, which a
- * stable sort here does. */
+ * featured first, then standard-promoted, then everything else — shared
+ * by both search actions below, since "promote your shop" needs to show
+ * the same tier state a category browse would. Distance sort within each
+ * group happens client-side (shops-browser.tsx already computes distance
+ * from the viewer's own coordinates for display), so this only needs to
+ * guarantee the tier grouping survives that later sort, which a stable
+ * sort here does. */
 async function withPromotionStatus(
   supabase: SupabaseClient<Database>,
   { shops, isMock }: ShopSearchResponse,
 ): Promise<ShopSearchActionResponse> {
   if (shops.length === 0) return { shops: [], isMock, rateLimited: false };
 
-  const promotedIds = await getActivePromotedPlaceIds(
+  const tiers = await getActivePromotionTiers(
     supabase,
     shops.map((s) => s.placeId),
   );
   const withPromotion: ShopResult[] = shops.map((shop) => ({
     ...shop,
-    isPromoted: promotedIds.has(shop.placeId),
+    promotionTier: tiers.get(shop.placeId) ?? null,
   }));
-  withPromotion.sort((a, b) => Number(b.isPromoted) - Number(a.isPromoted));
+  withPromotion.sort((a, b) => {
+    const rankA = a.promotionTier ? TIER_RANK[a.promotionTier] : 0;
+    const rankB = b.promotionTier ? TIER_RANK[b.promotionTier] : 0;
+    return rankB - rankA;
+  });
 
   return { shops: withPromotion, isMock, rateLimited: false };
 }
@@ -172,10 +187,12 @@ export interface CreateShopPromotionResult {
 export async function createShopPromotionAction({
   placeId,
   placeName,
+  tier,
   isNative,
 }: {
   placeId: string;
   placeName: string;
+  tier: string;
   /** Same native-app redirect handling as ad/meetup checkout — Checkout
    * has to run in the system browser there, which needs a revv://
    * custom-scheme success/cancel URL instead of a normal one. */
@@ -187,6 +204,9 @@ export async function createShopPromotionAction({
   if (!placeId || !placeName) {
     return { error: "Couldn't identify that shop." };
   }
+  if (!isShopPromotionTier(tier)) {
+    return { error: "Choose a valid plan." };
+  }
 
   const { supabase, user } = await requireUser();
   if (!user.email) return { error: "Your account needs a confirmed email." };
@@ -197,7 +217,8 @@ export async function createShopPromotionAction({
       promoter_id: user.id,
       place_id: placeId,
       place_name: placeName,
-      price_cents: SHOP_PROMOTION_PRICE_CENTS,
+      tier,
+      price_cents: SHOP_PROMOTION_TIERS[tier].priceCents,
     });
   } catch {
     return { error: "Couldn't start that promotion. Try again." };

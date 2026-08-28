@@ -48,9 +48,15 @@ export function ShopCard({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="truncate font-medium">{shop.name}</p>
-              {shop.isPromoted && (
-                <span className="flex-shrink-0 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-accent-foreground">
-                  Promoted
+              {shop.promotionTier && (
+                <span
+                  className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${
+                    shop.promotionTier === "featured"
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-accent/15 text-accent"
+                  }`}
+                >
+                  {shop.promotionTier === "featured" ? "Featured" : "Promoted"}
                 </span>
               )}
             </div>

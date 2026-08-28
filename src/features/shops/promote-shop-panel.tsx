@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { CloseIcon, PinIcon } from "@/components/ui/icons";
 import { searchShopsByQueryAction, createShopPromotionAction } from "@/features/shops/actions";
-import { SHOP_PROMOTION_PRICE_CENTS } from "@/lib/db/shop-promotions";
+import { SHOP_PROMOTION_TIERS, type ShopPromotionTier } from "@/lib/db/shop-promotions";
 import { Callout } from "@/components/ui/callout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ShopResult } from "@/features/shops/actions";
+
+const TIER_ORDER: ShopPromotionTier[] = ["standard", "featured"];
 
 /** "Promote your shop" — a free-text lookup instead of a Promote button
  * on every card. Someone finds their own business by name, picks it from
@@ -26,6 +28,7 @@ export function PromoteShopPanel({
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ShopResult | null>(null);
+  const [tier, setTier] = useState<ShopPromotionTier>("standard");
   const [isPromoting, setIsPromoting] = useState(false);
   const [promoteError, setPromoteError] = useState<string | null>(null);
 
@@ -60,6 +63,13 @@ export function PromoteShopPanel({
     }
   }
 
+  function selectShop(shop: ShopResult) {
+    setSelected(shop);
+    // Defaults to whichever tier is actually worth buying next — no
+    // point defaulting to "standard" if it's already active.
+    setTier(shop.promotionTier === "standard" ? "featured" : "standard");
+  }
+
   async function handlePromote() {
     if (!selected) return;
     setPromoteError(null);
@@ -70,6 +80,7 @@ export function PromoteShopPanel({
       const result = await createShopPromotionAction({
         placeId: selected.placeId,
         placeName: selected.name,
+        tier,
         isNative,
       });
       if (result.error || !result.url) {
@@ -129,16 +140,16 @@ export function PromoteShopPanel({
                 <button
                   key={shop.placeId}
                   type="button"
-                  onClick={() => setSelected(shop)}
+                  onClick={() => selectShop(shop)}
                   className={`flex flex-col gap-1 rounded-xl border px-3.5 py-3 text-left transition-colors ${
                     selected?.placeId === shop.placeId ? "border-accent bg-accent/10" : "border-border"
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <p className="font-medium">{shop.name}</p>
-                    {shop.isPromoted && (
+                    {shop.promotionTier && (
                       <span className="flex-shrink-0 rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-accent-foreground">
-                        Already promoted
+                        {shop.promotionTier === "featured" ? "Featured" : "Promoted"}
                       </span>
                     )}
                   </div>
@@ -155,20 +166,50 @@ export function PromoteShopPanel({
         </div>
 
         {selected && (
-          <div className="border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
+          <div className="flex flex-col gap-3 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
             {promoteError && <Callout tone="danger">{promoteError}</Callout>}
-            <Button
-              type="button"
-              onClick={handlePromote}
-              disabled={isPromoting || selected.isPromoted}
-              className="w-full py-3"
-            >
-              {selected.isPromoted
-                ? "Already promoted"
-                : isPromoting
-                  ? "Starting checkout…"
-                  : `Promote ${selected.name} · $${(SHOP_PROMOTION_PRICE_CENTS / 100).toFixed(0)}`}
-            </Button>
+
+            {selected.promotionTier === "featured" ? (
+              <p className="text-center text-sm text-muted">
+                {selected.name} already has the top Featured spot.
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2">
+                  {TIER_ORDER.map((t) => {
+                    const info = SHOP_PROMOTION_TIERS[t];
+                    const alreadyActive = selected.promotionTier === t;
+                    return (
+                      <label
+                        key={t}
+                        className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors ${
+                          tier === t ? "border-accent bg-accent/10" : "border-border"
+                        } ${alreadyActive ? "opacity-50" : "cursor-pointer"}`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="shop-promotion-tier"
+                            checked={tier === t}
+                            disabled={alreadyActive}
+                            onChange={() => setTier(t)}
+                          />
+                          <span className="font-medium">{info.label}</span>
+                        </span>
+                        <span className="text-muted">
+                          {alreadyActive ? "Already active" : `$${(info.priceCents / 100).toFixed(0)}`}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <Button type="button" onClick={handlePromote} disabled={isPromoting} className="w-full py-3">
+                  {isPromoting
+                    ? "Starting checkout…"
+                    : `Promote ${selected.name} · $${(SHOP_PROMOTION_TIERS[tier].priceCents / 100).toFixed(0)}`}
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>

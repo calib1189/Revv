@@ -74,13 +74,13 @@ export function ShopsBrowser() {
   const sorted = useMemo(() => {
     if (!shops) return [];
     return [...shops].sort((a, b) => {
-      // Promoted shops always sort ahead of everything else, regardless
-      // of distance — searchNearbyShopsAction already returns them in
-      // this order, but re-sorting by pure distance below would destroy
-      // that grouping if this comparator didn't check it first.
-      const promotedA = a.isPromoted ? 0 : 1;
-      const promotedB = b.isPromoted ? 0 : 1;
-      if (promotedA !== promotedB) return promotedA - promotedB;
+      // Featured, then standard-promoted, then everything else, always
+      // ahead of distance — searchNearbyShopsAction already returns them
+      // in this order, but re-sorting by pure distance below would
+      // destroy that grouping if this comparator didn't check it first.
+      const rankA = a.promotionTier === "featured" ? 2 : a.promotionTier === "standard" ? 1 : 0;
+      const rankB = b.promotionTier === "featured" ? 2 : b.promotionTier === "standard" ? 1 : 0;
+      if (rankA !== rankB) return rankB - rankA;
 
       if (location.status !== "ready") return 0;
       const { coords } = location;

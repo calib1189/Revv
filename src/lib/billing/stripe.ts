@@ -112,9 +112,9 @@ export async function createMeetupCheckoutSession({
 
 /**
  * A single one-time charge to promote a shop listing to the top of its
- * category on the Discover page — same dynamic price_data shape as the
- * ad campaign and meetup checkouts, just a flat price/duration instead
- * of a tier lookup (see SHOP_PROMOTION_PRICE_CENTS in shop-promotions.ts).
+ * category on the Discover page — same dynamic price_data shape and same
+ * tier-lookup pattern (see SHOP_PROMOTION_TIERS in shop-promotions.ts) as
+ * the ad campaign and meetup checkouts.
  */
 export async function createShopPromotionCheckoutSession({
   promotionId,
