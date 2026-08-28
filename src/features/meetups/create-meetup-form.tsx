@@ -16,8 +16,8 @@ import { Callout } from "@/components/ui/callout";
 import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
 
 const MAX_PHOTOS = 5;
-const TIER_ORDER: MeetupTier[] = ["standard", "promoted"];
-const TIER_METALS: Record<MeetupTier, TierMetal> = { standard: "silver", promoted: "gold" };
+const TIER_ORDER: MeetupTier[] = ["standard", "promoted", "diamond"];
+const TIER_METALS: Record<MeetupTier, TierMetal> = { standard: "silver", promoted: "gold", diamond: "diamond" };
 
 interface SelectedPhoto {
   file: File;
@@ -278,11 +278,16 @@ export function CreateMeetupForm({ userId }: { userId: string }) {
             id: t,
             metal: TIER_METALS[t],
             priceCents: MEETUP_TIERS[t].priceCents,
-            subtitle: t === "promoted" ? "Sorts ahead of every Silver meetup" : "Just requires payment to post",
+            subtitle:
+              t === "diamond"
+                ? "Top-tier placement — sorts above every Gold and Silver meet"
+                : t === "promoted"
+                  ? "Sorts above Silver listings"
+                  : "Just requires payment to post",
           }))}
         />
         <p className="mt-1.5 text-xs text-muted">
-          Gold meets sort ahead of every Silver one, regardless of distance.
+          Higher tiers sort ahead of lower ones, regardless of distance.
         </p>
       </div>
 

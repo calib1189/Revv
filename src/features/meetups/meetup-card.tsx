@@ -1,9 +1,18 @@
 import Link from "next/link";
 import Image from "next/image";
-import { PinIcon, CompassIcon, TimerIcon } from "@/components/ui/icons";
+import { PinIcon, CompassIcon, TimerIcon, GemIcon } from "@/components/ui/icons";
 import { formatDateTime } from "@/lib/format/date";
 import { formatDistance } from "@/lib/geo/distance";
-import type { Meetup } from "@/lib/db/meetups";
+import { MEETUP_TIERS, type Meetup, type MeetupTier } from "@/lib/db/meetups";
+import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
+
+// Same silver/gold/diamond palette as components/ui/tier-picker.tsx —
+// reused for color only, no functional link to the rank system.
+const TIER_METAL_COLORS: Record<MeetupTier, string> = {
+  standard: RANK_TEXT_COLORS.silver,
+  promoted: RANK_TEXT_COLORS.gold,
+  diamond: RANK_TEXT_COLORS.diamond,
+};
 
 export interface MeetupCardData {
   meetup: Meetup;
@@ -55,9 +64,16 @@ export function MeetupCard({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="truncate font-medium">{meetup.title}</p>
-              {meetup.tier === "promoted" && (
-                <span className="flex-shrink-0 rounded-full bg-accent px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-accent-foreground">
-                  Promoted
+              {meetup.tier !== "standard" && (
+                <span
+                  className="flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: `${TIER_METAL_COLORS[meetup.tier]}26`,
+                    color: TIER_METAL_COLORS[meetup.tier],
+                  }}
+                >
+                  <GemIcon className="h-2.5 w-2.5" />
+                  {MEETUP_TIERS[meetup.tier].label}
                 </span>
               )}
             </div>

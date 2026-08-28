@@ -435,7 +435,7 @@ export interface Database {
           starts_at: string;
           created_at: string;
           status: "pending_payment" | "active";
-          tier: "standard" | "promoted";
+          tier: "standard" | "promoted" | "diamond";
           price_cents: number;
           stripe_checkout_session_id: string | null;
         };
@@ -450,7 +450,7 @@ export interface Database {
           starts_at: string;
           created_at?: string;
           status?: "pending_payment" | "active";
-          tier?: "standard" | "promoted";
+          tier?: "standard" | "promoted" | "diamond";
           price_cents?: number;
           stripe_checkout_session_id?: string | null;
         };

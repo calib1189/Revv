@@ -3,9 +3,20 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
+import { getCurrentUser } from "@/lib/auth/get-user";
+import { createClient } from "@/lib/supabase/server";
 import { isMeetupBillingConfigured } from "@/lib/billing/config";
 import { createMeetupCheckoutSession } from "@/lib/billing/stripe";
-import { createMeetup, getMeetupById, deleteMeetup, MEETUP_TIERS, isMeetupTier } from "@/lib/db/meetups";
+import {
+  createMeetup,
+  getMeetupById,
+  deleteMeetup,
+  listMeetupsByHost,
+  MEETUP_TIERS,
+  isMeetupTier,
+  type Meetup,
+} from "@/lib/db/meetups";
+import { getMeetupViewCountsForMeetups } from "@/lib/db/meetup-views";
 import { validateMeetup } from "@/lib/validation/meetup";
 
 export async function deleteMeetupAction(meetupId: string): Promise<void> {
@@ -130,4 +141,35 @@ export async function createMeetupCheckoutAction({
 
   if (!url) return { error: "Couldn't start checkout. Try again." };
   return { url };
+}
+
+export interface MeetupWithViewCount {
+  meetup: Meetup;
+  viewCount: number;
+}
+
+export interface MyMeetupsResponse {
+  meetups: MeetupWithViewCount[];
+  requiresAuth: boolean;
+}
+
+/** Backs the "My meetups" panel — every meetup someone has hosted,
+ * newest first, with its view count. Returns requiresAuth rather than
+ * throwing when logged out, same shape as getMyShopPromotionsAction in
+ * features/shops/actions.ts, so the panel can show a clean "log in to
+ * see this" message instead of a generic error. */
+export async function getMyMeetupsAction(): Promise<MyMeetupsResponse> {
+  const user = await getCurrentUser();
+  if (!user) return { meetups: [], requiresAuth: true };
+
+  const supabase = await createClient();
+  const meetups = await listMeetupsByHost(supabase, user.id);
+  const viewCounts = await getMeetupViewCountsForMeetups(
+    supabase,
+    meetups.map((m) => m.id),
+  );
+  return {
+    meetups: meetups.map((meetup) => ({ meetup, viewCount: viewCounts.get(meetup.id) ?? 0 })),
+    requiresAuth: false,
+  };
 }

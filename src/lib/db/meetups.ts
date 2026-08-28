@@ -8,13 +8,26 @@ export type MeetupTier = Meetup["tier"];
 /** The only prices that exist — looked up server-side by tier key, never
  * trusted from the client, same reasoning as AD_TIERS in ad-campaigns.ts.
  * Labels match the Silver/Gold/Diamond branding used across every paid
- * tier in the app — see components/ui/tier-picker.tsx. "Gold" sorts
- * ahead of every "Silver" meetup regardless of distance (see
- * listUpcomingMeetups) — it's the same "pay for more visibility" idea as
- * an ad campaign, just for a listing. */
+ * tier in the app — see components/ui/tier-picker.tsx. Each tier sorts
+ * ahead of every tier below it regardless of distance (enforced
+ * client-side in meetups-list.tsx, using MEETUP_TIER_RANK below) — the
+ * same "pay for more visibility" idea as an ad campaign, just for a
+ * listing. Diamond is top-tier placement, NOT a guaranteed #1 slot: two
+ * Diamond meets in the same area are tie-broken by distance from
+ * whoever's viewing, same as shop promotions (see
+ * shop-promotions.ts) — don't market it as exclusive in copy. */
 export const MEETUP_TIERS: Record<MeetupTier, { label: string; priceCents: number }> = {
   standard: { label: "Silver", priceCents: 1000 },
   promoted: { label: "Gold", priceCents: 2500 },
+  diamond: { label: "Diamond", priceCents: 5000 },
+};
+
+/** Higher first — the single source of truth for ranking tiers against
+ * each other when sorting meetups, mirroring SHOP_PROMOTION_TIER_RANK. */
+export const MEETUP_TIER_RANK: Record<MeetupTier, number> = {
+  diamond: 3,
+  promoted: 2,
+  standard: 1,
 };
 
 export function isMeetupTier(value: string): value is MeetupTier {

@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MeetupCard } from "@/features/meetups/meetup-card";
 import { CreateMeetupForm } from "@/features/meetups/create-meetup-form";
+import { MyMeetupsPanel } from "@/features/meetups/my-meetups-panel";
 import { CompassIcon } from "@/components/ui/icons";
 import { haversineMiles } from "@/lib/geo/distance";
-import type { Meetup } from "@/lib/db/meetups";
+import { MEETUP_TIER_RANK, type Meetup } from "@/lib/db/meetups";
 
 export interface MeetupListItem {
   meetup: Meetup;
@@ -24,6 +25,7 @@ export function MeetupsList({
 }) {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
+  const [isMyMeetupsPanelOpen, setIsMyMeetupsPanelOpen] = useState(false);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -48,13 +50,13 @@ export function MeetupsList({
 
   const sorted = useMemo(() => {
     return [...items].sort((a, b) => {
-      // Promoted meets always sort ahead of standard ones, regardless of
-      // distance — the paid-for visibility bump. Only once both are the
-      // same tier does distance (or, with no location, list order) break
-      // the tie.
-      const promotedA = a.meetup.tier === "promoted" ? 0 : 1;
-      const promotedB = b.meetup.tier === "promoted" ? 0 : 1;
-      if (promotedA !== promotedB) return promotedA - promotedB;
+      // Diamond, then Gold, then Silver, always sort ahead of a lower (or
+      // no) tier, regardless of distance — the paid-for visibility bump.
+      // Only once both are the same tier does distance (or, with no
+      // location, list order) break the tie.
+      const rankA = MEETUP_TIER_RANK[a.meetup.tier];
+      const rankB = MEETUP_TIER_RANK[b.meetup.tier];
+      if (rankA !== rankB) return rankB - rankA;
 
       if (!userLocation) return 0;
       const distA =
@@ -76,12 +78,25 @@ export function MeetupsList({
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Car meets near you</h1>
-        <p className="mt-1 text-sm text-muted">
-          Cars &amp; coffee, cruises, track days — real meets happening close by.
-        </p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Car meets near you</h1>
+          <p className="mt-1 text-sm text-muted">
+            Cars &amp; coffee, cruises, track days — real meets happening close by.
+          </p>
+        </div>
+        {currentUserId && (
+          <button
+            type="button"
+            onClick={() => setIsMyMeetupsPanelOpen(true)}
+            className="self-start flex-shrink-0 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
+          >
+            My meetups
+          </button>
+        )}
       </div>
+
+      {isMyMeetupsPanelOpen && <MyMeetupsPanel onClose={() => setIsMyMeetupsPanelOpen(false)} />}
 
       {locationDenied && (
         <p className="mb-4 text-sm text-muted">
