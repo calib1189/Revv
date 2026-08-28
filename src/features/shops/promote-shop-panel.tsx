@@ -212,7 +212,7 @@ export function PromoteShopPanel({
                       priceCents: SHOP_PROMOTION_TIERS[t].priceCents,
                       subtitle:
                         t === "diamond"
-                          ? "Guaranteed top spot"
+                          ? "Top-tier placement — sorts above every Gold and Silver listing"
                           : t === "featured"
                             ? "Sorts above Silver listings"
                             : "Sorts above un-promoted shops",

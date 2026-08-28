@@ -12,8 +12,11 @@ export type ShopPromotionTier = ShopPromotion["tier"];
  * convention shared with the build-rating rank system's color palette
  * (see components/ui/tier-picker.tsx), not connected to it in any other
  * way. Each tier sorts ahead of every tier below it, not just ahead of
- * un-promoted shops — Diamond is a real guaranteed-top-spot option, not
- * just "ahead of the pack". */
+ * un-promoted shops — Diamond is real top-tier placement. It is NOT a
+ * guaranteed #1 slot: if two shops in the same area both buy Diamond,
+ * they're tie-broken by distance from whoever's viewing (see the sort in
+ * shops-browser.tsx), same as any other tier group. Don't market it as
+ * exclusive in copy — see promote-shop-panel.tsx's tier subtitles. */
 export const SHOP_PROMOTION_TIERS: Record<ShopPromotionTier, { label: string; priceCents: number }> = {
   standard: { label: "Silver", priceCents: 2500 },
   featured: { label: "Gold", priceCents: 5000 },
