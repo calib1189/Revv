@@ -84,6 +84,25 @@ export async function listShopPromotionsByPromoter(
   return data;
 }
 
+/** Every currently active (paid, unexpired) shop promotion, regardless of
+ * who bought it — the admin "what's live right now" view, unlike
+ * listShopPromotionsByPromoter (scoped to one person) or
+ * getActivePromotionTiers (scoped to specific place_ids). */
+export async function listAllActiveShopPromotions(
+  supabase: SupabaseClient<Database>,
+): Promise<ShopPromotion[]> {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("shop_promotions")
+    .select("*")
+    .eq("status", "active")
+    .gt("ends_at", nowIso)
+    .order("ends_at", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
 /** Which tier (if any) each of these place_ids currently has an active,
  * unexpired promotion at — used to sort/badge search results after they
  * come back from Places API, since Google itself has no concept of this.

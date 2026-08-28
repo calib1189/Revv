@@ -19,6 +19,11 @@ const SECTIONS = [
     description: "Paid campaigns waiting on review before they go live in the feed.",
   },
   {
+    href: "/admin/active",
+    label: "Currently active",
+    description: "Every ad, shop promotion, and meetup that's live and paid for right now.",
+  },
+  {
     href: "/admin/analytics",
     label: "Analytics",
     description: "Platform totals and activity over the last 30 days.",

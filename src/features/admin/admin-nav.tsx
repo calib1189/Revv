@@ -14,6 +14,7 @@ const LINKS: { href: string; label: string; countKey?: keyof AdminNavCounts }[] 
   { href: "/admin/reports", label: "Reports", countKey: "reports" },
   { href: "/admin/verifications", label: "Verifications", countKey: "verifications" },
   { href: "/admin/ads", label: "Ads", countKey: "ads" },
+  { href: "/admin/active", label: "Active" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/audit-log", label: "Audit log" },
   { href: "/admin/parts", label: "Parts" },

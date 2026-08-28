@@ -25,6 +25,37 @@ export async function getPlatformTotals(
   };
 }
 
+export interface ActiveUserCounts {
+  last24h: number;
+  last7d: number;
+}
+
+/** Distinct viewers who've watched/viewed at least one post recently —
+ * post_views is recorded broadly across the feed, reel, and post page
+ * (see lib/db/post-views.ts), so it's a far better "is anyone actually
+ * using this right now" signal than the events table, which only logs a
+ * handful of named actions (signup, post_created, vehicle_created).
+ * Distinct-count has to be done client-side — PostgREST's count option
+ * counts rows, not unique column values — same reasoning as
+ * getEventCounts' aggregation below. */
+export async function getActiveUserCounts(
+  supabase: SupabaseClient<Database>,
+): Promise<ActiveUserCounts> {
+  const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("post_views")
+    .select("viewer_id, created_at")
+    .gte("created_at", since7d);
+  if (error) throw error;
+
+  const last7d = new Set(data.map((row) => row.viewer_id));
+  const last24h = new Set(data.filter((row) => row.created_at >= since24h).map((row) => row.viewer_id));
+
+  return { last24h: last24h.size, last7d: last7d.size };
+}
+
 export interface EventCount {
   name: string;
   count: number;

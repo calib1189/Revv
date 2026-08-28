@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { getPlatformTotals, getEventCounts } from "@/lib/analytics/queries";
+import { getPlatformTotals, getActiveUserCounts, getEventCounts } from "@/lib/analytics/queries";
 
 export default async function AdminAnalyticsPage() {
   const supabase = await createClient();
-  const [totals, eventCounts] = await Promise.all([
+  const [totals, activeUsers, eventCounts] = await Promise.all([
     getPlatformTotals(supabase),
+    getActiveUserCounts(supabase),
     getEventCounts(supabase, 30),
   ]);
 
@@ -14,7 +15,7 @@ export default async function AdminAnalyticsPage() {
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">Analytics</h1>
 
-      <div className="mb-8 grid grid-cols-3 gap-3">
+      <div className="mb-6 grid grid-cols-3 gap-3">
         <div className="glass rounded-2xl p-4 text-center">
           <p className="text-2xl font-semibold">{totals.profiles}</p>
           <p className="text-xs text-muted">Users</p>
@@ -26,6 +27,18 @@ export default async function AdminAnalyticsPage() {
         <div className="glass rounded-2xl p-4 text-center">
           <p className="text-2xl font-semibold">{totals.posts}</p>
           <p className="text-xs text-muted">Posts</p>
+        </div>
+      </div>
+
+      <h2 className="mb-3 text-sm font-medium text-muted">Current users</h2>
+      <div className="mb-8 grid grid-cols-2 gap-3">
+        <div className="glass rounded-2xl p-4 text-center">
+          <p className="text-2xl font-semibold">{activeUsers.last24h}</p>
+          <p className="text-xs text-muted">Active today</p>
+        </div>
+        <div className="glass rounded-2xl p-4 text-center">
+          <p className="text-2xl font-semibold">{activeUsers.last7d}</p>
+          <p className="text-xs text-muted">Active this week</p>
         </div>
       </div>
 
