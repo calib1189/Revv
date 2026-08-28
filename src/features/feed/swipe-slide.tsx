@@ -57,7 +57,22 @@ function ShareButton({ postId }: { postId: string }) {
   );
 }
 
-function VideoMedia({ url, onDoubleTapLike }: { url: string; onDoubleTapLike: () => void }) {
+function VideoMedia({
+  url,
+  shouldLoad,
+  onDoubleTapLike,
+}: {
+  url: string;
+  /** False until this slide has scrolled near the viewport — until then
+   * `src` isn't set at all, so no request goes out. Every slide loaded
+   * into the feed (initial batch plus every infinite-scroll page) used
+   * to mount a real <video src> immediately regardless of whether it was
+   * ever actually scrolled to, which is exactly what blew up Supabase
+   * Storage egress: every post ever fetched issued a real network
+   * request the moment it was fetched, not when it was watched. */
+  shouldLoad: boolean;
+  onDoubleTapLike: () => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
@@ -104,7 +119,7 @@ function VideoMedia({ url, onDoubleTapLike }: { url: string; onDoubleTapLike: ()
     <div ref={containerRef} className="absolute inset-0" onClick={handleTap}>
       <video
         ref={videoRef}
-        src={url}
+        src={shouldLoad ? url : undefined}
         loop
         playsInline
         preload="metadata"
@@ -127,7 +142,7 @@ function VideoMedia({ url, onDoubleTapLike }: { url: string; onDoubleTapLike: ()
   );
 }
 
-function PhotoMedia({ urls }: { urls: string[] }) {
+function PhotoMedia({ urls, shouldLoad }: { urls: string[]; shouldLoad: boolean }) {
   const [index, setIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -148,8 +163,9 @@ function PhotoMedia({ urls }: { urls: string[] }) {
           // eslint-disable-next-line @next/next/no-img-element -- full-bleed slide, next/image fill needs a sized ancestor we don't have here
           <img
             key={i}
-            src={url}
+            src={shouldLoad ? url : undefined}
             alt=""
+            loading="lazy"
             className="h-full w-full flex-shrink-0 snap-center object-cover"
           />
         ))}
@@ -179,11 +195,37 @@ export function SwipeSlide({
   const isVideo = data.media[0]?.kind === "video";
   const containerRef = useRef<HTMLDivElement>(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [shouldLoadMedia, setShouldLoadMedia] = useState(false);
   const { liked, count: likeCount, toggle: toggleLike, like } = usePostLike(
     data.post.id,
     data.isLiked,
     data.likeCount,
   );
+
+  useEffect(() => {
+    // Every post the feed has fetched (initial batch, every infinite-
+    // scroll page, every category switch) used to mount a real <video>/
+    // <img src> the instant it rendered, regardless of whether it was
+    // ever scrolled to — this is what actually drove Supabase Storage
+    // egress into the 300%+ range with only a handful of real users.
+    // A generous rootMargin starts the request a bit before the slide is
+    // actually on screen (so scrolling still feels instant) without
+    // loading every post in the whole list up front. Once true it stays
+    // true — the point is "don't fetch until needed," not "unload it
+    // again the moment it scrolls away," which would just force a
+    // re-fetch on scrolling back.
+    if (shouldLoadMedia) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setShouldLoadMedia(true);
+      },
+      { rootMargin: "150% 0px", threshold: 0 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [shouldLoadMedia]);
 
   useEffect(() => {
     if (!data.isAuthenticated) return;
@@ -215,9 +257,9 @@ export function SwipeSlide({
     >
       {data.media.length > 0 &&
         (isVideo ? (
-          <VideoMedia url={data.media[0].url} onDoubleTapLike={like} />
+          <VideoMedia url={data.media[0].url} shouldLoad={shouldLoadMedia} onDoubleTapLike={like} />
         ) : (
-          <PhotoMedia urls={data.media.map((m) => m.url)} />
+          <PhotoMedia urls={data.media.map((m) => m.url)} shouldLoad={shouldLoadMedia} />
         ))}
 
       {data.isOwnPost && (
