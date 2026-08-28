@@ -55,8 +55,9 @@ export function ClipCombiner({
     try {
       const { file } = await combineClips(clips);
       onCombined(file);
-    } catch {
-      setError("Couldn't combine those clips. Try again.");
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      setError(`Couldn't combine those clips. (${detail})`);
     }
   }
 

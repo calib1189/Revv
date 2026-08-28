@@ -47,6 +47,13 @@ async function checkMedia(file: File): Promise<{ allowed: boolean; reason?: stri
   return moderateMediaAction(formData);
 }
 
+// The durationchange fix-up below had no ceiling at all — if it never
+// fired (for any reason: a malformed export, a device-specific decoder
+// stall), this promise just hung forever with no error, no way to
+// recover, and no diagnostic signal. Same class of bug as
+// use-clip-combiner.ts's loadClip, fixed the same way.
+const READ_DURATION_TIMEOUT_MS = 15000;
+
 function readVideoDurationSeconds(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -64,14 +71,25 @@ function readVideoDurationSeconds(file: File): Promise<number> {
     video.style.cssText = "position:fixed;left:-9999px;top:0;width:160px;height:160px;";
     document.body.appendChild(video);
 
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error("Timed out reading that video's duration."));
+    }, READ_DURATION_TIMEOUT_MS);
+
     function cleanup() {
+      clearTimeout(timer);
       URL.revokeObjectURL(url);
       video.remove();
     }
 
     video.onloadedmetadata = () => {
+      if (settled) return;
       if (Number.isFinite(video.duration) && video.duration > 0) {
         const duration = video.duration;
+        settled = true;
         cleanup();
         resolve(duration);
         return;
@@ -81,8 +99,10 @@ function readVideoDurationSeconds(file: File): Promise<number> {
       // until something forces a seek near the true end — same fix
       // already applied in video-editor.tsx and use-clip-combiner.ts.
       const onFixed = () => {
+        if (settled) return;
         video.removeEventListener("durationchange", onFixed);
         const duration = video.duration;
+        settled = true;
         cleanup();
         resolve(duration);
       };
@@ -90,8 +110,21 @@ function readVideoDurationSeconds(file: File): Promise<number> {
       video.currentTime = 1e10;
     };
     video.onerror = () => {
+      if (settled) return;
+      settled = true;
+      // Surfaces the browser's own MediaError code/message (e.g.
+      // MEDIA_ERR_SRC_NOT_SUPPORTED, MEDIA_ERR_DECODE) instead of a
+      // generic string, so a report of this failure actually carries
+      // real diagnostic signal instead of another dead end.
+      const mediaError = video.error;
       cleanup();
-      reject(new Error("Could not read video."));
+      reject(
+        new Error(
+          mediaError
+            ? `Could not read video (code ${mediaError.code}: ${mediaError.message || "no message"}).`
+            : "Could not read video.",
+        ),
+      );
     };
     video.src = url;
   });
@@ -216,8 +249,14 @@ export function ComposePostForm({
       const durationSeconds = await readVideoDurationSeconds(file);
       const durationError = validateVideoDuration(durationSeconds);
       if (durationError) return setError(durationError);
-    } catch {
-      return setError("Couldn't read that video file.");
+    } catch (err) {
+      // The real underlying reason (a MediaError code, a timeout) used
+      // to be thrown away here in favor of one generic string — leaving
+      // no way to tell a genuinely corrupt export apart from a device-
+      // specific decoder stall from a report of "couldn't read that
+      // video file" alone.
+      const detail = err instanceof Error ? err.message : String(err);
+      return setError(`Couldn't read that video file. (${detail})`);
     }
 
     clearVideo();

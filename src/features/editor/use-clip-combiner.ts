@@ -29,6 +29,15 @@ function pickBitsPerSecond(width: number, height: number): number {
   return Math.min(Math.max(bitsPerSecond, 4_000_000), 16_000_000);
 }
 
+// Every wait point below (loadedmetadata, the durationchange fix-up) had
+// no ceiling at all — if a clip stalled at any one of them for any reason
+// (a codec quirk, a device-specific decoder stall), the whole
+// Promise.all in combineClips below just hung forever with no error and
+// no way to recover, which is exactly what "stuck on loading" looks
+// like from the outside. This ceiling turns a silent hang into a real,
+// actionable error instead.
+const LOAD_CLIP_TIMEOUT_MS = 15000;
+
 /** Loads a clip's metadata, working around the same lazily-written-
  * duration bug documented in video-editor.tsx: a clip produced by
  * MediaRecorder (which every clip fed in here either is, or resembles)
@@ -48,7 +57,19 @@ function loadClip(file: File): Promise<{ video: HTMLVideoElement; url: string; d
     video.style.cssText = "position:fixed;left:-9999px;top:0;width:160px;height:160px;";
     document.body.appendChild(video);
 
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(url);
+      video.remove();
+      reject(new Error(`Couldn't read "${file.name}" — it may be corrupted or in an unsupported format.`));
+    }, LOAD_CLIP_TIMEOUT_MS);
+
     function finish(d: number) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       resolve({ video, url, duration: d });
     }
 
@@ -72,6 +93,9 @@ function loadClip(file: File): Promise<{ video: HTMLVideoElement; url: string; d
     video.addEventListener(
       "error",
       () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
         URL.revokeObjectURL(url);
         video.remove();
         reject(new Error(`Couldn't read "${file.name}".`));

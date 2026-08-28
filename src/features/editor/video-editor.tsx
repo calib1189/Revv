@@ -359,8 +359,13 @@ export function VideoEditor({
       const { blob, extension } = await exportVideo(video, source, state);
       const file = new File([blob], `revv-clip.${extension}`, { type: blob.type });
       onExported(file);
-    } catch {
-      setError("Couldn't finish editing that video. Try again.");
+    } catch (err) {
+      // Surfaces the real underlying reason (a MediaRecorder construction
+      // failure, a codec issue, decodeAudioData rejecting) instead of one
+      // generic string that gives no way to tell what actually happened
+      // on a given device.
+      const detail = err instanceof Error ? err.message : String(err);
+      setError(`Couldn't finish editing that video. (${detail})`);
     }
   }
 
