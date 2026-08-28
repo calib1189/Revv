@@ -3,14 +3,15 @@ import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getPostById } from "@/lib/db/posts";
-import { getProfileByUserId } from "@/lib/db/profiles";
+import { getProfileByUserId, getProfilesByIds } from "@/lib/db/profiles";
 import { getVehicleById } from "@/lib/db/vehicles";
 import { listPostMediaForPosts } from "@/lib/db/post-media";
-import { publicMediaUrl } from "@/lib/db/media";
+import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { getLikeCount, getLikedPostIds } from "@/lib/db/likes";
 import { getSavedPostIds } from "@/lib/db/saves";
 import { getViewCount, recordPostView } from "@/lib/db/post-views";
 import { listCommentsByPost } from "@/lib/db/comments";
+import { getBestRatingScoresByOwnerIds } from "@/lib/rating/best-build-scores";
 import { Avatar } from "@/features/feed/avatar";
 import { CaptionText } from "@/features/feed/caption-text";
 import { EyeIcon } from "@/components/ui/icons";
@@ -60,23 +61,36 @@ export default async function PostPage({
   }
   const viewCount = await getViewCount(supabase, post.id);
 
-  const [likedIds, savedIds, commentAuthors] = await Promise.all([
+  const commentAuthorIds = [...new Set(comments.map((c) => c.author_id))];
+
+  const [likedIds, savedIds, commentAuthors, commentAuthorScores] = await Promise.all([
     user ? getLikedPostIds(supabase, user.id, [post.id]) : Promise.resolve(new Set<string>()),
     user ? getSavedPostIds(supabase, user.id, [post.id]) : Promise.resolve(new Set<string>()),
-    Promise.all(
-      [...new Set(comments.map((c) => c.author_id))].map((id) =>
-        getProfileByUserId(supabase, id),
-      ),
-    ),
+    getProfilesByIds(supabase, commentAuthorIds),
+    getBestRatingScoresByOwnerIds(supabase, commentAuthorIds),
   ]);
 
-  const authorUsernameById = new Map(
-    commentAuthors.filter(Boolean).map((p) => [p!.id, p!.username]),
+  const commentAuthorById = new Map(commentAuthors.map((p) => [p.id, p]));
+  const commentAuthorAvatarIds = commentAuthors
+    .map((p) => p.avatar_media_id)
+    .filter((id): id is string => Boolean(id));
+  const commentAuthorAvatarMedia = await getMediaByIds(supabase, commentAuthorAvatarIds);
+  const commentAvatarUrlByMediaId = new Map(
+    commentAuthorAvatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
-  const commentsWithAuthor = comments.map((c) => ({
-    ...c,
-    authorUsername: authorUsernameById.get(c.author_id) ?? "unknown",
-  }));
+
+  const commentsWithAuthor = comments.map((c) => {
+    const authorProfile = commentAuthorById.get(c.author_id);
+    return {
+      ...c,
+      authorUsername: authorProfile?.username ?? "unknown",
+      authorDisplayName: authorProfile?.display_name ?? null,
+      authorAvatarUrl: authorProfile?.avatar_media_id
+        ? (commentAvatarUrlByMediaId.get(authorProfile.avatar_media_id) ?? null)
+        : null,
+      authorRatingScore: commentAuthorScores.get(c.author_id) ?? null,
+    };
+  });
 
   const isOwner = user?.id === post.author_id;
   const vehicleTitle = vehicle

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/features/feed/avatar";
+import { RankFrame } from "@/features/garage/rank-frame";
 import { DeleteCommentButton } from "@/features/feed/delete-comment-button";
 import { CommentForm } from "@/features/feed/comment-form";
 import { relativeTime } from "@/lib/format/relative-time";
@@ -10,6 +11,13 @@ import type { Comment } from "@/lib/db/comments";
 
 export interface CommentWithAuthor extends Comment {
   authorUsername: string;
+  /** Null when they haven't set one — falls back to @username. */
+  authorDisplayName: string | null;
+  authorAvatarUrl: string | null;
+  /** Highest ai_rating_score across the commenter's own vehicles' active
+   * builds (see lib/rating/best-build-scores.ts) — null if they have no
+   * rated build, in which case RankFrame renders no badge at all. */
+  authorRatingScore: number | null;
 }
 
 export function CommentList({
@@ -112,14 +120,16 @@ function CommentRow({
 }) {
   return (
     <div className="flex gap-3">
-      <Avatar username={comment.authorUsername} />
+      <RankFrame score={comment.authorRatingScore} compact hideBadge className="flex-shrink-0 rounded-full">
+        <Avatar username={comment.authorUsername} avatarUrl={comment.authorAvatarUrl} />
+      </RankFrame>
       <div className="min-w-0 flex-1">
         <p className="text-sm">
           <Link
             href={`/u/${comment.authorUsername}`}
             className="font-medium hover:underline"
           >
-            @{comment.authorUsername}
+            {comment.authorDisplayName || `@${comment.authorUsername}`}
           </Link>{" "}
           {comment.body}
         </p>

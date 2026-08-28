@@ -12,8 +12,10 @@ import { recordPostView } from "@/lib/db/post-views";
 import { createComment, deleteComment, listCommentsByPost } from "@/lib/db/comments";
 import { deletePost, listFeedPosts, getPostById } from "@/lib/db/posts";
 import { createReport } from "@/lib/db/reports";
-import { getProfileByUserId } from "@/lib/db/profiles";
+import { getProfileByUserId, getProfilesByIds } from "@/lib/db/profiles";
 import { listVehicleIdsByCategory } from "@/lib/db/vehicles";
+import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { getBestRatingScoresByOwnerIds } from "@/lib/rating/best-build-scores";
 import { validateComment } from "@/lib/validation/comment";
 import { composePostCards } from "@/lib/feed/compose-post-cards";
 import { sendPushToUser } from "@/lib/push/send";
@@ -143,16 +145,31 @@ export async function listCommentsForSheetAction(postId: string): Promise<Commen
   ]);
 
   const authorIds = [...new Set(comments.map((c) => c.author_id))];
-  const authors = await Promise.all(authorIds.map((id) => getProfileByUserId(supabase, id)));
-  const usernameById = new Map(
-    authors.filter((a): a is NonNullable<typeof a> => Boolean(a)).map((a) => [a.id, a.username]),
+  const [authors, authorScores] = await Promise.all([
+    getProfilesByIds(supabase, authorIds),
+    getBestRatingScoresByOwnerIds(supabase, authorIds),
+  ]);
+  const authorById = new Map(authors.map((a) => [a.id, a]));
+
+  const avatarIds = authors.map((a) => a.avatar_media_id).filter((id): id is string => Boolean(id));
+  const avatarMedia = await getMediaByIds(supabase, avatarIds);
+  const avatarUrlByMediaId = new Map(
+    avatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
 
   return {
-    comments: comments.map((c) => ({
-      ...c,
-      authorUsername: usernameById.get(c.author_id) ?? "unknown",
-    })),
+    comments: comments.map((c) => {
+      const author = authorById.get(c.author_id);
+      return {
+        ...c,
+        authorUsername: author?.username ?? "unknown",
+        authorDisplayName: author?.display_name ?? null,
+        authorAvatarUrl: author?.avatar_media_id
+          ? (avatarUrlByMediaId.get(author.avatar_media_id) ?? null)
+          : null,
+        authorRatingScore: authorScores.get(c.author_id) ?? null,
+      };
+    }),
     currentUserId: user?.id ?? null,
   };
 }
