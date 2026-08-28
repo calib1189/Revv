@@ -1,20 +1,11 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { listPendingReviewCampaigns, listCampaignsByAdvertiser, AD_TIERS } from "@/lib/db/ad-campaigns";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
-import { AdminNav } from "@/features/admin/admin-nav";
 import { AdCampaignRow, type AdCampaignRowData } from "@/features/admin/ad-campaign-row";
 
 export default async function AdminAdsPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/admin/ads");
-
   const supabase = await createClient();
-  const profile = await getProfileByUserId(supabase, user.id);
-  if (!profile?.is_admin) redirect("/feed");
-
   const campaigns = await listPendingReviewCampaigns(supabase);
   const advertisers = await Promise.all(
     campaigns.map((c) => getProfileByUserId(supabase, c.advertiser_id)),
@@ -69,10 +60,7 @@ export default async function AdminAdsPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
-      <div className="mb-2 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Ad review</h1>
-        <AdminNav current="/admin/ads" />
-      </div>
+      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Ad review</h1>
       <p className="mb-6 text-sm text-muted">
         Paid and waiting on you — approving puts it live in the feed
         immediately, labeled &ldquo;Sponsored,&rdquo; for its paid duration

@@ -1,20 +1,11 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { listPendingVerifications, listVehiclesByOwner } from "@/lib/db/vehicles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
-import { AdminNav } from "@/features/admin/admin-nav";
 import { VerificationRow, type VerificationRowData } from "@/features/admin/verification-row";
 
 export default async function AdminVerificationsPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login?next=/admin/verifications");
-
   const supabase = await createClient();
-  const profile = await getProfileByUserId(supabase, user.id);
-  if (!profile?.is_admin) redirect("/feed");
-
   const vehicles = await listPendingVerifications(supabase);
   const owners = await Promise.all(
     vehicles.map((v) => getProfileByUserId(supabase, v.owner_id)),
@@ -79,12 +70,9 @@ export default async function AdminVerificationsPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
-      <div className="mb-2 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Ownership verifications
-        </h1>
-        <AdminNav current="/admin/verifications" />
-      </div>
+      <h1 className="mb-2 text-2xl font-semibold tracking-tight">
+        Ownership verifications
+      </h1>
       <p className="mb-6 text-sm text-muted">
         A full-car photo with the owner&apos;s username written on paper in
         frame — approve only if both are clearly visible and it&apos;s
