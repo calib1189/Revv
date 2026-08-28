@@ -473,6 +473,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["meetup_media"]["Insert"]>;
         Relationships: never[];
       };
+      meetup_views: {
+        Row: {
+          id: string;
+          meetup_id: string;
+          viewer_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          meetup_id: string;
+          viewer_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["meetup_views"]["Insert"]>;
+        Relationships: never[];
+      };
       events: {
         Row: {
           id: string;
@@ -557,6 +573,24 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["shop_promotions"]["Insert"]>;
+        Relationships: never[];
+      };
+      shop_promotion_events: {
+        Row: {
+          id: string;
+          place_id: string;
+          kind: "impression" | "click";
+          viewer_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          place_id: string;
+          kind: "impression" | "click";
+          viewer_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["shop_promotion_events"]["Insert"]>;
         Relationships: never[];
       };
       places_search_cache: {

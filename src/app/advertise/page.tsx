@@ -10,6 +10,8 @@ import {
 } from "@/lib/db/ad-campaigns";
 import { AdCampaignForm } from "@/features/ads/ad-campaign-form";
 import { Callout } from "@/components/ui/callout";
+import { EyeIcon, PointerIcon } from "@/components/ui/icons";
+import { formatCompactNumber } from "@/lib/format/compact-number";
 
 const STATUS_LABELS: Record<string, string> = {
   pending_payment: "Awaiting payment",
@@ -58,19 +60,38 @@ export default async function AdvertisePage({
       {campaigns.length > 0 && (
         <div className="mb-8 flex flex-col gap-2">
           <h2 className="text-sm font-medium text-muted">Your campaigns</h2>
-          <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border">
+          <div className="flex flex-col gap-2.5">
             {campaigns.map((campaign) => {
               const counts = eventCountsById.get(campaign.id);
+              const ctr =
+                counts && counts.impressions > 0
+                  ? `${((counts.clicks / counts.impressions) * 100).toFixed(1)}% CTR`
+                  : null;
               return (
-                <div key={campaign.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{campaign.headline}</p>
-                    <p className="text-xs text-muted">
-                      {STATUS_LABELS[campaign.status] ?? campaign.status} ·{" "}
+                <div key={campaign.id} className="flex flex-col gap-3 rounded-2xl border border-border p-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 truncate text-sm font-medium">{campaign.headline}</p>
+                    <span className="flex-shrink-0 rounded-full bg-accent/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-accent">
                       {AD_TIERS[campaign.tier].label}
-                      {counts && ` · ${counts.impressions} views · ${counts.clicks} clicks`}
-                    </p>
+                    </span>
                   </div>
+                  <p className="text-xs text-muted">{STATUS_LABELS[campaign.status] ?? campaign.status}</p>
+
+                  {counts && (
+                    <div className="flex items-center gap-4 border-t border-border pt-3 text-sm">
+                      <span className="flex items-center gap-1.5 text-foreground">
+                        <EyeIcon className="h-4 w-4 text-muted" />
+                        <span className="font-medium">{formatCompactNumber(counts.impressions)}</span>
+                        <span className="text-xs text-muted">views</span>
+                      </span>
+                      <span className="flex items-center gap-1.5 text-foreground">
+                        <PointerIcon className="h-4 w-4 text-muted" />
+                        <span className="font-medium">{formatCompactNumber(counts.clicks)}</span>
+                        <span className="text-xs text-muted">clicks</span>
+                      </span>
+                      {ctr && <span className="ml-auto text-xs text-muted">{ctr}</span>}
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -63,6 +63,24 @@ export async function getShopPromotionById(
   return data;
 }
 
+/** Backs the "My promotions" panel — every promotion someone has ever
+ * paid for, newest first, regardless of status (a pending_payment row
+ * that never completed still shows, same as a `pending_review` ad
+ * campaign would on /advertise). */
+export async function listShopPromotionsByPromoter(
+  supabase: SupabaseClient<Database>,
+  promoterId: string,
+): Promise<ShopPromotion[]> {
+  const { data, error } = await supabase
+    .from("shop_promotions")
+    .select("*")
+    .eq("promoter_id", promoterId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
 /** Which tier (if any) each of these place_ids currently has an active,
  * unexpired promotion at — used to sort/badge search results after they
  * come back from Places API, since Google itself has no concept of this.

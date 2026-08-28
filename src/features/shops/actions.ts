@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
+import { getCurrentUser } from "@/lib/auth/get-user";
 import { getClientIp } from "@/lib/http/get-client-ip";
 import { isUnderShopsSearchRateLimit, recordShopsSearchAttempt } from "@/lib/shops/search-rate-limit";
 import { getPlacesProvider } from "@/lib/providers/get-places-provider";
@@ -13,10 +14,17 @@ import {
   createShopPromotion,
   getActivePromotionTiers,
   isShopPromotionTier,
+  listShopPromotionsByPromoter,
   SHOP_PROMOTION_TIERS,
   SHOP_PROMOTION_TIER_RANK,
+  type ShopPromotion,
   type ShopPromotionTier,
 } from "@/lib/db/shop-promotions";
+import {
+  recordShopPromotionEvent,
+  getShopPromotionEventCounts,
+  type ShopPromotionEventCounts,
+} from "@/lib/db/shop-promotion-events";
 import { buildPlacesCacheKey, getCachedPlacesSearch, setCachedPlacesSearch } from "@/lib/db/places-cache";
 import type { Shop, ShopSearchResponse } from "@/lib/providers/places-provider";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -244,4 +252,58 @@ export async function createShopPromotionAction({
 
   if (!url) return { error: "Couldn't start checkout. Try again." };
   return { url };
+}
+
+/** Fire-and-forget from ShopCard when a promoted card becomes visible or
+ * gets tapped. Swallows its own errors and silently no-ops when logged
+ * out — same reasoning and shape as recordAdEventBestEffort in
+ * features/ads/actions.ts. */
+async function recordShopPromotionEventBestEffort(
+  placeId: string,
+  kind: "impression" | "click",
+): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return;
+    const supabase = await createClient();
+    await recordShopPromotionEvent(supabase, placeId, kind, user.id);
+  } catch {
+    // best-effort only
+  }
+}
+
+export async function recordShopPromotionImpressionAction(placeId: string): Promise<void> {
+  await recordShopPromotionEventBestEffort(placeId, "impression");
+}
+
+export async function recordShopPromotionClickAction(placeId: string): Promise<void> {
+  await recordShopPromotionEventBestEffort(placeId, "click");
+}
+
+export interface ShopPromotionWithCounts {
+  promotion: ShopPromotion;
+  counts: ShopPromotionEventCounts;
+}
+
+export interface MyShopPromotionsResponse {
+  promotions: ShopPromotionWithCounts[];
+  requiresAuth: boolean;
+}
+
+/** Backs the "My promotions" panel. Returns requiresAuth rather than
+ * throwing when logged out, so the panel can show a clean "log in to see
+ * this" message instead of a generic error. */
+export async function getMyShopPromotionsAction(): Promise<MyShopPromotionsResponse> {
+  const user = await getCurrentUser();
+  if (!user) return { promotions: [], requiresAuth: true };
+
+  const supabase = await createClient();
+  const promotions = await listShopPromotionsByPromoter(supabase, user.id);
+  const withCounts = await Promise.all(
+    promotions.map(async (promotion) => ({
+      promotion,
+      counts: await getShopPromotionEventCounts(supabase, promotion.id),
+    })),
+  );
+  return { promotions: withCounts, requiresAuth: false };
 }

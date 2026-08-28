@@ -6,12 +6,14 @@ import { getMeetupById } from "@/lib/db/meetups";
 import { listMeetupMediaForMeetups } from "@/lib/db/meetup-media";
 import { publicMediaUrl } from "@/lib/db/media";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { getMeetupViewCount, recordMeetupView } from "@/lib/db/meetup-views";
 import { PhotoCarousel } from "@/features/feed/photo-carousel";
 import { Avatar } from "@/features/feed/avatar";
-import { PinIcon } from "@/components/ui/icons";
+import { PinIcon, EyeIcon } from "@/components/ui/icons";
 import { MeetupDetailDeleteButton } from "@/features/meetups/meetup-detail-delete-button";
 import { Callout } from "@/components/ui/callout";
 import { formatDateTime } from "@/lib/format/date";
+import { formatCompactNumber } from "@/lib/format/compact-number";
 
 export default async function MeetupDetailPage({
   params,
@@ -37,6 +39,15 @@ export default async function MeetupDetailPage({
   }));
   const isHost = user?.id === meetup.host_id;
 
+  if (user) {
+    try {
+      await recordMeetupView(supabase, meetup.id, user.id);
+    } catch {
+      // best-effort only
+    }
+  }
+  const viewCount = await getMeetupViewCount(supabase, meetup.id);
+
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
       <Link href="/discover" className="mb-4 inline-block text-sm text-muted hover:text-foreground">
@@ -57,7 +68,13 @@ export default async function MeetupDetailPage({
 
         <div className="p-5">
           <h1 className="text-xl font-semibold">{meetup.title}</h1>
-          <p className="mt-1 text-sm text-muted">{formatDateTime(meetup.starts_at)}</p>
+          <div className="mt-1 flex items-center gap-3 text-sm text-muted">
+            <span>{formatDateTime(meetup.starts_at)}</span>
+            <span className="flex items-center gap-1">
+              <EyeIcon className="h-3.5 w-3.5" />
+              {formatCompactNumber(viewCount)}
+            </span>
+          </div>
 
           <div className="mt-3 flex items-center gap-1.5 text-sm text-foreground">
             <PinIcon className="h-4 w-4 flex-shrink-0 text-muted" />

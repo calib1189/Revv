@@ -1932,3 +1932,15 @@ export function ArrowDownIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function PointerIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <path
+        d="M6 3.5 18 13l-5.2.8L15 20l-2.8 1.2-2.4-6.2L6 18V3.5Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

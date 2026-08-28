@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ShopCard } from "@/features/shops/shop-card";
 import { PromoteShopPanel } from "@/features/shops/promote-shop-panel";
+import { MyPromotionsPanel } from "@/features/shops/my-promotions-panel";
 import { searchNearbyShopsAction, type ShopResult } from "@/features/shops/actions";
 import { SHOP_CATEGORIES, getShopCategory } from "@/lib/shops/categories";
 import { SHOP_PROMOTION_TIER_RANK } from "@/lib/db/shop-promotions";
@@ -23,6 +24,7 @@ export function ShopsBrowser() {
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPromotePanelOpen, setIsPromotePanelOpen] = useState(false);
+  const [isMyPromotionsPanelOpen, setIsMyPromotionsPanelOpen] = useState(false);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -106,13 +108,22 @@ export function ShopsBrowser() {
           <h1 className="text-2xl font-semibold tracking-tight">Shops near you</h1>
           <p className="mt-1 text-sm text-muted">Mechanics, tint, body work — real local shops, real reviews.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setIsPromotePanelOpen(true)}
-          className="self-start flex-shrink-0 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
-        >
-          Promote your shop
-        </button>
+        <div className="flex flex-shrink-0 gap-2 self-start">
+          <button
+            type="button"
+            onClick={() => setIsMyPromotionsPanelOpen(true)}
+            className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
+          >
+            My promotions
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsPromotePanelOpen(true)}
+            className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
+          >
+            Promote your shop
+          </button>
+        </div>
       </div>
 
       {isPromotePanelOpen && (
@@ -120,6 +131,10 @@ export function ShopsBrowser() {
           coords={location.status === "ready" ? location.coords : null}
           onClose={() => setIsPromotePanelOpen(false)}
         />
+      )}
+
+      {isMyPromotionsPanelOpen && (
+        <MyPromotionsPanel onClose={() => setIsMyPromotionsPanelOpen(false)} />
       )}
 
       <div className="no-scrollbar mb-6 flex gap-2 overflow-x-auto pb-1">

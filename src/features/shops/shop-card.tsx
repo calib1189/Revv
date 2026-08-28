@@ -1,10 +1,15 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { PinIcon, StarIcon, GemIcon } from "@/components/ui/icons";
 import { formatDistance } from "@/lib/geo/distance";
 import { getShopCategory } from "@/lib/shops/categories";
 import { SHOP_PROMOTION_TIERS, type ShopPromotionTier } from "@/lib/db/shop-promotions";
 import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
+import {
+  recordShopPromotionImpressionAction,
+  recordShopPromotionClickAction,
+} from "@/features/shops/actions";
 import type { ShopCategoryId } from "@/lib/providers/places-provider";
 import type { ShopResult } from "@/features/shops/actions";
 
@@ -31,6 +36,38 @@ export function ShopCard({
   distanceMiles: number | null;
 }) {
   const { icon: CategoryIcon, label: categoryLabel } = getShopCategory(category);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasRecordedImpression = useRef(false);
+  const promotionTier = shop.promotionTier;
+
+  // Impressions only matter for a promoted shop — an un-promoted card has
+  // no spend behind it to measure. Same threshold/pattern as
+  // sponsored-slide.tsx's ad impression tracking.
+  useEffect(() => {
+    if (!promotionTier) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (
+          entry.isIntersecting &&
+          entry.intersectionRatio > 0.6 &&
+          !hasRecordedImpression.current
+        ) {
+          hasRecordedImpression.current = true;
+          recordShopPromotionImpressionAction(shop.placeId);
+        }
+      },
+      { threshold: [0, 0.6, 1] },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [promotionTier, shop.placeId]);
+
+  function recordClick() {
+    if (promotionTier) recordShopPromotionClickAction(shop.placeId);
+  }
 
   return (
     // A plain div, not an <a>, because it needs a real nested link
@@ -40,13 +77,18 @@ export function ShopCard({
     // what lets iOS hand off to the native Maps app before this WebView
     // ever loads anything at maps.apple.com.
     <div
+      ref={containerRef}
       role="link"
       tabIndex={0}
       onClick={() => {
+        recordClick();
         window.location.href = buildAppleMapsUrl(shop);
       }}
       onKeyDown={(e) => {
-        if (e.key === "Enter") window.location.href = buildAppleMapsUrl(shop);
+        if (e.key === "Enter") {
+          recordClick();
+          window.location.href = buildAppleMapsUrl(shop);
+        }
       }}
       className="glass flex cursor-pointer flex-col gap-2.5 rounded-2xl p-4 transition-opacity hover:opacity-90"
     >
@@ -109,7 +151,10 @@ export function ShopCard({
         href={shop.googleMapsUrl}
         target="_blank"
         rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          recordClick();
+        }}
         className="mt-1 self-start text-xs text-accent hover:underline"
       >
         Open in Google Maps
