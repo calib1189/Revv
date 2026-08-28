@@ -1,15 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { CloseIcon, PinIcon } from "@/components/ui/icons";
+import { CloseIcon, PinIcon, GemIcon } from "@/components/ui/icons";
 import { searchShopsByQueryAction, createShopPromotionAction } from "@/features/shops/actions";
-import { SHOP_PROMOTION_TIERS, type ShopPromotionTier } from "@/lib/db/shop-promotions";
+import { SHOP_PROMOTION_TIERS, SHOP_PROMOTION_TIER_RANK, type ShopPromotionTier } from "@/lib/db/shop-promotions";
+import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
+import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { Callout } from "@/components/ui/callout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ShopResult } from "@/features/shops/actions";
 
-const TIER_ORDER: ShopPromotionTier[] = ["standard", "featured"];
+const TIER_ORDER: ShopPromotionTier[] = ["standard", "featured", "diamond"];
+const TIER_METALS: Record<ShopPromotionTier, TierMetal> = {
+  standard: "silver",
+  featured: "gold",
+  diamond: "diamond",
+};
+
+function nextWorthwhileTier(current: ShopPromotionTier | null): ShopPromotionTier {
+  const currentRank = current ? SHOP_PROMOTION_TIER_RANK[current] : 0;
+  const next = TIER_ORDER.find((t) => SHOP_PROMOTION_TIER_RANK[t] > currentRank);
+  // Falls back to the top tier if somehow already there — the picker
+  // won't let anything be bought in that case anyway (see the "already
+  // has the top spot" branch below).
+  return next ?? "diamond";
+}
 
 /** "Promote your shop" — a free-text lookup instead of a Promote button
  * on every card. Someone finds their own business by name, picks it from
@@ -66,8 +82,9 @@ export function PromoteShopPanel({
   function selectShop(shop: ShopResult) {
     setSelected(shop);
     // Defaults to whichever tier is actually worth buying next — no
-    // point defaulting to "standard" if it's already active.
-    setTier(shop.promotionTier === "standard" ? "featured" : "standard");
+    // point defaulting to a tier the shop already has (or something
+    // below it).
+    setTier(nextWorthwhileTier(shop.promotionTier));
   }
 
   async function handlePromote() {
@@ -148,8 +165,15 @@ export function PromoteShopPanel({
                   <div className="flex items-center gap-2">
                     <p className="font-medium">{shop.name}</p>
                     {shop.promotionTier && (
-                      <span className="flex-shrink-0 rounded-full bg-accent px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-accent-foreground">
-                        {shop.promotionTier === "featured" ? "Featured" : "Promoted"}
+                      <span
+                        className="flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide"
+                        style={{
+                          backgroundColor: `${RANK_TEXT_COLORS[TIER_METALS[shop.promotionTier]]}26`,
+                          color: RANK_TEXT_COLORS[TIER_METALS[shop.promotionTier]],
+                        }}
+                      >
+                        <GemIcon className="h-2.5 w-2.5" />
+                        {SHOP_PROMOTION_TIERS[shop.promotionTier].label}
                       </span>
                     )}
                   </div>
@@ -169,40 +193,34 @@ export function PromoteShopPanel({
           <div className="flex flex-col gap-3 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
             {promoteError && <Callout tone="danger">{promoteError}</Callout>}
 
-            {selected.promotionTier === "featured" ? (
+            {selected.promotionTier === "diamond" ? (
               <p className="text-center text-sm text-muted">
-                {selected.name} already has the top Featured spot.
+                {selected.name} already has the top Diamond spot.
               </p>
             ) : (
               <>
-                <div className="flex flex-col gap-2">
-                  {TIER_ORDER.map((t) => {
-                    const info = SHOP_PROMOTION_TIERS[t];
-                    const alreadyActive = selected.promotionTier === t;
-                    return (
-                      <label
-                        key={t}
-                        className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors ${
-                          tier === t ? "border-accent bg-accent/10" : "border-border"
-                        } ${alreadyActive ? "opacity-50" : "cursor-pointer"}`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            name="shop-promotion-tier"
-                            checked={tier === t}
-                            disabled={alreadyActive}
-                            onChange={() => setTier(t)}
-                          />
-                          <span className="font-medium">{info.label}</span>
-                        </span>
-                        <span className="text-muted">
-                          {alreadyActive ? "Already active" : `$${(info.priceCents / 100).toFixed(0)}`}
-                        </span>
-                      </label>
-                    );
+                <TierPicker
+                  name="shop-promotion-tier"
+                  value={tier}
+                  onChange={(id) => setTier(id as ShopPromotionTier)}
+                  options={TIER_ORDER.map((t) => {
+                    const alreadyActive =
+                      !!selected.promotionTier && SHOP_PROMOTION_TIER_RANK[t] <= SHOP_PROMOTION_TIER_RANK[selected.promotionTier];
+                    return {
+                      id: t,
+                      metal: TIER_METALS[t],
+                      priceCents: SHOP_PROMOTION_TIERS[t].priceCents,
+                      subtitle:
+                        t === "diamond"
+                          ? "Guaranteed top spot"
+                          : t === "featured"
+                            ? "Sorts above Silver listings"
+                            : "Sorts above un-promoted shops",
+                      disabled: alreadyActive,
+                      disabledReason: alreadyActive ? "Already active or below" : undefined,
+                    };
                   })}
-                </div>
+                />
                 <Button type="button" onClick={handlePromote} disabled={isPromoting} className="w-full py-3">
                   {isPromoting
                     ? "Starting checkout…"

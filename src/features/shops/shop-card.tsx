@@ -1,10 +1,20 @@
 "use client";
 
-import { PinIcon, StarIcon } from "@/components/ui/icons";
+import { PinIcon, StarIcon, GemIcon } from "@/components/ui/icons";
 import { formatDistance } from "@/lib/geo/distance";
 import { getShopCategory } from "@/lib/shops/categories";
+import { SHOP_PROMOTION_TIERS, type ShopPromotionTier } from "@/lib/db/shop-promotions";
+import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import type { ShopCategoryId } from "@/lib/providers/places-provider";
 import type { ShopResult } from "@/features/shops/actions";
+
+// Same silver/gold/diamond palette as components/ui/tier-picker.tsx —
+// reused for color only, no functional link to the rank system.
+const TIER_METAL_COLORS: Record<ShopPromotionTier, string> = {
+  standard: RANK_TEXT_COLORS.silver,
+  featured: RANK_TEXT_COLORS.gold,
+  diamond: RANK_TEXT_COLORS.diamond,
+};
 
 function buildAppleMapsUrl(shop: ShopResult): string {
   const params = new URLSearchParams({ q: shop.name, ll: `${shop.lat},${shop.lng}` });
@@ -50,13 +60,14 @@ export function ShopCard({
               <p className="truncate font-medium">{shop.name}</p>
               {shop.promotionTier && (
                 <span
-                  className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${
-                    shop.promotionTier === "featured"
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-accent/15 text-accent"
-                  }`}
+                  className="flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide"
+                  style={{
+                    backgroundColor: `${TIER_METAL_COLORS[shop.promotionTier]}26`,
+                    color: TIER_METAL_COLORS[shop.promotionTier],
+                  }}
                 >
-                  {shop.promotionTier === "featured" ? "Featured" : "Promoted"}
+                  <GemIcon className="h-2.5 w-2.5" />
+                  {SHOP_PROMOTION_TIERS[shop.promotionTier].label}
                 </span>
               )}
             </div>

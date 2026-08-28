@@ -7,14 +7,29 @@ export type ShopPromotionTier = ShopPromotion["tier"];
 
 /** The only prices that exist — looked up server-side by tier key, never
  * trusted from the client, same reasoning as AD_TIERS/MEETUP_TIERS.
- * "Featured" sorts ahead of "standard" promotions too, not just ahead of
- * un-promoted shops — a real guaranteed-top-spot option, not just "ahead
- * of the pack". */
+ * Labels match the Silver/Gold/Diamond branding used across every paid
+ * tier in the app (ads, meetups, shop promotions) — purely a naming/UI
+ * convention shared with the build-rating rank system's color palette
+ * (see components/ui/tier-picker.tsx), not connected to it in any other
+ * way. Each tier sorts ahead of every tier below it, not just ahead of
+ * un-promoted shops — Diamond is a real guaranteed-top-spot option, not
+ * just "ahead of the pack". */
 export const SHOP_PROMOTION_TIERS: Record<ShopPromotionTier, { label: string; priceCents: number }> = {
-  standard: { label: "Promoted", priceCents: 2500 },
-  featured: { label: "Featured — top spot", priceCents: 5000 },
+  standard: { label: "Silver", priceCents: 2500 },
+  featured: { label: "Gold", priceCents: 5000 },
+  diamond: { label: "Diamond", priceCents: 10000 },
 };
 export const SHOP_PROMOTION_DURATION_DAYS = 30;
+
+/** Higher first — the single source of truth for ranking tiers against
+ * each other (and against "no promotion", rank 0). Search-result sorting
+ * and the "which tier wins for badging" logic below both derive from
+ * this instead of each hardcoding their own copy of the ordering. */
+export const SHOP_PROMOTION_TIER_RANK: Record<ShopPromotionTier, number> = {
+  diamond: 3,
+  featured: 2,
+  standard: 1,
+};
 
 export function isShopPromotionTier(value: string): value is ShopPromotionTier {
   return value in SHOP_PROMOTION_TIERS;
@@ -73,9 +88,10 @@ export async function getActivePromotionTiers(
   for (const row of data) {
     // A place could theoretically have more than one active promotion
     // (two different people promoting the same shop, or a renewal
-    // overlapping an existing one) — featured always wins the display
-    // tier regardless of insertion order.
-    if (row.tier === "featured" || !tiers.has(row.place_id)) {
+    // overlapping an existing one) — the highest tier always wins the
+    // display tier regardless of insertion order.
+    const existing = tiers.get(row.place_id);
+    if (!existing || SHOP_PROMOTION_TIER_RANK[row.tier] > SHOP_PROMOTION_TIER_RANK[existing]) {
       tiers.set(row.place_id, row.tier);
     }
   }

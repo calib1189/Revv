@@ -13,9 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
+import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
 
 const MAX_PHOTOS = 5;
 const TIER_ORDER: MeetupTier[] = ["standard", "promoted"];
+const TIER_METALS: Record<MeetupTier, TierMetal> = { standard: "silver", promoted: "gold" };
 
 interface SelectedPhoto {
   file: File;
@@ -268,33 +270,19 @@ export function CreateMeetupForm({ userId }: { userId: string }) {
 
       <div>
         <Label>Plan</Label>
-        <div className="flex flex-col gap-2">
-          {TIER_ORDER.map((t) => {
-            const info = MEETUP_TIERS[t];
-            return (
-              <label
-                key={t}
-                className={`flex cursor-pointer items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors ${
-                  tier === t ? "border-accent bg-accent/10" : "border-border"
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="tier"
-                    checked={tier === t}
-                    onChange={() => setTier(t)}
-                  />
-                  <span className="font-medium">{info.label}</span>
-                </span>
-                <span className="text-muted">${(info.priceCents / 100).toFixed(0)}</span>
-              </label>
-            );
-          })}
-        </div>
+        <TierPicker
+          name="meetup-tier"
+          value={tier}
+          onChange={(id) => setTier(id as MeetupTier)}
+          options={TIER_ORDER.map((t) => ({
+            id: t,
+            metal: TIER_METALS[t],
+            priceCents: MEETUP_TIERS[t].priceCents,
+            subtitle: t === "promoted" ? "Sorts ahead of every Silver meetup" : "Just requires payment to post",
+          }))}
+        />
         <p className="mt-1.5 text-xs text-muted">
-          Promoted meets sort ahead of every standard one, regardless of
-          distance.
+          Gold meets sort ahead of every Silver one, regardless of distance.
         </p>
       </div>
 

@@ -536,7 +536,7 @@ export interface Database {
           place_id: string;
           place_name: string;
           price_cents: number;
-          tier: "standard" | "featured";
+          tier: "standard" | "featured" | "diamond";
           status: "pending_payment" | "active";
           stripe_checkout_session_id: string | null;
           starts_at: string | null;
@@ -549,7 +549,7 @@ export interface Database {
           place_id: string;
           place_name: string;
           price_cents: number;
-          tier?: "standard" | "featured";
+          tier?: "standard" | "featured" | "diamond";
           status?: "pending_payment" | "active";
           stripe_checkout_session_id?: string | null;
           starts_at?: string | null;

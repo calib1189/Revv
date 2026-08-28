@@ -8,11 +8,12 @@ export type AdTier = AdCampaign["tier"];
 /** The only prices/durations that exist — looked up server-side by tier
  * key, never trusted from the client, so a submitted price can't be
  * tampered with in the request. Money is integer cents, per every other
- * price in this app. */
+ * price in this app. Labels match the Silver/Gold/Diamond branding used
+ * across every paid tier in the app — see components/ui/tier-picker.tsx. */
 export const AD_TIERS: Record<AdTier, { label: string; priceCents: number; durationDays: number }> = {
-  starter: { label: "Starter", priceCents: 2500, durationDays: 3 },
-  standard: { label: "Standard", priceCents: 7500, durationDays: 7 },
-  featured: { label: "Featured", priceCents: 20000, durationDays: 14 },
+  starter: { label: "Silver", priceCents: 2500, durationDays: 3 },
+  standard: { label: "Gold", priceCents: 7500, durationDays: 7 },
+  featured: { label: "Diamond", priceCents: 20000, durationDays: 14 },
 };
 
 export function isAdTier(value: string): value is AdTier {

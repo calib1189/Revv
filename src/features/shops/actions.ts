@@ -14,6 +14,7 @@ import {
   getActivePromotionTiers,
   isShopPromotionTier,
   SHOP_PROMOTION_TIERS,
+  SHOP_PROMOTION_TIER_RANK,
   type ShopPromotionTier,
 } from "@/lib/db/shop-promotions";
 import { buildPlacesCacheKey, getCachedPlacesSearch, setCachedPlacesSearch } from "@/lib/db/places-cache";
@@ -36,12 +37,8 @@ export interface ShopSearchActionResponse {
   rateLimited: boolean;
 }
 
-// Higher first — used to rank tiers against each other, and against "no
-// promotion" (rank 0), when sorting search results.
-const TIER_RANK: Record<ShopPromotionTier, number> = { featured: 2, standard: 1 };
-
 /** Cross-references raw Places results against shop_promotions and sorts
- * featured first, then standard-promoted, then everything else — shared
+ * Diamond first, then Gold, then Silver, then everything else — shared
  * by both search actions below, since "promote your shop" needs to show
  * the same tier state a category browse would. Distance sort within each
  * group happens client-side (shops-browser.tsx already computes distance
@@ -63,8 +60,8 @@ async function withPromotionStatus(
     promotionTier: tiers.get(shop.placeId) ?? null,
   }));
   withPromotion.sort((a, b) => {
-    const rankA = a.promotionTier ? TIER_RANK[a.promotionTier] : 0;
-    const rankB = b.promotionTier ? TIER_RANK[b.promotionTier] : 0;
+    const rankA = a.promotionTier ? SHOP_PROMOTION_TIER_RANK[a.promotionTier] : 0;
+    const rankB = b.promotionTier ? SHOP_PROMOTION_TIER_RANK[b.promotionTier] : 0;
     return rankB - rankA;
   });
 

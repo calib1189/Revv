@@ -8,8 +8,10 @@ import { validateImageFile } from "@/lib/validation/media";
 import { createAdCampaignAction } from "@/features/ads/actions";
 import { AD_TIERS, type AdTier } from "@/lib/db/ad-campaigns";
 import { Button } from "@/components/ui/button";
+import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
 
 const TIER_ORDER: AdTier[] = ["starter", "standard", "featured"];
+const TIER_METALS: Record<AdTier, TierMetal> = { starter: "silver", standard: "gold", featured: "diamond" };
 
 export function AdCampaignForm({ userId }: { userId: string }) {
   const [file, setFile] = useState<File | null>(null);
@@ -166,32 +168,17 @@ export function AdCampaignForm({ userId }: { userId: string }) {
 
       <div>
         <label className="mb-2 block text-sm font-medium">Plan</label>
-        <div className="flex flex-col gap-2">
-          {TIER_ORDER.map((t) => {
-            const info = AD_TIERS[t];
-            return (
-              <label
-                key={t}
-                className={`flex cursor-pointer items-center justify-between rounded-xl border px-4 py-3 text-sm transition-colors ${
-                  tier === t ? "border-accent bg-accent/10" : "border-border"
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="tier"
-                    checked={tier === t}
-                    onChange={() => setTier(t)}
-                  />
-                  <span className="font-medium">{info.label}</span>
-                </span>
-                <span className="text-muted">
-                  ${(info.priceCents / 100).toFixed(0)} · {info.durationDays} days
-                </span>
-              </label>
-            );
-          })}
-        </div>
+        <TierPicker
+          name="ad-tier"
+          value={tier}
+          onChange={(id) => setTier(id as AdTier)}
+          options={TIER_ORDER.map((t) => ({
+            id: t,
+            metal: TIER_METALS[t],
+            priceCents: AD_TIERS[t].priceCents,
+            subtitle: `${AD_TIERS[t].durationDays} days in the feed`,
+          }))}
+        />
       </div>
 
       <Button type="submit" disabled={isSubmitting}>

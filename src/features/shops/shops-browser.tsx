@@ -5,6 +5,7 @@ import { ShopCard } from "@/features/shops/shop-card";
 import { PromoteShopPanel } from "@/features/shops/promote-shop-panel";
 import { searchNearbyShopsAction, type ShopResult } from "@/features/shops/actions";
 import { SHOP_CATEGORIES, getShopCategory } from "@/lib/shops/categories";
+import { SHOP_PROMOTION_TIER_RANK } from "@/lib/db/shop-promotions";
 import { haversineMiles } from "@/lib/geo/distance";
 import { Callout } from "@/components/ui/callout";
 import type { ShopCategoryId } from "@/lib/providers/places-provider";
@@ -74,12 +75,12 @@ export function ShopsBrowser() {
   const sorted = useMemo(() => {
     if (!shops) return [];
     return [...shops].sort((a, b) => {
-      // Featured, then standard-promoted, then everything else, always
+      // Diamond, then Gold, then Silver, then everything else, always
       // ahead of distance — searchNearbyShopsAction already returns them
       // in this order, but re-sorting by pure distance below would
       // destroy that grouping if this comparator didn't check it first.
-      const rankA = a.promotionTier === "featured" ? 2 : a.promotionTier === "standard" ? 1 : 0;
-      const rankB = b.promotionTier === "featured" ? 2 : b.promotionTier === "standard" ? 1 : 0;
+      const rankA = a.promotionTier ? SHOP_PROMOTION_TIER_RANK[a.promotionTier] : 0;
+      const rankB = b.promotionTier ? SHOP_PROMOTION_TIER_RANK[b.promotionTier] : 0;
       if (rankA !== rankB) return rankB - rankA;
 
       if (location.status !== "ready") return 0;
