@@ -147,6 +147,26 @@ export async function rejectAdCampaignAction(campaignId: string): Promise<void> 
   revalidatePath("/admin/ads");
 }
 
+/** Pulls an already-live ad out of the feed early — a heavier action
+ * than reject (that's for something that never went live at all), so
+ * this is only reachable from a confirm step in the UI, never a bare
+ * button. No refund happens here — this only stops it from showing;
+ * any money-back is a separate manual decision via Stripe. */
+export async function endAdCampaignAction(campaignId: string): Promise<void> {
+  const { supabase, userId } = await requireAdmin();
+  await updateAdCampaignStatus(supabase, campaignId, {
+    status: "ended",
+    ends_at: new Date().toISOString(),
+  });
+  await createAuditLog(supabase, {
+    actorId: userId,
+    action: "ad_campaign.ended_early",
+    targetType: "ad_campaign",
+    targetId: campaignId,
+  });
+  revalidatePath("/admin/active");
+}
+
 /** Fire-and-forget from the client when a sponsored slide becomes
  * visible or its "Learn more" gets tapped. Swallows its own errors —
  * same reasoning as recordViewAction: a missed ad event shouldn't

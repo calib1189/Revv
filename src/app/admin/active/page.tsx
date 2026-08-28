@@ -5,14 +5,12 @@ import { listActiveCampaigns, AD_TIERS } from "@/lib/db/ad-campaigns";
 import { listAllActiveShopPromotions, SHOP_PROMOTION_TIERS } from "@/lib/db/shop-promotions";
 import { listUpcomingMeetups, MEETUP_TIERS } from "@/lib/db/meetups";
 import { formatDateTime } from "@/lib/format/date";
+import { EndAdCampaignButton } from "@/features/admin/end-ad-campaign-button";
 
-/** Read-only oversight of everything currently live and paid for —
- * companion to the review queues (which only show what's *waiting* on a
- * decision). Useful for spot-checking something already in the feed/
- * discover page, or just seeing total current paid inventory at a
- * glance. No end/pull-down actions here on purpose — killing something
- * already live and paid for is a different, heavier action than
- * approving or rejecting a submission, and isn't part of this view. */
+/** Oversight of everything currently live and paid for — companion to
+ * the review queues (which only show what's *waiting* on a decision).
+ * Ads can be ended early from here (EndAdCampaignButton, behind a
+ * confirm step); shop promotions and meetups stay read-only for now. */
 export default async function AdminActivePage() {
   const supabase = await createClient();
   const [campaigns, shopPromotions, meetups] = await Promise.all([
@@ -54,9 +52,12 @@ export default async function AdminActivePage() {
                     {AD_TIERS[c.tier].label}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted">
-                  @{usernameById.get(c.advertiser_id) ?? "unknown"} · ends {formatDateTime(c.ends_at!)}
-                </p>
+                <div className="mt-1.5 flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted">
+                    @{usernameById.get(c.advertiser_id) ?? "unknown"} · ends {formatDateTime(c.ends_at!)}
+                  </p>
+                  <EndAdCampaignButton campaignId={c.id} />
+                </div>
               </li>
             ))}
           </ul>
