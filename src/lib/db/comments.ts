@@ -17,6 +17,20 @@ export async function listCommentsByPost(
   return data;
 }
 
+export async function getCommentById(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<Comment | null> {
+  const { data, error } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getCommentCountsForPosts(
   supabase: SupabaseClient<Database>,
   postIds: string[],

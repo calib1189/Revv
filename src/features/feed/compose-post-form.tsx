@@ -14,6 +14,8 @@ import {
 } from "@/lib/validation/media";
 import { validateCaption, validatePhotoCount } from "@/lib/validation/post";
 import { trackEvent } from "@/lib/analytics/track";
+import { moderateMediaAction } from "@/features/moderation/actions";
+import { captureVideoFrame } from "@/features/moderation/capture-video-frame";
 import { Callout } from "@/components/ui/callout";
 import { VideoEditor } from "@/features/editor/video-editor";
 import { PhotoEditor } from "@/features/editor/photo-editor";
@@ -33,6 +35,17 @@ interface SelectedVideo {
 }
 
 type Step = "camera" | "compose";
+
+/** Runs one file through the server-side moderation check — a photo
+ * directly, or (for video) one captured frame, since there's no
+ * frame-by-frame video scanning. Called before any Supabase writes
+ * happen, so a flagged upload never leaves a post/media row that would
+ * need to be cleaned up. */
+async function checkMedia(file: File): Promise<{ allowed: boolean; reason?: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return moderateMediaAction(formData);
+}
 
 function readVideoDurationSeconds(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -243,6 +256,28 @@ export function ComposePostForm({
 
     setIsSubmitting(true);
     try {
+      // Screened before anything gets written — a flagged photo or video
+      // never creates a post/media row at all, so there's nothing to roll
+      // back on rejection.
+      if (mode === "photo") {
+        for (const photo of photos) {
+          const check = await checkMedia(photo.file);
+          if (!check.allowed) {
+            setError(check.reason ?? "This photo doesn't meet our content guidelines.");
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      } else if (video) {
+        const frame = await captureVideoFrame(video.file);
+        const check = await checkMedia(frame);
+        if (!check.allowed) {
+          setError(check.reason ?? "This video doesn't meet our content guidelines.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const supabase = createClient();
       const post = await createPost(supabase, {
         author_id: userId,

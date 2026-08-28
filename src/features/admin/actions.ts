@@ -6,6 +6,7 @@ import { updateReportStatus, type Report } from "@/lib/db/reports";
 import { deletePost } from "@/lib/db/posts";
 import { deleteComment } from "@/lib/db/comments";
 import { deleteVehicle, updateVehicle } from "@/lib/db/vehicles";
+import { setUserBanned } from "@/lib/db/profiles";
 import { createAuditLog } from "@/lib/db/audit-logs";
 
 export async function dismissReportAction(reportId: string): Promise<void> {
@@ -45,6 +46,35 @@ export async function removeReportedContentAction(
     targetType,
     targetId,
     metadata: { reportId },
+  });
+  revalidatePath("/admin/reports");
+}
+
+/** Blocks the account from creating new posts/comments (enforced at the
+ * RLS layer, see 0055_user_bans.sql) — doesn't touch login or delete
+ * anything already posted. Meant to be paired with
+ * removeReportedContentAction when a report is actually serious, not a
+ * replacement for it. */
+export async function banUserAction(userId: string): Promise<void> {
+  const { supabase, userId: actorId } = await requireAdmin();
+  await setUserBanned(supabase, userId, true);
+  await createAuditLog(supabase, {
+    actorId,
+    action: "user.banned",
+    targetType: "profile",
+    targetId: userId,
+  });
+  revalidatePath("/admin/reports");
+}
+
+export async function unbanUserAction(userId: string): Promise<void> {
+  const { supabase, userId: actorId } = await requireAdmin();
+  await setUserBanned(supabase, userId, false);
+  await createAuditLog(supabase, {
+    actorId,
+    action: "user.unbanned",
+    targetType: "profile",
+    targetId: userId,
   });
   revalidatePath("/admin/reports");
 }

@@ -141,6 +141,20 @@ export async function updateProfileDisplayName(
   return data;
 }
 
+/** Blocks/unblocks new posts and comments at the RLS layer (see
+ * 0055_user_bans.sql) — not a full account lockout, login still works. */
+export async function setUserBanned(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  banned: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ is_banned: banned, banned_at: banned ? new Date().toISOString() : null })
+    .eq("id", userId);
+  if (error) throw error;
+}
+
 export async function updateProfileAvatar(
   supabase: SupabaseClient<Database>,
   userId: string,

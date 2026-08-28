@@ -22,6 +22,8 @@ export interface Database {
           avatar_media_id: string | null;
           is_admin: boolean;
           is_verified: boolean;
+          is_banned: boolean;
+          banned_at: string | null;
           onboarded_at: string | null;
           created_at: string;
         };
@@ -33,6 +35,8 @@ export interface Database {
           avatar_media_id?: string | null;
           is_admin?: boolean;
           is_verified?: boolean;
+          is_banned?: boolean;
+          banned_at?: string | null;
           onboarded_at?: string | null;
           created_at?: string;
         };
@@ -44,6 +48,8 @@ export interface Database {
           avatar_media_id?: string | null;
           is_admin?: boolean;
           is_verified?: boolean;
+          is_banned?: boolean;
+          banned_at?: string | null;
           onboarded_at?: string | null;
           created_at?: string;
         };

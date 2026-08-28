@@ -6,6 +6,7 @@ import {
   dismissReportAction,
   removeReportedContentAction,
 } from "@/features/admin/actions";
+import { BanUserButton } from "@/features/admin/ban-user-button";
 import { relativeTime } from "@/lib/format/relative-time";
 import type { Report } from "@/lib/db/reports";
 
@@ -18,9 +19,13 @@ function targetHref(report: Report): string | null {
 export function ReportRow({
   report,
   reporterUsername,
+  authorId,
 }: {
   report: Report;
   reporterUsername: string;
+  /** Whoever authored/owns the reported thing — null if it was already
+   * deleted before this report was reviewed. */
+  authorId: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
   const [resolved, setResolved] = useState(false);
@@ -79,6 +84,7 @@ export function ReportRow({
             {report.target_type === "vehicle" ? "Remove vehicle" : "Remove content"}
           </button>
         )}
+        {authorId && <BanUserButton userId={authorId} />}
       </div>
     </li>
   );

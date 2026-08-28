@@ -44,6 +44,15 @@ export default function GuidelinesPage() {
         </section>
 
         <section>
+          <h2 className="mb-2 text-base font-semibold">No sexual or explicit content</h2>
+          <p>
+            REVV is about cars, not people — nudity, sexual content, and sexually explicit
+            material are never allowed, regardless of context. Every photo and video is screened
+            before it goes live, and accounts that post this kind of content are banned.
+          </p>
+        </section>
+
+        <section>
           <h2 className="mb-2 text-base font-semibold">Fitment and safety</h2>
           <p>
             The fitment calculator does real arithmetic, not a guarantee. If you post advice about
