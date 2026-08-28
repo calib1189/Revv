@@ -119,7 +119,7 @@ function CommentRow({
   onDeleted?: () => void;
 }) {
   return (
-    <div className="flex gap-3">
+    <div className="flex items-start gap-3">
       <RankFrame score={comment.authorRatingScore} compact hideBadge className="flex-shrink-0 rounded-full">
         <Avatar username={comment.authorUsername} avatarUrl={comment.authorAvatarUrl} />
       </RankFrame>
