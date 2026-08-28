@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { CloseIcon, PinIcon, GemIcon } from "@/components/ui/icons";
 import { searchShopsByQueryAction, createShopPromotionAction } from "@/features/shops/actions";
-import { SHOP_PROMOTION_TIERS, SHOP_PROMOTION_TIER_RANK, type ShopPromotionTier } from "@/lib/db/shop-promotions";
+import {
+  SHOP_PROMOTION_TIERS,
+  SHOP_PROMOTION_TIER_RANK,
+  SHOP_PROMOTION_DURATION_DAYS,
+  type ShopPromotionTier,
+} from "@/lib/db/shop-promotions";
 import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
 import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { Callout } from "@/components/ui/callout";
@@ -212,10 +217,10 @@ export function PromoteShopPanel({
                       priceCents: SHOP_PROMOTION_TIERS[t].priceCents,
                       subtitle:
                         t === "diamond"
-                          ? "Top-tier placement — sorts above every Gold and Silver listing"
+                          ? `Top-tier placement, ${SHOP_PROMOTION_DURATION_DAYS} days — sorts above every Gold and Silver listing`
                           : t === "featured"
-                            ? "Sorts above Silver listings"
-                            : "Sorts above un-promoted shops",
+                            ? `${SHOP_PROMOTION_DURATION_DAYS} days — sorts above Silver listings`
+                            : `${SHOP_PROMOTION_DURATION_DAYS} days — sorts above un-promoted shops`,
                       disabled: alreadyActive,
                       disabledReason: alreadyActive ? "Already active or below" : undefined,
                     };
@@ -224,8 +229,12 @@ export function PromoteShopPanel({
                 <Button type="button" onClick={handlePromote} disabled={isPromoting} className="w-full py-3">
                   {isPromoting
                     ? "Starting checkout…"
-                    : `Promote ${selected.name} · $${(SHOP_PROMOTION_TIERS[tier].priceCents / 100).toFixed(0)}`}
+                    : `Promote ${selected.name} for ${SHOP_PROMOTION_DURATION_DAYS} days · $${(SHOP_PROMOTION_TIERS[tier].priceCents / 100).toFixed(0)}`}
                 </Button>
+                <p className="text-center text-xs text-muted">
+                  Runs for {SHOP_PROMOTION_DURATION_DAYS} days from purchase, then stops automatically
+                  unless you promote again.
+                </p>
               </>
             )}
           </div>
