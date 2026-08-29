@@ -184,6 +184,7 @@ export function CameraRecorder({
   const [zoom, setZoom] = useState(1);
   const [zoomHintVisible, setZoomHintVisible] = useState(false);
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number; id: number } | null>(null);
+  const [captureFlash, setCaptureFlash] = useState(false);
 
   useEffect(() => {
     zoomRef.current = zoom;
@@ -438,6 +439,11 @@ export function CameraRecorder({
   function capturePhoto() {
     const canvas = canvasRef.current;
     if (!canvas || !canvas.width) return;
+    // A brief white flash is the one universal "the photo was just taken"
+    // signal every real camera app gives — purely a CSS overlay, doesn't
+    // touch the actual capture below at all.
+    setCaptureFlash(true);
+    setTimeout(() => setCaptureFlash(false), 150);
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
@@ -710,6 +716,13 @@ export function CameraRecorder({
         onPointerUp={handleViewfinderUp}
         onPointerCancel={handleViewfinderUp}
         className="absolute inset-0 h-full w-full touch-none object-cover"
+      />
+
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 z-[6] bg-white transition-opacity duration-150 ${
+          captureFlash ? "opacity-80" : "opacity-0"
+        }`}
       />
 
       {/* Targeting-frame corners — purely decorative, reads as a precision
