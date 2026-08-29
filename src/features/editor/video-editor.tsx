@@ -6,6 +6,7 @@ import { useVideoExport } from "@/features/editor/use-video-export";
 import { TrimScrubber } from "@/features/editor/trim-scrubber";
 import { FILTER_PRESETS } from "@/features/editor/filters";
 import { aspectNeedsPan } from "@/features/editor/crop";
+import { MAX_VIDEO_BYTES } from "@/lib/validation/media";
 import {
   DEFAULT_EDIT_STATE,
   TEXT_FONTS,
@@ -388,7 +389,17 @@ export function VideoEditor({
       state.musicVolume === baseline.musicVolume &&
       state.originalVolume === baseline.originalVolume &&
       state.playbackRate === baseline.playbackRate;
-    if (isUnedited) {
+    // A pure pass-through only actually works if the raw source already
+    // fits within the app's own size limit — a high-resolution/high-fps
+    // recording (4K, 120fps) can easily be several times larger than
+    // that even for a short clip, and passthrough can't shrink it.
+    // Re-encoding is the only way to get an oversized source down to a
+    // postable size regardless of whether anything was "edited" — the
+    // export pipeline already downscales to a fixed ~720p target
+    // (exportCanvasSize in use-video-export.ts) independent of the
+    // source's resolution, so this is expected to succeed even when the
+    // pass-through can't.
+    if (isUnedited && source.size <= MAX_VIDEO_BYTES) {
       onExported(source);
       return;
     }

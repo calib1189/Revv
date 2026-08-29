@@ -14,7 +14,7 @@ export function validateImageFile(file: {
   return null;
 }
 
-const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 const MAX_VIDEO_DURATION_SECONDS = 180;
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
 
