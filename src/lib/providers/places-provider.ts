@@ -27,8 +27,22 @@ export interface Shop {
   googleMapsUrl: string;
 }
 
+/** Extra fields only fetched for the shop detail page, not the search
+ * list — Places API (New) bills by field mask, and a search result list
+ * has no use for a phone number or website link, only the detail page
+ * where someone might actually act on them. */
+export interface ShopDetails extends Shop {
+  websiteUrl: string | null;
+  phoneNumber: string | null;
+}
+
 export interface ShopSearchResponse {
   shops: Shop[];
+  isMock: boolean;
+}
+
+export interface ShopDetailsResponse {
+  shop: ShopDetails | null;
   isMock: boolean;
 }
 
@@ -42,4 +56,10 @@ export interface PlacesProvider {
   /** Free-text lookup — backs "Promote your shop": someone types their own
    * shop's name to find and promote it, rather than browsing by category. */
   searchShopsByQuery(params: { lat: number; lng: number; query: string }): Promise<ShopSearchResponse>;
+
+  /** Backs the shop detail page — a separate, billed Place Details call
+   * (not Text Search), since that's the only endpoint that returns a
+   * website/phone number and works from just a place ID with no location
+   * needed. */
+  getShopDetails(placeId: string): Promise<ShopDetailsResponse>;
 }

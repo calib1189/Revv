@@ -23,10 +23,21 @@ import {
 import {
   recordShopPromotionEvent,
   getShopPromotionEventCounts,
+  getShopAnalyticsCounts,
+  hasPromotedShop,
   type ShopPromotionEventCounts,
+  type ShopPromotionEventKind,
+  type ShopAnalyticsCounts,
 } from "@/lib/db/shop-promotion-events";
-import { buildPlacesCacheKey, getCachedPlacesSearch, setCachedPlacesSearch } from "@/lib/db/places-cache";
-import type { Shop, ShopSearchResponse } from "@/lib/providers/places-provider";
+import {
+  buildPlacesCacheKey,
+  getCachedPlacesSearch,
+  setCachedPlacesSearch,
+  buildShopDetailsCacheKey,
+  getCachedShopDetails,
+  setCachedShopDetails,
+} from "@/lib/db/places-cache";
+import type { Shop, ShopSearchResponse, ShopDetails } from "@/lib/providers/places-provider";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -260,7 +271,7 @@ export async function createShopPromotionAction({
  * features/ads/actions.ts. */
 async function recordShopPromotionEventBestEffort(
   placeId: string,
-  kind: "impression" | "click",
+  kind: ShopPromotionEventKind,
 ): Promise<void> {
   try {
     const user = await getCurrentUser();
@@ -278,6 +289,18 @@ export async function recordShopPromotionImpressionAction(placeId: string): Prom
 
 export async function recordShopPromotionClickAction(placeId: string): Promise<void> {
   await recordShopPromotionEventBestEffort(placeId, "click");
+}
+
+export async function recordShopProfileVisitAction(placeId: string): Promise<void> {
+  await recordShopPromotionEventBestEffort(placeId, "profile_visit");
+}
+
+export async function recordShopInquiryAction(placeId: string): Promise<void> {
+  await recordShopPromotionEventBestEffort(placeId, "inquiry");
+}
+
+export async function recordShopWebsiteClickAction(placeId: string): Promise<void> {
+  await recordShopPromotionEventBestEffort(placeId, "website_click");
 }
 
 export interface ShopPromotionWithCounts {
@@ -307,3 +330,95 @@ export async function getMyShopPromotionsAction(): Promise<MyShopPromotionsRespo
   );
   return { promotions: withCounts, requiresAuth: false };
 }
+
+export interface ShopDetailsActionResponse {
+  shop: (ShopDetails & { promotionTier: ShopPromotionTier | null }) | null;
+  isMock: boolean;
+  rateLimited: boolean;
+}
+
+/**
+ * Backs the shop detail page — public, same reasoning as the search
+ * actions (anonymous visitors are the common case for "someone tapped a
+ * shop card"). Shares the same IP rate-limit bucket as search: this is
+ * a real, separately-billed Google call (Place Details, not Text
+ * Search), and there's no reason to give it its own, larger allowance
+ * just because it's a different endpoint under the hood.
+ */
+export async function getShopDetailsAction(placeId: string): Promise<ShopDetailsActionResponse> {
+  if (!placeId) return { shop: null, isMock: false, rateLimited: false };
+
+  const supabase = await createClient();
+
+  const cacheKey = buildShopDetailsCacheKey(placeId);
+  const cached = await getCachedShopDetails(supabase, cacheKey);
+  if (cached) return await withDetailsPromotionStatus(supabase, cached);
+
+  const ip = await getClientIp();
+  if (!(await isUnderShopsSearchRateLimit(supabase, ip))) {
+    return { shop: null, isMock: false, rateLimited: true };
+  }
+
+  try {
+    await recordShopsSearchAttempt(supabase, ip);
+    const response = await getPlacesProvider().getShopDetails(placeId);
+    if (!response.isMock) await setCachedShopDetails(cacheKey, response);
+    return await withDetailsPromotionStatus(supabase, response);
+  } catch (err) {
+    console.error("getShopDetailsAction failed:", err);
+    return { shop: null, isMock: false, rateLimited: false };
+  }
+}
+
+async function withDetailsPromotionStatus(
+  supabase: SupabaseClient<Database>,
+  { shop, isMock }: { shop: ShopDetails | null; isMock: boolean },
+): Promise<ShopDetailsActionResponse> {
+  if (!shop) return { shop: null, isMock, rateLimited: false };
+  const tiers = await getActivePromotionTiers(supabase, [shop.placeId]);
+  return {
+    shop: { ...shop, promotionTier: tiers.get(shop.placeId) ?? null },
+    isMock,
+    rateLimited: false,
+  };
+}
+
+export interface ShopAnalyticsResponse {
+  counts: ShopAnalyticsCounts;
+  /** False if the current viewer has never actively promoted this
+   * place — the page uses this to hide the analytics section entirely
+   * rather than show a wall of zeroes that would look like the shop
+   * simply has no traffic. */
+  hasAccess: boolean;
+  requiresAuth: boolean;
+}
+
+/** Backs the "Revv Business Analytics" section of the shop detail page.
+ * Only returns real counts for someone who has actually paid to promote
+ * this exact place at some point — enforced server-side by
+ * get_shop_analytics_counts itself, not just this action, since shops
+ * have no REVV-account ownership model beyond "you promoted this
+ * listing". */
+export async function getShopAnalyticsAction(placeId: string): Promise<ShopAnalyticsResponse> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { counts: EMPTY_SHOP_ANALYTICS, hasAccess: false, requiresAuth: true };
+  }
+
+  const supabase = await createClient();
+  const hasAccess = await hasPromotedShop(supabase, placeId);
+  if (!hasAccess) {
+    return { counts: EMPTY_SHOP_ANALYTICS, hasAccess: false, requiresAuth: false };
+  }
+
+  const counts = await getShopAnalyticsCounts(supabase, placeId);
+  return { counts, hasAccess: true, requiresAuth: false };
+}
+
+const EMPTY_SHOP_ANALYTICS: ShopAnalyticsCounts = {
+  impressions: 0,
+  profileVisits: 0,
+  clicks: 0,
+  inquiries: 0,
+  websiteClicks: 0,
+};

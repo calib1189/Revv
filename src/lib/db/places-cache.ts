@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/lib/supabase/database.types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import type { ShopSearchResponse } from "@/lib/providers/places-provider";
+import type { ShopSearchResponse, ShopDetailsResponse } from "@/lib/providers/places-provider";
 
 // Shop listings don't change minute-to-minute — 24h keeps costs down
 // while staying well within how often a rating, address, or open-hours
@@ -48,6 +48,39 @@ export async function getCachedPlacesSearch(
  * can write.
  */
 export async function setCachedPlacesSearch(cacheKey: string, response: ShopSearchResponse): Promise<void> {
+  const supabase = createServiceRoleClient();
+  await supabase
+    .from("places_search_cache")
+    .upsert(
+      { cache_key: cacheKey, response: response as unknown as Json, created_at: new Date().toISOString() },
+      { onConflict: "cache_key" },
+    );
+}
+
+// Keyed purely by place ID, not coordinates — a Place Details lookup
+// doesn't take a location at all, unlike Text Search, so there's no
+// coordinate to bucket. Same table, same TTL, same reasoning.
+export function buildShopDetailsCacheKey(placeId: string): string {
+  return `details:${placeId}`;
+}
+
+export async function getCachedShopDetails(
+  supabase: SupabaseClient<Database>,
+  cacheKey: string,
+): Promise<ShopDetailsResponse | null> {
+  const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("places_search_cache")
+    .select("response")
+    .eq("cache_key", cacheKey)
+    .gt("created_at", cutoff)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.response as unknown as ShopDetailsResponse;
+}
+
+export async function setCachedShopDetails(cacheKey: string, response: ShopDetailsResponse): Promise<void> {
   const supabase = createServiceRoleClient();
   await supabase
     .from("places_search_cache")

@@ -1,5 +1,5 @@
 import { getShopCategory } from "@/lib/shops/categories";
-import type { PlacesProvider, Shop, ShopSearchResponse } from "./places-provider";
+import type { PlacesProvider, Shop, ShopSearchResponse, ShopDetails, ShopDetailsResponse } from "./places-provider";
 
 // Places API (New) — Text Search, not the legacy Nearby Search endpoint.
 // A plain keyword query ("window tint shop") plus a location bias circle
@@ -30,6 +30,24 @@ const FIELD_MASK = [
 const SEARCH_RADIUS_METERS = 24_140;
 const MAX_RESULTS = 20;
 
+// Place Details — a different, separately-billed endpoint from Text
+// Search above, used only by the shop detail page (one call per visit,
+// not per search result), since that's the only endpoint that returns a
+// website/phone number and works from a bare place ID with no location.
+const DETAILS_URL = "https://places.googleapis.com/v1/places";
+const DETAILS_FIELD_MASK = [
+  "id",
+  "displayName",
+  "formattedAddress",
+  "location",
+  "rating",
+  "userRatingCount",
+  "currentOpeningHours.openNow",
+  "googleMapsUri",
+  "websiteUri",
+  "nationalPhoneNumber",
+].join(",");
+
 interface GooglePlace {
   id: string;
   displayName?: { text?: string };
@@ -39,6 +57,8 @@ interface GooglePlace {
   userRatingCount?: number;
   currentOpeningHours?: { openNow?: boolean };
   googleMapsUri?: string;
+  websiteUri?: string;
+  nationalPhoneNumber?: string;
 }
 
 interface GoogleTextSearchResponse {
@@ -62,6 +82,40 @@ export class GooglePlacesProvider implements PlacesProvider {
     query,
   }: Parameters<PlacesProvider["searchShopsByQuery"]>[0]): Promise<ShopSearchResponse> {
     return this.textSearch(query, lat, lng);
+  }
+
+  async getShopDetails(placeId: string): Promise<ShopDetailsResponse> {
+    const response = await fetch(`${DETAILS_URL}/${encodeURIComponent(placeId)}`, {
+      headers: {
+        "X-Goog-Api-Key": this.apiKey,
+        "X-Goog-FieldMask": DETAILS_FIELD_MASK,
+      },
+    });
+
+    if (response.status === 404) return { shop: null, isMock: false };
+    if (!response.ok) {
+      throw new Error(`Google Place Details request failed (${response.status}): ${await response.text()}`);
+    }
+
+    const place = (await response.json()) as GooglePlace;
+    if (place.location?.latitude == null || place.location?.longitude == null) {
+      return { shop: null, isMock: false };
+    }
+
+    const shop: ShopDetails = {
+      placeId: place.id,
+      name: place.displayName?.text ?? "Unnamed shop",
+      address: place.formattedAddress ?? "",
+      lat: place.location.latitude,
+      lng: place.location.longitude,
+      rating: place.rating ?? null,
+      reviewCount: place.userRatingCount ?? null,
+      isOpenNow: place.currentOpeningHours?.openNow ?? null,
+      googleMapsUrl: place.googleMapsUri ?? `https://www.google.com/maps/place/?q=place_id:${place.id}`,
+      websiteUrl: place.websiteUri ?? null,
+      phoneNumber: place.nationalPhoneNumber ?? null,
+    };
+    return { shop, isMock: false };
   }
 
   private async textSearch(textQuery: string, lat: number, lng: number): Promise<ShopSearchResponse> {

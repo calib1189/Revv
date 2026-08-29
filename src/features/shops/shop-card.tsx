@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { PinIcon, StarIcon, GemIcon } from "@/components/ui/icons";
 import { formatDistance } from "@/lib/geo/distance";
 import { getShopCategory } from "@/lib/shops/categories";
@@ -21,11 +22,6 @@ const TIER_METAL_COLORS: Record<ShopPromotionTier, string> = {
   diamond: RANK_TEXT_COLORS.diamond,
 };
 
-function buildAppleMapsUrl(shop: ShopResult): string {
-  const params = new URLSearchParams({ q: shop.name, ll: `${shop.lat},${shop.lng}` });
-  return `https://maps.apple.com/?${params.toString()}`;
-}
-
 export function ShopCard({
   shop,
   category,
@@ -39,6 +35,7 @@ export function ShopCard({
   const containerRef = useRef<HTMLDivElement>(null);
   const hasRecordedImpression = useRef(false);
   const promotionTier = shop.promotionTier;
+  const router = useRouter();
 
   // Impressions only matter for a promoted shop — an un-promoted card has
   // no spend behind it to measure. Same threshold/pattern as
@@ -72,23 +69,17 @@ export function ShopCard({
   return (
     // A plain div, not an <a>, because it needs a real nested link
     // (Google Maps) inside it — two <a> tags can't nest in valid HTML.
-    // The div's own onClick does a real top-level navigation (not
-    // window.open), the same as clicking a plain link would, which is
-    // what lets iOS hand off to the native Maps app before this WebView
-    // ever loads anything at maps.apple.com.
+    // Tapping the card itself now opens the shop's own REVV page (a
+    // "profile visit", recorded server-side there) instead of jumping
+    // straight to Maps — "Open in Google Maps" below is the fast-skip
+    // path for someone who just wants directions.
     <div
       ref={containerRef}
       role="link"
       tabIndex={0}
-      onClick={() => {
-        recordClick();
-        window.location.href = buildAppleMapsUrl(shop);
-      }}
+      onClick={() => router.push(`/discover/shop/${shop.placeId}?category=${category}`)}
       onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          recordClick();
-          window.location.href = buildAppleMapsUrl(shop);
-        }
+        if (e.key === "Enter") router.push(`/discover/shop/${shop.placeId}?category=${category}`);
       }}
       className="glass flex cursor-pointer flex-col gap-2.5 rounded-2xl p-4 transition-opacity hover:opacity-90"
     >

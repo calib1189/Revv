@@ -585,14 +585,14 @@ export interface Database {
         Row: {
           id: string;
           place_id: string;
-          kind: "impression" | "click";
+          kind: "impression" | "click" | "profile_visit" | "inquiry" | "website_click";
           viewer_id: string;
           created_at: string;
         };
         Insert: {
           id?: string;
           place_id: string;
-          kind: "impression" | "click";
+          kind: "impression" | "click" | "profile_visit" | "inquiry" | "website_click";
           viewer_id: string;
           created_at?: string;
         };

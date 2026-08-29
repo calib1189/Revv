@@ -1,4 +1,4 @@
-import type { PlacesProvider, ShopSearchResponse } from "./places-provider";
+import type { PlacesProvider, ShopSearchResponse, ShopDetailsResponse } from "./places-provider";
 
 /**
  * No Google Places API key configured. Returns zero results rather than
@@ -16,5 +16,9 @@ export class MockPlacesProvider implements PlacesProvider {
 
   async searchShopsByQuery(): Promise<ShopSearchResponse> {
     return { shops: [], isMock: true };
+  }
+
+  async getShopDetails(): Promise<ShopDetailsResponse> {
+    return { shop: null, isMock: true };
   }
 }
