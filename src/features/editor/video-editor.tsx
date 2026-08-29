@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { drawFrame } from "@/features/editor/draw-frame";
 import { useVideoExport } from "@/features/editor/use-video-export";
+import { compressVideo } from "@/features/editor/compress-video";
 import { TrimScrubber } from "@/features/editor/trim-scrubber";
 import { FILTER_PRESETS } from "@/features/editor/filters";
 import { aspectNeedsPan } from "@/features/editor/crop";
@@ -57,6 +58,33 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+/** Re-points an already-mounted <video> element at a new source and
+ * waits for its metadata to actually be ready, rather than assuming the
+ * assignment takes effect synchronously. Used to swap the live preview
+ * element onto a freshly-compressed file before re-encoding — exportVideo
+ * drives its own frame capture by playing/seeking this exact element, so
+ * it would otherwise still decode the original oversized source even
+ * though a smaller file was produced, regardless of which File object
+ * gets passed as exportVideo's own separate `source` argument (that one
+ * is only used for audio extraction, never the visual frames). */
+function loadVideoSource(video: HTMLVideoElement, url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const onLoaded = () => {
+      video.removeEventListener("loadedmetadata", onLoaded);
+      video.removeEventListener("error", onError);
+      resolve();
+    };
+    const onError = () => {
+      video.removeEventListener("loadedmetadata", onLoaded);
+      video.removeEventListener("error", onError);
+      reject(new Error("Could not load the compressed video."));
+    };
+    video.addEventListener("loadedmetadata", onLoaded, { once: true });
+    video.addEventListener("error", onError, { once: true });
+    video.src = url;
+  });
+}
+
 export function VideoEditor({
   source,
   onCancel,
@@ -88,6 +116,8 @@ export function VideoEditor({
   const [drawColor, setDrawColor] = useState(TEXT_COLORS[1]);
   const [drawWidth, setDrawWidth] = useState(DRAW_WIDTHS[1]);
   const [error, setError] = useState<string | null>(null);
+  const [compressionStage, setCompressionStage] = useState<"idle" | "loading" | "compressing">("idle");
+  const [compressionProgress, setCompressionProgress] = useState(0);
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -404,27 +434,57 @@ export function VideoEditor({
       return;
     }
 
-    // Re-encoding an oversized source has now failed the same way twice
-    // on this exact device (a clean recorder stop with zero captured
-    // data) — once when it was skipped then deliberately forced back on
-    // for this exact case. A canvas-based re-encode has to decode the
-    // FULL source resolution every single frame regardless of the
-    // output size, and decoding 4K/120fps in real time is a genuine
-    // hardware ceiling on a lot of phones, not a bug with a code fix.
-    // Attempting it again here would mean another confusing wait
-    // through "Finishing up" for the same guaranteed failure — better to
-    // say so immediately and point at the one path that's actually
-    // proven to work (recording small enough to skip re-encoding
-    // entirely) than to retry something with no real chance of success.
+    // Re-encoding an oversized source through the canvas-capture +
+    // MediaRecorder pipeline has failed outright on at least one real
+    // device (a clean recorder stop with zero captured data) — that
+    // pipeline has to decode the full source resolution every single
+    // frame in real time regardless of the output size, and decoding
+    // 4K/120fps live is a genuine hardware ceiling on a lot of phones,
+    // not a bug with a code fix. ffmpeg.wasm does the same compression
+    // job as offline software transcoding instead — slower, but with no
+    // dependency on the browser's own real-time streaming/recording
+    // APIs at all, so it can't hit that specific failure mode.
+    let effectiveSource = source;
     if (source.size > MAX_VIDEO_BYTES) {
-      setError(
-        "This video is too large to post as-is, and re-encoding it isn't working on this device. Try recording at 720p or 1080p instead of 4K/120fps — that should be small enough to post directly.",
-      );
-      return;
+      setCompressionStage("loading");
+      setCompressionProgress(0);
+      try {
+        effectiveSource = await compressVideo(source, {
+          onLoadProgress: () => setCompressionStage("compressing"),
+          onCompressProgress: (ratio) => setCompressionProgress(ratio),
+        });
+      } catch (err) {
+        setCompressionStage("idle");
+        const detail = err instanceof Error ? err.message : String(err);
+        setError(
+          `Couldn't compress that video for posting. (${detail}) Try recording at 720p or 1080p instead of 4K/120fps.`,
+        );
+        return;
+      }
+      setCompressionStage("idle");
+
+      if (isUnedited) {
+        onExported(effectiveSource);
+        return;
+      }
+
+      // Real edits were applied — re-point the live preview element at
+      // the now-normal-sized compressed file before re-encoding, so the
+      // trim/filter export pass decodes the small compressed video
+      // instead of the original oversized source (exportVideo's own
+      // `source` argument only feeds audio extraction, not the frame
+      // capture, which is driven entirely by this element).
+      try {
+        await loadVideoSource(video, URL.createObjectURL(effectiveSource));
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        setError(`Couldn't finish editing that video. (${detail})`);
+        return;
+      }
     }
 
     try {
-      const { blob, extension } = await exportVideo(video, source, state);
+      const { blob, extension } = await exportVideo(video, effectiveSource, state);
       const file = new File([blob], `revv-clip.${extension}`, { type: blob.type });
       onExported(file);
     } catch (err) {
@@ -472,10 +532,14 @@ export function VideoEditor({
         <button
           type="button"
           onClick={handleDone}
-          disabled={!ready || isExporting}
+          disabled={!ready || isExporting || compressionStage !== "idle"}
           className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-60"
         >
-          {isExporting ? (
+          {compressionStage === "loading" ? (
+            "Preparing compressor…"
+          ) : compressionStage === "compressing" ? (
+            `Compressing ${Math.round(compressionProgress * 100)}%`
+          ) : isExporting ? (
             progress >= 1 ? "Finishing up…" : `Exporting ${Math.round(progress * 100)}%`
           ) : (
             <>
