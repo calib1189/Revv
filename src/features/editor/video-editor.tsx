@@ -404,6 +404,25 @@ export function VideoEditor({
       return;
     }
 
+    // Re-encoding an oversized source has now failed the same way twice
+    // on this exact device (a clean recorder stop with zero captured
+    // data) — once when it was skipped then deliberately forced back on
+    // for this exact case. A canvas-based re-encode has to decode the
+    // FULL source resolution every single frame regardless of the
+    // output size, and decoding 4K/120fps in real time is a genuine
+    // hardware ceiling on a lot of phones, not a bug with a code fix.
+    // Attempting it again here would mean another confusing wait
+    // through "Finishing up" for the same guaranteed failure — better to
+    // say so immediately and point at the one path that's actually
+    // proven to work (recording small enough to skip re-encoding
+    // entirely) than to retry something with no real chance of success.
+    if (source.size > MAX_VIDEO_BYTES) {
+      setError(
+        "This video is too large to post as-is, and re-encoding it isn't working on this device. Try recording at 720p or 1080p instead of 4K/120fps — that should be small enough to post directly.",
+      );
+      return;
+    }
+
     try {
       const { blob, extension } = await exportVideo(video, source, state);
       const file = new File([blob], `revv-clip.${extension}`, { type: blob.type });
