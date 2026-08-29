@@ -592,6 +592,7 @@ export interface Database {
           price_cents: number;
           tier: "standard" | "featured" | "diamond";
           status: "pending_payment" | "active";
+          category: string | null;
           stripe_checkout_session_id: string | null;
           starts_at: string | null;
           ends_at: string | null;
@@ -605,6 +606,7 @@ export interface Database {
           price_cents: number;
           tier?: "standard" | "featured" | "diamond";
           status?: "pending_payment" | "active";
+          category?: string | null;
           stripe_checkout_session_id?: string | null;
           starts_at?: string | null;
           ends_at?: string | null;

@@ -34,10 +34,17 @@ export function PromoteThisShop({
   placeId,
   placeName,
   currentTier,
+  category,
 }: {
   placeId: string;
   placeName: string;
   currentTier: ShopPromotionTier | null;
+  /** The category this shop was browsed under to reach this page, if
+   * any — captured so the promotion guarantees visibility in that
+   * specific category browse (see searchNearbyShopsAction). Null when
+   * this page was reached some other way (a direct link, a Details-page
+   * revisit with no category in the URL). */
+  category: string | null;
 }) {
   const [tier, setTier] = useState<ShopPromotionTier>(nextWorthwhileTier(currentTier));
   const [isPromoting, setIsPromoting] = useState(false);
@@ -57,7 +64,7 @@ export function PromoteThisShop({
     try {
       const { Capacitor } = await import("@capacitor/core");
       const isNative = Capacitor.isNativePlatform();
-      const result = await createShopPromotionAction({ placeId, placeName, tier, isNative });
+      const result = await createShopPromotionAction({ placeId, placeName, tier, category, isNative });
       if (result.error || !result.url) {
         setError(result.error ?? "Couldn't start checkout. Try again.");
         return;

@@ -88,6 +88,68 @@ async function withPromotionStatus(
 }
 
 /**
+ * A promoted shop otherwise only ever shows up if Google's own Text
+ * Search happens to surface it for this category's keyword query near
+ * this location — that's the actual bug behind "I promoted my shop and
+ * don't see it": Google's relevance ranking (review count, prominence,
+ * name match) decides the 20 results a search returns, and a
+ * promotion re-sorts/badges whatever's already in that list, it can't
+ * pull in something Google left out. This looks up every active
+ * promotion that targets this category (or targets no category at all
+ * — see 0059's migration comment for why null means "every category")
+ * and, for whichever of those didn't make it into the organic results,
+ * fetches its own listing via Place Details and adds it in — a paying
+ * customer's guaranteed visibility, not just better placement among
+ * whatever Google decided to show anyway.
+ *
+ * Deliberately doesn't go through the per-IP search rate limit — the
+ * Details calls this makes are bounded by how many promotions are
+ * actually active (not by how many people are searching) and already
+ * share the same 24h cache every other Details lookup uses, so the
+ * real incremental Google cost is one call per promoted place per day,
+ * not per request.
+ */
+async function injectMissingPromotedShops(
+  supabase: SupabaseClient<Database>,
+  category: string,
+  shops: Shop[],
+): Promise<Shop[]> {
+  const nowIso = new Date().toISOString();
+  const { data: promotions, error } = await supabase
+    .from("shop_promotions")
+    .select("place_id")
+    .eq("status", "active")
+    .gt("ends_at", nowIso)
+    .or(`category.eq.${category},category.is.null`);
+  if (error) throw error;
+  if (promotions.length === 0) return shops;
+
+  const existingIds = new Set(shops.map((s) => s.placeId));
+  const missingIds = [...new Set(promotions.map((p) => p.place_id))].filter((id) => !existingIds.has(id));
+  if (missingIds.length === 0) return shops;
+
+  const injected = await Promise.all(
+    missingIds.map(async (placeId): Promise<ShopDetails | null> => {
+      const cacheKey = buildShopDetailsCacheKey(placeId);
+      const cached = await getCachedShopDetails(supabase, cacheKey);
+      if (cached) return cached.shop;
+      try {
+        const response = await getPlacesProvider().getShopDetails(placeId);
+        if (!response.isMock && response.shop) await setCachedShopDetails(cacheKey, response);
+        return response.isMock ? null : response.shop;
+      } catch {
+        // A promotion whose place_id Google no longer recognizes (the
+        // business closed, was removed from Google) just doesn't get
+        // injected — nothing left to show.
+        return null;
+      }
+    }),
+  );
+
+  return [...shops, ...injected.filter((shop): shop is ShopDetails => shop !== null)];
+}
+
+/**
  * Backs the Discover page's "Shops near you" browser — public, so this
  * has to be safe for anonymous callers, same as
  * searchMarketplaceProductsAction. IP-based rate limiting instead of a
@@ -116,7 +178,10 @@ export async function searchNearbyShopsAction({
   // search someone else already ran for the same category/area today.
   const cacheKey = buildPlacesCacheKey("category", category, lat, lng);
   const cached = await getCachedPlacesSearch(supabase, cacheKey);
-  if (cached) return await withPromotionStatus(supabase, cached);
+  if (cached) {
+    const shops = await injectMissingPromotedShops(supabase, category, cached.shops);
+    return await withPromotionStatus(supabase, { shops, isMock: cached.isMock });
+  }
 
   const ip = await getClientIp();
   if (!(await isUnderShopsSearchRateLimit(supabase, ip))) {
@@ -128,9 +193,13 @@ export async function searchNearbyShopsAction({
     const response = await getPlacesProvider().searchNearbyShops({ lat, lng, category });
     // Never cache a mock (not-configured) response — there's no cost to
     // save from it, and caching it would just serve a stale "not set up
-    // yet" placeholder after the real key gets configured.
+    // yet" placeholder after the real key gets configured. Cached before
+    // injection, not after — an injected promotion should reflect
+    // whatever's active right now, not get frozen into this key's 24h
+    // cache regardless of when that promotion actually expires.
     if (!response.isMock) await setCachedPlacesSearch(cacheKey, response);
-    return await withPromotionStatus(supabase, response);
+    const shops = await injectMissingPromotedShops(supabase, category, response.shops);
+    return await withPromotionStatus(supabase, { shops, isMock: response.isMock });
   } catch (err) {
     console.error("searchNearbyShopsAction failed:", err);
     return { shops: [], isMock: false, rateLimited: false };
@@ -204,11 +273,20 @@ export async function createShopPromotionAction({
   placeId,
   placeName,
   tier,
+  category,
   isNative,
 }: {
   placeId: string;
   placeName: string;
   tier: string;
+  /** Which category browse this promotion should guarantee visibility
+   * in — see searchNearbyShopsAction's injectMissingPromotedShops. Null
+   * when the promoter came from a context with no category to infer
+   * (currently: the "Promote your shop" search panel) rather than a
+   * category-filtered shop card — treated as "every category" rather
+   * than "none", since that's a strictly safer default for a paying
+   * customer than guaranteeing nothing. */
+  category?: string | null;
   /** Same native-app redirect handling as ad/meetup checkout — Checkout
    * has to run in the system browser there, which needs a revv://
    * custom-scheme success/cancel URL instead of a normal one. */
@@ -223,6 +301,9 @@ export async function createShopPromotionAction({
   if (!isShopPromotionTier(tier)) {
     return { error: "Choose a valid plan." };
   }
+  if (category && !isShopCategoryId(category)) {
+    return { error: "Choose a valid category." };
+  }
 
   const { supabase, user } = await requireUser();
   if (!user.email) return { error: "Your account needs a confirmed email." };
@@ -234,6 +315,7 @@ export async function createShopPromotionAction({
       place_id: placeId,
       place_name: placeName,
       tier,
+      category: category ?? null,
       price_cents: SHOP_PROMOTION_TIERS[tier].priceCents,
     });
   } catch {

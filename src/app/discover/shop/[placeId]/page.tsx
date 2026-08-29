@@ -54,7 +54,8 @@ export default async function ShopDetailPage({
     // best-effort only
   }
 
-  const category = categoryParam && isShopCategoryId(categoryParam) ? getShopCategory(categoryParam) : null;
+  const categoryId = categoryParam && isShopCategoryId(categoryParam) ? categoryParam : null;
+  const category = categoryId ? getShopCategory(categoryId) : null;
   const CategoryIcon = category?.icon ?? WrenchIcon;
   const tierColor = shop.promotionTier ? TIER_METAL_COLORS[shop.promotionTier] : null;
 
@@ -135,7 +136,12 @@ export default async function ShopDetailPage({
       </div>
 
       <div className="mt-6">
-        <PromoteThisShop placeId={shop.placeId} placeName={shop.name} currentTier={shop.promotionTier} />
+        <PromoteThisShop
+          placeId={shop.placeId}
+          placeName={shop.name}
+          currentTier={shop.promotionTier}
+          category={categoryId}
+        />
       </div>
     </div>
   );
