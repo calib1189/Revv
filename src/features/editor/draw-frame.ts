@@ -35,18 +35,30 @@ export function drawFrame(
   canvasWidth: number,
   canvasHeight: number,
   state: Pick<EditState, "aspect" | "panOffset" | "filterId" | "textLayers"> &
-    Partial<Pick<EditState, "drawStrokes">>,
+    Partial<Pick<EditState, "drawStrokes" | "rotation">>,
 ): void {
   const { width, height } = sourceDimensions(source);
   if (!width || !height) return;
 
-  const crop = cropRectForAspect(state.aspect, state.panOffset, width, height);
+  const rotation = state.rotation ?? 0;
+  const crop = cropRectForAspect(state.aspect, state.panOffset, width, height, rotation);
   const sx = crop.x * width;
   const sy = crop.y * height;
   const sw = crop.width * width;
   const sh = crop.height * height;
 
-  ctx.drawImage(source, sx, sy, sw, sh, 0, 0, canvasWidth, canvasHeight);
+  // Rotating around the canvas center and drawing into a rect sized for
+  // the *pre-rotation* orientation (swapped at 90°/270°) means the drawn
+  // rect's post-rotation footprint always exactly fills canvasWidth x
+  // canvasHeight — at rotation 0 this reduces algebraically to the same
+  // drawImage(source, ..., 0, 0, canvasWidth, canvasHeight) as before.
+  ctx.save();
+  ctx.translate(canvasWidth / 2, canvasHeight / 2);
+  if (rotation !== 0) ctx.rotate((rotation * Math.PI) / 180);
+  const drawWidth = rotation === 90 || rotation === 270 ? canvasHeight : canvasWidth;
+  const drawHeight = rotation === 90 || rotation === 270 ? canvasWidth : canvasHeight;
+  ctx.drawImage(source, sx, sy, sw, sh, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+  ctx.restore();
 
   const preset = getFilterPreset(state.filterId);
   if (state.filterId !== "original") {
@@ -73,16 +85,24 @@ export function drawFrame(
 
   for (const layer of state.textLayers) {
     const fontSize = layer.fontSize * (canvasWidth / 1080);
+    // A plain system font stack renders emoji glyphs fine — no separate
+    // emoji font stack needed, and font choice is moot for a sticker
+    // anyway since it's not shown in that tool's UI.
     ctx.font = `700 ${fontSize}px ${fontStack(layer.fontId)}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.lineJoin = "round";
-    ctx.lineWidth = Math.max(2, fontSize * 0.12);
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
-    ctx.fillStyle = layer.color;
     const x = layer.x * canvasWidth;
     const y = layer.y * canvasHeight;
-    ctx.strokeText(layer.text, x, y);
+    if (!layer.isSticker) {
+      // The dark stroke outline is what keeps real text legible over
+      // busy video — the same outline traced around a color emoji's
+      // glyph just looks like a smudge, so stickers skip it entirely.
+      ctx.lineJoin = "round";
+      ctx.lineWidth = Math.max(2, fontSize * 0.12);
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
+      ctx.fillStyle = layer.color;
+      ctx.strokeText(layer.text, x, y);
+    }
     ctx.fillText(layer.text, x, y);
   }
 }

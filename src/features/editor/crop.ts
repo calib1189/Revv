@@ -1,4 +1,4 @@
-import type { AspectRatioId, CropRect } from "@/features/editor/types";
+import type { AspectRatioId, CropRect, Rotation } from "@/features/editor/types";
 
 const ASPECT_RATIOS: Record<Exclude<AspectRatioId, "original">, number> = {
   "9:16": 9 / 16,
@@ -10,18 +10,25 @@ const ASPECT_RATIOS: Record<Exclude<AspectRatioId, "original">, number> = {
  * aspect ratio and a pan offset. Crops the axis the video has "extra" of
  * relative to the target — e.g. a 16:9 landscape clip cropped to 9:16
  * portrait crops horizontally (keeps full height) and panOffset slides
- * that crop window left/right; "original" never crops at all. */
+ * that crop window left/right; "original" never crops at all.
+ *
+ * `rotation` is the *output* rotation (see drawFrame) — a 90°/270°
+ * rotation swaps which source axis ends up "vertical" after rotating, so
+ * the crop has to target the inverse ratio for the final result to
+ * actually match the requested aspect once rotated. */
 export function cropRectForAspect(
   aspect: AspectRatioId,
   panOffset: number,
   videoWidth: number,
   videoHeight: number,
+  rotation: Rotation = 0,
 ): CropRect {
   if (aspect === "original" || !videoWidth || !videoHeight) {
     return { x: 0, y: 0, width: 1, height: 1 };
   }
 
-  const target = ASPECT_RATIOS[aspect];
+  const rawTarget = ASPECT_RATIOS[aspect];
+  const target = rotation === 90 || rotation === 270 ? 1 / rawTarget : rawTarget;
   const videoAspect = videoWidth / videoHeight;
 
   if (videoAspect > target) {
@@ -44,8 +51,9 @@ export function aspectNeedsPan(
   aspect: AspectRatioId,
   videoWidth: number,
   videoHeight: number,
+  rotation: Rotation = 0,
 ): boolean {
   if (aspect === "original" || !videoWidth || !videoHeight) return false;
-  const rect = cropRectForAspect(aspect, 0, videoWidth, videoHeight);
+  const rect = cropRectForAspect(aspect, 0, videoWidth, videoHeight, rotation);
   return rect.width < 0.999 || rect.height < 0.999;
 }

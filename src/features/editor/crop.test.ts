@@ -47,6 +47,31 @@ describe("cropRectForAspect", () => {
   });
 });
 
+describe("cropRectForAspect with rotation", () => {
+  it("targets the inverse aspect at 90° so the rotated result matches the requested ratio", () => {
+    // A 1920x1080 landscape source, rotated 90°, cropped to 9:16: the
+    // pre-rotation crop should actually be a 16:9 window (the inverse of
+    // 9/16) so that after rotating 90° it reads as 9:16.
+    const rotated = cropRectForAspect("9:16", 0.5, 1920, 1080, 90);
+    const equivalent = cropRectForAspect("9:16", 0.5, 1080, 1920, 0);
+    // Cropping a 1920x1080 frame to 16:9 crops nothing (it already is
+    // 16:9) — same shape as cropping a 1080x1920 frame to 9:16.
+    expect(rotated).toEqual(equivalent);
+  });
+
+  it("270° behaves the same as 90° for the crop rect (both swap the axis)", () => {
+    const at90 = cropRectForAspect("1:1", 0.5, 1920, 1080, 90);
+    const at270 = cropRectForAspect("1:1", 0.5, 1920, 1080, 270);
+    expect(at90).toEqual(at270);
+  });
+
+  it("180° behaves the same as 0° (no axis swap)", () => {
+    const at0 = cropRectForAspect("9:16", 0.5, 1920, 1080, 0);
+    const at180 = cropRectForAspect("9:16", 0.5, 1920, 1080, 180);
+    expect(at0).toEqual(at180);
+  });
+});
+
 describe("aspectNeedsPan", () => {
   it("is false for 'original'", () => {
     expect(aspectNeedsPan("original", 1920, 1080)).toBe(false);

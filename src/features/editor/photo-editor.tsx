@@ -4,7 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { drawFrame } from "@/features/editor/draw-frame";
 import { FILTER_PRESETS } from "@/features/editor/filters";
 import { aspectNeedsPan } from "@/features/editor/crop";
-import { TEXT_FONTS, type AspectRatioId, type TextLayer } from "@/features/editor/types";
+import { STICKER_EMOJIS } from "@/features/editor/stickers";
+import {
+  TEXT_FONTS,
+  type AspectRatioId,
+  type Rotation,
+  type TextLayer,
+  type DrawStroke,
+} from "@/features/editor/types";
 import {
   BackIcon,
   CheckIcon,
@@ -13,10 +20,13 @@ import {
   FilterIcon,
   TrashIcon,
   PlusIcon,
+  StickerIcon,
+  RotateIcon,
+  BrushIcon,
 } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
-type Tool = "crop" | "filter" | "text" | null;
+type Tool = "crop" | "filter" | "text" | "sticker" | "draw" | null;
 
 const ASPECTS: { id: AspectRatioId; label: string }[] = [
   { id: "9:16", label: "9:16" },
@@ -26,11 +36,15 @@ const ASPECTS: { id: AspectRatioId; label: string }[] = [
 ];
 
 const TEXT_COLORS = ["#ffffff", "#ff4433", "#ffd166", "#06d6a0", "#4cc9f0", "#000000"];
+const DRAW_WIDTHS = [6, 12, 22];
+const ROTATION_STEPS: Rotation[] = [0, 90, 180, 270];
 
 const TOOLS: { id: Exclude<Tool, null>; label: string; icon: typeof CropIcon }[] = [
   { id: "crop", label: "Crop", icon: CropIcon },
   { id: "filter", label: "Filters", icon: FilterIcon },
   { id: "text", label: "Text", icon: TextToolIcon },
+  { id: "sticker", label: "Stickers", icon: StickerIcon },
+  { id: "draw", label: "Draw", icon: BrushIcon },
 ];
 
 function clamp(value: number, min: number, max: number): number {
@@ -40,8 +54,10 @@ function clamp(value: number, min: number, max: number): number {
 interface PhotoEditState {
   aspect: AspectRatioId;
   panOffset: number;
+  rotation: Rotation;
   filterId: string;
   textLayers: TextLayer[];
+  drawStrokes: DrawStroke[];
 }
 
 export function PhotoEditor({
@@ -65,11 +81,15 @@ export function PhotoEditor({
   const [state, setState] = useState<PhotoEditState>({
     aspect: "original",
     panOffset: 0.5,
+    rotation: 0,
     filterId: "original",
     textLayers: [],
+    drawStrokes: [],
   });
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [newTextDraft, setNewTextDraft] = useState("");
+  const [drawColor, setDrawColor] = useState(TEXT_COLORS[1]);
+  const [drawWidth, setDrawWidth] = useState(DRAW_WIDTHS[1]);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -131,6 +151,14 @@ export function PhotoEditor({
     setState((s) => ({ ...s, ...patch }));
   }
 
+  function rotateClockwise() {
+    setState((s) => {
+      const currentIndex = ROTATION_STEPS.indexOf(s.rotation);
+      const next = ROTATION_STEPS[(currentIndex + 1) % ROTATION_STEPS.length];
+      return { ...s, rotation: next };
+    });
+  }
+
   function addTextLayer() {
     if (!newTextDraft.trim()) return;
     const layer: TextLayer = {
@@ -141,9 +169,25 @@ export function PhotoEditor({
       color: "#ffffff",
       fontSize: 64,
       fontId: "sans",
+      isSticker: false,
     };
     setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
     setNewTextDraft("");
+    setSelectedTextId(layer.id);
+  }
+
+  function addStickerLayer(emoji: string) {
+    const layer: TextLayer = {
+      id: crypto.randomUUID(),
+      text: emoji,
+      x: 0.5,
+      y: 0.5,
+      color: "#ffffff",
+      fontSize: 110,
+      fontId: "sans",
+      isSticker: true,
+    };
+    setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
     setSelectedTextId(layer.id);
   }
 
@@ -159,18 +203,62 @@ export function PhotoEditor({
     if (selectedTextId === id) setSelectedTextId(null);
   }
 
+  function addDrawStroke(strokeId: string, fracX: number, fracY: number) {
+    setState((s) => {
+      const point = { x: fracX, y: fracY };
+      const existing = s.drawStrokes.find((st) => st.id === strokeId);
+      const drawStrokes: DrawStroke[] = existing
+        ? s.drawStrokes.map((st) =>
+            st.id === strokeId ? { ...st, points: [...st.points, point] } : st,
+          )
+        : [...s.drawStrokes, { id: strokeId, color: drawColor, width: drawWidth, points: [point] }];
+      return { ...s, drawStrokes };
+    });
+  }
+
+  function undoDrawStroke() {
+    setState((s) => ({ ...s, drawStrokes: s.drawStrokes.slice(0, -1) }));
+  }
+
+  function clearDrawStrokes() {
+    setState((s) => ({ ...s, drawStrokes: [] }));
+  }
+
   function handlePreviewPointerDown(e: React.PointerEvent) {
     const container = previewRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const dragTextId = selectedTextId;
+
+    if (tool === "draw") {
+      e.preventDefault();
+      const strokeId = crypto.randomUUID();
+      const point = (ev: { clientX: number; clientY: number }) => ({
+        x: clamp((ev.clientX - rect.left) / rect.width, 0, 1),
+        y: clamp((ev.clientY - rect.top) / rect.height, 0, 1),
+      });
+      const first = point(e);
+      addDrawStroke(strokeId, first.x, first.y);
+      function move(ev: PointerEvent) {
+        const p = point(ev);
+        addDrawStroke(strokeId, p.x, p.y);
+      }
+      function up() {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+      }
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      return;
+    }
+
+    const dragTextId = tool === "text" || tool === "sticker" ? selectedTextId : null;
     const cropPanEnabled =
-      tool === "crop" && aspectNeedsPan(state.aspect, imgDims.width, imgDims.height);
+      tool === "crop" && aspectNeedsPan(state.aspect, imgDims.width, imgDims.height, state.rotation);
     if (!dragTextId && !cropPanEnabled) return;
 
     e.preventDefault();
     const imgAspect = imgDims.width / Math.max(1, imgDims.height);
-    const targetAspect =
+    const rawTargetAspect =
       state.aspect === "9:16"
         ? 9 / 16
         : state.aspect === "1:1"
@@ -178,6 +266,8 @@ export function PhotoEditor({
           : state.aspect === "4:5"
             ? 4 / 5
             : imgAspect;
+    const targetAspect =
+      state.rotation === 90 || state.rotation === 270 ? 1 / rawTargetAspect : rawTargetAspect;
     const panAxisIsX = imgAspect > targetAspect;
 
     function move(ev: PointerEvent) {
@@ -268,22 +358,24 @@ export function PhotoEditor({
               Loading…
             </div>
           )}
-          {tool === "text" &&
-            state.textLayers.map((layer) => (
-              <button
-                key={layer.id}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedTextId(layer.id);
-                }}
-                className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${
-                  selectedTextId === layer.id ? "border-accent" : "border-transparent"
-                }`}
-                style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%` }}
-                aria-label={`Select "${layer.text}"`}
-              />
-            ))}
+          {(tool === "text" || tool === "sticker") &&
+            state.textLayers
+              .filter((l) => l.isSticker === (tool === "sticker"))
+              .map((layer) => (
+                <button
+                  key={layer.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedTextId(layer.id);
+                  }}
+                  className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${
+                    selectedTextId === layer.id ? "border-accent" : "border-transparent"
+                  }`}
+                  style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%` }}
+                  aria-label={`Select "${layer.text}"`}
+                />
+              ))}
         </div>
       </div>
 
@@ -304,6 +396,14 @@ export function PhotoEditor({
                 {a.label}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={rotateClockwise}
+              aria-label="Rotate 90 degrees"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/80"
+            >
+              <RotateIcon className="h-4 w-4" />
+            </button>
           </div>
         )}
 
@@ -348,7 +448,7 @@ export function PhotoEditor({
               </button>
             </div>
 
-            {selectedLayer && (
+            {selectedLayer && !selectedLayer.isSticker && (
               <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -409,11 +509,127 @@ export function PhotoEditor({
                 </div>
               </div>
             )}
-            {!selectedLayer && state.textLayers.length > 0 && (
+            {!selectedLayer && state.textLayers.filter((l) => !l.isSticker).length > 0 && (
               <p className="text-center text-xs text-muted">
                 Tap a dot on the preview to drag or restyle it.
               </p>
             )}
+          </div>
+        )}
+
+        {tool === "sticker" && (
+          <div className="flex flex-col gap-3 px-4 py-4">
+            <div className="no-scrollbar grid grid-cols-8 gap-2 overflow-x-auto">
+              {STICKER_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => addStickerLayer(emoji)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-xl"
+                  aria-label={`Add ${emoji} sticker`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            {selectedLayer && selectedLayer.isSticker && (
+              <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-white/60">Selected: {selectedLayer.text}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeTextLayer(selectedLayer.id)}
+                    aria-label="Delete sticker"
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-white/60">Size</span>
+                  <input
+                    type="range"
+                    min={40}
+                    max={220}
+                    step={4}
+                    value={selectedLayer.fontSize}
+                    onChange={(e) =>
+                      updateTextLayer(selectedLayer.id, { fontSize: Number(e.target.value) })
+                    }
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            )}
+            {!selectedLayer && state.textLayers.filter((l) => l.isSticker).length > 0 && (
+              <p className="text-center text-xs text-muted">
+                Tap a sticker on the preview to drag or resize it.
+              </p>
+            )}
+          </div>
+        )}
+
+        {tool === "draw" && (
+          <div className="flex flex-col gap-3 px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {TEXT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setDrawColor(c)}
+                    className={`h-6 w-6 rounded-full border-2 ${
+                      drawColor === c ? "border-accent" : "border-white/20"
+                    }`}
+                    style={{ backgroundColor: c }}
+                    aria-label={`Draw color ${c}`}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={undoDrawStroke}
+                  disabled={state.drawStrokes.length === 0}
+                  className="text-xs text-white/70 disabled:opacity-40"
+                >
+                  Undo
+                </button>
+                <button
+                  type="button"
+                  onClick={clearDrawStrokes}
+                  disabled={state.drawStrokes.length === 0}
+                  aria-label="Clear drawing"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70 disabled:opacity-40"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {DRAW_WIDTHS.map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setDrawWidth(w)}
+                  aria-label={`Brush size ${w}`}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                    drawWidth === w ? "bg-accent" : "bg-white/10"
+                  }`}
+                >
+                  <span
+                    className="rounded-full"
+                    style={{
+                      width: Math.round(w / 2),
+                      height: Math.round(w / 2),
+                      backgroundColor: drawWidth === w ? "var(--color-accent-foreground)" : "white",
+                    }}
+                  />
+                </button>
+              ))}
+              <span className="text-xs text-white/50">Draw right on the preview</span>
+            </div>
           </div>
         )}
 

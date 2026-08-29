@@ -32,9 +32,19 @@ export interface TextLayer {
   color: string;
   fontSize: number;
   fontId: TextFontId;
+  /** An emoji sticker uses this same layer shape (drag/resize/delete are
+   * identical) but skips the stroke outline drawFrame adds for text —
+   * a dark outline traced around a color emoji's glyph looks wrong,
+   * where the same outline is what keeps real text legible over video. */
+  isSticker: boolean;
 }
 
 export type AspectRatioId = "9:16" | "1:1" | "4:5" | "original";
+
+/** Clockwise degrees. A plain cycle through the four right angles, like
+ * every other mobile photo/video editor's rotate button — not a free
+ * angle, which would need its own crop-corner math. */
+export type Rotation = 0 | 90 | 180 | 270;
 
 export interface DrawStroke {
   id: string;
@@ -56,12 +66,18 @@ export interface EditState {
   /** Pan offset (0-1) along whichever axis the chosen aspect ratio
    * actually crops — see cropRectForAspect in use-video-export.ts. */
   panOffset: number;
+  rotation: Rotation;
   filterId: string;
   textLayers: TextLayer[];
   drawStrokes: DrawStroke[];
   musicFile: File | null;
   musicVolume: number;
   originalVolume: number;
+  /** A narration track recorded in-app (mic only, via the Voice tool),
+   * mixed in the same way as musicFile — see use-video-export.ts. Not
+   * looped: it plays once from the start of the trimmed clip. */
+  voiceoverFile: File | null;
+  voiceoverVolume: number;
   /** HTMLMediaElement.playbackRate applied during both preview and
    * export — a value here changes how much source timeline plays back
    * per second, not the frame-composite math itself, so drawFrame
@@ -81,11 +97,14 @@ export const SPEED_PRESETS: { value: number; label: string }[] = [
 export const DEFAULT_EDIT_STATE: Omit<EditState, "trimStart" | "trimEnd"> = {
   aspect: "9:16",
   panOffset: 0.5,
+  rotation: 0,
   filterId: "original",
   textLayers: [],
   drawStrokes: [],
   musicFile: null,
   musicVolume: 0.8,
   originalVolume: 1,
+  voiceoverFile: null,
+  voiceoverVolume: 1,
   playbackRate: 1,
 };

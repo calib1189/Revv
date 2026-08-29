@@ -109,6 +109,7 @@ export function useVideoExport() {
       let combinedStream: MediaStream | null = null;
       let originalNode: AudioBufferSourceNode | null = null;
       let musicNode: AudioBufferSourceNode | null = null;
+      let voiceoverNode: AudioBufferSourceNode | null = null;
 
       // Wrapped in try/finally so a thrown error partway through (a codec
       // that turns out unsupported, decodeAudioData rejecting, anything)
@@ -126,7 +127,7 @@ export function useVideoExport() {
         await waitForSeek(video, state.trimStart);
 
         let audioTracks: MediaStreamTrack[] = [];
-        const needsAudio = state.originalVolume > 0 || !!state.musicFile;
+        const needsAudio = state.originalVolume > 0 || !!state.musicFile || !!state.voiceoverFile;
         if (needsAudio) {
           const AudioContextCtor =
             window.AudioContext ||
@@ -182,6 +183,23 @@ export function useVideoExport() {
               musicNode.connect(gain).connect(destination);
             } catch {
               musicNode = null;
+            }
+          }
+
+          if (state.voiceoverFile) {
+            try {
+              const arrayBuffer = await state.voiceoverFile.arrayBuffer();
+              const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+              voiceoverNode = audioCtx.createBufferSource();
+              voiceoverNode.buffer = audioBuffer;
+              // Not looped — a narration recording plays once, starting
+              // when the clip does, unlike music which is expected to
+              // vamp for however long the clip runs.
+              const gain = audioCtx.createGain();
+              gain.gain.value = state.voiceoverVolume;
+              voiceoverNode.connect(gain).connect(destination);
+            } catch {
+              voiceoverNode = null;
             }
           }
 
@@ -245,6 +263,7 @@ export function useVideoExport() {
         const durationSeconds = Math.max(0.1, state.trimEnd - state.trimStart);
         originalNode?.start(0, state.trimStart, durationSeconds);
         musicNode?.start(0);
+        voiceoverNode?.start(0);
         // currentTime still advances in source-time regardless of rate —
         // the trimEnd check below stays correct unchanged — but the
         // *wall-clock* time to get there scales inversely with it, which
@@ -304,6 +323,7 @@ export function useVideoExport() {
         recorder.stop();
         originalNode?.stop();
         musicNode?.stop();
+        voiceoverNode?.stop();
         // recorder.onstop not firing (a real MediaRecorder flakiness on
         // some devices) would otherwise hang export forever right here,
         // after the progress bar already reads 100% — indistinguishable

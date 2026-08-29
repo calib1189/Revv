@@ -7,6 +7,8 @@ import { compressVideo } from "@/features/editor/compress-video";
 import { TrimScrubber } from "@/features/editor/trim-scrubber";
 import { FILTER_PRESETS } from "@/features/editor/filters";
 import { aspectNeedsPan } from "@/features/editor/crop";
+import { STICKER_EMOJIS } from "@/features/editor/stickers";
+import { pickAudioRecorderMimeType } from "@/features/editor/audio-recording";
 import { MAX_VIDEO_BYTES } from "@/lib/validation/media";
 import {
   DEFAULT_EDIT_STATE,
@@ -14,6 +16,7 @@ import {
   SPEED_PRESETS,
   type EditState,
   type AspectRatioId,
+  type Rotation,
   type TextLayer,
   type DrawStroke,
 } from "@/features/editor/types";
@@ -29,10 +32,15 @@ import {
   PlusIcon,
   BrushIcon,
   SpeedIcon,
+  StickerIcon,
+  RotateIcon,
+  MicIcon,
 } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
-type Tool = "trim" | "crop" | "filter" | "text" | "draw" | "speed" | "music" | null;
+type Tool = "trim" | "crop" | "filter" | "text" | "sticker" | "draw" | "speed" | "music" | "voice" | null;
+
+const ROTATION_STEPS: Rotation[] = [0, 90, 180, 270];
 
 const ASPECTS: { id: AspectRatioId; label: string }[] = [
   { id: "9:16", label: "9:16" },
@@ -50,9 +58,13 @@ const TOOLS: { id: Exclude<Tool, null>; label: string; icon: typeof ScissorsIcon
   { id: "speed", label: "Speed", icon: SpeedIcon },
   { id: "filter", label: "Filters", icon: FilterIcon },
   { id: "text", label: "Text", icon: TextToolIcon },
+  { id: "sticker", label: "Stickers", icon: StickerIcon },
   { id: "draw", label: "Draw", icon: BrushIcon },
+  { id: "voice", label: "Voice", icon: MicIcon },
   { id: "music", label: "Music", icon: MusicIcon },
 ];
+
+const MAX_VOICEOVER_SECONDS = 180;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -118,6 +130,13 @@ export function VideoEditor({
   const [error, setError] = useState<string | null>(null);
   const [compressionStage, setCompressionStage] = useState<"idle" | "loading" | "compressing">("idle");
   const [compressionProgress, setCompressionProgress] = useState(0);
+  const [isRecordingVoiceover, setIsRecordingVoiceover] = useState(false);
+  const voiceoverAudioRef = useRef<HTMLAudioElement>(null);
+  const voiceoverUrl = useRef<string | null>(null);
+  const voiceoverRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceoverStreamRef = useRef<MediaStream | null>(null);
+  const voiceoverChunksRef = useRef<BlobPart[]>([]);
+  const voiceoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -275,8 +294,47 @@ export function VideoEditor({
     if (musicAudioRef.current) musicAudioRef.current.volume = state.musicVolume;
   }, [state.musicVolume]);
 
+  // Voiceover preview: same plain-<audio>-loop pattern as music above, so
+  // a recorded narration can be played back once for a sanity check —
+  // not looped, matching how it's actually mixed in export (start(0), no
+  // loop, since it's meant to run once alongside the clip, not repeat).
+  useEffect(() => {
+    if (voiceoverUrl.current) URL.revokeObjectURL(voiceoverUrl.current);
+    if (!state.voiceoverFile) {
+      voiceoverUrl.current = null;
+      if (voiceoverAudioRef.current) voiceoverAudioRef.current.src = "";
+      return;
+    }
+    const url = URL.createObjectURL(state.voiceoverFile);
+    voiceoverUrl.current = url;
+    if (voiceoverAudioRef.current) voiceoverAudioRef.current.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [state.voiceoverFile]);
+
+  useEffect(() => {
+    if (voiceoverAudioRef.current) voiceoverAudioRef.current.volume = state.voiceoverVolume;
+  }, [state.voiceoverVolume]);
+
+  // Stop any in-flight recording and release the mic if the editor is
+  // torn down mid-recording (user backs out while recording).
+  useEffect(() => {
+    return () => {
+      if (voiceoverTimeoutRef.current) clearTimeout(voiceoverTimeoutRef.current);
+      voiceoverRecorderRef.current?.stop();
+      voiceoverStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
   function updateState(patch: Partial<EditState>) {
     setState((s) => ({ ...s, ...patch }));
+  }
+
+  function rotateClockwise() {
+    setState((s) => {
+      const currentIndex = ROTATION_STEPS.indexOf(s.rotation);
+      const next = ROTATION_STEPS[(currentIndex + 1) % ROTATION_STEPS.length];
+      return { ...s, rotation: next };
+    });
   }
 
   function addTextLayer() {
@@ -289,10 +347,68 @@ export function VideoEditor({
       color: "#ffffff",
       fontSize: 64,
       fontId: "sans",
+      isSticker: false,
     };
     setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
     setNewTextDraft("");
     setSelectedTextId(layer.id);
+  }
+
+  function addStickerLayer(emoji: string) {
+    const layer: TextLayer = {
+      id: crypto.randomUUID(),
+      text: emoji,
+      x: 0.5,
+      y: 0.5,
+      color: "#ffffff",
+      fontSize: 110,
+      fontId: "sans",
+      isSticker: true,
+    };
+    setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
+    setSelectedTextId(layer.id);
+  }
+
+  async function startVoiceoverRecording() {
+    setError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceoverStreamRef.current = stream;
+      const { mimeType, extension } = pickAudioRecorderMimeType();
+      const recorder = new MediaRecorder(stream, { mimeType });
+      voiceoverChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) voiceoverChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(voiceoverChunksRef.current, { type: mimeType.split(";")[0] });
+        if (blob.size > 0) {
+          const file = new File([blob], `voiceover.${extension}`, { type: blob.type });
+          updateState({ voiceoverFile: file });
+        }
+        stream.getTracks().forEach((t) => t.stop());
+        voiceoverStreamRef.current = null;
+      };
+      voiceoverRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecordingVoiceover(true);
+      // A stray tap-and-forget shouldn't record indefinitely — cap it the
+      // same as a posted clip's own max length.
+      voiceoverTimeoutRef.current = setTimeout(() => {
+        stopVoiceoverRecording();
+      }, MAX_VOICEOVER_SECONDS * 1000);
+    } catch {
+      setError("Couldn't access the microphone. Check your browser/app permissions.");
+    }
+  }
+
+  function stopVoiceoverRecording() {
+    if (voiceoverTimeoutRef.current) {
+      clearTimeout(voiceoverTimeoutRef.current);
+      voiceoverTimeoutRef.current = null;
+    }
+    voiceoverRecorderRef.current?.stop();
+    setIsRecordingVoiceover(false);
   }
 
   function updateTextLayer(id: string, patch: Partial<TextLayer>) {
@@ -359,14 +475,14 @@ export function VideoEditor({
     // be selected — otherwise switching to another tool (crop, say) while
     // a text layer was still selected would keep dragging that text
     // instead of doing whatever the newly-selected tool is for.
-    const dragTextId = tool === "text" ? selectedTextId : null;
+    const dragTextId = tool === "text" || tool === "sticker" ? selectedTextId : null;
     const cropPanEnabled =
-      tool === "crop" && aspectNeedsPan(state.aspect, videoDims.width, videoDims.height);
+      tool === "crop" && aspectNeedsPan(state.aspect, videoDims.width, videoDims.height, state.rotation);
     if (!dragTextId && !cropPanEnabled) return;
 
     e.preventDefault();
     const videoAspect = videoDims.width / Math.max(1, videoDims.height);
-    const targetAspect =
+    const rawTargetAspect =
       state.aspect === "9:16"
         ? 9 / 16
         : state.aspect === "1:1"
@@ -374,6 +490,8 @@ export function VideoEditor({
           : state.aspect === "4:5"
             ? 4 / 5
             : videoAspect;
+    const targetAspect =
+      state.rotation === 90 || state.rotation === 270 ? 1 / rawTargetAspect : rawTargetAspect;
     const panAxisIsX = videoAspect > targetAspect;
 
     function move(ev: PointerEvent) {
@@ -412,12 +530,15 @@ export function VideoEditor({
       state.trimEnd === baseline.trimEnd &&
       state.aspect === baseline.aspect &&
       state.panOffset === baseline.panOffset &&
+      state.rotation === baseline.rotation &&
       state.filterId === baseline.filterId &&
       state.textLayers.length === 0 &&
       state.drawStrokes.length === 0 &&
       state.musicFile === null &&
       state.musicVolume === baseline.musicVolume &&
       state.originalVolume === baseline.originalVolume &&
+      state.voiceoverFile === null &&
+      state.voiceoverVolume === baseline.voiceoverVolume &&
       state.playbackRate === baseline.playbackRate;
     // A pure pass-through only actually works if the raw source already
     // fits within the app's own size limit — a high-resolution/high-fps
@@ -569,26 +690,29 @@ export function VideoEditor({
               Loading…
             </div>
           )}
-          {tool === "text" &&
-            state.textLayers.map((layer) => (
-              <button
-                key={layer.id}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedTextId(layer.id);
-                }}
-                className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${
-                  selectedTextId === layer.id ? "border-accent" : "border-transparent"
-                }`}
-                style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%` }}
-                aria-label={`Select "${layer.text}"`}
-              />
-            ))}
+          {(tool === "text" || tool === "sticker") &&
+            state.textLayers
+              .filter((l) => l.isSticker === (tool === "sticker"))
+              .map((layer) => (
+                <button
+                  key={layer.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedTextId(layer.id);
+                  }}
+                  className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${
+                    selectedTextId === layer.id ? "border-accent" : "border-transparent"
+                  }`}
+                  style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%` }}
+                  aria-label={`Select "${layer.text}"`}
+                />
+              ))}
         </div>
       </div>
 
       <audio ref={musicAudioRef} className="hidden" />
+      <audio ref={voiceoverAudioRef} className="hidden" />
 
       <div className="flex-shrink-0 border-t border-white/10 bg-[#0a0a0b] pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         {tool === "trim" && (
@@ -616,6 +740,14 @@ export function VideoEditor({
                 {a.label}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={rotateClockwise}
+              aria-label="Rotate 90 degrees"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/80"
+            >
+              <RotateIcon className="h-4 w-4" />
+            </button>
           </div>
         )}
 
@@ -679,7 +811,7 @@ export function VideoEditor({
               </button>
             </div>
 
-            {selectedLayer && (
+            {selectedLayer && !selectedLayer.isSticker && (
               <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -740,9 +872,62 @@ export function VideoEditor({
                 </div>
               </div>
             )}
-            {!selectedLayer && state.textLayers.length > 0 && (
+            {!selectedLayer && state.textLayers.filter((l) => !l.isSticker).length > 0 && (
               <p className="text-center text-xs text-muted">
                 Tap a dot on the preview to drag or restyle it.
+              </p>
+            )}
+          </div>
+        )}
+
+        {tool === "sticker" && (
+          <div className="flex flex-col gap-3 px-4 py-4">
+            <div className="no-scrollbar grid grid-cols-8 gap-2 overflow-x-auto">
+              {STICKER_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => addStickerLayer(emoji)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-xl"
+                  aria-label={`Add ${emoji} sticker`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            {selectedLayer && selectedLayer.isSticker && (
+              <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs text-white/60">Selected: {selectedLayer.text}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeTextLayer(selectedLayer.id)}
+                    aria-label="Delete sticker"
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-white/60">Size</span>
+                  <input
+                    type="range"
+                    min={40}
+                    max={220}
+                    step={4}
+                    value={selectedLayer.fontSize}
+                    onChange={(e) =>
+                      updateTextLayer(selectedLayer.id, { fontSize: Number(e.target.value) })
+                    }
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            )}
+            {!selectedLayer && state.textLayers.filter((l) => l.isSticker).length > 0 && (
+              <p className="text-center text-xs text-muted">
+                Tap a sticker on the preview to drag or resize it.
               </p>
             )}
           </div>
@@ -808,6 +993,62 @@ export function VideoEditor({
               ))}
               <span className="text-xs text-white/50">Draw right on the preview</span>
             </div>
+          </div>
+        )}
+
+        {tool === "voice" && (
+          <div className="flex flex-col gap-4 px-4 py-4">
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                onClick={isRecordingVoiceover ? stopVoiceoverRecording : startVoiceoverRecording}
+                className={`flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold ${
+                  isRecordingVoiceover
+                    ? "bg-danger text-white"
+                    : "bg-accent text-accent-foreground"
+                }`}
+              >
+                <MicIcon className="h-4 w-4" />
+                {isRecordingVoiceover ? "Stop recording" : "Record voiceover"}
+              </button>
+            </div>
+            {isRecordingVoiceover && (
+              <p className="text-center text-xs text-white/50">
+                Recording — plays back over the clip from the start of your trim.
+              </p>
+            )}
+            {!isRecordingVoiceover && state.voiceoverFile && (
+              <>
+                <div className="flex items-center gap-3 text-sm text-white/80">
+                  <span className="w-20 flex-shrink-0">Voiceover</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={state.voiceoverVolume}
+                    onChange={(e) => updateState({ voiceoverVolume: Number(e.target.value) })}
+                    className="flex-1"
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => voiceoverAudioRef.current?.play().catch(() => {})}
+                    className="text-xs text-white/70 hover:text-white"
+                  >
+                    Play back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateState({ voiceoverFile: null })}
+                    className="text-xs text-muted hover:text-danger"
+                  >
+                    Remove voiceover
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
