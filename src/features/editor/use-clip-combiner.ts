@@ -209,6 +209,18 @@ export function useClipCombiner() {
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
+
+      // Same silent-failure gap fixed in use-video-export.ts — without
+      // this, a recorder failure produced an empty result with zero
+      // indication anything had gone wrong at the source.
+      let recorderError: Error | null = null;
+      recorder.onerror = (event) => {
+        const err = (event as unknown as { error?: DOMException }).error;
+        recorderError = new Error(
+          `MediaRecorder error: ${err?.name ?? "unknown"}${err?.message ? ` — ${err.message}` : ""}`,
+        );
+      };
+
       const finished = new Promise<Blob>((resolve) => {
         recorder.onstop = () => resolve(new Blob(chunks, { type: baseType }));
       });
@@ -270,6 +282,13 @@ export function useClipCombiner() {
           setTimeout(() => resolve(new Blob(chunks, { type: baseType })), 15000);
         }),
       ]);
+
+      if (recorderError) throw recorderError;
+      if (blob.size === 0) {
+        throw new Error(
+          `Combining produced no data (recorder state: ${recorder.state}, chunks: ${chunks.length}).`,
+        );
+      }
 
       return { file: new File([blob], `combined.${extension}`, { type: baseType }) };
     } finally {

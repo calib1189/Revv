@@ -207,6 +207,25 @@ export function useVideoExport() {
           if (e.data.size > 0) chunks.push(e.data);
         };
 
+        // Previously nothing was listening for this at all — if the
+        // recorder failed internally (an unsupported codec/track
+        // combination only discovered at record time despite
+        // isTypeSupported() reporting true, a security restriction,
+        // anything), it failed completely silently: no chunks were ever
+        // produced, and the rest of this function ran to completion
+        // anyway, handing back an empty Blob with no indication anything
+        // had gone wrong at the actual source. That's what was
+        // happening — the failure surfaced two steps later, in a
+        // different function entirely, as an opaque "couldn't read that
+        // video file, 0KB".
+        let recorderError: Error | null = null;
+        recorder.onerror = (event) => {
+          const err = (event as unknown as { error?: DOMException }).error;
+          recorderError = new Error(
+            `MediaRecorder error: ${err?.name ?? "unknown"}${err?.message ? ` — ${err.message}` : ""}`,
+          );
+        };
+
         const finished = new Promise<Blob>((resolve) => {
           recorder.onstop = () => resolve(new Blob(chunks, { type: baseType }));
         });
@@ -301,6 +320,18 @@ export function useVideoExport() {
             setTimeout(() => resolve(new Blob(chunks, { type: baseType })), 15000);
           }),
         ]);
+
+        // A recorder error or a genuinely empty result used to be handed
+        // back as if export had succeeded, only to fail two steps later
+        // (reading the file back) with no way to tell that failure apart
+        // from an unrelated one. Throwing here instead means the error
+        // the user actually sees now names the real cause.
+        if (recorderError) throw recorderError;
+        if (blob.size === 0) {
+          throw new Error(
+            `Recording produced no data (recorder state: ${recorder.state}, chunks: ${chunks.length}).`,
+          );
+        }
 
         return { blob, extension };
       } finally {
