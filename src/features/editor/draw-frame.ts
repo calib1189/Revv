@@ -1,5 +1,5 @@
 import { cropRectForAspect } from "@/features/editor/crop";
-import { getFilterPreset } from "@/features/editor/filters";
+import { getFilterPreset, blendFilterPreset } from "@/features/editor/filters";
 import { applyFilter } from "@/features/editor/pixel-filters";
 import { TEXT_FONTS } from "@/features/editor/types";
 import type { EditState } from "@/features/editor/types";
@@ -35,7 +35,7 @@ export function drawFrame(
   canvasWidth: number,
   canvasHeight: number,
   state: Pick<EditState, "aspect" | "panOffset" | "filterId" | "textLayers"> &
-    Partial<Pick<EditState, "drawStrokes" | "rotation">>,
+    Partial<Pick<EditState, "drawStrokes" | "rotation" | "filterIntensity">>,
 ): void {
   const { width, height } = sourceDimensions(source);
   if (!width || !height) return;
@@ -60,8 +60,8 @@ export function drawFrame(
   ctx.drawImage(source, sx, sy, sw, sh, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
   ctx.restore();
 
-  const preset = getFilterPreset(state.filterId);
   if (state.filterId !== "original") {
+    const preset = blendFilterPreset(getFilterPreset(state.filterId), state.filterIntensity ?? 1);
     const frame = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
     applyFilter(frame, preset);
     ctx.putImageData(frame, 0, 0);

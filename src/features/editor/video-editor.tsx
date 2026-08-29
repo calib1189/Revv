@@ -5,7 +5,9 @@ import { drawFrame } from "@/features/editor/draw-frame";
 import { useVideoExport } from "@/features/editor/use-video-export";
 import { compressVideo } from "@/features/editor/compress-video";
 import { TrimScrubber } from "@/features/editor/trim-scrubber";
-import { FILTER_PRESETS } from "@/features/editor/filters";
+import { FILTER_PRESETS, FILTER_CATEGORIES, type FilterCategoryId } from "@/features/editor/filters";
+import { FilterSwatch } from "@/features/editor/filter-swatch";
+import { capturePreviewSource } from "@/features/editor/capture-preview-source";
 import { aspectNeedsPan } from "@/features/editor/crop";
 import { STICKER_EMOJIS } from "@/features/editor/stickers";
 import { pickAudioRecorderMimeType } from "@/features/editor/audio-recording";
@@ -127,6 +129,8 @@ export function VideoEditor({
   const [newTextDraft, setNewTextDraft] = useState("");
   const [drawColor, setDrawColor] = useState(TEXT_COLORS[1]);
   const [drawWidth, setDrawWidth] = useState(DRAW_WIDTHS[1]);
+  const [filterCategory, setFilterCategory] = useState<FilterCategoryId>(FILTER_CATEGORIES[0].id);
+  const [filterPreviewSource, setFilterPreviewSource] = useState<ImageData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compressionStage, setCompressionStage] = useState<"idle" | "loading" | "compressing">("idle");
   const [compressionProgress, setCompressionProgress] = useState(0);
@@ -176,6 +180,7 @@ export function VideoEditor({
         baselineStateRef.current = next;
         return next;
       });
+      setFilterPreviewSource(capturePreviewSource(el));
       setReady(true);
     }
 
@@ -532,6 +537,7 @@ export function VideoEditor({
       state.panOffset === baseline.panOffset &&
       state.rotation === baseline.rotation &&
       state.filterId === baseline.filterId &&
+      state.filterIntensity === baseline.filterIntensity &&
       state.textLayers.length === 0 &&
       state.drawStrokes.length === 0 &&
       state.musicFile === null &&
@@ -771,23 +777,51 @@ export function VideoEditor({
         )}
 
         {tool === "filter" && (
-          <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 py-4">
-            {FILTER_PRESETS.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => updateState({ filterId: f.id })}
-                className="flex flex-shrink-0 flex-col items-center gap-1.5"
-              >
-                <span
-                  className={`h-14 w-14 rounded-xl bg-gradient-to-br from-zinc-500 to-zinc-800 ${
-                    state.filterId === f.id ? "ring-2 ring-accent ring-offset-2 ring-offset-black" : ""
+          <div className="flex flex-col gap-3 py-4">
+            <div className="no-scrollbar flex gap-2 overflow-x-auto px-4">
+              {FILTER_CATEGORIES.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setFilterCategory(c.id)}
+                  className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+                    filterCategory === c.id ? "bg-accent text-accent-foreground" : "bg-white/10 text-white/70"
                   }`}
-                  style={{ filter: f.previewCss }}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="no-scrollbar flex gap-3 overflow-x-auto px-4">
+              {FILTER_PRESETS.filter((f) => f.id === "original" || f.category === filterCategory).map((f) => (
+                <FilterSwatch
+                  key={f.id}
+                  preset={f}
+                  previewSource={filterPreviewSource}
+                  selected={state.filterId === f.id}
+                  onClick={() => updateState({ filterId: f.id, filterIntensity: 1 })}
                 />
-                <span className="text-xs text-white/80">{f.label}</span>
-              </button>
-            ))}
+              ))}
+            </div>
+
+            {state.filterId !== "original" && (
+              <div className="flex items-center gap-3 px-4">
+                <span className="w-14 flex-shrink-0 text-xs text-white/60">
+                  {Math.round(state.filterIntensity * 100)}%
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={state.filterIntensity}
+                  onChange={(e) => updateState({ filterIntensity: Number(e.target.value) })}
+                  className="flex-1"
+                  aria-label="Filter intensity"
+                />
+              </div>
+            )}
           </div>
         )}
 

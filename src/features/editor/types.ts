@@ -68,6 +68,9 @@ export interface EditState {
   panOffset: number;
   rotation: Rotation;
   filterId: string;
+  /** 0-1 — how strongly filterId's preset is applied, blended toward
+   * no filter at all at 0. See blendFilterPreset in filters.ts. */
+  filterIntensity: number;
   textLayers: TextLayer[];
   drawStrokes: DrawStroke[];
   musicFile: File | null;
@@ -99,6 +102,7 @@ export const DEFAULT_EDIT_STATE: Omit<EditState, "trimStart" | "trimEnd"> = {
   panOffset: 0.5,
   rotation: 0,
   filterId: "original",
+  filterIntensity: 1,
   textLayers: [],
   drawStrokes: [],
   musicFile: null,
