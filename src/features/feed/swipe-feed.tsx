@@ -63,11 +63,11 @@ export function SwipeFeed({
         if (entry.isIntersecting && !isLoading) {
           setIsLoading(true);
           const last = posts[posts.length - 1];
-          if (!last) {
+          if (!last?.rankCursor) {
             setIsLoading(false);
             return;
           }
-          loadMoreFeedPostsAction(last.post.created_at, category)
+          loadMoreFeedPostsAction(last.rankCursor, category)
             .then((next) => {
               setPosts((prev) => [...prev, ...next]);
               setHasMore(next.length > 0);

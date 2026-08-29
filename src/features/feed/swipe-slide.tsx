@@ -9,7 +9,7 @@ import { CommentSheet } from "@/features/feed/comment-sheet";
 import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { CaptionText } from "@/features/feed/caption-text";
-import { recordViewAction } from "@/features/feed/actions";
+import { recordViewAction, recordViewCompletionAction, recordShareAction } from "@/features/feed/actions";
 import { usePostLike } from "@/features/feed/use-post-like";
 import { useDoubleTap } from "@/features/feed/use-double-tap";
 import { CommentIcon, EyeIcon, HeartIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon } from "@/components/ui/icons";
@@ -26,14 +26,21 @@ function ShareButton({ postId }: { postId: string }) {
     if (navigator.share) {
       try {
         await navigator.share({ url });
+        // Only a completed share (not a dismissed sheet) counts as a
+        // real signal for the feed ranking algorithm — navigator.share
+        // resolving means the OS share sheet's own action actually went
+        // through, not just that it was opened.
+        recordShareAction(postId);
       } catch {
-        // User dismissed the native share sheet — not an error.
+        // User dismissed the native share sheet — not an error, and not
+        // a share that should count toward this post's engagement.
       }
       return;
     }
     try {
       await navigator.clipboard.writeText(url);
       setStatus("copied");
+      recordShareAction(postId);
     } catch {
       // Clipboard access can be denied (browser settings, an insecure
       // context) even when navigator.clipboard exists — silently doing
@@ -57,9 +64,19 @@ function ShareButton({ postId }: { postId: string }) {
   );
 }
 
+// A looping video (see the `loop` attribute below) never fires `ended`
+// — it seeks back to 0 instead — so "watched all the way through" has
+// to be detected via how far into the clip playback has gotten, not
+// waiting for a completion event that will never come. 0.9 rather than
+// 1.0 tolerates a video whose last handful of frames never quite get a
+// `timeupdate` tick before looping.
+const COMPLETION_THRESHOLD = 0.9;
+
 function VideoMedia({
   url,
   shouldLoad,
+  postId,
+  trackCompletion,
   onDoubleTapLike,
 }: {
   url: string;
@@ -71,12 +88,19 @@ function VideoMedia({
    * Storage egress: every post ever fetched issued a real network
    * request the moment it was fetched, not when it was watched. */
   shouldLoad: boolean;
+  postId: string;
+  /** Skips wiring up completion tracking at all for a logged-out viewer
+   * — recordViewCompletionAction would just no-op anyway, but there's
+   * no reason to attach the listener or make the call in the first
+   * place for someone with no engagement history to feed. */
+  trackCompletion: boolean;
   onDoubleTapLike: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [heartPop, setHeartPop] = useState(0);
+  const hasRecordedCompletion = useRef(false);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -97,6 +121,23 @@ function VideoMedia({
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!trackCompletion) return;
+    const el = videoRef.current;
+    if (!el) return;
+
+    function onTimeUpdate() {
+      if (hasRecordedCompletion.current) return;
+      if (!el!.duration || !Number.isFinite(el!.duration)) return;
+      if (el!.currentTime / el!.duration >= COMPLETION_THRESHOLD) {
+        hasRecordedCompletion.current = true;
+        recordViewCompletionAction(postId);
+      }
+    }
+    el.addEventListener("timeupdate", onTimeUpdate);
+    return () => el.removeEventListener("timeupdate", onTimeUpdate);
+  }, [postId, trackCompletion]);
 
   function togglePlayPause() {
     const el = videoRef.current;
@@ -257,7 +298,13 @@ export function SwipeSlide({
     >
       {data.media.length > 0 &&
         (isVideo ? (
-          <VideoMedia url={data.media[0].url} shouldLoad={shouldLoadMedia} onDoubleTapLike={like} />
+          <VideoMedia
+            url={data.media[0].url}
+            shouldLoad={shouldLoadMedia}
+            postId={data.post.id}
+            trackCompletion={data.isAuthenticated}
+            onDoubleTapLike={like}
+          />
         ) : (
           <PhotoMedia urls={data.media.map((m) => m.url)} shouldLoad={shouldLoadMedia} />
         ))}

@@ -9,8 +9,11 @@ import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirme
 import { likePost, unlikePost } from "@/lib/db/likes";
 import { savePost, unsavePost } from "@/lib/db/saves";
 import { recordPostView } from "@/lib/db/post-views";
+import { recordPostViewCompletion } from "@/lib/db/post-view-completions";
+import { recordPostShare } from "@/lib/db/post-shares";
 import { createComment, deleteComment, listCommentsByPost } from "@/lib/db/comments";
-import { deletePost, listFeedPosts, getPostById } from "@/lib/db/posts";
+import { deletePost, getPostById } from "@/lib/db/posts";
+import { listRankedFeedPosts } from "@/lib/ranking/ranked-feed";
 import { createReport } from "@/lib/db/reports";
 import { getProfileByUserId, getProfilesByIds } from "@/lib/db/profiles";
 import { listVehicleIdsByCategory } from "@/lib/db/vehicles";
@@ -31,8 +34,19 @@ async function resolveCategoryVehicleIds(
   return listVehicleIdsByCategory(supabase, category);
 }
 
+async function rankedFeedPage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string | null,
+  vehicleIds: string[] | undefined,
+  cursor?: string | null,
+): Promise<PostCardData[]> {
+  const { items } = await listRankedFeedPosts(supabase, { viewerId: userId, cursor, limit: 8, vehicleIds });
+  const cards = await composePostCards(supabase, items.map((item) => item.post), userId);
+  return cards.map((card, i) => ({ ...card, rankCursor: items[i].cursor }));
+}
+
 export async function loadMoreFeedPostsAction(
-  before: string,
+  cursor: string,
   category?: string | null,
 ): Promise<PostCardData[]> {
   const supabase = await createClient();
@@ -41,9 +55,7 @@ export async function loadMoreFeedPostsAction(
     getCurrentUser(),
     resolveCategoryVehicleIds(supabase, resolvedCategory),
   ]);
-  const posts = await listFeedPosts(supabase, { before, limit: 8, vehicleIds });
-
-  return composePostCards(supabase, posts, user?.id ?? null);
+  return rankedFeedPage(supabase, user?.id ?? null, vehicleIds, cursor);
 }
 
 /** Switching the FYP's category filter (category-filter-bar.tsx) replaces
@@ -58,9 +70,7 @@ export async function loadFeedByCategoryAction(
     getCurrentUser(),
     resolveCategoryVehicleIds(supabase, resolvedCategory),
   ]);
-  const posts = await listFeedPosts(supabase, { limit: 8, vehicleIds });
-
-  return composePostCards(supabase, posts, user?.id ?? null);
+  return rankedFeedPage(supabase, user?.id ?? null, vehicleIds);
 }
 
 /** Fire-and-forget from the client when a post becomes visible in the
@@ -72,6 +82,36 @@ export async function recordViewAction(postId: string): Promise<void> {
     const user = await getCurrentUser();
     if (!user) return;
     await recordPostView(supabase, postId, user.id);
+  } catch {
+    // best-effort only
+  }
+}
+
+/** Fire-and-forget from swipe-slide.tsx's VideoMedia when a video has
+ * been watched all the way through — a stronger signal than the plain
+ * view-ping above, feeding the feed ranking algorithm's engagement
+ * score (feed-score.ts). */
+export async function recordViewCompletionAction(postId: string): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const user = await getCurrentUser();
+    if (!user) return;
+    await recordPostViewCompletion(supabase, postId, user.id);
+  } catch {
+    // best-effort only
+  }
+}
+
+/** Fire-and-forget from swipe-slide.tsx's ShareButton once a share
+ * actually completes (the native share sheet was used, or the link was
+ * copied) — silently no-ops when logged out, same as every other
+ * best-effort feed signal. */
+export async function recordShareAction(postId: string): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const user = await getCurrentUser();
+    if (!user) return;
+    await recordPostShare(supabase, postId, user.id);
   } catch {
     // best-effort only
   }

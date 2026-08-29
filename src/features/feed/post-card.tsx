@@ -41,6 +41,11 @@ export interface PostCardData {
   isFollowingAuthor: boolean | null;
   isOwnPost: boolean;
   isAuthenticated: boolean;
+  /** Opaque pagination cursor for the ranked "For You" feed — present
+   * only when this card came from listRankedFeedPosts, absent for
+   * plain chronological listings (a profile's reel view, /saved) that
+   * have no ranking to paginate through. */
+  rankCursor?: string;
 }
 
 export function PostCard({ data }: { data: PostCardData }) {
