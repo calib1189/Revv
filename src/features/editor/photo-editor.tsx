@@ -96,6 +96,7 @@ export function PhotoEditor({
   const [drawWidth, setDrawWidth] = useState(DRAW_WIDTHS[1]);
   const [filterCategory, setFilterCategory] = useState<FilterCategoryId>(FILTER_CATEGORIES[0].id);
   const [filterPreviewSource, setFilterPreviewSource] = useState<ImageData | null>(null);
+  const hasCapturedFilterPreviewRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -108,7 +109,6 @@ export function PhotoEditor({
     if (!img) return;
     function onLoaded() {
       setImgDims({ width: img!.naturalWidth, height: img!.naturalHeight });
-      setFilterPreviewSource(capturePreviewSource(img!));
       setReady(true);
     }
     if (img.complete && img.naturalWidth) onLoaded();
@@ -152,6 +152,17 @@ export function PhotoEditor({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     drawFrame(ctx, img, canvas.width, canvas.height, state);
+    // Captured once, from this canvas's first real drawn frame rather
+    // than directly from the source <img> — see capture-preview-source.ts
+    // for why (matches the same fix applied in video-editor.tsx, even
+    // though an already-loaded <img> is less prone to the "no frame
+    // decoded yet" issue a <video> has — capturing from the canvas is
+    // still the more honest source of truth for what's actually on
+    // screen, crop/rotation included).
+    if (!hasCapturedFilterPreviewRef.current) {
+      hasCapturedFilterPreviewRef.current = true;
+      setFilterPreviewSource(capturePreviewSource(canvas));
+    }
   }, [ready, state, canvasSize]);
 
   function updateState(patch: Partial<PhotoEditState>) {

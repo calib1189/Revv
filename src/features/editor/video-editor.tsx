@@ -141,6 +141,7 @@ export function VideoEditor({
   const voiceoverStreamRef = useRef<MediaStream | null>(null);
   const voiceoverChunksRef = useRef<BlobPart[]>([]);
   const voiceoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasCapturedFilterPreviewRef = useRef(false);
 
   const stateRef = useRef(state);
   useEffect(() => {
@@ -180,7 +181,6 @@ export function VideoEditor({
         baselineStateRef.current = next;
         return next;
       });
-      setFilterPreviewSource(capturePreviewSource(el));
       setReady(true);
     }
 
@@ -235,6 +235,16 @@ export function VideoEditor({
       el.volume = s.originalVolume;
       el.playbackRate = s.playbackRate;
       drawFrame(ctx!, el, canvas!.width, canvas!.height, s);
+      // Captured once, from this canvas's first real drawn frame rather
+      // than directly from the <video> element — see
+      // capture-preview-source.ts for why that distinction matters.
+      // filterId is still "original" this early, so what's captured is
+      // guaranteed to be the unfiltered frame every swatch previews
+      // against, not whatever filter happens to already be selected.
+      if (!hasCapturedFilterPreviewRef.current) {
+        hasCapturedFilterPreviewRef.current = true;
+        setFilterPreviewSource(capturePreviewSource(canvas!));
+      }
       raf = requestAnimationFrame(loop);
     }
     raf = requestAnimationFrame(loop);

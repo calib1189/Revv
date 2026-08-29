@@ -1,19 +1,24 @@
-import type { MediaSource } from "@/features/editor/draw-frame";
-
 const PREVIEW_WIDTH = 96;
 const PREVIEW_HEIGHT = 128;
 
 /** A single small, static "cover"-cropped snapshot of whatever frame the
- * source happens to be showing right now — captured once (when the
- * editor's metadata finishes loading) and reused for every filter
- * swatch, rather than each swatch drawing from a live, possibly-
- * different moment of a playing video. Real content, not a generic
- * gradient, without needing 12 live-updating canvases. */
-export function capturePreviewSource(source: MediaSource): ImageData | null {
-  const { width, height } =
-    source instanceof HTMLVideoElement
-      ? { width: source.videoWidth, height: source.videoHeight }
-      : { width: source.naturalWidth, height: source.naturalHeight };
+ * source happens to be showing right now — captured once and reused for
+ * every filter swatch, rather than each swatch drawing from a live,
+ * possibly-different moment of a playing video. Real content, not a
+ * generic gradient, without needing 12 live-updating canvases.
+ *
+ * Deliberately takes the editor's own already-rendering preview canvas
+ * as the source, not the raw <video>/<img> element directly. A <video>
+ * has no paintable frame yet the instant `loadedmetadata` fires (some
+ * browsers don't decode/paint anything until `loadeddata` or later),
+ * so drawImage()-ing it that early silently produces a blank/black
+ * capture — the reported "no thumbnails" bug. The edit-preview canvas
+ * only ever gets a drawImage call once drawFrame has actually composited
+ * a real frame onto it, so capturing from that canvas after its first
+ * successful draw reuses an already-proven-working paint instead of a
+ * second, less reliable path guessing at video readiness itself. */
+export function capturePreviewSource(source: HTMLCanvasElement): ImageData | null {
+  const { width, height } = source;
   if (!width || !height) return null;
 
   const canvas = document.createElement("canvas");
