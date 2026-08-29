@@ -50,17 +50,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (metadata?.type === "meetup") {
-      // Payment confirmed — straight to 'active', no review step. A
-      // meetup is a normal community listing (title/description/location/
-      // time), not paid content interspersed into the main feed the way
-      // an ad campaign is, so the existing reports system is the
-      // moderation backstop here rather than a pre-publish gate.
+      // Payment confirmed — moves the meetup into the admin review queue,
+      // same as an ad campaign. Not straight to 'active': a real charge
+      // doesn't mean the listing's content has actually been looked at.
       const meetupId = metadata.meetup_id;
       if (meetupId) {
         const { error } = await supabase
           .from("meetups")
           .update({
-            status: "active",
+            status: "pending_review",
             stripe_checkout_session_id: (session.id as string) ?? null,
           })
           .eq("id", meetupId);

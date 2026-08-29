@@ -440,7 +440,7 @@ export interface Database {
           lng: number | null;
           starts_at: string;
           created_at: string;
-          status: "pending_payment" | "active";
+          status: "pending_payment" | "pending_review" | "active" | "rejected";
           tier: "standard" | "promoted" | "diamond";
           price_cents: number;
           stripe_checkout_session_id: string | null;
@@ -455,7 +455,7 @@ export interface Database {
           lng?: number | null;
           starts_at: string;
           created_at?: string;
-          status?: "pending_payment" | "active";
+          status?: "pending_payment" | "pending_review" | "active" | "rejected";
           tier?: "standard" | "promoted" | "diamond";
           price_cents?: number;
           stripe_checkout_session_id?: string | null;

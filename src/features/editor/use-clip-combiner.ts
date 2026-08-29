@@ -3,17 +3,29 @@
 import { useCallback, useRef, useState } from "react";
 
 const EXPORT_FPS = 30;
-// Same 1080p ceiling as the in-app camera recorder (see camera-recorder.tsx's
-// pickVideoBitsPerSecond comment) — combining is itself a real-time
-// canvas-capture encode, same as recording, so the same overload risk
-// applies. The video editor's own export pass re-encodes at 720p anyway;
-// this only needs to preserve enough detail for that later pass to work
-// with, not be the final output resolution.
-const MAX_DIMENSION = 1920;
+// Matches use-video-export.ts's own MAX_DIMENSION exactly, not the
+// 1920p this used to target. Real-device testing showed combining at
+// 1920p/up-to-16Mbps produces a MediaRecorder that appears to start and
+// stop cleanly but never emits a single non-empty chunk — a real
+// hardware-encoder ceiling one step more real than the "hangs partway
+// through" cases this file's other safety nets exist for, and not one
+// this codebase has any way to detect from JS ahead of time
+// (MediaRecorder.isTypeSupported only validates the codec string, not
+// this exact resolution+bitrate+track combination). The video editor's
+// own export pass re-encodes at 720p regardless of what this produces,
+// so there's no quality this was actually preserving.
+const MAX_DIMENSION = 720;
+// Same flat rate use-video-export.ts uses (the proven-working path),
+// instead of scaling up to 16Mbps at higher resolutions.
+const VIDEO_BITS_PER_SECOND = 6_000_000;
 
 function pickVideoMimeType(): string {
   const candidates = [
     "video/mp4;codecs=avc1,mp4a.40.2",
+    // A plain, codec-string-free "video/mp4" rung between the specific
+    // codec string and webm — matches use-video-export.ts's own fallback
+    // order, which has one more rung than this used to.
+    "video/mp4",
     "video/webm;codecs=vp9,opus",
     "video/webm;codecs=vp8,opus",
     "video/webm",
@@ -22,11 +34,6 @@ function pickVideoMimeType(): string {
     if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(type)) return type;
   }
   return "video/webm";
-}
-
-function pickBitsPerSecond(width: number, height: number): number {
-  const bitsPerSecond = Math.round(width * height * 0.14 * 30);
-  return Math.min(Math.max(bitsPerSecond, 4_000_000), 16_000_000);
 }
 
 // Every wait point below (loadedmetadata, the durationchange fix-up) had
@@ -203,7 +210,7 @@ export function useClipCombiner() {
       const extension = mimeType.includes("mp4") ? "mp4" : "webm";
       const recorder = new MediaRecorder(combinedStream, {
         mimeType,
-        videoBitsPerSecond: pickBitsPerSecond(canvas.width, canvas.height),
+        videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
       });
       const chunks: BlobPart[] = [];
       recorder.ondataavailable = (e) => {

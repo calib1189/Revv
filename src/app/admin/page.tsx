@@ -19,6 +19,11 @@ const SECTIONS = [
     description: "Paid campaigns waiting on review before they go live in the feed.",
   },
   {
+    href: "/admin/meetups",
+    label: "Meetups",
+    description: "Paid meetup listings waiting on review before they go live on Discover.",
+  },
+  {
     href: "/admin/active",
     label: "Currently active",
     description: "Every ad, shop promotion, and meetup that's live and paid for right now.",

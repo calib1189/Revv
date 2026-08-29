@@ -5,6 +5,7 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { listOpenReports } from "@/lib/db/reports";
 import { listPendingVerifications } from "@/lib/db/vehicles";
 import { listPendingReviewCampaigns } from "@/lib/db/ad-campaigns";
+import { listPendingReviewMeetups } from "@/lib/db/meetups";
 import { AdminNav } from "@/features/admin/admin-nav";
 
 /** Single admin auth gate + persistent nav for every /admin/* route —
@@ -20,15 +21,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const profile = await getProfileByUserId(supabase, user.id);
   if (!profile?.is_admin) redirect("/feed");
 
-  const [reports, verifications, ads] = await Promise.all([
+  const [reports, verifications, ads, meetups] = await Promise.all([
     listOpenReports(supabase),
     listPendingVerifications(supabase),
     listPendingReviewCampaigns(supabase),
+    listPendingReviewMeetups(supabase),
   ]);
 
   return (
     <div className="flex flex-1 flex-col">
-      <AdminNav counts={{ reports: reports.length, verifications: verifications.length, ads: ads.length }} />
+      <AdminNav
+        counts={{
+          reports: reports.length,
+          verifications: verifications.length,
+          ads: ads.length,
+          meetups: meetups.length,
+        }}
+      />
       {children}
     </div>
   );

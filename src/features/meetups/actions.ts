@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { isMeetupBillingConfigured } from "@/lib/billing/config";
@@ -12,11 +13,13 @@ import {
   getMeetupById,
   deleteMeetup,
   listMeetupsByHost,
+  updateMeetupStatus,
   MEETUP_TIERS,
   isMeetupTier,
   type Meetup,
 } from "@/lib/db/meetups";
 import { getMeetupViewCountsForMeetups } from "@/lib/db/meetup-views";
+import { createAuditLog } from "@/lib/db/audit-logs";
 import { validateMeetup } from "@/lib/validation/meetup";
 
 export async function deleteMeetupAction(meetupId: string): Promise<void> {
@@ -172,4 +175,29 @@ export async function getMyMeetupsAction(): Promise<MyMeetupsResponse> {
     meetups: meetups.map((meetup) => ({ meetup, viewCount: viewCounts.get(meetup.id) ?? 0 })),
     requiresAuth: false,
   };
+}
+
+export async function approveMeetupAction(meetupId: string): Promise<void> {
+  const { supabase, userId } = await requireAdmin();
+  await updateMeetupStatus(supabase, meetupId, "active");
+  await createAuditLog(supabase, {
+    actorId: userId,
+    action: "meetup.approved",
+    targetType: "meetup",
+    targetId: meetupId,
+  });
+  revalidatePath("/admin/meetups");
+  revalidatePath("/discover");
+}
+
+export async function rejectMeetupAction(meetupId: string): Promise<void> {
+  const { supabase, userId } = await requireAdmin();
+  await updateMeetupStatus(supabase, meetupId, "rejected");
+  await createAuditLog(supabase, {
+    actorId: userId,
+    action: "meetup.rejected",
+    targetType: "meetup",
+    targetId: meetupId,
+  });
+  revalidatePath("/admin/meetups");
 }

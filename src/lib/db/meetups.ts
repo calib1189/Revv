@@ -110,3 +110,27 @@ export async function deleteMeetup(
   const { error } = await supabase.from("meetups").delete().eq("id", meetupId);
   if (error) throw error;
 }
+
+/** The admin review queue's source list — mirrors
+ * listPendingReviewCampaigns in ad-campaigns.ts exactly. */
+export async function listPendingReviewMeetups(
+  supabase: SupabaseClient<Database>,
+): Promise<Meetup[]> {
+  const { data, error } = await supabase
+    .from("meetups")
+    .select("*")
+    .eq("status", "pending_review")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateMeetupStatus(
+  supabase: SupabaseClient<Database>,
+  meetupId: string,
+  status: "active" | "rejected",
+): Promise<void> {
+  const { error } = await supabase.from("meetups").update({ status }).eq("id", meetupId);
+  if (error) throw error;
+}

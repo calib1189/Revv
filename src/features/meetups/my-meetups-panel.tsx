@@ -17,7 +17,9 @@ const TIER_METAL_COLORS: Record<MeetupTier, string> = {
 
 const STATUS_LABELS: Record<string, string> = {
   pending_payment: "Awaiting payment",
+  pending_review: "In review",
   active: "Live",
+  rejected: "Not approved",
 };
 
 function MeetupRow({ item }: { item: MeetupWithViewCount }) {
