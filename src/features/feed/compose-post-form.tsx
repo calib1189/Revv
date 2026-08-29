@@ -254,9 +254,15 @@ export function ComposePostForm({
       // to be thrown away here in favor of one generic string — leaving
       // no way to tell a genuinely corrupt export apart from a device-
       // specific decoder stall from a report of "couldn't read that
-      // video file" alone.
+      // video file" alone. File size is the cheapest possible signal for
+      // which failure this actually is: a few KB means the export
+      // produced next to nothing (the encoder never really ran); a
+      // normal-looking size that still won't decode points at a
+      // structurally broken container instead (e.g. a MediaRecorder
+      // export whose finalization never completed).
       const detail = err instanceof Error ? err.message : String(err);
-      return setError(`Couldn't read that video file. (${detail})`);
+      const sizeKb = Math.round(file.size / 1024);
+      return setError(`Couldn't read that video file. (${detail}, ${sizeKb}KB)`);
     }
 
     clearVideo();
