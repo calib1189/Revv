@@ -241,7 +241,16 @@ export function VideoEditor({
       // filterId is still "original" this early, so what's captured is
       // guaranteed to be the unfiltered frame every swatch previews
       // against, not whatever filter happens to already be selected.
-      if (!hasCapturedFilterPreviewRef.current) {
+      //
+      // Gated on readyState, not just "has drawFrame run yet" — the very
+      // first rAF tick(s) after calling video.play() commonly run before
+      // the video has actually decoded any frame at all, so drawFrame's
+      // drawImage silently paints nothing and a capture right then would
+      // lock in a blank frame forever (the ref guard only allows one
+      // attempt). HAVE_CURRENT_DATA is the first readyState where the
+      // element is guaranteed to actually have a decoded frame to have
+      // just painted.
+      if (!hasCapturedFilterPreviewRef.current && el.readyState >= el.HAVE_CURRENT_DATA) {
         hasCapturedFilterPreviewRef.current = true;
         setFilterPreviewSource(capturePreviewSource(canvas!));
       }
