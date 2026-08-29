@@ -17,15 +17,18 @@ const PROTECTED_EXACT = [
   "/settings/notifications",
   "/messages",
   "/friends",
-  "/admin/reports",
-  "/admin/audit-log",
-  "/admin/analytics",
-  "/admin/parts",
+  "/advertise",
 ];
 const PROTECTED_PATTERNS = [
   /^\/garage\/[^/]+\/edit$/,
   /^\/garage\/[^/]+\/builds\/[^/]+\/review$/,
   /^\/messages\/[^/]+$/,
+  // Every /admin/* route is also independently gated by admin/layout.tsx's
+  // own is_admin check — this is defense in depth, not the only gate. A
+  // prefix match instead of listing each admin route individually means a
+  // newly added admin page can't accidentally ship ungated at this layer
+  // just because someone forgot to list it here.
+  /^\/admin(\/.*)?$/,
 ];
 
 function isProtectedPath(pathname: string) {

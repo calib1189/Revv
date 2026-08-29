@@ -23,11 +23,12 @@ export default async function ConversationPage({
 
   // RLS already scopes conversations to participants; fetch by id via
   // messages/conversations join isn't needed — select by id directly.
-  const { data: conversation } = await supabase
+  const { data: conversation, error: conversationError } = await supabase
     .from("conversations")
     .select("*")
     .eq("id", conversationId)
     .maybeSingle();
+  if (conversationError) throw conversationError;
   if (!conversation) notFound();
 
   const otherUserId = otherParticipant(conversation, user.id);
