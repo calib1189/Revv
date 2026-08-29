@@ -92,6 +92,13 @@ export function VideoEditor({
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+  // Snapshot of the state right after real metadata loads (before any
+  // possible user interaction) — lets handleDone tell "genuinely
+  // unedited" apart from "edited, then undone back to the same values"
+  // by comparison instead of tracking every single mutation path
+  // individually (there are several: updateState, addTextLayer,
+  // addDrawStroke, etc.), which would be easy to under-track.
+  const baselineStateRef = useRef<EditState | null>(null);
 
   const { exportVideo, isExporting, progress } = useVideoExport();
 
@@ -114,7 +121,11 @@ export function VideoEditor({
       const d = el.duration;
       setVideoDims({ width: el.videoWidth, height: el.videoHeight });
       setDuration(d);
-      setState((s) => ({ ...s, trimStart: 0, trimEnd: Math.min(d, 60) }));
+      setState((s) => {
+        const next = { ...s, trimStart: 0, trimEnd: Math.min(d, 60) };
+        baselineStateRef.current = next;
+        return next;
+      });
       setReady(true);
     }
 
@@ -355,6 +366,33 @@ export function VideoEditor({
     const video = videoRef.current;
     if (!video) return;
     setError(null);
+
+    // Nothing was actually changed from the freshly-loaded baseline —
+    // no trim, no crop/aspect change, no filter, no text, no drawing, no
+    // music, no speed/volume change. There's no real reason to re-encode
+    // through the canvas-capture + MediaRecorder pipeline for a no-op,
+    // and that pipeline has shown real device-specific reliability
+    // issues (see use-video-export.ts's recorder.onerror handling) that
+    // a pure pass-through of the original file has zero exposure to.
+    const baseline = baselineStateRef.current;
+    const isUnedited =
+      baseline !== null &&
+      state.trimStart === baseline.trimStart &&
+      state.trimEnd === baseline.trimEnd &&
+      state.aspect === baseline.aspect &&
+      state.panOffset === baseline.panOffset &&
+      state.filterId === baseline.filterId &&
+      state.textLayers.length === 0 &&
+      state.drawStrokes.length === 0 &&
+      state.musicFile === null &&
+      state.musicVolume === baseline.musicVolume &&
+      state.originalVolume === baseline.originalVolume &&
+      state.playbackRate === baseline.playbackRate;
+    if (isUnedited) {
+      onExported(source);
+      return;
+    }
+
     try {
       const { blob, extension } = await exportVideo(video, source, state);
       const file = new File([blob], `revv-clip.${extension}`, { type: blob.type });
