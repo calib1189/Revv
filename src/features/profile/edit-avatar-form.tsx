@@ -7,7 +7,8 @@ import { uploadImage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { publicMediaUrl } from "@/lib/db/media";
 import { updateProfileAvatar } from "@/lib/db/profiles";
-import { validateImageFile } from "@/lib/validation/media";
+import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
+import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { Avatar } from "@/features/feed/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -26,8 +27,9 @@ export function EditAvatarForm({
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  async function handleSelect(file: File) {
+  async function handleSelect(rawFile: File) {
     setError(null);
+    const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
     const fileError = validateImageFile(file);
     if (fileError) return setError(fileError);
 

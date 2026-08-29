@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { addVehicleMedia } from "@/lib/db/vehicle-media";
-import { validateImageFile } from "@/lib/validation/media";
+import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
+import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { Button } from "@/components/ui/button";
 
 export function GalleryUploader({
@@ -30,7 +31,8 @@ export function GalleryUploader({
       const supabase = createClient();
       let position = nextPosition;
 
-      for (const file of Array.from(files)) {
+      for (const rawFile of Array.from(files)) {
+        const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
         const validationError = validateImageFile(file);
         if (validationError) {
           setError(validationError);

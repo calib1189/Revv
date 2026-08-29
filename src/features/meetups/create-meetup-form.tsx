@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { addMeetupMedia } from "@/lib/db/meetup-media";
 import { createMedia } from "@/lib/db/media";
 import { uploadImage } from "@/lib/storage/upload";
-import { validateImageFile } from "@/lib/validation/media";
+import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
+import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { validateMeetup } from "@/lib/validation/meetup";
 import { createMeetupDraftAction, createMeetupCheckoutAction } from "@/features/meetups/actions";
 import { MEETUP_TIERS, type MeetupTier } from "@/lib/db/meetups";
@@ -45,10 +46,11 @@ export function CreateMeetupForm({ userId }: { userId: string }) {
     setIsOpen(false);
   }
 
-  function handleSelectPhotos(files: FileList) {
+  async function handleSelectPhotos(files: FileList) {
     const next: SelectedPhoto[] = [...photos];
-    for (const file of Array.from(files)) {
+    for (const rawFile of Array.from(files)) {
       if (next.length >= MAX_PHOTOS) break;
+      const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
       const fileError = validateImageFile(file);
       if (fileError) {
         setError(fileError);

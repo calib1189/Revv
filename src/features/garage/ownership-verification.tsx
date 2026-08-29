@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
-import { validateImageFile } from "@/lib/validation/media";
+import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
+import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { Button } from "@/components/ui/button";
 import { CheckIcon } from "@/components/ui/icons";
 
@@ -34,7 +35,8 @@ export function OwnershipVerification({
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  async function handleFile(file: File) {
+  async function handleFile(rawFile: File) {
+    const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
     const validationError = validateImageFile(file);
     if (validationError) {
       setError(validationError);

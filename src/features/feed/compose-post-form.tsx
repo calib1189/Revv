@@ -11,7 +11,9 @@ import {
   validateImageFile,
   validateVideoFile,
   validateVideoDuration,
+  MAX_IMAGE_BYTES,
 } from "@/lib/validation/media";
+import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { validateCaption, validatePhotoCount } from "@/lib/validation/post";
 import { trackEvent } from "@/lib/analytics/track";
 import { moderateMediaAction } from "@/features/moderation/actions";
@@ -163,11 +165,12 @@ export function ComposePostForm({
     setPhotos([]);
   }
 
-  function handleSelectPhotos(files: FileList) {
+  async function handleSelectPhotos(files: FileList) {
     setError(null);
     clearVideo();
     const next: SelectedPhoto[] = [...photos];
-    for (const file of Array.from(files)) {
+    for (const rawFile of Array.from(files)) {
+      const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
       const fileError = validateImageFile(file);
       if (fileError) {
         setError(fileError);
@@ -188,7 +191,7 @@ export function ComposePostForm({
     });
   }
 
-  function handleImportFiles(files: FileList) {
+  async function handleImportFiles(files: FileList) {
     setError(null);
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
@@ -225,7 +228,7 @@ export function ComposePostForm({
       setError("When picking more than one file, they all need to be photos, or all need to be videos.");
       return;
     }
-    handleSelectPhotos(files);
+    await handleSelectPhotos(files);
     setStep("compose");
   }
 
@@ -270,9 +273,10 @@ export function ComposePostForm({
     setStep("compose");
   }
 
-  function handlePhotoEditorExported(file: File) {
+  async function handlePhotoEditorExported(rawFile: File) {
     setPhotoEditorSource(null);
     setError(null);
+    const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
     const fileError = validateImageFile(file);
     if (fileError) return setError(fileError);
 

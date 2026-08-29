@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
-import { validateImageFile } from "@/lib/validation/media";
+import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
+import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { createAdCampaignAction } from "@/features/ads/actions";
 import { AD_TIERS, type AdTier } from "@/lib/db/ad-campaigns";
 import { Button } from "@/components/ui/button";
@@ -39,15 +40,16 @@ export function AdCampaignForm({ userId }: { userId: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleFile(selected: File) {
-    const validationError = validateImageFile(selected);
+  async function handleFile(selected: File) {
+    const compressed = await compressImageIfNeeded(selected, MAX_IMAGE_BYTES);
+    const validationError = validateImageFile(compressed);
     if (validationError) {
       setError(validationError);
       return;
     }
     setError(null);
-    setFile(selected);
-    setPreviewUrl(URL.createObjectURL(selected));
+    setFile(compressed);
+    setPreviewUrl(URL.createObjectURL(compressed));
   }
 
   async function handleSubmit(e: React.FormEvent) {
