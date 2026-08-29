@@ -7,8 +7,8 @@
  * Deliberately does NOT seek to find that frame. A freshly-recorded/
  * exported clip commonly reports a bogus Infinity/NaN duration until
  * forced through a seek-to-a-huge-value workaround — the fix already
- * applied in readVideoDurationSeconds (compose-post-form.tsx),
- * video-editor.tsx, and use-clip-combiner.ts. This function originally
+ * applied in readVideoDurationSeconds (compose-post-form.tsx) and
+ * video-editor.tsx. This function originally
  * tried to reuse that same seek, then seek again to a specific
  * timestamp to sample — but that second seek can race against a stale
  * `seeked` event left over from the first one, which is exactly what

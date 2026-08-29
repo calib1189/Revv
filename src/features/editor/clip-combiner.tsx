@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useClipCombiner } from "@/features/editor/use-clip-combiner";
+import { combineClipsFfmpeg } from "@/features/editor/combine-clips-ffmpeg";
 import { BackIcon, CheckIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
@@ -27,7 +27,9 @@ export function ClipCombiner({
 }) {
   const [clips, setClips] = useState(sources);
   const [error, setError] = useState<string | null>(null);
-  const { combineClips, isCombining, progress } = useClipCombiner();
+  const [stage, setStage] = useState<"idle" | "loading" | "combining">("idle");
+  const [progress, setProgress] = useState(0);
+  const isCombining = stage !== "idle";
 
   function move(index: number, direction: -1 | 1) {
     setClips((prev) => {
@@ -52,12 +54,19 @@ export function ClipCombiner({
       onCombined(clips[0]);
       return;
     }
+    setStage("loading");
+    setProgress(0);
     try {
-      const { file } = await combineClips(clips);
+      const { file } = await combineClipsFfmpeg(clips, {
+        onLoadProgress: () => setStage("combining"),
+        onCombineProgress: setProgress,
+      });
       onCombined(file);
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       setError(`Couldn't combine those clips. (${detail})`);
+    } finally {
+      setStage("idle");
     }
   }
 
@@ -82,7 +91,9 @@ export function ClipCombiner({
           disabled={isCombining || clips.length === 0}
           className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-60"
         >
-          {isCombining ? (
+          {stage === "loading" ? (
+            "Preparing…"
+          ) : stage === "combining" ? (
             `Combining ${Math.round(progress * 100)}%`
           ) : (
             <>

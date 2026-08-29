@@ -53,7 +53,7 @@ async function checkMedia(file: File): Promise<{ allowed: boolean; reason?: stri
 // fired (for any reason: a malformed export, a device-specific decoder
 // stall), this promise just hung forever with no error, no way to
 // recover, and no diagnostic signal. Same class of bug as
-// use-clip-combiner.ts's loadClip, fixed the same way.
+// video-editor.tsx's own load-metadata effect, fixed the same way.
 const READ_DURATION_TIMEOUT_MS = 15000;
 
 function readVideoDurationSeconds(file: File): Promise<number> {
@@ -99,7 +99,7 @@ function readVideoDurationSeconds(file: File): Promise<number> {
       // The file being read here is always a just-exported/recorded
       // clip, which commonly reports a bogus duration (Infinity, NaN)
       // until something forces a seek near the true end — same fix
-      // already applied in video-editor.tsx and use-clip-combiner.ts.
+      // already applied in video-editor.tsx.
       const onFixed = () => {
         if (settled) return;
         video.removeEventListener("durationchange", onFixed);
