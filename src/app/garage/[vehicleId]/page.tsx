@@ -23,7 +23,7 @@ import { ModificationList } from "@/features/builds/modification-list";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
-import { GemIcon } from "@/components/ui/icons";
+import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { BudgetCard } from "@/features/builds/budget-card";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
@@ -184,14 +184,15 @@ export default async function VehiclePage({
           <div className="mb-6 glass-raised rounded-3xl p-6">
             {(() => {
               const tier = rankForScore(activeBuild.ai_rating_score!);
+              const Icon = RANK_MATERIAL_ICONS[tier];
               return (
                 <>
                   <div className="flex items-center gap-3">
                     <span
                       className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
-                      style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26`, color: RANK_TEXT_COLORS[tier] }}
+                      style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26` }}
                     >
-                      <GemIcon className="h-6 w-6" />
+                      <Icon className="h-9 w-9" />
                     </span>
                     <div className="min-w-0">
                       <p className="text-xs font-medium uppercase tracking-wide text-muted">

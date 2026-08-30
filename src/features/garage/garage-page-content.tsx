@@ -6,7 +6,7 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { VehicleCard } from "@/features/garage/vehicle-card";
 import { Button } from "@/components/ui/button";
-import { GemIcon } from "@/components/ui/icons";
+import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 
 /** Garage is one panel of the swipeable tab pager now (tab-pager-shell.tsx)
@@ -85,7 +85,10 @@ export async function GaragePageContent() {
               href="/leaderboard"
               className="flex items-center gap-1.5 hover:text-foreground"
             >
-              <GemIcon className="h-3.5 w-3.5" style={{ color: RANK_TEXT_COLORS[bestTier] }} />
+              {(() => {
+                const Icon = RANK_MATERIAL_ICONS[bestTier];
+                return <Icon className="h-4 w-4" />;
+              })()}
               Best:{" "}
               <span className="font-semibold" style={{ color: RANK_TEXT_COLORS[bestTier] }}>
                 {RANK_LABELS[bestTier]} · {bestScore.toFixed(2)}

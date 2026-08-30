@@ -9,6 +9,7 @@ import { RatingReveal } from "@/features/garage/rating-reveal";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { GemIcon } from "@/components/ui/icons";
+import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import type { BuildRating } from "@/lib/providers/rating-provider";
 
 export function RateBuildPanel({
@@ -90,14 +91,15 @@ export function RateBuildPanel({
 
   if (pending) {
     const tier = rankForScore(pending.score);
+    const Icon = RANK_MATERIAL_ICONS[tier];
     return (
       <div className="glass-raised rounded-3xl p-6">
         <div className="flex items-center gap-3">
           <span
             className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26`, color: RANK_TEXT_COLORS[tier] }}
+            style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26` }}
           >
-            <GemIcon className="h-6 w-6" />
+            <Icon className="h-9 w-9" />
           </span>
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">New rating</p>
@@ -153,6 +155,7 @@ export function RateBuildPanel({
 
   if (currentScore != null) {
     const tier = rankForScore(currentScore);
+    const Icon = RANK_MATERIAL_ICONS[tier];
     return (
       <>
         {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} />}
@@ -161,9 +164,9 @@ export function RateBuildPanel({
           <div className="flex min-w-0 items-center gap-3">
             <span
               className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
-              style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26`, color: RANK_TEXT_COLORS[tier] }}
+              style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26` }}
             >
-              <GemIcon className="h-6 w-6" />
+              <Icon className="h-9 w-9" />
             </span>
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wide text-muted">Build rating</p>
