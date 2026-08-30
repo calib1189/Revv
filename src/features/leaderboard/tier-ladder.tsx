@@ -10,8 +10,8 @@ export function TierLadder() {
       <div className="relative z-10 flex flex-col gap-3">
         {RANK_TIERS.map(({ tier }, i) => (
           <div key={tier} className="flex items-center gap-4">
-            <div className="flex w-16 flex-shrink-0 items-center justify-center">
-              <TierSwatch tier={tier} className={i === 0 ? "h-14 w-14" : "h-11 w-11"} />
+            <div className="flex w-20 flex-shrink-0 items-center justify-center">
+              <TierSwatch tier={tier} className={i === 0 ? "h-[4.5rem] w-[4.5rem]" : "h-14 w-14"} />
             </div>
             <div className="min-w-0">
               <p className={`font-semibold ${i === 0 ? "text-base" : "text-sm"}`}>

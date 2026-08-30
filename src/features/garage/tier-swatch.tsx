@@ -16,7 +16,7 @@ export function TierSwatch({
   const Icon = RANK_MATERIAL_ICONS[tier];
   return (
     <div className={`rank-frame rank-${tier} rounded-full ${className}`}>
-      <div className="flex h-full w-full items-center justify-center rounded-full bg-surface p-1.5">
+      <div className="flex h-full w-full items-center justify-center rounded-full bg-surface p-1">
         <Icon className="h-full w-full" />
       </div>
     </div>
