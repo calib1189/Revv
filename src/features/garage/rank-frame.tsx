@@ -1,4 +1,4 @@
-import { GemIcon } from "@/components/ui/icons";
+import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import {
   rankForScore,
   RANK_LABELS,
@@ -23,6 +23,7 @@ export function RankFrame({
   if (score == null) return <>{children}</>;
 
   const tier = rankForScore(score);
+  const Icon = RANK_MATERIAL_ICONS[tier];
 
   return (
     <div
@@ -38,7 +39,7 @@ export function RankFrame({
             color: RANK_BADGE_TEXT_COLORS[tier],
           }}
         >
-          <GemIcon className={compact ? "h-2.5 w-2.5" : "h-3 w-3"} />
+          <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
           {RANK_LABELS[tier]} · {score.toFixed(2)}
         </div>
       )}
