@@ -1,46 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { GemIcon } from "@/components/ui/icons";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, RANK_TIERS, type RankTier } from "@/lib/rating/rank";
-import { useCountUp } from "@/features/garage/use-count-up";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, type RankTier } from "@/lib/rating/rank";
+import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { ParticleBurst } from "@/features/garage/particle-burst";
+import { unknownClimbValue, landingValue, landingStartValue } from "@/features/garage/climb-math";
 import type { BuildRating } from "@/lib/providers/rating-provider";
 
-type Stage = "climbing" | "landed" | "settled";
+type Stage = "climbing" | "landing" | "landed" | "settled";
 
-// Ascending — bronze first, cosmic last. RANK_TIERS itself is ordered
-// highest-first (it's built for rankForScore's "first match wins" logic),
-// so this is that same single source of truth, just walked backwards.
-const TIER_LADDER: RankTier[] = [...RANK_TIERS].reverse().map((t) => t.tier);
-const MIN_BY_TIER: Record<RankTier, number> = Object.fromEntries(
-  RANK_TIERS.map((t) => [t.tier, t.min]),
-) as Record<RankTier, number>;
-
-// A brisk, constant climb while the tier is still unknown/far away —
-// this is what makes it read as a real slot-machine-style climb rather
-// than a slow crawl. The three DECELERATE_DELAYS kick in only once the
-// climb is genuinely closing in on the real answer, each step slower
-// than the last, so the landing itself always feels earned rather than
-// arbitrary — the same "spinning wheel loses momentum" cue every real
-// slot machine / gacha reveal uses.
-const CLIMB_STEP_MS = 140;
-const DECELERATE_DELAYS = [230, 380, 620]; // 3 tiers out, 2 out, 1 out
 // However fast the real result comes back, the climb always gets at
-// least this long to actually feel like a climb — a bronze result that
-// happened to resolve instantly shouldn't skip straight to landing.
-const MIN_CLIMB_MS = 2400;
-const SETTLE_DELAY_MS = 1500;
-const COUNT_UP_MS = 900;
+// least this long before it's allowed to start its final approach —
+// see climb-math.ts's unknownClimbValue for what's actually driving the
+// displayed number during this window.
+const MIN_CLIMB_MS = 2200;
+const LANDING_DURATION_MS = 1100;
+const LANDING_RUNWAY = 7;
+const SETTLE_DELAY_MS = 1300;
 
 /**
- * The "unboxing" moment for a build rating. Climbs the tier ladder from
- * Bronze, one rank at a time, accelerating while the outcome is still
- * unknown and decelerating into an exact landing on the real tier —
- * "slowly climbs the ranks till it hits your exact score and rank,"
- * not a generic loading spinner before a single reveal. The climb loop
- * itself doubles as the loading state for the real AI call: it just
- * keeps lapping the ladder for as long as that takes.
+ * The build-rating "unboxing" moment: the score starts at 0 and climbs
+ * continuously — fast at first, slowing as it goes — for as long as the
+ * real AI call takes (this doubles as the loading state), then eases
+ * into an exact landing on the real score once it's ready. The tier
+ * ring/icon shown is always whatever tier the *currently displayed*
+ * number falls into, so every time the climb crosses a tier boundary —
+ * climbing or landing, it doesn't matter which — that swap fires its
+ * own level-up effect (ring shockwave + icon bounce + a small particle
+ * burst in the new tier's color). Landing itself gets an extra, bigger
+ * celebration on top of that once it reaches the exact final number.
  */
 export function RatingReveal({
   result,
@@ -50,14 +38,17 @@ export function RatingReveal({
   result: BuildRating | null;
   onDone: () => void;
 }) {
-  const [displayTierIndex, setDisplayTierIndex] = useState(0);
-  const [stage, setStage] = useState<Stage>("climbing");
+  const [stage, setStageState] = useState<Stage>("climbing");
+  const [displayedValue, setDisplayedValue] = useState(0);
   const [skipRequested, setSkipRequested] = useState(false);
+  const [levelUpKey, setLevelUpKey] = useState(0);
 
-  // Read inside the climb loop via refs, not effect dependencies — the
-  // loop is a single self-scheduling setTimeout chain started once on
-  // mount, deliberately not restarted every time `result` arrives, so
-  // the in-flight step's own delay is never disrupted by that arrival.
+  const stageRef = useRef<Stage>("climbing");
+  function setStage(next: Stage) {
+    stageRef.current = next;
+    setStageState(next);
+  }
+
   const resultRef = useRef(result);
   useEffect(() => {
     resultRef.current = result;
@@ -66,66 +57,64 @@ export function RatingReveal({
   useEffect(() => {
     skipRef.current = skipRequested;
   }, [skipRequested]);
+
   const startedAtRef = useRef<number | null>(null);
+  const landingFromRef = useRef(0);
+  const landingStartedAtRef = useRef<number | null>(null);
+  const prevTierRef = useRef<RankTier>("bronze");
 
   useEffect(() => {
     startedAtRef.current = performance.now();
   }, []);
 
+  // The one continuous animation loop, running for the component's
+  // whole lifetime (started once, deliberately not restarted when
+  // `result` arrives — see rating-reveal's earlier bug history for why
+  // that matters under React's dev Strict Mode specifically). Reads
+  // `stage` via a ref rather than depending on it, since flipping
+  // stages happens *inside* this same loop.
   useEffect(() => {
-    // No "already started" guard here on purpose — React's dev Strict
-    // Mode runs this effect through mount → cleanup → mount once, and a
-    // guard that only allows the loop to start once actively breaks
-    // that: the first mount's chain gets torn down by the deliberate
-    // cleanup below, and a guard would then block the second (real,
-    // persisting) mount from ever starting its own. The cleanup itself
-    // is what makes re-running this effect safe, the same way it would
-    // be for any other effect.
+    let raf: number;
     let cancelled = false;
-    let index = 0;
-    // Tracked so the effect cleanup can actually clear whatever's
-    // currently pending — step()'s own return value is never read by
-    // anything (it's called as a bare statement, both initially and
-    // from inside the scheduled callback itself), so returning a
-    // cleanup closure from step() the way a normal effect would did
-    // nothing: on unmount, a stray already-scheduled timeout would
-    // still fire once and call setState on an unmounted component.
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    function scheduleStep(delay: number) {
-      timeoutId = setTimeout(() => {
-        if (cancelled) return;
-        index = (index + 1) % TIER_LADDER.length;
-        setDisplayTierIndex(index);
-        step();
-      }, delay);
-    }
-
-    function step() {
+    function frame(now: number) {
       if (cancelled) return;
-      const currentResult = resultRef.current;
-      const elapsed = startedAtRef.current === null ? 0 : performance.now() - startedAtRef.current;
-      const pastMinimum = skipRef.current || elapsed >= MIN_CLIMB_MS;
+      const start = startedAtRef.current ?? now;
+      const elapsed = now - start;
 
-      if (currentResult && pastMinimum) {
-        const targetIndex = TIER_LADDER.indexOf(rankForScore(currentResult.score));
-        const distance = (targetIndex - index + TIER_LADDER.length) % TIER_LADDER.length;
-        if (distance === 0) {
+      if (stageRef.current === "climbing") {
+        const currentResult = resultRef.current;
+        const pastMinimum = skipRef.current || elapsed >= MIN_CLIMB_MS;
+        if (currentResult && pastMinimum) {
+          const unknownValue = unknownClimbValue(elapsed);
+          landingFromRef.current = landingStartValue(unknownValue, currentResult.score, LANDING_RUNWAY);
+          landingStartedAtRef.current = now;
+          setStage("landing");
+        } else {
+          setDisplayedValue(unknownClimbValue(elapsed));
+        }
+      } else if (stageRef.current === "landing") {
+        const currentResult = resultRef.current;
+        if (!currentResult) {
+          raf = requestAnimationFrame(frame);
+          return;
+        }
+        const landingElapsed = now - (landingStartedAtRef.current ?? now);
+        setDisplayedValue(landingValue(landingElapsed, LANDING_DURATION_MS, landingFromRef.current, currentResult.score));
+        if (landingElapsed >= LANDING_DURATION_MS) {
+          setDisplayedValue(currentResult.score);
           setStage("landed");
           return;
         }
-        const delay =
-          distance <= DECELERATE_DELAYS.length ? DECELERATE_DELAYS[DECELERATE_DELAYS.length - distance] : CLIMB_STEP_MS;
-        scheduleStep(delay);
+      } else {
         return;
       }
-
-      scheduleStep(CLIMB_STEP_MS);
+      raf = requestAnimationFrame(frame);
     }
-    step();
+    raf = requestAnimationFrame(frame);
     return () => {
       cancelled = true;
-      if (timeoutId) clearTimeout(timeoutId);
+      cancelAnimationFrame(raf);
     };
   }, []);
 
@@ -135,39 +124,47 @@ export function RatingReveal({
     return () => clearTimeout(t);
   }, [stage]);
 
-  const climbingTier = TIER_LADDER[displayTierIndex];
-  const finalTier = result ? rankForScore(result.score) : null;
+  const displayedTier = rankForScore(displayedValue);
+
+  // Fires the level-up effect every time the *displayed* tier changes —
+  // during the fast climb, during the slower landing approach, doesn't
+  // matter which. Deliberately not gated to any particular stage.
+  useEffect(() => {
+    if (prevTierRef.current !== displayedTier) {
+      prevTierRef.current = displayedTier;
+      setLevelUpKey((k) => k + 1);
+    }
+  }, [displayedTier]);
+
   const landed = stage === "landed" || stage === "settled";
-  const displayedTier = landed && finalTier ? finalTier : climbingTier;
   const color = RANK_TEXT_COLORS[displayedTier];
-  // Starts from the landed tier's own minimum, not 0 — the climb was
-  // already showing that number a moment ago, so the count-up should
-  // continue upward from there to the exact real score, not jump back
-  // to zero first. See use-count-up.ts's `from` param.
-  const countUp = useCountUp(
-    result?.score ?? MIN_BY_TIER[displayedTier],
-    COUNT_UP_MS,
-    landed,
-    finalTier ? MIN_BY_TIER[finalTier] : 0,
-  );
-  const displayedScore = landed ? countUp : MIN_BY_TIER[displayedTier];
+  const Icon = RANK_MATERIAL_ICONS[displayedTier];
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black">
-      <div className={`relative flex h-44 w-44 items-center justify-center ${stage === "landed" ? "reveal-shake" : ""}`}>
-        <div className={landed ? "reveal-materialize" : ""}>
-          <div
-            className={`rank-frame rank-${displayedTier} flex h-40 w-40 items-center justify-center rounded-full`}
-          >
-            <GemIcon className="h-16 w-16" style={{ color }} />
+      <div className="relative flex h-44 w-44 items-center justify-center">
+        <div key={`ring-${levelUpKey}`} className={landed ? "reveal-materialize" : "tier-levelup-icon-pop"}>
+          <div className={`rank-frame rank-${displayedTier} flex h-40 w-40 items-center justify-center rounded-full p-6`}>
+            <Icon className="h-full w-full drop-shadow-lg" />
           </div>
         </div>
+
+        {/* Shockwave ring on every tier crossing, key-remounted so the
+            one-shot CSS animation replays each time. */}
+        <span
+          key={`pulse-${levelUpKey}`}
+          aria-hidden
+          className="tier-levelup-ring pointer-events-none absolute inset-0 rounded-full border-2"
+          style={{ borderColor: color }}
+        />
+        {levelUpKey > 0 && (
+          <ParticleBurst key={`sparkle-${levelUpKey}`} burstKey={levelUpKey} colors={[color, "#ffffff"]} />
+        )}
 
         {stage === "landed" && (
           <span aria-hidden className="reveal-flash absolute inset-0 rounded-full bg-white" />
         )}
-
-        {landed && <ParticleBurst burstKey={result?.score ?? 0} colors={[color, "#ffffff", `${color}99`]} />}
+        {landed && <ParticleBurst burstKey={`final-${result?.score ?? 0}`} colors={[color, "#ffffff", `${color}99`]} />}
       </div>
 
       <div className="mt-7 flex flex-col items-center gap-1 text-center">
@@ -179,13 +176,10 @@ export function RatingReveal({
             {result.isMock ? "Preview rating" : "Your rating"}
           </p>
         )}
-        <p
-          className={`text-3xl font-bold tracking-tight transition-colors duration-150 ${landed ? "reveal-text-in" : ""}`}
-          style={{ color }}
-        >
+        <p className="text-3xl font-bold tracking-tight transition-colors duration-150" style={{ color }}>
           {RANK_LABELS[displayedTier]}
         </p>
-        <p className="text-xl font-semibold tabular-nums text-white/90">{displayedScore.toFixed(2)}</p>
+        <p className="text-xl font-semibold tabular-nums text-white/90">{displayedValue.toFixed(2)}</p>
       </div>
 
       {!landed && !skipRequested && (
