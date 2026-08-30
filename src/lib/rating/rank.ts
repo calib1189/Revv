@@ -23,10 +23,16 @@ export const RANK_LABELS: Record<RankTier, string> = {
   cosmic: "Cosmic",
 };
 
-/** Badge chip background per tier — matches the frame border colors in
- * globals.css. Cosmic gets a dark chip since it needs to sit on top of a
- * bright starfield, everything else is light enough for dark text. */
-export const RANK_BADGE_COLORS: Record<RankTier, string> = {
+/** Tier color for use as foreground text/icon color directly on the
+ * app's own dark background (rate-build-panel headings, the garage-list
+ * best-build badge, the rank-badge chip) — every badge chip now sits on
+ * a neutral dark background rather than a solid tier-color fill (a solid
+ * fill made the full-color badge artwork blend into a same-hue backdrop),
+ * so there's no separate "chip background" palette to keep in sync
+ * anymore. Cosmic gets a legible light lavender instead of its ring's
+ * near-black so it doesn't disappear against the same dark background
+ * everything else sits on. */
+export const RANK_TEXT_COLORS: Record<RankTier, string> = {
   bronze: "#c98a52",
   copper: "#d99569",
   iron: "#aeb2bb",
@@ -36,34 +42,6 @@ export const RANK_BADGE_COLORS: Record<RankTier, string> = {
   emerald: "#5be3a9",
   diamond: "#c9f4ff",
   ruby: "#f27a93",
-  cosmic: "#1a0b2e",
-};
-
-export const RANK_BADGE_TEXT_COLORS: Record<RankTier, string> = {
-  bronze: "#0a0a0b",
-  copper: "#0a0a0b",
-  iron: "#0a0a0b",
-  silver: "#0a0a0b",
-  gold: "#0a0a0b",
-  platinum: "#0a0a0b",
-  emerald: "#0a0a0b",
-  diamond: "#0a0a0b",
-  ruby: "#0a0a0b",
-  cosmic: "#f4f4f5",
-};
-
-/** Tier color for use as foreground text/icon color directly on the
- * app's own dark background (rate-build-panel headings, the garage-list
- * best-build badge) — a DIFFERENT use from RANK_BADGE_COLORS, which is a
- * chip *background* meant to be paired with RANK_BADGE_TEXT_COLORS.
- * Identical to RANK_BADGE_COLORS for every tier except cosmic: cosmic's
- * badge color is near-black on purpose (it's a dark chip background),
- * which reads as invisible text on the app's own near-black background.
- * This swaps in a legible light lavender for that one case while keeping
- * the "cosmic purple" identity, instead of just falling back to plain
- * white. */
-export const RANK_TEXT_COLORS: Record<RankTier, string> = {
-  ...RANK_BADGE_COLORS,
   cosmic: "#c9b6ff",
 };
 

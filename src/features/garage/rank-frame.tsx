@@ -1,10 +1,5 @@
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import {
-  rankForScore,
-  RANK_LABELS,
-  RANK_BADGE_COLORS,
-  RANK_BADGE_TEXT_COLORS,
-} from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import type { ReactNode } from "react";
 
 export function RankFrame({
@@ -35,11 +30,12 @@ export function RankFrame({
         <div
           className={`rank-badge ${compact ? "text-[0.65rem]" : ""}`}
           style={{
-            background: RANK_BADGE_COLORS[tier],
-            color: RANK_BADGE_TEXT_COLORS[tier],
+            background: "rgba(10, 10, 11, 0.72)",
+            border: `1px solid ${RANK_TEXT_COLORS[tier]}66`,
+            color: RANK_TEXT_COLORS[tier],
           }}
         >
-          <Icon className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+          <Icon className={compact ? "h-4 w-4" : "h-5 w-5"} />
           {RANK_LABELS[tier]} · {score.toFixed(2)}
         </div>
       )}
