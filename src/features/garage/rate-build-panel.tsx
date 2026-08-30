@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { generateBuildRatingAction, confirmBuildRatingAction } from "@/features/garage/rating-actions";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
+import { RatingReveal } from "@/features/garage/rating-reveal";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { GemIcon } from "@/components/ui/icons";
@@ -26,20 +27,43 @@ export function RateBuildPanel({
   const [isConfirming, setIsConfirming] = useState(false);
   const [pending, setPending] = useState<BuildRating | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Opens the moment "Rate my build" is tapped, not once the response
+  // arrives — the reveal's own charging stage is what covers the real
+  // network latency, so it needs to be on screen before that latency
+  // even starts. revealResult stays null until the API call actually
+  // resolves; the reveal component charges for as long as that takes.
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [revealResult, setRevealResult] = useState<BuildRating | null>(null);
 
   async function handleGenerate() {
     setError(null);
     setPending(null);
+    setRevealResult(null);
     setIsGenerating(true);
+    setIsRevealing(true);
     try {
       const result = await generateBuildRatingAction(vehicleId);
-      if (result.error) setError(result.error);
-      else if (result.data) setPending(result.data);
+      if (result.error) {
+        setError(result.error);
+        setIsRevealing(false);
+      } else if (result.data) {
+        setRevealResult(result.data);
+      }
     } catch {
       setError("Couldn't rate that build. Try again.");
+      setIsRevealing(false);
     } finally {
       setIsGenerating(false);
     }
+  }
+
+  // Only once the reveal has actually played through does the existing
+  // "New rating" card (strengths/limiting factors, Show this rating/
+  // Discard) take over — the reveal is a moment in front of that card,
+  // not a replacement for the review step it already had.
+  function handleRevealDone() {
+    setIsRevealing(false);
+    if (revealResult) setPending(revealResult);
   }
 
   async function handleConfirm() {
@@ -130,7 +154,9 @@ export function RateBuildPanel({
   if (currentScore != null) {
     const tier = rankForScore(currentScore);
     return (
-      <div className="glass-raised rounded-3xl p-6">
+      <>
+        {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} />}
+        <div className="glass-raised rounded-3xl p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <span
@@ -194,11 +220,14 @@ export function RateBuildPanel({
           See how tiers work →
         </Link>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="glass-raised rounded-3xl p-6">
+    <>
+      {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} />}
+      <div className="glass-raised rounded-3xl p-6">
       <div className="flex items-center gap-4">
         <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-accent/15 text-accent">
           <GemIcon className="h-6 w-6" />
@@ -223,6 +252,7 @@ export function RateBuildPanel({
           <Callout tone="danger">{error}</Callout>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

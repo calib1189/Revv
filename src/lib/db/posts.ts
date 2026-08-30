@@ -180,3 +180,15 @@ export async function deletePost(
   const { error } = await supabase.from("posts").delete().eq("id", id);
   if (error) throw error;
 }
+
+/** RLS ("authors update their own posts", 0014) is the only thing
+ * enforcing ownership here — a caller updating someone else's post id
+ * just silently affects zero rows rather than needing a check here too. */
+export async function updatePostCaption(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  caption: string | null,
+): Promise<void> {
+  const { error } = await supabase.from("posts").update({ caption }).eq("id", id);
+  if (error) throw error;
+}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SaveButton } from "@/features/feed/save-button";
-import { VideoOptionsMenu } from "@/features/feed/video-options-menu";
+import { PostOptionsSheet } from "@/features/feed/post-options-sheet";
 import { FollowBadge } from "@/features/feed/follow-badge";
 import { CommentSheet } from "@/features/feed/comment-sheet";
 import { Avatar } from "@/features/feed/avatar";
@@ -237,6 +237,12 @@ export function SwipeSlide({
   const containerRef = useRef<HTMLDivElement>(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shouldLoadMedia, setShouldLoadMedia] = useState(false);
+  // Local override so an edited caption shows immediately — `data` is a
+  // snapshot from whichever server fetch produced this slide, and
+  // there's no cheap way to force that all the way back in sync after
+  // a caption edit without a full page reload.
+  const [captionOverride, setCaptionOverride] = useState<string | null | undefined>(undefined);
+  const displayedCaption = captionOverride === undefined ? data.post.caption : captionOverride;
   const { liked, count: likeCount, toggle: toggleLike, like } = usePostLike(
     data.post.id,
     data.isLiked,
@@ -314,7 +320,11 @@ export function SwipeSlide({
           className="pointer-events-auto absolute right-3 z-10"
           style={{ top: `calc(${HEADER_HEIGHT} + ${extraTopInset} + 0.5rem)` }}
         >
-          <VideoOptionsMenu postId={data.post.id} />
+          <PostOptionsSheet
+            postId={data.post.id}
+            caption={displayedCaption}
+            onCaptionUpdated={setCaptionOverride}
+          />
         </div>
       )}
 
@@ -337,9 +347,9 @@ export function SwipeSlide({
               • {data.vehicleTitle}
             </Link>
           )}
-          {data.post.caption && (
+          {displayedCaption && (
             <CaptionText
-              text={data.post.caption}
+              text={displayedCaption}
               className="mt-1.5 line-clamp-2 text-sm text-white/90"
             />
           )}

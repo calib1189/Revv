@@ -307,6 +307,36 @@ html.native-app body::-webkit-scrollbar {
     mask-composite: exclude;
   }
 
+  /* A real child element, not a third pseudo-element (CSS only gives a
+     ::before/::after per element, both already spoken for above) — a
+     periodic light streak that sweeps across the ring every few
+     seconds, same "premium loot-card" shine every tier gets regardless
+     of its own material animation. Masked exactly like ::before/::after
+     so it obeys the same ring-only guarantee — it can never paint over
+     the photo in the middle no matter how bright it gets. */
+  .rank-glint {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    border-radius: inherit;
+    pointer-events: none;
+    box-sizing: border-box;
+    padding: 3px;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.95) 48%, transparent 64%);
+    background-size: 260% 260%;
+    animation: rank-glint-sweep 5s ease-in-out infinite;
+  }
+
+  @keyframes rank-glint-sweep {
+    0% { background-position: -70% -70%; }
+    16% { background-position: 170% 170%; }
+    100% { background-position: 170% 170%; }
+  }
+
   .rank-frame::after {
     z-index: 6;
     padding: 3px;
@@ -342,14 +372,21 @@ html.native-app body::-webkit-scrollbar {
   .rank-gold::before {
     background: linear-gradient(120deg, #7a5a13, #fbe08a, #7a5a13, #e8bf4f, #fbe08a);
     background-size: 300% 300%;
-    animation: rank-shine-sweep 2.8s linear infinite;
-    filter: drop-shadow(0 0 8px rgb(232 191 79 / 0.6));
+    animation: rank-shine-sweep 2.8s linear infinite, rank-gold-glow-pulse 2.4s ease-in-out infinite;
   }
   .rank-platinum::before {
     background: linear-gradient(120deg, #a9bac6, #ffffff, #a9bac6, #e4ecf2, #ffffff);
     background-size: 300% 300%;
-    animation: rank-shine-sweep 2.3s linear infinite;
-    filter: drop-shadow(0 0 10px rgb(228 236 242 / 0.7));
+    animation: rank-shine-sweep 2.3s linear infinite, rank-platinum-glow-pulse 2.2s ease-in-out infinite;
+  }
+
+  @keyframes rank-gold-glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 8px rgb(232 191 79 / 0.6)) brightness(1); }
+    50% { filter: drop-shadow(0 0 16px rgb(251 224 138 / 0.85)) brightness(1.15); }
+  }
+  @keyframes rank-platinum-glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 10px rgb(228 236 242 / 0.7)) brightness(1); }
+    50% { filter: drop-shadow(0 0 18px rgb(255 255 255 / 0.9)) brightness(1.15); }
   }
 
   /* ---- gems: rotating faceted conic-gradient, like light turning in a cut stone.
@@ -360,14 +397,21 @@ html.native-app body::-webkit-scrollbar {
      static so the mask stays correct while the facets still spin. ---- */
   .rank-emerald::before {
     background: conic-gradient(from var(--rank-angle, 0deg), #094328, #2fd48a, #8bffce, #17b374, #094328, #2fd48a, #094328);
-    animation: rank-angle-spin 6s linear infinite;
-    filter: drop-shadow(0 0 10px rgb(47 212 138 / 0.65));
+    animation: rank-angle-spin 6s linear infinite, rank-emerald-glow-pulse 2.6s ease-in-out infinite;
   }
 
   .rank-diamond::before {
     background: conic-gradient(from var(--rank-angle, 0deg), #6bc4ea, #ffffff, #bff4ff, #7dd3fc, #ffffff, #a5f3fc, #ffffff, #6bc4ea);
-    animation: rank-angle-spin 3.4s linear infinite;
-    filter: drop-shadow(0 0 12px rgb(165 243 252 / 0.75));
+    animation: rank-angle-spin 3.4s linear infinite, rank-diamond-glow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes rank-emerald-glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 10px rgb(47 212 138 / 0.65)) brightness(1); }
+    50% { filter: drop-shadow(0 0 20px rgb(139 255 206 / 0.9)) brightness(1.2); }
+  }
+  @keyframes rank-diamond-glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 12px rgb(165 243 252 / 0.75)) brightness(1); }
+    50% { filter: drop-shadow(0 0 22px rgb(255 255 255 / 0.95)) brightness(1.2); }
   }
   .rank-diamond::after {
     background-image:
@@ -397,8 +441,12 @@ html.native-app body::-webkit-scrollbar {
   /* ---- cosmic: slow-rotating starfield + nebula ring ---- */
   .rank-cosmic::before {
     background: conic-gradient(from var(--rank-angle, 0deg), #150826, #4c1d95, #be185d, #1e3a8a, #150826, #7c3aed, #150826);
-    animation: rank-angle-spin 14s linear infinite;
-    filter: drop-shadow(0 0 12px rgb(139 92 246 / 0.65));
+    animation: rank-angle-spin 14s linear infinite, rank-cosmic-glow-pulse 3.2s ease-in-out infinite;
+  }
+
+  @keyframes rank-cosmic-glow-pulse {
+    0%, 100% { filter: drop-shadow(0 0 12px rgb(139 92 246 / 0.65)) brightness(1); }
+    50% { filter: drop-shadow(0 0 24px rgb(236 72 153 / 0.85)) brightness(1.25); }
   }
   .rank-cosmic::after {
     background-image:
@@ -484,5 +532,97 @@ html.native-app body::-webkit-scrollbar {
   @keyframes rank-star-twinkle {
     0%, 100% { opacity: 0.6; transform: scale(0.82); filter: drop-shadow(0 0 2px rgb(167 139 250 / 0.6)) hue-rotate(0deg); }
     50% { opacity: 1; transform: scale(1.18); filter: drop-shadow(0 0 7px rgb(236 72 153 / 0.9)) hue-rotate(40deg); }
+  }
+
+  /* ------------------------------------------------------------------- *
+   * Build-rating reveal — the "unboxing" sequence in rating-reveal.tsx.
+   * Deliberately tier-neutral colors (white/violet) during the charging
+   * stage since the tier isn't known yet at that point — nothing here
+   * should accidentally hint at (or spoil) what's about to be revealed.
+   * ------------------------------------------------------------------- */
+  .reveal-charging-glow {
+    animation: reveal-charging-pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes reveal-charging-pulse {
+    0%, 100% { filter: drop-shadow(0 0 18px rgb(167 139 250 / 0.55)) brightness(1); transform: scale(1); }
+    50% { filter: drop-shadow(0 0 34px rgb(216 180 254 / 0.9)) brightness(1.2); transform: scale(1.05); }
+  }
+
+  /* Same masked-border-ring technique as .rank-frame::before, applied to
+     a plain circle with no photo inside — the tier isn't known yet
+     during charging, so this uses a neutral violet/white gradient
+     rather than any real tier's colors (nothing here should hint at or
+     spoil what's about to be revealed). */
+  .reveal-charging-frame {
+    position: relative;
+    border-radius: 9999px;
+  }
+  .reveal-charging-frame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-sizing: border-box;
+    padding: 4px;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    background: conic-gradient(from var(--rank-angle, 0deg), #2e1065, #a78bfa, #f0abfc, #7c3aed, #2e1065, #a78bfa, #2e1065);
+    animation: rank-angle-spin 2.6s linear infinite;
+    filter: drop-shadow(0 0 14px rgb(167 139 250 / 0.6));
+  }
+
+  .reveal-flash {
+    animation: reveal-flash-fade 550ms ease-out forwards;
+  }
+
+  @keyframes reveal-flash-fade {
+    0% { opacity: 0; transform: scale(0.4); }
+    35% { opacity: 1; transform: scale(1.4); }
+    100% { opacity: 0; transform: scale(2.2); }
+  }
+
+  .reveal-punch {
+    animation: reveal-punch-scale 450ms cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+  }
+
+  @keyframes reveal-punch-scale {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; }
+    40% { transform: scale(1.35) rotate(-8deg); opacity: 1; }
+    100% { transform: scale(0.2) rotate(12deg); opacity: 0; }
+  }
+
+  .reveal-shake {
+    animation: reveal-shake-wobble 450ms ease-in-out;
+  }
+
+  @keyframes reveal-shake-wobble {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-6px, 2px); }
+    40% { transform: translate(5px, -3px); }
+    60% { transform: translate(-4px, -2px); }
+    80% { transform: translate(3px, 3px); }
+  }
+
+  .reveal-materialize {
+    animation: reveal-materialize-in 700ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes reveal-materialize-in {
+    0% { transform: scale(0.25); opacity: 0; }
+    60% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .reveal-text-in {
+    animation: reveal-text-fade-up 500ms ease-out forwards;
+  }
+
+  @keyframes reveal-text-fade-up {
+    0% { transform: translateY(10px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
   }
 }

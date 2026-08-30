@@ -12,7 +12,7 @@ import { recordPostView } from "@/lib/db/post-views";
 import { recordPostViewCompletion } from "@/lib/db/post-view-completions";
 import { recordPostShare } from "@/lib/db/post-shares";
 import { createComment, deleteComment, listCommentsByPost } from "@/lib/db/comments";
-import { deletePost, getPostById } from "@/lib/db/posts";
+import { deletePost, getPostById, updatePostCaption } from "@/lib/db/posts";
 import { listRankedFeedPosts } from "@/lib/ranking/ranked-feed";
 import { createReport } from "@/lib/db/reports";
 import { getProfileByUserId, getProfilesByIds } from "@/lib/db/profiles";
@@ -20,6 +20,7 @@ import { listVehicleIdsByCategory } from "@/lib/db/vehicles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { getBestRatingScoresByOwnerIds } from "@/lib/rating/best-build-scores";
 import { validateComment } from "@/lib/validation/comment";
+import { validateCaption } from "@/lib/validation/post";
 import { composePostCards } from "@/lib/feed/compose-post-cards";
 import { sendPushToUser } from "@/lib/push/send";
 import { isVehicleCategory, type VehicleCategory } from "@/lib/vehicles/category";
@@ -253,6 +254,26 @@ export async function deletePostAction(postId: string): Promise<void> {
   await deletePost(supabase, postId);
   revalidatePath("/feed");
   redirect("/feed");
+}
+
+export interface UpdateCaptionResult {
+  error?: string;
+}
+
+export async function updateCaptionAction(postId: string, caption: string): Promise<UpdateCaptionResult> {
+  const trimmed = caption.trim();
+  const validationError = validateCaption(trimmed);
+  if (validationError) return { error: validationError };
+
+  const { supabase } = await requireUser();
+  try {
+    await updatePostCaption(supabase, postId, trimmed || null);
+  } catch {
+    return { error: "Couldn't update that caption. Try again." };
+  }
+  revalidatePath(`/p/${postId}`);
+  revalidatePath("/feed");
+  return {};
 }
 
 const REPORT_REASONS = [
