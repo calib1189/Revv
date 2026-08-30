@@ -650,4 +650,71 @@ html.native-app body::-webkit-scrollbar {
     45% { transform: scale(1.28) rotate(-6deg); }
     100% { transform: scale(1) rotate(0deg); }
   }
+
+  /* ------------------------------------------------------------------- *
+   * Casino-jackpot dressing for the reveal — a full-screen color wash on
+   * every tier-up (not just the contained ring pulse), a slow-rotating
+   * spotlight/sunburst behind the ring the whole time, and a chasing
+   * marquee-bulb border around the screen edge once it actually lands,
+   * the same way a slot machine's own cabinet lights up on a win rather
+   * than just the reels themselves.
+   * ------------------------------------------------------------------- */
+  .reveal-screen-flash {
+    animation: reveal-screen-flash-fade 550ms ease-out forwards;
+  }
+
+  @keyframes reveal-screen-flash-fade {
+    0% { opacity: 0; }
+    12% { opacity: 0.6; }
+    100% { opacity: 0; }
+  }
+
+  .reveal-light-rays {
+    position: absolute;
+    inset: -60px;
+    border-radius: 9999px;
+    pointer-events: none;
+    background: repeating-conic-gradient(
+      from var(--rank-angle, 0deg),
+      rgba(255, 255, 255, 0.55) 0deg 3deg,
+      transparent 3deg 30deg
+    );
+    -webkit-mask-image: radial-gradient(circle, black 32%, transparent 72%);
+    mask-image: radial-gradient(circle, black 32%, transparent 72%);
+    animation: rank-angle-spin 9s linear infinite;
+    opacity: 0.5;
+    transition: opacity 400ms ease-out;
+  }
+
+  .reveal-light-rays.reveal-light-rays-bright {
+    opacity: 1;
+    animation-duration: 4s;
+  }
+
+  .marquee-bulb {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: currentColor;
+    transform: translate(-50%, -50%);
+    animation: marquee-twinkle 2.2s ease-in-out infinite;
+  }
+
+  @keyframes marquee-twinkle {
+    0%, 78%, 100% { opacity: 0.18; box-shadow: none; transform: translate(-50%, -50%) scale(0.7); }
+    6% { opacity: 1; box-shadow: 0 0 10px 3px currentColor; transform: translate(-50%, -50%) scale(1.4); }
+  }
+
+  .reveal-landing-shake {
+    animation: reveal-shake-wobble 450ms ease-in-out;
+  }
+
+  @keyframes reveal-shake-wobble {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-6px, 2px); }
+    40% { transform: translate(5px, -3px); }
+    60% { transform: translate(-4px, -2px); }
+    80% { transform: translate(3px, 3px); }
+  }
 }

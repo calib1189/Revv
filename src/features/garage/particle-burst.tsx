@@ -23,7 +23,19 @@ const LIFETIME_MS = 1700;
  * camera), and a burst of colored rectangles is genuinely simple enough
  * not to need a dependency for it. Fires once on mount and removes
  * itself; re-mount (change `burstKey`) to fire again. */
-export function ParticleBurst({ colors, burstKey }: { colors: string[]; burstKey: string | number }) {
+export function ParticleBurst({
+  colors,
+  burstKey,
+  count = 70,
+  speedMultiplier = 1,
+}: {
+  colors: string[];
+  burstKey: string | number;
+  /** More particles for a bigger "jackpot" moment (the final landing)
+   * than the quick per-tier sparkle during the climb. */
+  count?: number;
+  speedMultiplier?: number;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -41,10 +53,9 @@ export function ParticleBurst({ colors, burstKey }: { colors: string[]; burstKey
 
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
-    const count = 70;
     const particles: Particle[] = Array.from({ length: count }, () => {
       const angle = Math.random() * Math.PI * 2;
-      const speed = (2.5 + Math.random() * 6) * devicePixelRatio;
+      const speed = (2.5 + Math.random() * 6) * devicePixelRatio * speedMultiplier;
       return {
         x: cx,
         y: cy,
@@ -96,7 +107,7 @@ export function ParticleBurst({ colors, burstKey }: { colors: string[]; burstKey
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- burstKey is the intentional re-trigger; colors is stable enough in practice
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- burstKey is the intentional re-trigger; colors/count/speedMultiplier are stable enough in practice
   }, [burstKey]);
 
   return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" />;

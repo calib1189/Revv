@@ -18,6 +18,33 @@ const LANDING_DURATION_MS = 1100;
 const LANDING_RUNWAY = 7;
 const SETTLE_DELAY_MS = 1300;
 
+const MARQUEE_BULB_COUNT = 28;
+
+/** Positions bulbs evenly around a rectangle's perimeter (0-100% in
+ * both axes), each with a staggered animation-delay so the twinkle
+ * appears to travel around the border — the same "chasing" look a real
+ * casino marquee's bulbs have, computed once at module load since the
+ * layout never changes between reveals. */
+const MARQUEE_BULBS = Array.from({ length: MARQUEE_BULB_COUNT }, (_, i) => {
+  const t = (i / MARQUEE_BULB_COUNT) * 4;
+  let left: number;
+  let top: number;
+  if (t < 1) {
+    left = t * 100;
+    top = 0;
+  } else if (t < 2) {
+    left = 100;
+    top = (t - 1) * 100;
+  } else if (t < 3) {
+    left = 100 - (t - 2) * 100;
+    top = 100;
+  } else {
+    left = 0;
+    top = 100 - (t - 3) * 100;
+  }
+  return { left: `${left}%`, top: `${top}%`, delay: (i / MARQUEE_BULB_COUNT) * 2.2 };
+});
+
 /**
  * The build-rating "unboxing" moment: the score starts at 0 and climbs
  * continuously — fast at first, slowing as it goes — for as long as the
@@ -26,9 +53,12 @@ const SETTLE_DELAY_MS = 1300;
  * ring/icon shown is always whatever tier the *currently displayed*
  * number falls into, so every time the climb crosses a tier boundary —
  * climbing or landing, it doesn't matter which — that swap fires its
- * own level-up effect (ring shockwave + icon bounce + a small particle
- * burst in the new tier's color). Landing itself gets an extra, bigger
- * celebration on top of that once it reaches the exact final number.
+ * own level-up effect: a ring shockwave, an icon bounce, a small
+ * particle burst, and a full-screen color flash, the same "the whole
+ * cabinet lights up" feeling a real slot machine gives on every step
+ * toward a win, not just the reels themselves. Landing gets the same
+ * treatment turned up further — a bigger particle burst, a screen
+ * shake, and a chasing marquee-bulb border around the whole screen.
  */
 export function RatingReveal({
   result,
@@ -141,8 +171,35 @@ export function RatingReveal({
   const Icon = RANK_MATERIAL_ICONS[displayedTier];
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black">
+    <div
+      className={`fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden bg-black ${
+        stage === "landed" ? "reveal-landing-shake" : ""
+      }`}
+    >
+      {/* Full-screen color wash — replays on every tier-up via the
+          key-remount trick, same as the contained ring pulse. */}
+      <span
+        key={`screen-flash-${levelUpKey}`}
+        aria-hidden
+        className="reveal-screen-flash pointer-events-none absolute inset-0"
+        style={{ background: `radial-gradient(circle, ${color}66 0%, transparent 70%)` }}
+      />
+
+      {/* Chasing marquee-bulb border — only once it's actually landed,
+          the "the whole cabinet lights up" moment, not the whole climb. */}
+      {landed &&
+        MARQUEE_BULBS.map((b, i) => (
+          <span
+            key={i}
+            aria-hidden
+            className="marquee-bulb"
+            style={{ left: b.left, top: b.top, animationDelay: `${b.delay}s`, color }}
+          />
+        ))}
+
       <div className="relative flex h-44 w-44 items-center justify-center">
+        <div aria-hidden className={`reveal-light-rays ${landed ? "reveal-light-rays-bright" : ""}`} style={{ color }} />
+
         <div key={`ring-${levelUpKey}`} className={landed ? "reveal-materialize" : "tier-levelup-icon-pop"}>
           <div className={`rank-frame rank-${displayedTier} flex h-40 w-40 items-center justify-center rounded-full p-6`}>
             <Icon className="h-full w-full drop-shadow-lg" />
@@ -164,10 +221,17 @@ export function RatingReveal({
         {stage === "landed" && (
           <span aria-hidden className="reveal-flash absolute inset-0 rounded-full bg-white" />
         )}
-        {landed && <ParticleBurst burstKey={`final-${result?.score ?? 0}`} colors={[color, "#ffffff", `${color}99`]} />}
+        {landed && (
+          <ParticleBurst
+            burstKey={`final-${result?.score ?? 0}`}
+            colors={[color, "#ffffff", `${color}99`, "#ffd166"]}
+            count={160}
+            speedMultiplier={1.4}
+          />
+        )}
       </div>
 
-      <div className="mt-7 flex flex-col items-center gap-1 text-center">
+      <div className="relative mt-7 flex flex-col items-center gap-1 text-center">
         {!landed && (
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Rating your build…</p>
         )}
@@ -186,7 +250,7 @@ export function RatingReveal({
         <button
           type="button"
           onClick={() => setSkipRequested(true)}
-          className="mt-10 text-xs text-white/40 underline underline-offset-2"
+          className="relative mt-10 text-xs text-white/40 underline underline-offset-2"
         >
           Skip
         </button>
@@ -196,7 +260,7 @@ export function RatingReveal({
         <button
           type="button"
           onClick={onDone}
-          className="reveal-text-in mt-10 rounded-full bg-accent px-8 py-3 text-sm font-semibold text-accent-foreground"
+          className="reveal-text-in relative mt-10 rounded-full bg-accent px-8 py-3 text-sm font-semibold text-accent-foreground"
         >
           Continue
         </button>

@@ -10,21 +10,23 @@ import type { RankTier } from "@/lib/rating/rank";
  * the same material rather than two different color choices for "gold."
  *
  * Ingots use the classic isometric-block technique (three visible
- * faces — top, left, right — each a different shade of the same
- * gradient) plus a soft diagonal shine band, which is what actually
- * sells "metal bar" at a glance; gems use a faceted-hexagon cut with
- * each facet a different opacity so light reads as hitting the stone
- * from one direction, plus a bright table-facet highlight.
+ * faces — top, right, front — each a different shade of the same
+ * gradient), proportioned wide and flat like a real bullion bar rather
+ * than a cube, plus a stamped groove line and a soft diagonal shine
+ * band; gems use a proper brilliant-cut silhouette (a hexagonal table,
+ * angled crown facets, and a pointed pavilion) with a 4-point sparkle
+ * glyph instead of a plain highlight ellipse — the shape that actually
+ * reads as "cut gemstone" rather than a kite with lines on it.
  */
 
 function Ingot({
   id,
   top,
-  left,
-  right,
+  front,
+  side,
   outline,
   ...props
-}: SVGProps<SVGSVGElement> & { id: string; top: [string, string]; left: [string, string]; right: [string, string]; outline: string }) {
+}: SVGProps<SVGSVGElement> & { id: string; top: [string, string]; front: [string, string]; side: [string, string]; outline: string }) {
   return (
     <svg viewBox="0 0 100 100" {...props}>
       <defs>
@@ -32,28 +34,31 @@ function Ingot({
           <stop offset="0%" stopColor={top[0]} />
           <stop offset="100%" stopColor={top[1]} />
         </linearGradient>
-        <linearGradient id={`${id}-left`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={left[0]} />
-          <stop offset="100%" stopColor={left[1]} />
+        <linearGradient id={`${id}-front`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor={front[0]} />
+          <stop offset="100%" stopColor={front[1]} />
         </linearGradient>
-        <linearGradient id={`${id}-right`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor={right[0]} />
-          <stop offset="100%" stopColor={right[1]} />
+        <linearGradient id={`${id}-side`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor={side[0]} />
+          <stop offset="100%" stopColor={side[1]} />
         </linearGradient>
-        <linearGradient id={`${id}-shine`} x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={`${id}-shine`} x1="0%" y1="100%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-          <stop offset="48%" stopColor="#ffffff" stopOpacity="0.55" />
-          <stop offset="60%" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="45%" stopColor="#ffffff" stopOpacity="0.6" />
+          <stop offset="58%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
       </defs>
-      {/* left face */}
-      <path d="M22,38 L50,50 L50,82 L22,70 Z" fill={`url(#${id}-left)`} stroke={outline} strokeWidth="1" strokeLinejoin="round" />
-      {/* right face */}
-      <path d="M50,50 L78,38 L78,70 L50,82 Z" fill={`url(#${id}-right)`} stroke={outline} strokeWidth="1" strokeLinejoin="round" />
+      {/* front face — wide and flat, a real bar's proportions, not a cube */}
+      <path d="M14,68 L64,68 L64,48 L14,48 Z" fill={`url(#${id}-front)`} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
+      {/* side face — receding to the upper right */}
+      <path d="M64,68 L88,54 L88,34 L64,48 Z" fill={`url(#${id}-side)`} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
       {/* top face */}
-      <path d="M22,38 L50,26 L78,38 L50,50 Z" fill={`url(#${id}-top)`} stroke={outline} strokeWidth="1" strokeLinejoin="round" />
-      {/* shine sweep across the left face */}
-      <path d="M22,38 L50,50 L50,82 L22,70 Z" fill={`url(#${id}-shine)`} />
+      <path d="M14,48 L64,48 L88,34 L38,34 Z" fill={`url(#${id}-top)`} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
+      {/* stamped groove, the way a real ingot's face is often lined */}
+      <path d="M20,60 L58,60" stroke={outline} strokeWidth="1" opacity="0.35" strokeLinecap="round" />
+      {/* diagonal shine sweeping across the front + top */}
+      <path d="M14,68 L64,68 L64,48 L14,48 Z" fill={`url(#${id}-shine)`} />
+      <path d="M14,48 L64,48 L88,34 L38,34 Z" fill={`url(#${id}-shine)`} opacity="0.7" />
     </svg>
   );
 }
@@ -61,17 +66,19 @@ function Ingot({
 function Gem({
   id,
   table,
-  faceA,
-  faceB,
-  faceC,
+  crownLeft,
+  crownRight,
+  pavilionLeft,
+  pavilionRight,
   outline,
   ...props
 }: SVGProps<SVGSVGElement> & {
   id: string;
   table: [string, string];
-  faceA: string;
-  faceB: string;
-  faceC: string;
+  crownLeft: string;
+  crownRight: string;
+  pavilionLeft: string;
+  pavilionRight: string;
   outline: string;
 }) {
   return (
@@ -82,25 +89,30 @@ function Gem({
           <stop offset="100%" stopColor={table[1]} />
         </linearGradient>
       </defs>
-      {/* lower-left facet */}
-      <path d="M28,40 L50,52 L38,86 Z" fill={faceA} stroke={outline} strokeWidth="1" strokeLinejoin="round" />
-      {/* lower-right facet */}
-      <path d="M72,40 L50,52 L62,86 Z" fill={faceB} stroke={outline} strokeWidth="1" strokeLinejoin="round" />
-      {/* bottom point */}
-      <path d="M38,86 L50,52 L62,86 L50,96 Z" fill={faceC} stroke={outline} strokeWidth="1" strokeLinejoin="round" />
-      {/* crown facets */}
-      <path d="M18,38 L28,40 L50,52 L14,46 Z" fill={faceA} stroke={outline} strokeWidth="1" strokeLinejoin="round" />
-      <path d="M82,38 L72,40 L50,52 L86,46 Z" fill={faceB} stroke={outline} strokeWidth="1" strokeLinejoin="round" />
-      {/* table (top facet) — brightest, catches the light */}
+      {/* pavilion — the pointed base, split left/right so light still
+          reads as hitting from one side even below the girdle */}
+      <path d="M14,42 L50,50 L38,88 Z" fill={pavilionLeft} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M86,42 L50,50 L62,88 Z" fill={pavilionRight} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M38,88 L50,50 L62,88 L50,97 Z" fill={pavilionLeft} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
+      {/* crown facets, angled up from the girdle to the table */}
+      <path d="M14,42 L32,24 L50,50 Z" fill={crownLeft} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M86,42 L68,24 L50,50 Z" fill={crownRight} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
+      {/* table — the flat top facet, brightest, catches the most light */}
       <path
-        d="M18,38 L38,22 L62,22 L82,38 L50,52 Z"
+        d="M32,24 L68,24 L86,42 L50,50 L14,42 Z"
         fill={`url(#${id}-table)`}
         stroke={outline}
-        strokeWidth="1"
+        strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      {/* sparkle highlight */}
-      <ellipse cx="42" cy="32" rx="7" ry="3.5" fill="#ffffff" opacity="0.75" transform="rotate(-18 42 32)" />
+      {/* a real 4-point sparkle glyph, not a plain ellipse — this is
+          what actually reads as "catching the light" on a cut stone */}
+      <path
+        d="M38,30 L40.5,36.5 L47,39 L40.5,41.5 L38,48 L35.5,41.5 L29,39 L35.5,36.5 Z"
+        fill="#ffffff"
+        opacity="0.95"
+      />
+      <path d="M68,58 L69.4,61.4 L72.8,62.8 L69.4,64.2 L68,67.6 L66.6,64.2 L63.2,62.8 L66.6,61.4 Z" fill="#ffffff" opacity="0.65" />
     </svg>
   );
 }
@@ -110,8 +122,8 @@ export function BronzeIngotIcon(props: SVGProps<SVGSVGElement>) {
     <Ingot
       id="bronze"
       top={["#c98a52", "#a3652f"]}
-      left={["#a3652f", "#6b3f1f"]}
-      right={["#6b3f1f", "#4a2a14"]}
+      front={["#a3652f", "#6b3f1f"]}
+      side={["#6b3f1f", "#4a2a14"]}
       outline="#3d2410"
       {...props}
     />
@@ -123,8 +135,8 @@ export function CopperIngotIcon(props: SVGProps<SVGSVGElement>) {
     <Ingot
       id="copper"
       top={["#e0a374", "#c17a4d"]}
-      left={["#c17a4d", "#7a3f22"]}
-      right={["#7a3f22", "#552a17"]}
+      front={["#c17a4d", "#7a3f22"]}
+      side={["#7a3f22", "#552a17"]}
       outline="#3f1e0f"
       {...props}
     />
@@ -136,8 +148,8 @@ export function IronIngotIcon(props: SVGProps<SVGSVGElement>) {
     <Ingot
       id="iron"
       top={["#cfd3d9", "#b8bcc4"]}
-      left={["#b8bcc4", "#7a7e87"]}
-      right={["#7a7e87", "#52555e"]}
+      front={["#b8bcc4", "#7a7e87"]}
+      side={["#7a7e87", "#52555e"]}
       outline="#33353b"
       {...props}
     />
@@ -149,8 +161,8 @@ export function SilverIngotIcon(props: SVGProps<SVGSVGElement>) {
     <Ingot
       id="silver"
       top={["#ffffff", "#dde1e7"]}
-      left={["#cbd0d8", "#8b909a"]}
-      right={["#8b909a", "#5f636c"]}
+      front={["#cbd0d8", "#8b909a"]}
+      side={["#8b909a", "#5f636c"]}
       outline="#42454c"
       {...props}
     />
@@ -162,8 +174,8 @@ export function GoldIngotIcon(props: SVGProps<SVGSVGElement>) {
     <Ingot
       id="gold"
       top={["#fbe08a", "#e8bf4f"]}
-      left={["#e8bf4f", "#a67e1f"]}
-      right={["#a67e1f", "#7a5a13"]}
+      front={["#e8bf4f", "#a67e1f"]}
+      side={["#a67e1f", "#7a5a13"]}
       outline="#573f0c"
       {...props}
     />
@@ -175,8 +187,8 @@ export function PlatinumIngotIcon(props: SVGProps<SVGSVGElement>) {
     <Ingot
       id="platinum"
       top={["#ffffff", "#eef4f8"]}
-      left={["#e4ecf2", "#a9bac6"]}
-      right={["#a9bac6", "#7c8e9a"]}
+      front={["#e4ecf2", "#a9bac6"]}
+      side={["#a9bac6", "#7c8e9a"]}
       outline="#5b6a75"
       {...props}
     />
@@ -188,9 +200,10 @@ export function EmeraldGemIcon(props: SVGProps<SVGSVGElement>) {
     <Gem
       id="emerald"
       table={["#8bffce", "#2fd48a"]}
-      faceA="#17b374"
-      faceB="#0f8a5a"
-      faceC="#094328"
+      crownLeft="#17b374"
+      crownRight="#0f8a5a"
+      pavilionLeft="#0f8a5a"
+      pavilionRight="#094328"
       outline="#062b19"
       {...props}
     />
@@ -202,9 +215,10 @@ export function DiamondGemIcon(props: SVGProps<SVGSVGElement>) {
     <Gem
       id="diamond"
       table={["#ffffff", "#bff4ff"]}
-      faceA="#a5f3fc"
-      faceB="#7dd3fc"
-      faceC="#6bc4ea"
+      crownLeft="#a5f3fc"
+      crownRight="#7dd3fc"
+      pavilionLeft="#7dd3fc"
+      pavilionRight="#6bc4ea"
       outline="#3d7f96"
       {...props}
     />
@@ -216,9 +230,10 @@ export function RubyGemIcon(props: SVGProps<SVGSVGElement>) {
     <Gem
       id="ruby"
       table={["#ffc2cf", "#ff3b5c"]}
-      faceA="#e33a5c"
-      faceB="#b41e3d"
-      faceC="#5c0819"
+      crownLeft="#e33a5c"
+      crownRight="#b41e3d"
+      pavilionLeft="#b41e3d"
+      pavilionRight="#5c0819"
       outline="#3d0511"
       {...props}
     />
