@@ -45,6 +45,18 @@ export const RANK_TEXT_COLORS: Record<RankTier, string> = {
   cosmic: "#c9b6ff",
 };
 
+/** Background-wash color per tier, for the rating-reveal's full-screen
+ * ambient background specifically. Identical to RANK_TEXT_COLORS except
+ * for diamond: #c9f4ff reads fine as icon/text color but is too close
+ * to white to register as "blue" once diluted into a soft background
+ * glow — this swaps in a properly saturated blue for that one case,
+ * same identity, without touching diamond's icon/text/badge color
+ * anywhere else. */
+export const RANK_AMBIENT_COLORS: Record<RankTier, string> = {
+  ...RANK_TEXT_COLORS,
+  diamond: "#2f8fef",
+};
+
 /** Single source of truth for tier boundaries, highest first. Score is
  * 0-100 with two decimal places (e.g. 95.25). Boundaries themselves stay
  * clean round numbers — each tier spans a full ten-point band except ruby

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, type RankTier } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, RANK_AMBIENT_COLORS, type RankTier } from "@/lib/rating/rank";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { ParticleBurst } from "@/features/garage/particle-burst";
 import { unknownClimbValue, landingValue, landingStartValue } from "@/features/garage/climb-math";
@@ -143,6 +143,7 @@ export function RatingReveal({
 
   const landed = stage === "landed" || stage === "settled";
   const color = RANK_TEXT_COLORS[displayedTier];
+  const ambientColor = RANK_AMBIENT_COLORS[displayedTier];
   const Icon = RANK_MATERIAL_ICONS[displayedTier];
 
   return (
@@ -157,12 +158,12 @@ export function RatingReveal({
       <span
         aria-hidden
         className="reveal-ambient-glow pointer-events-none absolute inset-0"
-        style={{ "--reveal-color": color } as React.CSSProperties}
+        style={{ "--reveal-color": ambientColor } as React.CSSProperties}
       />
       <span
         aria-hidden
         className="reveal-ambient-sweep pointer-events-none absolute inset-0"
-        style={{ "--reveal-color": color } as React.CSSProperties}
+        style={{ "--reveal-color": ambientColor } as React.CSSProperties}
       />
 
       {/* Full-screen color wash — replays on every tier-up via the
