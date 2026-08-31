@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { CloseIcon, PinIcon, GemIcon } from "@/components/ui/icons";
-import { searchShopsByQueryAction, createShopPromotionAction } from "@/features/shops/actions";
+import {
+  searchShopsByQueryAction,
+  createShopPromotionAction,
+} from "@/features/shops/actions";
+import { createWebHandoffAction } from "@/features/auth/actions";
+import { openExternalBrowser } from "@/lib/native/open-external";
 import {
   SHOP_PROMOTION_TIERS,
   SHOP_PROMOTION_TIER_RANK,
@@ -23,9 +28,13 @@ const TIER_METALS: Record<ShopPromotionTier, TierMetal> = {
   diamond: "diamond",
 };
 
-function nextWorthwhileTier(current: ShopPromotionTier | null): ShopPromotionTier {
+function nextWorthwhileTier(
+  current: ShopPromotionTier | null,
+): ShopPromotionTier {
   const currentRank = current ? SHOP_PROMOTION_TIER_RANK[current] : 0;
-  const next = TIER_ORDER.find((t) => SHOP_PROMOTION_TIER_RANK[t] > currentRank);
+  const next = TIER_ORDER.find(
+    (t) => SHOP_PROMOTION_TIER_RANK[t] > currentRank,
+  );
   // Falls back to the top tier if somehow already there — the picker
   // won't let anything be bought in that case anyway (see the "already
   // has the top spot" branch below).
@@ -52,13 +61,16 @@ export function PromoteShopPanel({
   const [tier, setTier] = useState<ShopPromotionTier>("standard");
   const [isPromoting, setIsPromoting] = useState(false);
   const [promoteError, setPromoteError] = useState<string | null>(null);
+  const [sentToWeb, setSentToWeb] = useState(false);
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = query.trim();
     if (!trimmed) return;
     if (!coords) {
-      setSearchError("Turn on location first so results can be matched near you.");
+      setSearchError(
+        "Turn on location first so results can be matched near you.",
+      );
       return;
     }
 
@@ -67,13 +79,19 @@ export function PromoteShopPanel({
     setResults(null);
     setSelected(null);
     try {
-      const response = await searchShopsByQueryAction({ lat: coords.lat, lng: coords.lng, query: trimmed });
+      const response = await searchShopsByQueryAction({
+        lat: coords.lat,
+        lng: coords.lng,
+        query: trimmed,
+      });
       if (response.isMock) {
         setSearchError("Shop lookup isn't set up yet — check back soon.");
         return;
       }
       if (response.rateLimited) {
-        setSearchError("You've searched a lot just now — give it a few minutes and try again.");
+        setSearchError(
+          "You've searched a lot just now — give it a few minutes and try again.",
+        );
         return;
       }
       setResults(response.shops);
@@ -99,22 +117,35 @@ export function PromoteShopPanel({
     try {
       const { Capacitor } = await import("@capacitor/core");
       const isNative = Capacitor.isNativePlatform();
+
+      // See createWebHandoffAction's doc comment — native never creates
+      // a checkout itself, it hands the whole flow to the website in
+      // the real external browser instead.
+      if (isNative) {
+        const handoff = await createWebHandoffAction(
+          `/discover/shop/${selected.placeId}`,
+        );
+        if (handoff.error || !handoff.url) {
+          setPromoteError(
+            handoff.error ?? "Couldn't open that on the web. Try again.",
+          );
+          return;
+        }
+        openExternalBrowser(handoff.url);
+        setSentToWeb(true);
+        return;
+      }
+
       const result = await createShopPromotionAction({
         placeId: selected.placeId,
         placeName: selected.name,
         tier,
-        isNative,
       });
       if (result.error || !result.url) {
         setPromoteError(result.error ?? "Couldn't start checkout. Try again.");
         return;
       }
-      if (isNative) {
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url: result.url });
-      } else {
-        window.location.href = result.url;
-      }
+      window.location.href = result.url;
     } catch {
       setPromoteError("Couldn't start checkout. Try again.");
     } finally {
@@ -153,7 +184,9 @@ export function PromoteShopPanel({
           {searchError && <Callout tone="danger">{searchError}</Callout>}
 
           {results !== null && results.length === 0 && !searchError && (
-            <p className="text-sm text-muted">No matches — try a different search.</p>
+            <p className="text-sm text-muted">
+              No matches — try a different search.
+            </p>
           )}
 
           {results && results.length > 0 && (
@@ -164,7 +197,9 @@ export function PromoteShopPanel({
                   type="button"
                   onClick={() => selectShop(shop)}
                   className={`flex flex-col gap-1 rounded-xl border px-3.5 py-3 text-left transition-colors ${
-                    selected?.placeId === shop.placeId ? "border-accent bg-accent/10" : "border-border"
+                    selected?.placeId === shop.placeId
+                      ? "border-accent bg-accent/10"
+                      : "border-border"
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -174,7 +209,8 @@ export function PromoteShopPanel({
                         className="flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide"
                         style={{
                           backgroundColor: `${RANK_TEXT_COLORS[TIER_METALS[shop.promotionTier]]}26`,
-                          color: RANK_TEXT_COLORS[TIER_METALS[shop.promotionTier]],
+                          color:
+                            RANK_TEXT_COLORS[TIER_METALS[shop.promotionTier]],
                         }}
                       >
                         <GemIcon className="h-2.5 w-2.5" />
@@ -198,7 +234,12 @@ export function PromoteShopPanel({
           <div className="flex flex-col gap-3 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
             {promoteError && <Callout tone="danger">{promoteError}</Callout>}
 
-            {selected.promotionTier === "diamond" ? (
+            {sentToWeb ? (
+              <p className="text-center text-sm text-muted">
+                Opened in your browser, already signed in — pick a plan and pay
+                there to finish promoting {selected.name}.
+              </p>
+            ) : selected.promotionTier === "diamond" ? (
               <p className="text-center text-sm text-muted">
                 {selected.name} already has the top Diamond spot.
               </p>
@@ -210,7 +251,9 @@ export function PromoteShopPanel({
                   onChange={(id) => setTier(id as ShopPromotionTier)}
                   options={TIER_ORDER.map((t) => {
                     const alreadyActive =
-                      !!selected.promotionTier && SHOP_PROMOTION_TIER_RANK[t] <= SHOP_PROMOTION_TIER_RANK[selected.promotionTier];
+                      !!selected.promotionTier &&
+                      SHOP_PROMOTION_TIER_RANK[t] <=
+                        SHOP_PROMOTION_TIER_RANK[selected.promotionTier];
                     return {
                       id: t,
                       metal: TIER_METALS[t],
@@ -222,18 +265,25 @@ export function PromoteShopPanel({
                             ? `${SHOP_PROMOTION_DURATION_DAYS} days — sorts above Silver listings`
                             : `${SHOP_PROMOTION_DURATION_DAYS} days — sorts above un-promoted shops`,
                       disabled: alreadyActive,
-                      disabledReason: alreadyActive ? "Already active or below" : undefined,
+                      disabledReason: alreadyActive
+                        ? "Already active or below"
+                        : undefined,
                     };
                   })}
                 />
-                <Button type="button" onClick={handlePromote} disabled={isPromoting} className="w-full py-3">
+                <Button
+                  type="button"
+                  onClick={handlePromote}
+                  disabled={isPromoting}
+                  className="w-full py-3"
+                >
                   {isPromoting
                     ? "Starting checkout…"
                     : `Promote ${selected.name} for ${SHOP_PROMOTION_DURATION_DAYS} days · $${(SHOP_PROMOTION_TIERS[tier].priceCents / 100).toFixed(0)}`}
                 </Button>
                 <p className="text-center text-xs text-muted">
-                  Runs for {SHOP_PROMOTION_DURATION_DAYS} days from purchase, then stops automatically
-                  unless you promote again.
+                  Runs for {SHOP_PROMOTION_DURATION_DAYS} days from purchase,
+                  then stops automatically unless you promote again.
                 </p>
               </>
             )}

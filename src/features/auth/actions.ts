@@ -7,8 +7,12 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { validateUsername } from "@/lib/validation/username";
 import { trackEvent } from "@/lib/analytics/track";
 import { getProfileByUserId } from "@/lib/db/profiles";
-import { isUnderSignupRateLimit, recordSignupAttempt } from "@/lib/auth/signup-rate-limit";
+import {
+  isUnderSignupRateLimit,
+  recordSignupAttempt,
+} from "@/lib/auth/signup-rate-limit";
 import { getClientIp } from "@/lib/http/get-client-ip";
+import { SITE_URL } from "@/lib/site-url";
 
 export interface AuthActionState {
   error: string | null;
@@ -160,4 +164,55 @@ export async function deleteAccount(): Promise<void> {
   await admin.auth.admin.deleteUser(user.id);
 
   redirect("/");
+}
+
+export interface WebHandoffResult {
+  url?: string;
+  error?: string;
+}
+
+/**
+ * Apple requires In-App Purchase for anything that unlocks a feature
+ * *inside* the app — ad campaigns, shop promotions, and meetup boosts
+ * all charge through Stripe directly, which is the wrong side of that
+ * line even though what's being sold is real-world visibility, not
+ * digital content. Rather than build a second, parallel StoreKit
+ * billing path (the "TikTok" approach — real engineering cost, plus
+ * Apple's cut on every sale), the native app instead hands the
+ * purchase off to the website entirely: this mints a one-time Supabase
+ * magic link for the signed-in user and sends them to it in the
+ * external system browser, never the app's own WebView, so nothing
+ * resembling a purchase flow is ever presented from inside the app —
+ * the same pattern Netflix and Spotify use for subscriptions. The
+ * checkout itself is never created here; the equivalent web page
+ * creates its own draft/session when the person completes the flow
+ * there, so a handoff nobody finishes doesn't leave an orphaned
+ * pending-payment row behind.
+ */
+export async function createWebHandoffAction(
+  nextPath: string,
+): Promise<WebHandoffResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in." };
+  if (!user.email) return { error: "Your account needs a confirmed email." };
+
+  const admin = createServiceRoleClient();
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email: user.email,
+    // Routed through /auth/callback, not straight to nextPath — that's
+    // what actually exchanges the code for a session (see that route);
+    // landing directly on nextPath with an un-exchanged code in the URL
+    // would leave the browser just as logged-out as before the link was
+    // clicked.
+    options: { redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(nextPath)}` },
+  });
+  if (error || !data.properties?.action_link) {
+    return { error: "Couldn't open that on the web. Try again." };
+  }
+
+  return { url: data.properties.action_link };
 }

@@ -29,21 +29,20 @@ export function NativeAppBridge() {
       await StatusBar.setStyle({ style: Style.Dark });
       await SplashScreen.hide();
 
-      // Anything that has to run in the system browser view rather than
-      // this WebView (OAuth — Google outright refuses to show its login
-      // page inside an embedded WebView — and Stripe Checkout, which a
-      // WebView can't complete either) hands control back to the app via
-      // a revv://<destination>?... custom-scheme URL. oauth-buttons.tsx,
-      // ad-campaign-form.tsx, and create-meetup-form.tsx are the other
-      // half of each: they open the provider's URL via Browser.open()
-      // with one of these as the redirect target. Routed by host rather
-      // than one hardcoded path, since there's more than one destination
-      // now.
+      // OAuth has to run in the system browser view rather than this
+      // WebView (Google outright refuses to show its login page inside
+      // an embedded WebView) and hands control back to the app via a
+      // revv://auth?... custom-scheme URL — oauth-buttons.tsx is the
+      // other half, opening Google/Apple's own URL via Browser.open()
+      // with this as the redirect target. Checkout (ads, shop/meetup
+      // promotion) used to have its own revv:// routes here too, back
+      // when it ran through this same in-app-browser-then-bounce-back
+      // pattern — see createWebHandoffAction's doc comment for why that
+      // no longer happens at all: those purchases now hand off to the
+      // real external browser instead, which never comes back through
+      // this app-open listener.
       const REVV_SCHEME_ROUTES: Record<string, string> = {
         auth: "/auth/callback",
-        "ad-checkout": "/advertise",
-        "meetup-checkout": "/discover",
-        "shop-promotion-checkout": "/discover",
       };
 
       const listener = await App.addListener("appUrlOpen", async ({ url }) => {

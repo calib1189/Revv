@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { createShopPromotionAction } from "@/features/shops/actions";
+import { createWebHandoffAction } from "@/features/auth/actions";
+import { openExternalBrowser } from "@/lib/native/open-external";
 import {
   SHOP_PROMOTION_TIERS,
   SHOP_PROMOTION_TIER_RANK,
@@ -19,9 +21,14 @@ const TIER_METALS: Record<ShopPromotionTier, TierMetal> = {
   diamond: "diamond",
 };
 
-function nextWorthwhileTier(current: ShopPromotionTier | null): ShopPromotionTier {
+function nextWorthwhileTier(
+  current: ShopPromotionTier | null,
+): ShopPromotionTier {
   const currentRank = current ? SHOP_PROMOTION_TIER_RANK[current] : 0;
-  return TIER_ORDER.find((t) => SHOP_PROMOTION_TIER_RANK[t] > currentRank) ?? "diamond";
+  return (
+    TIER_ORDER.find((t) => SHOP_PROMOTION_TIER_RANK[t] > currentRank) ??
+    "diamond"
+  );
 }
 
 /** Same tier-purchase flow as promote-shop-panel.tsx, minus the search
@@ -46,9 +53,12 @@ export function PromoteThisShop({
    * revisit with no category in the URL). */
   category: string | null;
 }) {
-  const [tier, setTier] = useState<ShopPromotionTier>(nextWorthwhileTier(currentTier));
+  const [tier, setTier] = useState<ShopPromotionTier>(
+    nextWorthwhileTier(currentTier),
+  );
   const [isPromoting, setIsPromoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sentToWeb, setSentToWeb] = useState(false);
 
   if (currentTier === "diamond") {
     return (
@@ -64,22 +74,51 @@ export function PromoteThisShop({
     try {
       const { Capacitor } = await import("@capacitor/core");
       const isNative = Capacitor.isNativePlatform();
-      const result = await createShopPromotionAction({ placeId, placeName, tier, category, isNative });
+
+      // See createWebHandoffAction's doc comment — this never creates a
+      // checkout on native. It hands the whole flow to the website
+      // instead, in the real external browser, so nothing resembling a
+      // purchase is ever presented from inside the app.
+      if (isNative) {
+        const handoff = await createWebHandoffAction(
+          `/discover/shop/${placeId}`,
+        );
+        if (handoff.error || !handoff.url) {
+          setError(
+            handoff.error ?? "Couldn't open that on the web. Try again.",
+          );
+          return;
+        }
+        openExternalBrowser(handoff.url);
+        setSentToWeb(true);
+        return;
+      }
+
+      const result = await createShopPromotionAction({
+        placeId,
+        placeName,
+        tier,
+        category,
+      });
       if (result.error || !result.url) {
         setError(result.error ?? "Couldn't start checkout. Try again.");
         return;
       }
-      if (isNative) {
-        const { Browser } = await import("@capacitor/browser");
-        await Browser.open({ url: result.url });
-      } else {
-        window.location.href = result.url;
-      }
+      window.location.href = result.url;
     } catch {
       setError("Couldn't start checkout. Try again.");
     } finally {
       setIsPromoting(false);
     }
+  }
+
+  if (sentToWeb) {
+    return (
+      <p className="glass rounded-2xl p-4 text-center text-sm text-muted">
+        Opened in your browser, already signed in — pick a plan and pay there to
+        finish promoting {placeName}.
+      </p>
+    );
   }
 
   return (
@@ -91,7 +130,10 @@ export function PromoteThisShop({
         value={tier}
         onChange={(id) => setTier(id as ShopPromotionTier)}
         options={TIER_ORDER.map((t) => {
-          const alreadyActive = !!currentTier && SHOP_PROMOTION_TIER_RANK[t] <= SHOP_PROMOTION_TIER_RANK[currentTier];
+          const alreadyActive =
+            !!currentTier &&
+            SHOP_PROMOTION_TIER_RANK[t] <=
+              SHOP_PROMOTION_TIER_RANK[currentTier];
           return {
             id: t,
             metal: TIER_METALS[t],
@@ -103,11 +145,18 @@ export function PromoteThisShop({
                   ? `${SHOP_PROMOTION_DURATION_DAYS} days — sorts above Silver listings`
                   : `${SHOP_PROMOTION_DURATION_DAYS} days — sorts above un-promoted shops`,
             disabled: alreadyActive,
-            disabledReason: alreadyActive ? "Already active or below" : undefined,
+            disabledReason: alreadyActive
+              ? "Already active or below"
+              : undefined,
           };
         })}
       />
-      <Button type="button" onClick={handlePromote} disabled={isPromoting} className="w-full py-3">
+      <Button
+        type="button"
+        onClick={handlePromote}
+        disabled={isPromoting}
+        className="w-full py-3"
+      >
         {isPromoting
           ? "Starting checkout…"
           : `Promote for ${SHOP_PROMOTION_DURATION_DAYS} days · $${(SHOP_PROMOTION_TIERS[tier].priceCents / 100).toFixed(0)}`}

@@ -29,19 +29,12 @@ export async function createAdCampaignAction({
   caption,
   destinationUrl,
   tier,
-  isNative,
 }: {
   mediaId: string;
   headline: string;
   caption: string;
   destinationUrl: string;
   tier: string;
-  /** The native app shell can't follow a plain https:// redirect back
-   * to itself — Checkout has to run in the system browser there (same
-   * reason OAuth does, see oauth-buttons.tsx/native-app-bridge.tsx), so
-   * success/cancel need the revv:// custom scheme instead of a normal
-   * URL when this request is coming from the native app. */
-  isNative: boolean;
 }): Promise<CreateAdResult> {
   if (!isAdBillingConfigured()) {
     return { error: "Ad billing isn't set up yet." };
@@ -87,9 +80,12 @@ export async function createAdCampaignAction({
     return { error: "Couldn't create the campaign. Try again." };
   }
 
+  // Native never reaches this action at all anymore — ad creation on
+  // the app is a NativeCheckoutGate handoff to the web, so this only
+  // ever needs plain web URLs.
   const origin = (await headers()).get("origin");
-  const successUrl = isNative ? "revv://ad-checkout?success=1" : `${origin}/advertise?success=1`;
-  const cancelUrl = isNative ? "revv://ad-checkout" : `${origin}/advertise`;
+  const successUrl = `${origin}/advertise?success=1`;
+  const cancelUrl = `${origin}/advertise`;
 
   let url: string | null;
   try {

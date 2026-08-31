@@ -324,7 +324,6 @@ export async function createShopPromotionAction({
   placeName,
   tier,
   category,
-  isNative,
 }: {
   placeId: string;
   placeName: string;
@@ -337,10 +336,6 @@ export async function createShopPromotionAction({
    * than "none", since that's a strictly safer default for a paying
    * customer than guaranteeing nothing. */
   category?: string | null;
-  /** Same native-app redirect handling as ad/meetup checkout — Checkout
-   * has to run in the system browser there, which needs a revv://
-   * custom-scheme success/cancel URL instead of a normal one. */
-  isNative: boolean;
 }): Promise<CreateShopPromotionResult> {
   if (!isShopPromotionBillingConfigured()) {
     return { error: "Promoting a shop isn't set up yet." };
@@ -372,11 +367,12 @@ export async function createShopPromotionAction({
     return { error: "Couldn't start that promotion. Try again." };
   }
 
+  // Native never reaches this action at all anymore (see
+  // createWebHandoffAction's doc comment) — checkout only ever runs on
+  // the web, so these are always plain web URLs.
   const origin = (await headers()).get("origin");
-  const successUrl = isNative
-    ? "revv://shop-promotion-checkout?success=1"
-    : `${origin}/discover?success=1`;
-  const cancelUrl = isNative ? "revv://shop-promotion-checkout" : `${origin}/discover`;
+  const successUrl = `${origin}/discover?success=1`;
+  const cancelUrl = `${origin}/discover`;
 
   let url: string | null;
   try {

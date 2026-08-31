@@ -94,14 +94,8 @@ export interface CreateMeetupCheckoutResult {
 
 export async function createMeetupCheckoutAction({
   meetupId,
-  isNative,
 }: {
   meetupId: string;
-  /** Same native-app redirect handling as ad checkout (see
-   * ad-campaign-form.tsx/native-app-bridge.tsx) — Checkout has to run in
-   * the system browser there, which needs a revv:// custom-scheme
-   * success/cancel URL instead of a normal one. */
-  isNative: boolean;
 }): Promise<CreateMeetupCheckoutResult> {
   if (!isMeetupBillingConfigured()) {
     return { error: "Posting a meetup isn't set up yet." };
@@ -121,11 +115,12 @@ export async function createMeetupCheckoutAction({
     return { error: "That meetup has already been paid for." };
   }
 
+  // Native never reaches this action at all anymore — meetup creation
+  // on the app is a NativeCheckoutGate handoff to the web, so this only
+  // ever needs plain web URLs.
   const origin = (await headers()).get("origin");
-  const successUrl = isNative
-    ? "revv://meetup-checkout?success=1"
-    : `${origin}/discover?success=1`;
-  const cancelUrl = isNative ? "revv://meetup-checkout" : `${origin}/discover`;
+  const successUrl = `${origin}/discover?success=1`;
+  const cancelUrl = `${origin}/discover`;
 
   let url: string | null;
   try {
