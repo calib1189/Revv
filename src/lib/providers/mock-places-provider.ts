@@ -18,6 +18,10 @@ export class MockPlacesProvider implements PlacesProvider {
     return { shops: [], isMock: true };
   }
 
+  async searchShopsInLocationText(): Promise<ShopSearchResponse> {
+    return { shops: [], isMock: true };
+  }
+
   async getShopDetails(): Promise<ShopDetailsResponse> {
     return { shop: null, isMock: true };
   }

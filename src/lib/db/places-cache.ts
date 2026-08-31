@@ -23,6 +23,14 @@ export function buildPlacesCacheKey(kind: "category" | "query", value: string, l
   return `${kind}:${normalized}:${bucketCoordinate(lat)}:${bucketCoordinate(lng)}`;
 }
 
+/** Same idea as buildPlacesCacheKey, for a search with no coordinates at
+ * all (a typed-in city/zip/address instead of geolocation) — keyed on
+ * the category and the normalized location text together instead of a
+ * coordinate bucket. */
+export function buildPlacesTextLocationCacheKey(category: string, locationText: string): string {
+  return `text-location:${category}:${locationText.trim().toLowerCase()}`;
+}
+
 export async function getCachedPlacesSearch(
   supabase: SupabaseClient<Database>,
   cacheKey: string,

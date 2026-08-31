@@ -31,6 +31,7 @@ import {
 } from "@/lib/db/shop-promotion-events";
 import {
   buildPlacesCacheKey,
+  buildPlacesTextLocationCacheKey,
   getCachedPlacesSearch,
   setCachedPlacesSearch,
   buildShopDetailsCacheKey,
@@ -202,6 +203,55 @@ export async function searchNearbyShopsAction({
     return await withPromotionStatus(supabase, { shops, isMock: response.isMock });
   } catch (err) {
     console.error("searchNearbyShopsAction failed:", err);
+    return { shops: [], isMock: false, rateLimited: false };
+  }
+}
+
+const MAX_LOCATION_TEXT_LENGTH = 100;
+
+/**
+ * Same category browse as searchNearbyShopsAction, for a viewer who
+ * denied (or was never asked for) location and typed a city/zip/address
+ * instead — see shops-browser.tsx's "denied" state. No lat/lng at all,
+ * so results carry no distance and injectMissingPromotedShops still
+ * runs (a promotion should still be guaranteed visible here), but there's
+ * no viewer coordinate to sort promoted-vs-not by distance against
+ * client-side.
+ */
+export async function searchShopsInLocationTextAction({
+  locationText,
+  category,
+}: {
+  locationText: string;
+  category: string;
+}): Promise<ShopSearchActionResponse> {
+  const trimmed = locationText.trim();
+  if (!isShopCategoryId(category) || !trimmed || trimmed.length > MAX_LOCATION_TEXT_LENGTH) {
+    return { shops: [], isMock: false, rateLimited: false };
+  }
+
+  const supabase = await createClient();
+
+  const cacheKey = buildPlacesTextLocationCacheKey(category, trimmed);
+  const cached = await getCachedPlacesSearch(supabase, cacheKey);
+  if (cached) {
+    const shops = await injectMissingPromotedShops(supabase, category, cached.shops);
+    return await withPromotionStatus(supabase, { shops, isMock: cached.isMock });
+  }
+
+  const ip = await getClientIp();
+  if (!(await isUnderShopsSearchRateLimit(supabase, ip))) {
+    return { shops: [], isMock: false, rateLimited: true };
+  }
+
+  try {
+    await recordShopsSearchAttempt(supabase, ip);
+    const response = await getPlacesProvider().searchShopsInLocationText({ locationText: trimmed, category });
+    if (!response.isMock) await setCachedPlacesSearch(cacheKey, response);
+    const shops = await injectMissingPromotedShops(supabase, category, response.shops);
+    return await withPromotionStatus(supabase, { shops, isMock: response.isMock });
+  } catch (err) {
+    console.error("searchShopsInLocationTextAction failed:", err);
     return { shops: [], isMock: false, rateLimited: false };
   }
 }

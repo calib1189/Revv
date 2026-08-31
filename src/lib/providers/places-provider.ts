@@ -57,6 +57,15 @@ export interface PlacesProvider {
    * shop's name to find and promote it, rather than browsing by category. */
   searchShopsByQuery(params: { lat: number; lng: number; query: string }): Promise<ShopSearchResponse>;
 
+  /** Category browse with no coordinates at all — for a viewer who denied
+   * (or never got asked for) location and typed a city/zip/address
+   * instead. Text Search resolves the location from the query text
+   * itself, so this needs no geocoding step (see 0015_meetups.sql for why
+   * this app deliberately carries no geocoding dependency). Results have
+   * no lat/lng-based distance to show, since there's no reference point
+   * to measure from. */
+  searchShopsInLocationText(params: { locationText: string; category: ShopCategoryId }): Promise<ShopSearchResponse>;
+
   /** Backs the shop detail page — a separate, billed Place Details call
    * (not Text Search), since that's the only endpoint that returns a
    * website/phone number and works from just a place ID with no location

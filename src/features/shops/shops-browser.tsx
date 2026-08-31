@@ -4,20 +4,31 @@ import { useEffect, useMemo, useState } from "react";
 import { ShopCard } from "@/features/shops/shop-card";
 import { PromoteShopPanel } from "@/features/shops/promote-shop-panel";
 import { MyPromotionsPanel } from "@/features/shops/my-promotions-panel";
-import { searchNearbyShopsAction, type ShopResult } from "@/features/shops/actions";
+import {
+  searchNearbyShopsAction,
+  searchShopsInLocationTextAction,
+  type ShopResult,
+} from "@/features/shops/actions";
 import { SHOP_CATEGORIES, getShopCategory } from "@/lib/shops/categories";
 import { SHOP_PROMOTION_TIER_RANK } from "@/lib/db/shop-promotions";
 import { haversineMiles } from "@/lib/geo/distance";
 import { Callout } from "@/components/ui/callout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { ShopCategoryId } from "@/lib/providers/places-provider";
 
 type LocationState =
   | { status: "loading" }
   | { status: "ready"; coords: { lat: number; lng: number } }
-  | { status: "denied" };
+  | { status: "denied" }
+  /** A typed-in city/zip/address instead of geolocation — see
+   * searchShopsInLocationTextAction. No coordinates, so results carry no
+   * distance and can't be sorted by it. */
+  | { status: "manual"; text: string };
 
 export function ShopsBrowser() {
   const [location, setLocation] = useState<LocationState>({ status: "loading" });
+  const [locationInput, setLocationInput] = useState("");
   const [category, setCategory] = useState<ShopCategoryId>(SHOP_CATEGORIES[0].id);
   const [shops, setShops] = useState<ShopResult[] | null>(null);
   const [isMock, setIsMock] = useState(false);
@@ -48,7 +59,7 @@ export function ShopsBrowser() {
   }, []);
 
   useEffect(() => {
-    if (location.status !== "ready") return;
+    if (location.status !== "ready" && location.status !== "manual") return;
     let cancelled = false;
     // Same microtask-deferral reasoning as above — resets to a loading
     // state for the new category/location before the fetch below
@@ -59,7 +70,11 @@ export function ShopsBrowser() {
       setError(null);
       setIsRateLimited(false);
     });
-    searchNearbyShopsAction({ lat: location.coords.lat, lng: location.coords.lng, category })
+    const search =
+      location.status === "ready"
+        ? searchNearbyShopsAction({ lat: location.coords.lat, lng: location.coords.lng, category })
+        : searchShopsInLocationTextAction({ locationText: location.text, category });
+    search
       .then((response) => {
         if (cancelled) return;
         setIsMock(response.isMock);
@@ -156,15 +171,49 @@ export function ShopsBrowser() {
       {location.status === "loading" && <p className="text-sm text-muted">Finding your location…</p>}
 
       {location.status === "denied" && (
-        <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
+        <div className="glass flex flex-col items-center gap-3 rounded-2xl px-6 py-10 text-center">
           <p className="text-sm font-medium">Turn on location to see shops near you</p>
           <p className="max-w-xs text-xs text-muted">
             REVV needs your location to find local shops — check your device or browser settings.
           </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const trimmed = locationInput.trim();
+              if (trimmed) setLocation({ status: "manual", text: trimmed });
+            }}
+            className="mt-2 flex w-full max-w-xs items-center gap-2"
+          >
+            <Input
+              value={locationInput}
+              onChange={(e) => setLocationInput(e.target.value)}
+              placeholder="City or zip code"
+              aria-label="City or zip code"
+            />
+            <Button type="submit" className="flex-shrink-0 px-4 py-2.5 text-sm" disabled={!locationInput.trim()}>
+              Search
+            </Button>
+          </form>
         </div>
       )}
 
-      {location.status === "ready" && (
+      {location.status === "manual" && (
+        <p className="mb-4 flex items-center justify-between gap-3 text-xs text-muted">
+          <span>
+            Showing results near <span className="font-medium text-foreground">{location.text}</span> — not sorted
+            by distance.
+          </span>
+          <button
+            type="button"
+            onClick={() => setLocation({ status: "denied" })}
+            className="flex-shrink-0 underline underline-offset-2 hover:text-foreground"
+          >
+            Change
+          </button>
+        </p>
+      )}
+
+      {(location.status === "ready" || location.status === "manual") && (
         <>
           {error && <Callout tone="danger">{error}</Callout>}
 

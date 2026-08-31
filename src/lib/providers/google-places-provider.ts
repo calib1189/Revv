@@ -84,6 +84,13 @@ export class GooglePlacesProvider implements PlacesProvider {
     return this.textSearch(query, lat, lng);
   }
 
+  async searchShopsInLocationText({
+    locationText,
+    category,
+  }: Parameters<PlacesProvider["searchShopsInLocationText"]>[0]): Promise<ShopSearchResponse> {
+    return this.textSearch(`${getShopCategory(category).searchQuery} near ${locationText}`);
+  }
+
   async getShopDetails(placeId: string): Promise<ShopDetailsResponse> {
     const response = await fetch(`${DETAILS_URL}/${encodeURIComponent(placeId)}`, {
       headers: {
@@ -118,7 +125,7 @@ export class GooglePlacesProvider implements PlacesProvider {
     return { shop, isMock: false };
   }
 
-  private async textSearch(textQuery: string, lat: number, lng: number): Promise<ShopSearchResponse> {
+  private async textSearch(textQuery: string, lat?: number, lng?: number): Promise<ShopSearchResponse> {
     const response = await fetch(SEARCH_URL, {
       method: "POST",
       headers: {
@@ -128,12 +135,14 @@ export class GooglePlacesProvider implements PlacesProvider {
       },
       body: JSON.stringify({
         textQuery,
-        locationBias: {
-          circle: {
-            center: { latitude: lat, longitude: lng },
-            radius: SEARCH_RADIUS_METERS,
-          },
-        },
+        // No location bias for a plain typed-in location — Google's own
+        // Text Search resolves "auto repair shop near Austin, TX" from
+        // the query text itself, and biasing toward the wrong place
+        // (there's no coordinate to bias toward here in the first place)
+        // would only hurt relevance.
+        ...(lat != null && lng != null
+          ? { locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: SEARCH_RADIUS_METERS } } }
+          : {}),
         maxResultCount: MAX_RESULTS,
       }),
     });
