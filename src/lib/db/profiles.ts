@@ -61,6 +61,30 @@ export async function getProfilesByIds(
   return data;
 }
 
+/** Profile info for the sitemap — every profile is publicly readable,
+ * but a banned user's profile shouldn't be actively promoted in search
+ * results even though it still works if linked directly. Capped and
+ * ordered by recency for the same unbounded-sitemap reason as
+ * listSitemapVehicles/listSitemapPosts. */
+export async function listSitemapProfiles(
+  supabase: SupabaseClient<Database>,
+  limit = 5000,
+): Promise<{ id: string; username: string; isBanned: boolean; createdAt: string }[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, is_banned, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data.map((p) => ({
+    id: p.id,
+    username: p.username,
+    isBanned: p.is_banned,
+    createdAt: p.created_at,
+  }));
+}
+
 export async function searchProfilesByUsername(
   supabase: SupabaseClient<Database>,
   query: string,

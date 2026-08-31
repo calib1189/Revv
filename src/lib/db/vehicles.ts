@@ -89,6 +89,29 @@ export async function listPendingVerifications(
   return data;
 }
 
+/** Vehicle ids for the sitemap — every vehicle is publicly readable (see
+ * 0001_init.sql's RLS policy). A plain id list rather than a Postgres-
+ * side join to profiles (same reasoning as listVehicleIdsByCategory
+ * above: doesn't depend on PostgREST's embedded-resource relationship
+ * cache staying in sync) — banned owners are filtered out by the
+ * caller, which already needs the owner id to build the banned-set once
+ * for vehicles and posts together. Capped and ordered by recency rather
+ * than listing every vehicle ever created, since an unbounded sitemap
+ * is its own problem once the app has real scale. */
+export async function listSitemapVehicles(
+  supabase: SupabaseClient<Database>,
+  limit = 5000,
+): Promise<{ id: string; ownerId: string; createdAt: string }[]> {
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id, owner_id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data.map((v) => ({ id: v.id, ownerId: v.owner_id, createdAt: v.created_at }));
+}
+
 export async function getVehicleById(
   supabase: SupabaseClient<Database>,
   id: string,

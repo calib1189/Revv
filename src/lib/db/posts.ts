@@ -4,6 +4,24 @@ import type { Database } from "@/lib/supabase/database.types";
 export type Post = Database["public"]["Tables"]["posts"]["Row"];
 export type PostInsert = Database["public"]["Tables"]["posts"]["Insert"];
 
+/** Post ids for the sitemap — a plain id list (see listSitemapVehicles in
+ * vehicles.ts for why: avoids depending on PostgREST's embedded-resource
+ * relationship cache). Capped and ordered by recency for the same
+ * unbounded-sitemap reason. */
+export async function listSitemapPosts(
+  supabase: SupabaseClient<Database>,
+  limit = 5000,
+): Promise<{ id: string; authorId: string; createdAt: string }[]> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("id, author_id, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data.map((p) => ({ id: p.id, authorId: p.author_id, createdAt: p.created_at }));
+}
+
 export async function listFeedPosts(
   supabase: SupabaseClient<Database>,
   {
