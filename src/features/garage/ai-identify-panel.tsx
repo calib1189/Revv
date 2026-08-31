@@ -34,7 +34,23 @@ export function AiIdentifyPanel({
       if (result.error) {
         setError(result.error);
       } else if (result.data) {
-        setSuggestion(result.data);
+        // The model is deliberately allowed to return null for every
+        // field rather than guess (see the prompt in
+        // gemini-vision-provider.ts) — a heavily modified build, an
+        // unusual angle, or a less common vehicle can genuinely come
+        // back with nothing to show. Surfacing that as an explicit
+        // message instead of a near-blank "AI suggestion" card is the
+        // difference between "this looks broken" and "try a clearer
+        // photo, or just fill it in yourself".
+        const identifiedNothing =
+          !result.data.year && !result.data.make && !result.data.model;
+        if (identifiedNothing) {
+          setError(
+            "Couldn't confidently identify that vehicle from this photo — try a clearer, more direct angle, or fill in the details below yourself.",
+          );
+        } else {
+          setSuggestion(result.data);
+        }
       }
     } catch {
       setError("Couldn't identify that photo. Try again.");
