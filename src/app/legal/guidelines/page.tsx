@@ -1,4 +1,4 @@
-import { LegalDraftNotice } from "@/features/legal/legal-draft-notice";
+import { LegalDisclaimer } from "@/features/legal/legal-disclaimer";
 
 export const metadata = { title: "Community Guidelines — REVV" };
 
@@ -6,8 +6,8 @@ export default function GuidelinesPage() {
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
       <h1 className="mb-2 text-2xl font-semibold tracking-tight">Community Guidelines</h1>
-      <p className="mb-6 text-sm text-muted">Last updated: draft, not yet published.</p>
-      <LegalDraftNotice />
+      <p className="mb-1 text-sm text-muted">Last updated: August 31, 2026.</p>
+      <LegalDisclaimer />
 
       <div className="flex flex-col gap-6 text-sm leading-relaxed text-foreground">
         <section>

@@ -1,4 +1,4 @@
-import { LegalDraftNotice } from "@/features/legal/legal-draft-notice";
+import { LegalDisclaimer } from "@/features/legal/legal-disclaimer";
 
 export const metadata = { title: "Privacy Policy — REVV" };
 
@@ -6,8 +6,8 @@ export default function PrivacyPage() {
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
       <h1 className="mb-2 text-2xl font-semibold tracking-tight">Privacy Policy</h1>
-      <p className="mb-6 text-sm text-muted">Last updated: draft, not yet published.</p>
-      <LegalDraftNotice />
+      <p className="mb-1 text-sm text-muted">Last updated: August 31, 2026.</p>
+      <LegalDisclaimer />
 
       <div className="flex flex-col gap-6 text-sm leading-relaxed text-foreground">
         <section>
@@ -16,8 +16,21 @@ export default function PrivacyPage() {
             <li>Account information: email, username, bio, avatar</li>
             <li>Content you post: photos, videos, captions, comments, messages</li>
             <li>Garage data: vehicles, builds, parts, maintenance records you enter</li>
+            <li>
+              Photos you submit to AI features (vehicle identification, build rating) and content
+              you post, which may be screened by an automated moderation check — each sent to the
+              configured AI provider for that one request
+            </li>
+            <li>
+              Location, only when you grant permission — used to find nearby shops and sort meets
+              by distance. Never stored against your account; used for that one search and
+              discarded
+            </li>
+            <li>
+              A push notification token, only if you opt in to notifications — used solely to
+              deliver notifications to your device
+            </li>
             <li>Usage events: pages viewed and actions taken, used for the analytics you see reflected in product usage (not sold to third parties)</li>
-            <li>Photos you submit to AI features (vehicle identification, mod visualization) — sent to the configured AI provider for that single request</li>
           </ul>
         </section>
 
@@ -33,10 +46,12 @@ export default function PrivacyPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold">3. AI processing</h2>
           <p>
-            When you use an AI-assisted feature, the photo or text you submit is sent to the
-            AI provider configured for that feature. We do not use your content to train models
-            beyond what the provider&apos;s own terms specify. AI output is shown to you as a
-            suggestion and is never saved to your account until you confirm it.
+            When you use an AI-assisted feature — identifying a vehicle from a photo or rating a
+            build — the photo or text you submit is sent to the AI provider configured for that
+            feature. Posted photos and captions may also be sent for automated moderation
+            screening. We do not use your content to train models beyond what the provider&apos;s
+            own terms specify. AI output is shown to you as a suggestion and is never saved to
+            your account until you confirm it.
           </p>
         </section>
 
@@ -44,7 +59,8 @@ export default function PrivacyPage() {
           <h2 className="mb-2 text-base font-semibold">4. Who we share it with</h2>
           <ul className="ml-5 list-disc space-y-1">
             <li>Infrastructure providers (hosting, database, storage) needed to run REVV</li>
-            <li>The AI providers behind AI-assisted features, for the request you initiate</li>
+            <li>The AI providers behind AI-assisted features and moderation, for the request you initiate</li>
+            <li>Google, for shop search and meet locations, when you use those features — only the coordinates needed for that search</li>
             <li>Stripe, for billing, if you subscribe to a paid feature — we never see your card details</li>
             <li>Affiliate partners, only in aggregate/click-through form when you follow an affiliate product link</li>
             <li>Law enforcement, if legally required</li>

@@ -1,4 +1,4 @@
-import { LegalDraftNotice } from "@/features/legal/legal-draft-notice";
+import { LegalDisclaimer } from "@/features/legal/legal-disclaimer";
 
 export const metadata = { title: "Terms of Service — REVV" };
 
@@ -6,8 +6,8 @@ export default function TermsPage() {
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
       <h1 className="mb-2 text-2xl font-semibold tracking-tight">Terms of Service</h1>
-      <p className="mb-6 text-sm text-muted">Last updated: draft, not yet published.</p>
-      <LegalDraftNotice />
+      <p className="mb-1 text-sm text-muted">Last updated: August 31, 2026.</p>
+      <LegalDisclaimer />
 
       <div className="flex flex-col gap-6 text-sm leading-relaxed text-foreground">
         <section>
@@ -56,11 +56,13 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold">5. AI-assisted features</h2>
           <p>
-            Some features use AI to make suggestions — identifying a vehicle from a photo,
-            proposing a visual mod preview, or drafting a reply in the assistant. AI output is
-            always shown as a suggestion with its confidence level, never written directly to your
-            garage or build. Nothing is saved as fact until you review and confirm it. AI
-            suggestions can be wrong; verify anything that matters before relying on it.
+            Some features use AI to make suggestions — identifying a vehicle from a photo, or
+            scoring a build&apos;s overall quality. AI output is always shown as a suggestion with
+            its confidence level, never written directly to your garage or build. Nothing is saved
+            as fact until you review and confirm it. Photos and captions you post may also be
+            screened by an automated moderation check before or after they go live. AI suggestions
+            and moderation calls can be wrong; verify anything that matters before relying on it,
+            and report anything that slips through.
           </p>
         </section>
 
