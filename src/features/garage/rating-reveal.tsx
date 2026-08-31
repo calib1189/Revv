@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, RANK_AMBIENT_COLORS, type RankTier } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, RANK_AMBIENT_COLORS, RANK_TIERS, type RankTier } from "@/lib/rating/rank";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { ParticleBurst } from "@/features/garage/particle-burst";
 import { unknownClimbValue, landingValue, landingStartValue } from "@/features/garage/climb-math";
+import { RevealSoundEngine } from "@/features/garage/reveal-sound";
 import type { BuildRating } from "@/lib/providers/rating-provider";
 
 type Stage = "climbing" | "landing" | "landed" | "settled";
@@ -12,11 +13,20 @@ type Stage = "climbing" | "landing" | "landed" | "settled";
 // However fast the real result comes back, the climb always gets at
 // least this long before it's allowed to start its final approach —
 // see climb-math.ts's unknownClimbValue for what's actually driving the
-// displayed number during this window.
-const MIN_CLIMB_MS = 2200;
-const LANDING_DURATION_MS = 1100;
+// displayed number during this window. MIN_CLIMB_MS + LANDING_DURATION_MS
+// is the full 8s the number takes to finish counting, guaranteed
+// regardless of how fast the real rating call actually comes back.
+const MIN_CLIMB_MS = 6200;
+const LANDING_DURATION_MS = 1800;
 const LANDING_RUNWAY = 7;
-const SETTLE_DELAY_MS = 1300;
+const SETTLE_DELAY_MS = 1600;
+
+// RANK_TIERS is ordered highest tier first (cosmic) to lowest (bronze);
+// the sound engine wants the opposite — ascending rank, 0 for bronze —
+// so a climb up the ladder is also a climb up in pitch.
+function ascendingRank(tier: RankTier): number {
+  return RANK_TIERS.length - 1 - RANK_TIERS.findIndex((t) => t.tier === tier);
+}
 
 /**
  * The build-rating "unboxing" moment: the score starts at 0 and climbs
@@ -68,9 +78,15 @@ export function RatingReveal({
   const landingStartedAtRef = useRef<number | null>(null);
   const prevTierRef = useRef<RankTier>("bronze");
 
+  const [sound] = useState(() => new RevealSoundEngine());
+
   useEffect(() => {
     startedAtRef.current = performance.now();
-  }, []);
+    sound.startClimbHum();
+    return () => {
+      sound.dispose();
+    };
+  }, [sound]);
 
   // The one continuous animation loop, running for the component's
   // whole lifetime (started once, deliberately not restarted when
@@ -96,7 +112,9 @@ export function RatingReveal({
           landingStartedAtRef.current = now;
           setStage("landing");
         } else {
-          setDisplayedValue(unknownClimbValue(elapsed));
+          const value = unknownClimbValue(elapsed);
+          setDisplayedValue(value);
+          sound.updateClimbPitch(value);
         }
       } else if (stageRef.current === "landing") {
         const currentResult = resultRef.current;
@@ -105,9 +123,13 @@ export function RatingReveal({
           return;
         }
         const landingElapsed = now - (landingStartedAtRef.current ?? now);
-        setDisplayedValue(landingValue(landingElapsed, LANDING_DURATION_MS, landingFromRef.current, currentResult.score));
+        const value = landingValue(landingElapsed, LANDING_DURATION_MS, landingFromRef.current, currentResult.score);
+        setDisplayedValue(value);
+        sound.updateClimbPitch(value);
         if (landingElapsed >= LANDING_DURATION_MS) {
           setDisplayedValue(currentResult.score);
+          sound.stopClimbHum();
+          sound.playLanding();
           setStage("landed");
           return;
         }
@@ -121,7 +143,7 @@ export function RatingReveal({
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [sound]);
 
   useEffect(() => {
     if (stage !== "landed") return;
@@ -138,8 +160,9 @@ export function RatingReveal({
     if (prevTierRef.current !== displayedTier) {
       prevTierRef.current = displayedTier;
       setLevelUpKey((k) => k + 1);
+      sound.playLevelUp(ascendingRank(displayedTier), RANK_TIERS.length);
     }
-  }, [displayedTier]);
+  }, [displayedTier, sound]);
 
   const landed = stage === "landed" || stage === "settled";
   const color = RANK_TEXT_COLORS[displayedTier];

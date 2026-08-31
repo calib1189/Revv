@@ -8,7 +8,7 @@
 // toward this ceiling and never quite reaches it — climbing forever
 // without spoiling anything, for however long the real API call takes.
 const UNKNOWN_CLIMB_ASYMPTOTE = 92;
-const UNKNOWN_CLIMB_TIME_CONSTANT_MS = 2600;
+const UNKNOWN_CLIMB_TIME_CONSTANT_MS = 4200;
 
 /** Exponential approach toward (never reaching) UNKNOWN_CLIMB_ASYMPTOTE —
  * fast at first, slowing continuously, the same "still climbing, not
@@ -17,15 +17,20 @@ export function unknownClimbValue(elapsedMs: number): number {
   return UNKNOWN_CLIMB_ASYMPTOTE * (1 - Math.exp(-Math.max(0, elapsedMs) / UNKNOWN_CLIMB_TIME_CONSTANT_MS));
 }
 
-function easeOutExpo(t: number): number {
-  return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+// Cubic rather than expo — expo's deceleration is nearly instantaneous
+// in its final few percent, which reads as a snap rather than a glide.
+// Cubic eases off the same "decelerating into place" way but over a
+// visibly longer stretch of the animation, which is what actually
+// makes the landing feel smooth rather than abrupt.
+function easeOutCubic(t: number): number {
+  return t >= 1 ? 1 : 1 - Math.pow(1 - t, 3);
 }
 
 /** Interpolates from `from` to `to` over `durationMs`, eased so it lands
  * with a decelerating "click into place" rather than a linear count. */
 export function landingValue(elapsedMs: number, durationMs: number, from: number, to: number): number {
   const t = Math.min(1, Math.max(0, elapsedMs) / durationMs);
-  return from + (to - from) * easeOutExpo(t);
+  return from + (to - from) * easeOutCubic(t);
 }
 
 /** Where the final landing animation should start from — always at
