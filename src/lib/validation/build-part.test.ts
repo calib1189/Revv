@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { validateBuildPartForm, dollarsToCents } from "./build-part";
 
-const valid = { rawName: "Apex EC-7 18x9.5 +35", price: "1200.50", installCost: "150" };
+const valid = {
+  rawName: "Apex EC-7 18x9.5 +35",
+  price: "1200.50",
+  installCost: "150",
+  ownerAffiliateUrl: "",
+};
 
 describe("validateBuildPartForm", () => {
   it("passes for a fully valid entry", () => {
@@ -41,6 +46,32 @@ describe("validateBuildPartForm", () => {
 
   it("accepts a price typed with thousands commas", () => {
     expect(validateBuildPartForm({ ...valid, price: "$1,500.50" }).price).toBeUndefined();
+  });
+
+  it("allows an empty owner affiliate URL since it's optional", () => {
+    expect(
+      validateBuildPartForm({ ...valid, ownerAffiliateUrl: "" }).ownerAffiliateUrl,
+    ).toBeUndefined();
+  });
+
+  it("accepts a real https link for the owner affiliate URL", () => {
+    expect(
+      validateBuildPartForm({ ...valid, ownerAffiliateUrl: "https://amzn.to/abc123" })
+        .ownerAffiliateUrl,
+    ).toBeUndefined();
+  });
+
+  it("rejects a non-URL string for the owner affiliate URL", () => {
+    expect(
+      validateBuildPartForm({ ...valid, ownerAffiliateUrl: "not a link" }).ownerAffiliateUrl,
+    ).toMatch(/valid link/);
+  });
+
+  it("rejects a non-http(s) protocol for the owner affiliate URL", () => {
+    expect(
+      validateBuildPartForm({ ...valid, ownerAffiliateUrl: "ftp://example.com/x" })
+        .ownerAffiliateUrl,
+    ).toMatch(/https:\/\//);
   });
 });
 

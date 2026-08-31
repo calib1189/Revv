@@ -123,6 +123,21 @@ export function ModificationForm({
       <PartPicker initialPart={initialPart} />
 
       <div>
+        <Label htmlFor="ownerAffiliateUrl">Your affiliate link (optional)</Label>
+        <Input
+          id="ownerAffiliateUrl"
+          name="ownerAffiliateUrl"
+          type="url"
+          placeholder="https://amzn.to/yourlink"
+          defaultValue={buildPart?.owner_affiliate_url ?? ""}
+        />
+        <p className="mt-1.5 text-xs text-muted">
+          Have your own affiliate link for this part? Add it here and it&apos;s what people see
+          instead of REVV&apos;s — you get paid directly by the retailer, not through REVV.
+        </p>
+      </div>
+
+      <div>
         <Label htmlFor="notes">Notes</Label>
         <textarea
           id="notes"

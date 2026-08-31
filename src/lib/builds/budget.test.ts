@@ -15,6 +15,7 @@ function makePart(overrides: Partial<BuildPart>): BuildPart {
     installed_at: null,
     notes: null,
     media_id: null,
+    owner_affiliate_url: null,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };

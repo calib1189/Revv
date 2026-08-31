@@ -22,6 +22,7 @@ function readFields(formData: FormData) {
     installedAt: String(formData.get("installedAt") ?? ""),
     notes: String(formData.get("notes") ?? ""),
     partId: String(formData.get("partId") ?? "") || null,
+    ownerAffiliateUrl: String(formData.get("ownerAffiliateUrl") ?? ""),
   };
 }
 
@@ -52,6 +53,7 @@ export async function createBuildPartAction(
     install_cost_cents: dollarsToCents(fields.installCost),
     installed_at: fields.installedAt || null,
     notes: fields.notes.trim() || null,
+    owner_affiliate_url: fields.ownerAffiliateUrl.trim() || null,
   });
 
   revalidatePath(`/garage/${vehicleId}`);
@@ -79,6 +81,7 @@ export async function updateBuildPartAction(
     install_cost_cents: dollarsToCents(fields.installCost),
     installed_at: fields.installedAt || null,
     notes: fields.notes.trim() || null,
+    owner_affiliate_url: fields.ownerAffiliateUrl.trim() || null,
   });
 
   revalidatePath(`/garage/${vehicleId}`);

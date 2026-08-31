@@ -138,7 +138,7 @@ function ModificationRow({
             <div className="mt-2 max-w-sm">
               <ProductCard part={linkedPart} />
               <div className="mt-2">
-                <BuyButton partId={linkedPart.id} />
+                <BuyButton partId={linkedPart.id} ownerAffiliateUrl={part.owner_affiliate_url} />
               </div>
             </div>
           ) : (
