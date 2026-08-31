@@ -18,33 +18,6 @@ const LANDING_DURATION_MS = 1100;
 const LANDING_RUNWAY = 7;
 const SETTLE_DELAY_MS = 1300;
 
-const MARQUEE_BULB_COUNT = 28;
-
-/** Positions bulbs evenly around a rectangle's perimeter (0-100% in
- * both axes), each with a staggered animation-delay so the twinkle
- * appears to travel around the border — the same "chasing" look a real
- * casino marquee's bulbs have, computed once at module load since the
- * layout never changes between reveals. */
-const MARQUEE_BULBS = Array.from({ length: MARQUEE_BULB_COUNT }, (_, i) => {
-  const t = (i / MARQUEE_BULB_COUNT) * 4;
-  let left: number;
-  let top: number;
-  if (t < 1) {
-    left = t * 100;
-    top = 0;
-  } else if (t < 2) {
-    left = 100;
-    top = (t - 1) * 100;
-  } else if (t < 3) {
-    left = 100 - (t - 2) * 100;
-    top = 100;
-  } else {
-    left = 0;
-    top = 100 - (t - 3) * 100;
-  }
-  return { left: `${left}%`, top: `${top}%`, delay: (i / MARQUEE_BULB_COUNT) * 2.2 };
-});
-
 /**
  * The build-rating "unboxing" moment: the score starts at 0 and climbs
  * continuously — fast at first, slowing as it goes — for as long as the
@@ -56,9 +29,11 @@ const MARQUEE_BULBS = Array.from({ length: MARQUEE_BULB_COUNT }, (_, i) => {
  * own level-up effect: a ring shockwave, an icon bounce, a small
  * particle burst, and a full-screen color flash, the same "the whole
  * cabinet lights up" feeling a real slot machine gives on every step
- * toward a win, not just the reels themselves. Landing gets the same
- * treatment turned up further — a bigger particle burst, a screen
- * shake, and a chasing marquee-bulb border around the whole screen.
+ * toward a win, not just the reels themselves. The background itself is
+ * never flat — a slow-rotating color sweep behind everything, always
+ * the current tier's own color, cross-fading as the tier changes.
+ * Landing gets the same treatment turned up further — a bigger particle
+ * burst and a screen shake.
  */
 export function RatingReveal({
   result,
@@ -176,6 +151,20 @@ export function RatingReveal({
         stage === "landed" ? "reveal-landing-shake" : ""
       }`}
     >
+      {/* The reveal's whole background — always the current tier's
+          color, always moving, cross-fading smoothly as the tier
+          changes (the transition lives on the CSS custom property). */}
+      <span
+        aria-hidden
+        className="reveal-ambient-glow pointer-events-none absolute inset-0"
+        style={{ "--reveal-color": color } as React.CSSProperties}
+      />
+      <span
+        aria-hidden
+        className="reveal-ambient-sweep pointer-events-none absolute inset-0"
+        style={{ "--reveal-color": color } as React.CSSProperties}
+      />
+
       {/* Full-screen color wash — replays on every tier-up via the
           key-remount trick, same as the contained ring pulse. */}
       <span
@@ -185,21 +174,7 @@ export function RatingReveal({
         style={{ background: `radial-gradient(circle, ${color}66 0%, transparent 70%)` }}
       />
 
-      {/* Chasing marquee-bulb border — only once it's actually landed,
-          the "the whole cabinet lights up" moment, not the whole climb. */}
-      {landed &&
-        MARQUEE_BULBS.map((b, i) => (
-          <span
-            key={i}
-            aria-hidden
-            className="marquee-bulb"
-            style={{ left: b.left, top: b.top, animationDelay: `${b.delay}s`, color }}
-          />
-        ))}
-
       <div className="relative flex h-44 w-44 items-center justify-center">
-        <div aria-hidden className={`reveal-light-rays ${landed ? "reveal-light-rays-bright" : ""}`} style={{ color }} />
-
         <div key={`ring-${levelUpKey}`} className={landed ? "reveal-materialize" : "tier-levelup-icon-pop"}>
           <div className={`rank-frame rank-${displayedTier} flex h-40 w-40 items-center justify-center rounded-full p-6`}>
             <Icon className="h-full w-full drop-shadow-lg" />

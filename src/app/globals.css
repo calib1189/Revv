@@ -653,11 +653,10 @@ html.native-app body::-webkit-scrollbar {
 
   /* ------------------------------------------------------------------- *
    * Casino-jackpot dressing for the reveal — a full-screen color wash on
-   * every tier-up (not just the contained ring pulse), a slow-rotating
-   * spotlight/sunburst behind the ring the whole time, and a chasing
-   * marquee-bulb border around the screen edge once it actually lands,
-   * the same way a slot machine's own cabinet lights up on a win rather
-   * than just the reels themselves.
+   * every tier-up (not just the contained ring pulse), and a full-screen
+   * ambient background that's always the current tier's own color and
+   * always moving, the same way a slot machine's own cabinet lights up
+   * on a win rather than just the reels themselves.
    * ------------------------------------------------------------------- */
   .reveal-screen-flash {
     animation: reveal-screen-flash-fade 550ms ease-out forwards;
@@ -669,41 +668,42 @@ html.native-app body::-webkit-scrollbar {
     100% { opacity: 0; }
   }
 
-  .reveal-light-rays {
+  /* The reveal's full background — replaces flat black. A fixed soft
+     glow anchored above the ring plus a slow-rotating color sweep behind
+     it, both keyed to the current tier's color and cross-fading smoothly
+     as the climb moves through tiers (the transition is on the custom
+     property itself, which is what makes the color interpolate instead
+     of hard-cutting). */
+  @property --reveal-color {
+    syntax: "<color>";
+    inherits: false;
+    initial-value: #000000;
+  }
+
+  .reveal-ambient-glow,
+  .reveal-ambient-sweep {
+    --reveal-color: #000000;
     position: absolute;
-    inset: -60px;
-    border-radius: 9999px;
-    pointer-events: none;
-    background: repeating-conic-gradient(
-      from var(--rank-angle, 0deg),
-      rgba(255, 255, 255, 0.55) 0deg 3deg,
-      transparent 3deg 30deg
+    inset: -30%;
+    transition: --reveal-color 600ms ease;
+  }
+
+  .reveal-ambient-glow {
+    background: radial-gradient(55% 45% at 50% 32%, color-mix(in srgb, var(--reveal-color) 42%, transparent) 0%, transparent 70%);
+  }
+
+  .reveal-ambient-sweep {
+    background: conic-gradient(
+      from var(--rank-angle, 0deg) at 50% 50%,
+      color-mix(in srgb, var(--reveal-color) 24%, transparent),
+      transparent 22%,
+      color-mix(in srgb, var(--reveal-color) 16%, transparent) 50%,
+      transparent 78%,
+      color-mix(in srgb, var(--reveal-color) 24%, transparent) 100%
     );
-    -webkit-mask-image: radial-gradient(circle, black 32%, transparent 72%);
-    mask-image: radial-gradient(circle, black 32%, transparent 72%);
-    animation: rank-angle-spin 9s linear infinite;
-    opacity: 0.5;
-    transition: opacity 400ms ease-out;
-  }
-
-  .reveal-light-rays.reveal-light-rays-bright {
-    opacity: 1;
-    animation-duration: 4s;
-  }
-
-  .marquee-bulb {
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    border-radius: 9999px;
-    background: currentColor;
-    transform: translate(-50%, -50%);
-    animation: marquee-twinkle 2.2s ease-in-out infinite;
-  }
-
-  @keyframes marquee-twinkle {
-    0%, 78%, 100% { opacity: 0.18; box-shadow: none; transform: translate(-50%, -50%) scale(0.7); }
-    6% { opacity: 1; box-shadow: 0 0 10px 3px currentColor; transform: translate(-50%, -50%) scale(1.4); }
+    filter: blur(50px);
+    opacity: 0.9;
+    animation: rank-angle-spin 28s linear infinite;
   }
 
   .reveal-landing-shake {
