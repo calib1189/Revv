@@ -679,9 +679,22 @@ html.native-app body::-webkit-scrollbar {
   }
 
   @keyframes tier-levelup-icon-bounce {
-    0% { transform: scale(1) rotate(0deg); }
-    45% { transform: scale(1.2) rotate(-4deg); }
-    100% { transform: scale(1) rotate(0deg); }
+    0% { transform: scale(0.75) rotate(0deg); opacity: 0; }
+    30% { opacity: 1; }
+    45% { transform: scale(1.2) rotate(-4deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  /* The outgoing tier's icon during a crossfade — shrinks and fades away
+     underneath the incoming one (tier-levelup-icon-bounce above), rather
+     than disappearing the instant the new tier's icon mounts. */
+  .tier-icon-fade-out {
+    animation: tier-icon-fade-out-shrink 380ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  }
+
+  @keyframes tier-icon-fade-out-shrink {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.7); opacity: 0; }
   }
 
   /* ------------------------------------------------------------------- *
@@ -718,7 +731,7 @@ html.native-app body::-webkit-scrollbar {
     --reveal-color: #000000;
     position: absolute;
     inset: -30%;
-    transition: --reveal-color 600ms ease;
+    transition: --reveal-color 800ms ease;
   }
 
   .reveal-ambient-glow {

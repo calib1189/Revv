@@ -95,12 +95,7 @@ export function RateBuildPanel({
     return (
       <div className="glass-raised rounded-3xl p-6">
         <div className="flex items-center gap-3">
-          <span
-            className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26` }}
-          >
-            <Icon className="h-9 w-9" />
-          </span>
+          <Icon className="h-16 w-16 flex-shrink-0" />
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wide text-muted">New rating</p>
             <p className="text-xl font-bold tracking-tight" style={{ color: RANK_TEXT_COLORS[tier] }}>
@@ -162,12 +157,7 @@ export function RateBuildPanel({
         <div className="glass-raised rounded-3xl p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span
-              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
-              style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26` }}
-            >
-              <Icon className="h-9 w-9" />
-            </span>
+            <Icon className="h-16 w-16 flex-shrink-0" />
             <div className="min-w-0">
               <p className="text-xs font-medium uppercase tracking-wide text-muted">Build rating</p>
               <p

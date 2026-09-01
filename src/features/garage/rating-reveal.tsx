@@ -57,6 +57,11 @@ export function RatingReveal({
   const [displayedValue, setDisplayedValue] = useState(0);
   const [skipRequested, setSkipRequested] = useState(false);
   const [levelUpKey, setLevelUpKey] = useState(0);
+  // The tier being faded out during a crossfade — kept mounted just long
+  // enough to shrink away while the new tier's icon pops in over it,
+  // instead of the old one vanishing the instant the new one appears.
+  const [outgoingTier, setOutgoingTier] = useState<RankTier | null>(null);
+  const outgoingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stageRef = useRef<Stage>("climbing");
   function setStage(next: Stage) {
@@ -158,16 +163,28 @@ export function RatingReveal({
   // matter which. Deliberately not gated to any particular stage.
   useEffect(() => {
     if (prevTierRef.current !== displayedTier) {
+      const previousTier = prevTierRef.current;
       prevTierRef.current = displayedTier;
       setLevelUpKey((k) => k + 1);
       sound.playLevelUp(ascendingRank(displayedTier), RANK_TIERS.length);
+
+      setOutgoingTier(previousTier);
+      if (outgoingTimeoutRef.current) clearTimeout(outgoingTimeoutRef.current);
+      outgoingTimeoutRef.current = setTimeout(() => setOutgoingTier(null), 380);
     }
   }, [displayedTier, sound]);
+
+  useEffect(() => {
+    return () => {
+      if (outgoingTimeoutRef.current) clearTimeout(outgoingTimeoutRef.current);
+    };
+  }, []);
 
   const landed = stage === "landed" || stage === "settled";
   const color = RANK_TEXT_COLORS[displayedTier];
   const ambientColor = RANK_AMBIENT_COLORS[displayedTier];
   const Icon = RANK_MATERIAL_ICONS[displayedTier];
+  const OutgoingIcon = outgoingTier ? RANK_MATERIAL_ICONS[outgoingTier] : null;
 
   return (
     <div
@@ -235,6 +252,22 @@ export function RatingReveal({
           </div>
         )}
 
+        {/* The previous tier's icon, kept mounted just long enough to
+            shrink and fade away underneath the new one — a genuine
+            crossfade instead of the old icon vanishing the instant the
+            new one appears (which is what a plain key-remount gives you
+            on its own). */}
+        {OutgoingIcon && outgoingTier && (
+          <div className="tier-icon-fade-out absolute inset-0 flex items-center justify-center">
+            <OutgoingIcon
+              className="h-full w-full"
+              style={{
+                filter: `brightness(1.3) contrast(1.15) saturate(1.25) drop-shadow(0 0 22px ${RANK_TEXT_COLORS[outgoingTier]}99)`,
+              }}
+            />
+          </div>
+        )}
+
         <div
           key={`ring-${levelUpKey}`}
           className={`flex h-full w-full items-center justify-center ${landed ? "reveal-materialize" : "tier-levelup-icon-pop"}`}
@@ -274,7 +307,7 @@ export function RatingReveal({
             {result.isMock ? "Preview rating" : "Your rating"}
           </p>
         )}
-        <p className="text-3xl font-bold tracking-tight transition-colors duration-150" style={{ color }}>
+        <p className="text-3xl font-bold tracking-tight transition-colors duration-300 ease-out" style={{ color }}>
           {RANK_LABELS[displayedTier]}
         </p>
         <p className="text-xl font-semibold tabular-nums text-white/90">{displayedValue.toFixed(2)}</p>
