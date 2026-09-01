@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { unknownClimbValue, climbCeilingForScore, landingValue, landingStartValue, needsCorrection } from "./climb-math";
+import {
+  unknownClimbValue,
+  climbCeilingForScore,
+  cappedClimbValue,
+  landingValue,
+  landingStartValue,
+  needsCorrection,
+} from "./climb-math";
 
 describe("unknownClimbValue", () => {
   it("starts at exactly 0", () => {
@@ -95,6 +102,39 @@ describe("climbCeilingForScore", () => {
   it("allows the climb to rise into diamond when the real score is ruby's neighbor below, emerald", () => {
     // Emerald is 70-79.99 — one tier up is diamond, whose top is 89.99.
     expect(climbCeilingForScore(74)).toBeCloseTo(89.99, 5);
+  });
+});
+
+describe("cappedClimbValue", () => {
+  it("matches unknownClimbValue exactly once the real score is ruby or cosmic (no cap to apply)", () => {
+    expect(cappedClimbValue(3000, 92)).toBeCloseTo(unknownClimbValue(3000), 10);
+    expect(cappedClimbValue(6200, 98)).toBeCloseTo(unknownClimbValue(6200), 10);
+  });
+
+  it("never reaches or exceeds the capped ceiling even at a very long elapsed time", () => {
+    // 12.4 is bronze — capped at 29.99 (copper's top).
+    expect(cappedClimbValue(30_000, 12.4)).toBeLessThan(29.99);
+  });
+
+  it("is monotonically increasing under a cap, same as the uncapped curve", () => {
+    const a = cappedClimbValue(500, 12.4);
+    const b = cappedClimbValue(1500, 12.4);
+    const c = cappedClimbValue(4000, 12.4);
+    const d = cappedClimbValue(6200, 12.4);
+    expect(b).toBeGreaterThan(a);
+    expect(c).toBeGreaterThan(b);
+    expect(d).toBeGreaterThan(c);
+  });
+
+  it("keeps visibly climbing all the way through the minimum climb duration rather than plateauing early", () => {
+    // Regression guard: a hard clamp against the ceiling reached ~30
+    // within the first couple of seconds and then sat there, frozen,
+    // for the remaining several seconds of the climb — this asserts
+    // there's still a real, visible (not sub-cent) gap between the
+    // midpoint and the end of the climb's minimum duration.
+    const midpoint = cappedClimbValue(4000, 12.4);
+    const end = cappedClimbValue(6200, 12.4);
+    expect(end - midpoint).toBeGreaterThan(1);
   });
 });
 

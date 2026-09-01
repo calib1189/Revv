@@ -10,7 +10,7 @@ import { DiamondPrism } from "@/features/garage/diamond-prism";
 import { RubyEmbers } from "@/features/garage/ruby-embers";
 import {
   unknownClimbValue,
-  climbCeilingForScore,
+  cappedClimbValue,
   landingValue,
   landingStartValue,
   needsCorrection,
@@ -168,12 +168,11 @@ export function RatingReveal({
           sound.playAnticipationRiser(ANTICIPATION_MS / 1000);
           setStage("anticipating");
         } else {
-          const rawValue = unknownClimbValue(elapsed);
           // Once the real score is already known (it just hasn't hit the
           // minimum suspense duration yet), don't let the climb wander
-          // any further above it than one tier — see
-          // climbCeilingForScore's own comment for why.
-          const value = currentResult ? Math.min(rawValue, climbCeilingForScore(currentResult.score)) : rawValue;
+          // any further above it than one tier — see cappedClimbValue's
+          // own comment for why this is a rescale, not a clamp.
+          const value = currentResult ? cappedClimbValue(elapsed, currentResult.score) : unknownClimbValue(elapsed);
           setDisplayedValue(value);
         }
       } else if (stageRef.current === "anticipating") {

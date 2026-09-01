@@ -90,6 +90,29 @@ export function climbCeilingForScore(trueScore: number): number {
   return RANK_TIERS[capIndex - 1].min - 0.01;
 }
 
+/** unknownClimbValue, capped for a known real score — but rescaled
+ * toward the capped ceiling rather than clamped against it. A hard
+ * clamp (`Math.min(unknownClimbValue(elapsedMs), ceiling)`) sounds
+ * right but isn't: unknownClimbValue's own schedule is tuned to reach
+ * ~60 by 3800ms and creep toward 92 for the rest of its ~6200ms run, so
+ * clamping a low ceiling (say 30, for a bronze real score) means the
+ * *displayed* value hits that ceiling within the first couple of
+ * seconds and then sits there, visibly frozen, for the remaining
+ * several seconds of the climb's own minimum duration — the exact
+ * "did this break?" stall the climb's fast-early/slow-late pacing was
+ * built to avoid in the first place. Scaling the whole curve by
+ * `ceiling / TAIL_CEILING` instead keeps every checkpoint's relative
+ * timing intact (still fast through the low tiers, still easing into
+ * the finish near the end of the climb) while aiming the same shape at
+ * a lower asymptote, so the number keeps visibly creeping the entire
+ * time. */
+export function cappedClimbValue(elapsedMs: number, trueScore: number): number {
+  const raw = unknownClimbValue(elapsedMs);
+  const ceiling = climbCeilingForScore(trueScore);
+  if (ceiling === Infinity) return raw;
+  return raw * (ceiling / TAIL_CEILING);
+}
+
 /** Interpolates from `from` to `to` over `durationMs`, eased so it lands
  * with a decelerating "click into place" rather than a linear count. */
 export function landingValue(elapsedMs: number, durationMs: number, from: number, to: number): number {
