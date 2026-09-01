@@ -5,6 +5,9 @@ import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, RANK_AMBIENT_COLORS, RANK_
 import { RANK_MATERIAL_ICONS, RANK_ICON_SRC } from "@/features/garage/rank-material-icons";
 import { ParticleBurst } from "@/features/garage/particle-burst";
 import { CosmicStarfield } from "@/features/garage/cosmic-starfield";
+import { EmeraldAura } from "@/features/garage/emerald-aura";
+import { DiamondPrism } from "@/features/garage/diamond-prism";
+import { RubyEmbers } from "@/features/garage/ruby-embers";
 import { unknownClimbValue, landingValue, landingStartValue, needsCorrection } from "@/features/garage/climb-math";
 import { RevealSoundEngine } from "@/features/garage/reveal-sound";
 import { hapticTierUp, hapticLanding } from "@/lib/haptics";
@@ -288,10 +291,13 @@ export function RatingReveal({
       }`}
       style={{ "--shake-intensity": 1 + dramaIntensity * 1.3 } as React.CSSProperties}
     >
-      {/* The single bespoke top-tier moment — cosmic's own landing
-          turns the whole screen into a starfield rather than just being
-          a bigger version of every other tier's effects. */}
+      {/* Bespoke top-tier landing backdrops — each of these gets its own
+          distinct scene instead of just a bigger version of every other
+          tier's effects (the same idea CosmicStarfield started with). */}
       {landed && displayedTier === "cosmic" && <CosmicStarfield />}
+      {landed && displayedTier === "emerald" && <EmeraldAura />}
+      {landed && displayedTier === "diamond" && <DiamondPrism />}
+      {landed && displayedTier === "ruby" && <RubyEmbers />}
 
       {/* The reveal's whole background — always the current tier's
           color, always moving, cross-fading smoothly as the tier

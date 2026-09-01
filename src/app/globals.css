@@ -775,6 +775,68 @@ html.native-app body::-webkit-scrollbar {
     50% { transform: translate(-5vw, -5vh) scale(0.9); }
   }
 
+  /* Shared rising-particle motion — emerald's fireflies and ruby's
+     embers are the same drift-up-and-fade arc, just different colors
+     and sizes set per-particle via inline style (--drift-x). */
+  .reveal-firefly-rise {
+    animation-name: reveal-firefly-rise-up;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+
+  @keyframes reveal-firefly-rise-up {
+    0% { transform: translate(0, 0); opacity: 0; }
+    12% { opacity: 1; }
+    88% { opacity: 1; }
+    100% { transform: translate(var(--drift-x, 0), -85vh); opacity: 0; }
+  }
+
+  /* Emerald: soft vertical light shafts, like sunlight breaking through
+     a forest canopy — a few wide, faint, slowly-shifting gradient
+     bars rather than a flat wash. */
+  .reveal-emerald-shafts {
+    background:
+      linear-gradient(100deg, transparent 15%, rgba(94, 234, 212, 0.12) 22%, transparent 30%),
+      linear-gradient(100deg, transparent 55%, rgba(94, 234, 212, 0.08) 63%, transparent 72%);
+    background-size: 200% 200%;
+    animation: reveal-emerald-shafts-drift 14s ease-in-out infinite;
+  }
+
+  @keyframes reveal-emerald-shafts-drift {
+    0%, 100% { background-position: 0% 0%; }
+    50% { background-position: 15% 8%; }
+  }
+
+  /* Diamond: a slow-turning sweep of prismatic light — light refracting
+     inside a cut stone, reusing the same rotating-conic-gradient trick
+     as the ambient sweep but tighter and colder (icy blue/white/cyan
+     rather than the tier's single ambient wash color). */
+  .reveal-prism-sweep {
+    background: conic-gradient(
+      from var(--rank-angle, 0deg) at 50% 50%,
+      rgba(191, 244, 255, 0.22),
+      transparent 18%,
+      rgba(125, 211, 252, 0.16) 40%,
+      transparent 60%,
+      rgba(255, 255, 255, 0.2) 80%,
+      transparent 96%
+    );
+    filter: blur(40px);
+    animation: rank-angle-spin 9s linear infinite;
+  }
+
+  /* Ruby: a slow-pulsing heat glow underneath the rising embers — the
+     forge they're coming from, not a static backdrop. */
+  .reveal-heat-pulse {
+    background: radial-gradient(60% 50% at 50% 70%, rgba(255, 90, 60, 0.28) 0%, transparent 75%);
+    animation: reveal-heat-pulse-glow 3.2s ease-in-out infinite;
+  }
+
+  @keyframes reveal-heat-pulse-glow {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+
   /* A light sweep across the emblem itself, not just the ring around it
      — masked to that tier's own icon (mask-image defaults to using the
      image's alpha channel), via an inline mask-image set per-tier in
