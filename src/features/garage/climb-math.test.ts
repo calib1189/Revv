@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { unknownClimbValue, landingValue, landingStartValue, needsCorrection } from "./climb-math";
+import { unknownClimbValue, climbCeilingForScore, landingValue, landingStartValue, needsCorrection } from "./climb-math";
 
 describe("unknownClimbValue", () => {
   it("starts at exactly 0", () => {
@@ -71,6 +71,30 @@ describe("unknownClimbValue", () => {
     const rubyDwell = MIN_CLIMB_MS - timeToReach(90);
     expect(rubyDwell).toBeGreaterThanOrEqual(700);
     expect(rubyDwell).toBeLessThanOrEqual(1000);
+  });
+});
+
+describe("climbCeilingForScore", () => {
+  it("caps a low real score's climb at the top of exactly one tier above it", () => {
+    // 55 is gold (50-59.99) — one tier up is platinum, whose top is
+    // 69.99 (just under emerald's 70 floor).
+    expect(climbCeilingForScore(55)).toBeCloseTo(69.99, 5);
+  });
+
+  it("never lets the capped ceiling reach into the tier two above the real score", () => {
+    // 12.4 is bronze (0-19.99) — one tier up is copper, whose top is
+    // 29.99 (just under iron's 30 floor, two tiers up from bronze).
+    expect(climbCeilingForScore(12.4)).toBeCloseTo(29.99, 5);
+  });
+
+  it("returns no cap (Infinity) once the real score is already ruby or cosmic", () => {
+    expect(climbCeilingForScore(92)).toBe(Infinity); // ruby
+    expect(climbCeilingForScore(98)).toBe(Infinity); // cosmic
+  });
+
+  it("allows the climb to rise into diamond when the real score is ruby's neighbor below, emerald", () => {
+    // Emerald is 70-79.99 — one tier up is diamond, whose top is 89.99.
+    expect(climbCeilingForScore(74)).toBeCloseTo(89.99, 5);
   });
 });
 

@@ -817,6 +817,12 @@ html.native-app body::-webkit-scrollbar {
     animation-name: reveal-shooting-star-streak;
     animation-timing-function: ease-out;
     animation-iteration-count: infinite;
+    /* Without this, the element sits in its plain (fully visible,
+       static) CSS during animation-delay rather than the keyframe's
+       hidden 0% state — every star renders as a frozen bright bar for
+       up to several seconds before its staggered delay elapses and the
+       streak actually starts. */
+    animation-fill-mode: backwards;
   }
 
   @keyframes reveal-shooting-star-streak {

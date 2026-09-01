@@ -1,3 +1,5 @@
+import { RANK_TIERS } from "@/lib/rating/rank";
+
 /**
  * Pure math behind the rating reveal's climbing score — kept separate
  * from the component's stateful RAF loop so the actual curve shapes are
@@ -64,6 +66,28 @@ export function unknownClimbValue(elapsedMs: number): number {
   return (
     valueStart + (TAIL_CEILING - valueStart) * (1 - Math.exp(-(t - segStart) / TAIL_TIME_CONSTANT_MS))
   );
+}
+
+/** The highest value the unknown-phase climb is allowed to show once the
+ * real score is already known but the climb hasn't reached its minimum
+ * suspense duration yet — one tier above the real score's own tier, no
+ * further. Without this, the climb keeps racing toward its own ~92
+ * ceiling regardless of how low the real score actually is, and
+ * whatever tier it happens to be sitting in once the minimum duration
+ * expires becomes the peak the "correcting" stage has to visibly crash
+ * back down from — a real score of, say, Gold could let the climb touch
+ * Ruby first, then correction has to plunge through Diamond, Emerald,
+ * and Platinum on its way back down. Capping the peak at one tier above
+ * the truth means a correction never has to cross more than that one
+ * tier boundary, however far below the peak the real score is. Returns
+ * `Infinity` (no cap) once the real score is already ruby or cosmic —
+ * there's no tier above cosmic to cap against, and the climb's own
+ * asymptote never gets that high anyway. */
+export function climbCeilingForScore(trueScore: number): number {
+  const trueIndex = RANK_TIERS.findIndex((t) => trueScore >= t.min);
+  const capIndex = Math.max(0, trueIndex - 1);
+  if (capIndex === 0) return Infinity;
+  return RANK_TIERS[capIndex - 1].min - 0.01;
 }
 
 /** Interpolates from `from` to `to` over `durationMs`, eased so it lands
