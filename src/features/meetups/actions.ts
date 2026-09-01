@@ -49,6 +49,7 @@ export async function createMeetupDraftAction({
   lat,
   lng,
   tier,
+  crewId,
 }: {
   title: string;
   description: string;
@@ -57,6 +58,7 @@ export async function createMeetupDraftAction({
   lat: number | null;
   lng: number | null;
   tier: string;
+  crewId?: string | null;
 }): Promise<CreateMeetupDraftResult> {
   if (!isMeetupBillingConfigured()) {
     return { error: "Posting a meetup isn't set up yet." };
@@ -80,6 +82,7 @@ export async function createMeetupDraftAction({
       lng,
       tier,
       price_cents: MEETUP_TIERS[tier].priceCents,
+      crew_id: crewId || null,
     });
     return { meetupId: meetup.id };
   } catch {

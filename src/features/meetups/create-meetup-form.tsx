@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
 import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
+import type { Crew } from "@/lib/db/crews";
 
 const MAX_PHOTOS = 5;
 const TIER_ORDER: MeetupTier[] = ["standard", "promoted", "diamond"];
@@ -33,7 +34,7 @@ interface SelectedPhoto {
   previewUrl: string;
 }
 
-export function CreateMeetupForm({ userId }: { userId: string }) {
+export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Crew[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export function CreateMeetupForm({ userId }: { userId: string }) {
   >("idle");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
   const [tier, setTier] = useState<MeetupTier>("standard");
+  const [crewId, setCrewId] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,6 +55,7 @@ export function CreateMeetupForm({ userId }: { userId: string }) {
     setPhotos([]);
     setCoords(null);
     setTier("standard");
+    setCrewId("");
     setError(null);
     formRef.current?.reset();
     setIsOpen(false);
@@ -122,6 +125,7 @@ export function CreateMeetupForm({ userId }: { userId: string }) {
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
         tier,
+        crewId: crewId || null,
       });
       if (draft.error || !draft.meetupId) {
         setError(draft.error ?? "Couldn't create that meetup. Try again.");
@@ -299,6 +303,25 @@ export function CreateMeetupForm({ userId }: { userId: string }) {
                 : "Optional — lets nearby people see how far away this is."}
           </p>
         </div>
+
+        {crews.length > 0 && (
+          <div>
+            <Label htmlFor="meetup-crew">Attach to a crew (optional)</Label>
+            <select
+              id="meetup-crew"
+              value={crewId}
+              onChange={(e) => setCrewId(e.target.value)}
+              className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
+            >
+              <option value="">None</option>
+              {crews.map((crew) => (
+                <option key={crew.id} value={crew.id}>
+                  {crew.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div>
           <Label>Plan</Label>

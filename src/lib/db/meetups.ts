@@ -61,6 +61,25 @@ export async function listUpcomingMeetups(
   return data;
 }
 
+/** A single crew's Events tab — every meetup tagged to that crew,
+ * regardless of status, since a leader/admin browsing their own crew's
+ * page should still see one they just created that's still
+ * pending_payment/pending_review (RLS's own host/admin read policies
+ * already gate who can actually see a non-active row here). */
+export async function listCrewMeetups(
+  supabase: SupabaseClient<Database>,
+  crewId: string,
+): Promise<Meetup[]> {
+  const { data, error } = await supabase
+    .from("meetups")
+    .select("*")
+    .eq("crew_id", crewId)
+    .order("starts_at", { ascending: true });
+
+  if (error) throw error;
+  return data;
+}
+
 export async function getMeetupById(
   supabase: SupabaseClient<Database>,
   meetupId: string,

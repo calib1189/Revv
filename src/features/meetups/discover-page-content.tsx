@@ -4,6 +4,8 @@ import { listUpcomingMeetups } from "@/lib/db/meetups";
 import { listMeetupMediaForMeetups } from "@/lib/db/meetup-media";
 import { publicMediaUrl } from "@/lib/db/media";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { getCrewsByIds } from "@/lib/db/crews";
+import { listCrewIdsForUser } from "@/lib/db/crew-members";
 import { DiscoverTabs } from "@/features/discover/discover-tabs";
 import type { MeetupListItem } from "@/features/meetups/meetups-list";
 
@@ -44,5 +46,8 @@ export async function DiscoverPageContent() {
   });
 
   const currentUserId = user?.email_confirmed_at ? user.id : null;
-  return <DiscoverTabs meetupItems={items} currentUserId={currentUserId} />;
+  const yourCrews = currentUserId
+    ? await getCrewsByIds(supabase, await listCrewIdsForUser(supabase, currentUserId))
+    : [];
+  return <DiscoverTabs meetupItems={items} currentUserId={currentUserId} crews={yourCrews} />;
 }

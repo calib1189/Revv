@@ -46,6 +46,29 @@ export async function listFeedPosts(
   return data;
 }
 
+/** A single crew's own feed — same shape as listFeedPosts, filtered to
+ * one crew instead of a vehicle-category id list. Posts here also still
+ * show up in the main feed (crew_id is an additive tag, not a
+ * partition) — this is purely the crew page's own view. */
+export async function listCrewFeedPosts(
+  supabase: SupabaseClient<Database>,
+  crewId: string,
+  { before, limit = 12 }: { before?: string; limit?: number } = {},
+): Promise<Post[]> {
+  let query = supabase
+    .from("posts")
+    .select("*")
+    .eq("crew_id", crewId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (before) query = query.lt("created_at", before);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
 export async function listVideoPosts(
   supabase: SupabaseClient<Database>,
   { before, limit = 6 }: { before?: string; limit?: number } = {},

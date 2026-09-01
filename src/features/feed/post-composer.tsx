@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
 import type { Vehicle } from "@/lib/db/vehicles";
+import type { Crew } from "@/lib/db/crews";
 
 interface SelectedPhoto {
   file: File;
@@ -34,12 +35,15 @@ export function PostComposer({
   photos,
   video,
   vehicles,
+  crews,
   caption,
   onCaptionChange,
   hashtags,
   onHashtagsChange,
   vehicleId,
   onVehicleIdChange,
+  crewId,
+  onCrewIdChange,
   onBack,
   onRemovePhoto,
   onSubmit,
@@ -50,12 +54,15 @@ export function PostComposer({
   photos: SelectedPhoto[];
   video: SelectedVideo | null;
   vehicles: Vehicle[];
+  crews: Crew[];
   caption: string;
   onCaptionChange: (value: string) => void;
   hashtags: string;
   onHashtagsChange: (value: string) => void;
   vehicleId: string;
   onVehicleIdChange: (value: string) => void;
+  crewId: string;
+  onCrewIdChange: (value: string) => void;
   onBack: () => void;
   onRemovePhoto: (index: number) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -197,6 +204,25 @@ export function PostComposer({
               {vehicles.map((vehicle) => (
                 <option key={vehicle.id} value={vehicle.id}>
                   {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {crews.length > 0 && (
+          <div>
+            <Label htmlFor="crew">Post to a crew</Label>
+            <select
+              id="crew"
+              value={crewId}
+              onChange={(e) => onCrewIdChange(e.target.value)}
+              className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
+            >
+              <option value="">None</option>
+              {crews.map((crew) => (
+                <option key={crew.id} value={crew.id}>
+                  {crew.name}
                 </option>
               ))}
             </select>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MeetupsList, type MeetupListItem } from "@/features/meetups/meetups-list";
 import { ShopsBrowser } from "@/features/shops/shops-browser";
+import type { Crew } from "@/lib/db/crews";
 
 type DiscoverTab = "meets" | "shops";
 
@@ -15,9 +16,11 @@ type DiscoverTab = "meets" | "shops";
 export function DiscoverTabs({
   meetupItems,
   currentUserId,
+  crews,
 }: {
   meetupItems: MeetupListItem[];
   currentUserId: string | null;
+  crews: Crew[];
 }) {
   const [tab, setTab] = useState<DiscoverTab>("meets");
 
@@ -47,7 +50,7 @@ export function DiscoverTabs({
       </div>
 
       {tab === "meets" ? (
-        <MeetupsList items={meetupItems} currentUserId={currentUserId} />
+        <MeetupsList items={meetupItems} currentUserId={currentUserId} crews={crews} />
       ) : (
         <ShopsBrowser />
       )}

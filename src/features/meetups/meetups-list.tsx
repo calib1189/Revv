@@ -8,6 +8,7 @@ import { MyMeetupsPanel } from "@/features/meetups/my-meetups-panel";
 import { CompassIcon } from "@/components/ui/icons";
 import { haversineMiles } from "@/lib/geo/distance";
 import { MEETUP_TIER_RANK, type Meetup } from "@/lib/db/meetups";
+import type { Crew } from "@/lib/db/crews";
 
 export interface MeetupListItem {
   meetup: Meetup;
@@ -19,9 +20,11 @@ export interface MeetupListItem {
 export function MeetupsList({
   items,
   currentUserId,
+  crews,
 }: {
   items: MeetupListItem[];
   currentUserId: string | null;
+  crews: Crew[];
 }) {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationDenied, setLocationDenied] = useState(false);
@@ -106,7 +109,7 @@ export function MeetupsList({
 
       {currentUserId && (
         <div className="mb-6">
-          <CreateMeetupForm userId={currentUserId} />
+          <CreateMeetupForm userId={currentUserId} crews={crews} />
         </div>
       )}
 

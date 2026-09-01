@@ -242,6 +242,7 @@ export interface Database {
           author_id: string;
           vehicle_id: string | null;
           build_id: string | null;
+          crew_id: string | null;
           post_type: "photo" | "video";
           caption: string | null;
           created_at: string;
@@ -251,6 +252,7 @@ export interface Database {
           author_id: string;
           vehicle_id?: string | null;
           build_id?: string | null;
+          crew_id?: string | null;
           post_type?: "photo" | "video";
           caption?: string | null;
           created_at?: string;
@@ -444,6 +446,54 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["follows"]["Insert"]>;
         Relationships: never[];
       };
+      crews: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          description: string | null;
+          category: "make_model" | "local_area" | "scene" | "club" | "private_group" | "other";
+          location_text: string | null;
+          visibility: "public" | "private";
+          logo_media_id: string | null;
+          banner_media_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          description?: string | null;
+          category: "make_model" | "local_area" | "scene" | "club" | "private_group" | "other";
+          location_text?: string | null;
+          visibility?: "public" | "private";
+          logo_media_id?: string | null;
+          banner_media_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["crews"]["Insert"]>;
+        Relationships: never[];
+      };
+      crew_members: {
+        Row: {
+          id: string;
+          crew_id: string;
+          user_id: string;
+          role: "member" | "admin" | "leader";
+          status: "pending" | "approved";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          crew_id: string;
+          user_id: string;
+          role?: "member" | "admin" | "leader";
+          status?: "pending" | "approved";
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["crew_members"]["Insert"]>;
+        Relationships: never[];
+      };
       reports: {
         Row: {
           id: string;
@@ -533,6 +583,7 @@ export interface Database {
           tier: "standard" | "promoted" | "diamond";
           price_cents: number;
           stripe_checkout_session_id: string | null;
+          crew_id: string | null;
         };
         Insert: {
           id?: string;
@@ -548,6 +599,7 @@ export interface Database {
           tier?: "standard" | "promoted" | "diamond";
           price_cents?: number;
           stripe_checkout_session_id?: string | null;
+          crew_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["meetups"]["Insert"]>;
         Relationships: never[];

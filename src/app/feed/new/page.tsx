@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
+import { getCrewsByIds } from "@/lib/db/crews";
+import { listCrewIdsForUser } from "@/lib/db/crew-members";
 import { ComposePostForm } from "@/features/feed/compose-post-form";
 
 export default async function NewPostPage() {
@@ -28,7 +30,11 @@ export default async function NewPostPage() {
     );
   }
 
-  const vehicles = await listVehiclesByOwner(supabase, user.id);
+  const [vehicles, crewIds] = await Promise.all([
+    listVehiclesByOwner(supabase, user.id),
+    listCrewIdsForUser(supabase, user.id),
+  ]);
+  const crews = await getCrewsByIds(supabase, crewIds);
 
-  return <ComposePostForm userId={user.id} vehicles={vehicles} />;
+  return <ComposePostForm userId={user.id} vehicles={vehicles} crews={crews} />;
 }

@@ -13,6 +13,9 @@ const KIND_VERB: Record<string, string> = {
   like: "liked your post",
   comment: "commented on your post",
   follow: "started following you",
+  crew_join_request: "requested to join your crew",
+  crew_join_approved: "approved your request to join",
+  crew_post: "posted in a crew you're in",
 };
 
 export default async function NotificationsPage() {
@@ -65,9 +68,13 @@ export default async function NotificationsPage() {
             const href =
               n.kind === "follow"
                 ? `/u/${username}`
-                : n.target_type === "post" && n.target_id
-                  ? `/p/${n.target_id}`
-                  : "#";
+                : n.target_type === "crew" && n.target_id
+                  ? n.kind === "crew_join_request"
+                    ? `/crews/${n.target_id}/requests`
+                    : `/crews/${n.target_id}`
+                  : n.target_type === "post" && n.target_id
+                    ? `/p/${n.target_id}`
+                    : "#";
 
             return (
               <li key={n.id} className="px-4 py-3">
