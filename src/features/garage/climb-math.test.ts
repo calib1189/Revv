@@ -27,6 +27,51 @@ describe("unknownClimbValue", () => {
   it("treats a negative elapsed time as zero rather than going backward", () => {
     expect(unknownClimbValue(-500)).toBe(0);
   });
+
+  // Locks in the actual per-tier pacing contract this function exists
+  // to produce — bronze through gold fast, platinum/emerald slower,
+  // diamond and ruby each landing inside their own target dwell window.
+  // See CLIMB_SEGMENTS' own comment for why this isn't just one smooth
+  // curve.
+  function timeToReach(target: number): number {
+    // Binary search rather than solving each segment's ease inverse by
+    // hand — this function only needs to be monotonically increasing
+    // for that to work, which the "is monotonically increasing" test
+    // above already establishes.
+    let lo = 0;
+    let hi = 20_000;
+    for (let i = 0; i < 50; i++) {
+      const mid = (lo + hi) / 2;
+      if (unknownClimbValue(mid) < target) lo = mid;
+      else hi = mid;
+    }
+    return hi;
+  }
+
+  it("reaches gold's ceiling (60) well before the platinum/diamond/ruby budget even starts", () => {
+    expect(timeToReach(60)).toBeCloseTo(3800, 0);
+  });
+
+  it("spends noticeably longer crossing diamond (80 to 90) than crossing platinum or emerald", () => {
+    const platinumDwell = timeToReach(70) - timeToReach(60);
+    const emeraldDwell = timeToReach(80) - timeToReach(70);
+    const diamondDwell = timeToReach(90) - timeToReach(80);
+    expect(diamondDwell).toBeGreaterThan(platinumDwell);
+    expect(diamondDwell).toBeGreaterThan(emeraldDwell);
+  });
+
+  it("diamond's own dwell (80 to 90) lands inside its ~500-700ms target", () => {
+    const diamondDwell = timeToReach(90) - timeToReach(80);
+    expect(diamondDwell).toBeGreaterThanOrEqual(500);
+    expect(diamondDwell).toBeLessThanOrEqual(700);
+  });
+
+  it("ruby's own dwell (90 until the 6200ms climb floor) lands inside its ~700-1000ms target", () => {
+    const MIN_CLIMB_MS = 6200;
+    const rubyDwell = MIN_CLIMB_MS - timeToReach(90);
+    expect(rubyDwell).toBeGreaterThanOrEqual(700);
+    expect(rubyDwell).toBeLessThanOrEqual(1000);
+  });
 });
 
 describe("landingValue", () => {

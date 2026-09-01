@@ -123,7 +123,6 @@ export function RatingReveal({
 
   useEffect(() => {
     startedAtRef.current = performance.now();
-    sound.startClimbHum();
     return () => {
       sound.dispose();
     };
@@ -157,7 +156,6 @@ export function RatingReveal({
         } else {
           const value = unknownClimbValue(elapsed);
           setDisplayedValue(value);
-          sound.updateClimbPitch(value);
         }
       } else if (stageRef.current === "anticipating") {
         const anticipationElapsed = now - (anticipationStartedAtRef.current ?? now);
@@ -207,11 +205,9 @@ export function RatingReveal({
         const landingElapsed = now - (landingStartedAtRef.current ?? now);
         const value = landingValue(landingElapsed, LANDING_DURATION_MS, landingFromRef.current, currentResult.score);
         setDisplayedValue(value);
-        sound.updateClimbPitch(value);
         if (landingElapsed >= LANDING_DURATION_MS) {
           setDisplayedValue(currentResult.score);
-          sound.stopClimbHum();
-          sound.playLanding(ascendingRank(rankForScore(currentResult.score)), RANK_TIERS.length);
+          sound.playRankLocked(rankForScore(currentResult.score));
           hapticLanding();
           setStage("landed");
           return;
