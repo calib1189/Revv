@@ -230,6 +230,16 @@ export async function createCommentAction(
   if (error) return { error };
 
   const { supabase, user } = await requireUser();
+
+  // RLS already blocks this insert outright for a banned account (see
+  // migration 0055) — checked again here so the error actually says why,
+  // instead of the generic catch-all below telling someone to "try
+  // again" when retrying can never work.
+  const profile = await getProfileByUserId(supabase, user.id);
+  if (profile?.is_banned) {
+    return { error: "Your account is restricted from commenting." };
+  }
+
   try {
     await createComment(supabase, postId, user.id, body.trim(), parentId);
   } catch {

@@ -6,6 +6,7 @@ import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { DeleteCommentButton } from "@/features/feed/delete-comment-button";
 import { CommentForm } from "@/features/feed/comment-form";
+import { ReportButton } from "@/features/feed/report-button";
 import { relativeTime } from "@/lib/format/relative-time";
 import type { Comment } from "@/lib/db/comments";
 
@@ -146,12 +147,14 @@ function CommentRow({
               Reply
             </button>
           )}
-          {currentUserId === comment.author_id && (
+          {currentUserId === comment.author_id ? (
             <DeleteCommentButton
               commentId={comment.id}
               postId={postId}
               onDeleted={onDeleted}
             />
+          ) : (
+            currentUserId && <ReportButton targetType="comment" targetId={comment.id} />
           )}
         </div>
       </div>
