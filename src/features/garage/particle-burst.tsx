@@ -9,6 +9,13 @@ interface Particle {
   vy: number;
   size: number;
   color: string;
+  /** Local-space sheen (dark -> white highlight -> base color) across
+   * the particle's own width, defined once at spawn and reused every
+   * frame — since it's in local (pre-transform) coordinates, it rotates
+   * and moves with the particle for free via the same ctx.rotate the
+   * shape itself already goes through, rather than needing to be
+   * recomputed. */
+  gradient: CanvasGradient;
   rotation: number;
   vRotation: number;
   life: number; // 0-1, counts down
@@ -16,6 +23,15 @@ interface Particle {
 
 const GRAVITY = 0.28;
 const LIFETIME_MS = 1700;
+
+function darken(hex: string, amount: number): string {
+  const clean = hex.replace("#", "").slice(0, 6);
+  const num = parseInt(clean, 16);
+  const r = ((num >> 16) & 0xff) * (1 - amount);
+  const g = ((num >> 8) & 0xff) * (1 - amount);
+  const b = (num & 0xff) * (1 - amount);
+  return `rgb(${r | 0}, ${g | 0}, ${b | 0})`;
+}
 
 /** A one-shot confetti burst from the center of its container, hand-
  * rolled on canvas rather than a library — this project already
@@ -65,13 +81,23 @@ export function ParticleBurst({
     const particles: Particle[] = Array.from({ length: count }, () => {
       const angle = Math.random() * Math.PI * 2;
       const speed = (2.5 + Math.random() * 6) * devicePixelRatio * speedMultiplier;
+      const size = (3 + Math.random() * 5) * devicePixelRatio;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      // A metallic-foil look — a bright highlight sweeping across each
+      // tiny piece rather than a flat fill — same "premium loot" shine
+      // every other part of this reveal already has.
+      const gradient = ctx!.createLinearGradient(-size / 2, 0, size / 2, 0);
+      gradient.addColorStop(0, darken(color, 0.5));
+      gradient.addColorStop(0.5, "#ffffff");
+      gradient.addColorStop(1, color);
       return {
         x: cx,
         y: cy,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed - 3 * devicePixelRatio,
-        size: (3 + Math.random() * 5) * devicePixelRatio,
-        color: colors[Math.floor(Math.random() * colors.length)],
+        size,
+        color,
+        gradient,
         rotation: Math.random() * Math.PI * 2,
         vRotation: (Math.random() - 0.5) * 0.4,
         life: 1,
@@ -105,7 +131,9 @@ export function ParticleBurst({
         ctx!.globalAlpha = Math.max(0, p.life);
         ctx!.translate(p.x, p.y);
         ctx!.rotate(p.rotation);
-        ctx!.fillStyle = p.color;
+        ctx!.shadowColor = p.color;
+        ctx!.shadowBlur = p.size * 1.1;
+        ctx!.fillStyle = p.gradient;
         ctx!.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
         ctx!.restore();
       }
