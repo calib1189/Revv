@@ -204,7 +204,7 @@ export function RatingReveal({
         style={{ background: `radial-gradient(circle, ${color}66 0%, transparent 70%)` }}
       />
 
-      <div className="relative flex h-64 w-64 items-center justify-center">
+      <div className="relative flex h-52 w-52 items-center justify-center">
         <div
           key={`ring-${levelUpKey}`}
           className={`flex h-full w-full items-center justify-center ${landed ? "reveal-materialize" : "tier-levelup-icon-pop"}`}
