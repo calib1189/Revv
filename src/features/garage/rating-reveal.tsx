@@ -118,6 +118,13 @@ export function RatingReveal({
   const correctionFromRef = useRef(0);
   const correctionToRef = useRef(0);
   const prevTierRef = useRef<RankTier>("bronze");
+  // The highest whole point a climb tick has already fired for — ticking
+  // off this rather than a fixed timer means the tick rate falls out of
+  // the curve itself (fast while climbing quickly, sparse as it
+  // decelerates) instead of needing its own separate schedule. Only
+  // moves forward: a downward correction doesn't fire ticks for ground
+  // already covered, so re-crossing it during landing stays quiet.
+  const tickHighWaterRef = useRef(0);
 
   const [sound] = useState(() => new RevealSoundEngine());
 
@@ -143,6 +150,14 @@ export function RatingReveal({
       const start = startedAtRef.current ?? now;
       const elapsed = now - start;
 
+      function maybeTick(value: number) {
+        const floor = Math.floor(value);
+        if (floor > tickHighWaterRef.current) {
+          tickHighWaterRef.current = floor;
+          sound.playClimbTick();
+        }
+      }
+
       if (stageRef.current === "climbing") {
         const currentResult = resultRef.current;
         const pastMinimum = skipRef.current || elapsed >= MIN_CLIMB_MS;
@@ -156,6 +171,7 @@ export function RatingReveal({
         } else {
           const value = unknownClimbValue(elapsed);
           setDisplayedValue(value);
+          maybeTick(value);
         }
       } else if (stageRef.current === "anticipating") {
         const anticipationElapsed = now - (anticipationStartedAtRef.current ?? now);
@@ -205,6 +221,7 @@ export function RatingReveal({
         const landingElapsed = now - (landingStartedAtRef.current ?? now);
         const value = landingValue(landingElapsed, LANDING_DURATION_MS, landingFromRef.current, currentResult.score);
         setDisplayedValue(value);
+        maybeTick(value);
         if (landingElapsed >= LANDING_DURATION_MS) {
           setDisplayedValue(currentResult.score);
           sound.playRankLocked(rankForScore(currentResult.score));

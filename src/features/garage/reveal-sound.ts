@@ -15,8 +15,8 @@ import type { RankTier } from "@/lib/rating/rank";
  * fires a short, self-contained sound and then goes quiet. The reveal
  * used to run one long background hum the whole time the score was
  * climbing; it's gone entirely in favor of a discrete cue on each real
- * event (a tier crossing, the anticipation beat, a correction, the
- * final lock), with real silence in between.
+ * event (a climb tick, a tier crossing, the anticipation beat, a
+ * correction, the final lock), with real silence in between.
  */
 export class RevealSoundEngine {
   private ctx: AudioContext | null = null;
@@ -90,6 +90,24 @@ export class RevealSoundEngine {
     gain.connect(ctx.destination);
     osc.start(startTime);
     osc.stop(startTime + duration + 0.05);
+  }
+
+  /** A quick, light mechanical tick — the "spinning reel" texture behind
+   * the climbing and landing numbers, standing in for the old
+   * continuous hum. The caller fires this once per whole point the
+   * displayed number crosses rather than on a fixed timer, so it
+   * naturally races during the fast early climb and spaces itself out
+   * as the curve decelerates into diamond/ruby and the landing approach
+   * — a real slot machine's "winding down" feel, for free, just from
+   * following the number instead of a clock. Slight per-call pitch
+   * jitter keeps a couple hundred of these in a row from reading as a
+   * metronome. */
+  playClimbTick() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const jitter = 1 + (Math.random() - 0.5) * 0.3;
+    this.tone(720 * jitter, now, 0.045, { type: "triangle", gain: 0.045 });
   }
 
   /** Short two-note chime on every tier crossing during the climb —
