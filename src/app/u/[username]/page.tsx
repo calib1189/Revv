@@ -132,6 +132,11 @@ export default async function ProfilePage({
           {profile.display_name && (
             <p className="truncate text-sm text-muted">@{profile.username}</p>
           )}
+          {profile.is_founder && (
+            <span className="mt-1.5 inline-flex w-fit flex-shrink-0 items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
+              Founder &amp; Owner
+            </span>
+          )}
 
           <div className="mt-4 flex gap-6">
             <div>
