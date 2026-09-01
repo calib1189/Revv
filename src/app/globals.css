@@ -697,6 +697,20 @@ html.native-app body::-webkit-scrollbar {
     100% { transform: scale(0.7); opacity: 0; }
   }
 
+  /* The held beat between the climb stopping and the final approach
+     starting — a slow breathing pulse on the icon itself, distinct from
+     (and layered separately from) the level-up bounce/materialize
+     animations so swapping into and out of it can't restart either of
+     those. */
+  .reveal-anticipation-pulse {
+    animation: reveal-anticipation-pulse-scale 0.4s ease-in-out infinite;
+  }
+
+  @keyframes reveal-anticipation-pulse-scale {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+
   /* ------------------------------------------------------------------- *
    * Casino-jackpot dressing for the reveal — a full-screen color wash on
    * every tier-up (not just the contained ring pulse), and a full-screen

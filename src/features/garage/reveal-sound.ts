@@ -108,6 +108,20 @@ export class RevealSoundEngine {
     this.tone(base * 1.5, now + 0.08, 0.2, { type: "triangle", gain: 0.08 });
   }
 
+  /** A brief "holding its breath" moment right before landing — a slow
+   * pitch bend on the same climbing hum rather than a new sound, so it
+   * reads as tension building toward the landing chord instead of an
+   * unrelated cue. */
+  playAnticipationRiser(durationSec: number) {
+    const ctx = this.ctx;
+    if (!ctx || !this.humOsc) return;
+    const now = ctx.currentTime;
+    const current = this.humOsc.frequency.value;
+    this.humOsc.frequency.cancelScheduledValues(now);
+    this.humOsc.frequency.setValueAtTime(current, now);
+    this.humOsc.frequency.linearRampToValueAtTime(current * 1.15, now + durationSec);
+  }
+
   /** The final landing moment — a small ascending major chord. */
   playLanding() {
     const ctx = this.getContext();

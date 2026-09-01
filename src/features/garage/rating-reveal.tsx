@@ -8,7 +8,7 @@ import { unknownClimbValue, landingValue, landingStartValue } from "@/features/g
 import { RevealSoundEngine } from "@/features/garage/reveal-sound";
 import type { BuildRating } from "@/lib/providers/rating-provider";
 
-type Stage = "climbing" | "landing" | "landed" | "settled";
+type Stage = "climbing" | "anticipating" | "landing" | "landed" | "settled";
 
 // However fast the real result comes back, the climb always gets at
 // least this long before it's allowed to start its final approach —
@@ -17,6 +17,11 @@ type Stage = "climbing" | "landing" | "landed" | "settled";
 // is the full 8s the number takes to finish counting, guaranteed
 // regardless of how fast the real rating call actually comes back.
 const MIN_CLIMB_MS = 6200;
+// A held beat between the climb stopping and the final approach starting
+// — the number freezes, the hum bends upward, and the icon holds a slow
+// pulse, all as a genuine "is it going to land here" pause rather than
+// going straight from climbing into landing.
+const ANTICIPATION_MS = 550;
 const LANDING_DURATION_MS = 1800;
 const LANDING_RUNWAY = 7;
 const SETTLE_DELAY_MS = 1600;
@@ -54,7 +59,17 @@ export function RatingReveal({
   onDone: () => void;
 }) {
   const [stage, setStageState] = useState<Stage>("climbing");
-  const [displayedValue, setDisplayedValue] = useState(0);
+  const [displayedValue, setDisplayedValueState] = useState(0);
+  // The RAF loop's own `frame` closure is created once and recurses via
+  // requestAnimationFrame rather than being re-created on every render
+  // (same reasoning as resultRef/skipRef below) — reading `displayedValue`
+  // directly from it would read whatever it was at mount forever, not
+  // its current value, so anything inside that loop needs this ref.
+  const displayedValueRef = useRef(0);
+  function setDisplayedValue(value: number) {
+    displayedValueRef.current = value;
+    setDisplayedValueState(value);
+  }
   const [skipRequested, setSkipRequested] = useState(false);
   const [levelUpKey, setLevelUpKey] = useState(0);
   // The tier being faded out during a crossfade — kept mounted just long
@@ -81,6 +96,7 @@ export function RatingReveal({
   const startedAtRef = useRef<number | null>(null);
   const landingFromRef = useRef(0);
   const landingStartedAtRef = useRef<number | null>(null);
+  const anticipationStartedAtRef = useRef<number | null>(null);
   const prevTierRef = useRef<RankTier>("bronze");
 
   const [sound] = useState(() => new RevealSoundEngine());
@@ -112,14 +128,30 @@ export function RatingReveal({
         const currentResult = resultRef.current;
         const pastMinimum = skipRef.current || elapsed >= MIN_CLIMB_MS;
         if (currentResult && pastMinimum) {
-          const unknownValue = unknownClimbValue(elapsed);
-          landingFromRef.current = landingStartValue(unknownValue, currentResult.score, LANDING_RUNWAY);
-          landingStartedAtRef.current = now;
-          setStage("landing");
+          // Freeze right here rather than jumping straight into landing
+          // — landingFromRef is computed once anticipation ends, from
+          // whatever value it was frozen at, not a live climb value.
+          anticipationStartedAtRef.current = now;
+          sound.playAnticipationRiser(ANTICIPATION_MS / 1000);
+          setStage("anticipating");
         } else {
           const value = unknownClimbValue(elapsed);
           setDisplayedValue(value);
           sound.updateClimbPitch(value);
+        }
+      } else if (stageRef.current === "anticipating") {
+        const anticipationElapsed = now - (anticipationStartedAtRef.current ?? now);
+        if (anticipationElapsed >= ANTICIPATION_MS) {
+          const currentResult = resultRef.current;
+          if (currentResult) {
+            landingFromRef.current = landingStartValue(
+              displayedValueRef.current,
+              currentResult.score,
+              LANDING_RUNWAY,
+            );
+            landingStartedAtRef.current = now;
+            setStage("landing");
+          }
         }
       } else if (stageRef.current === "landing") {
         const currentResult = resultRef.current;
@@ -275,9 +307,13 @@ export function RatingReveal({
           {/* The source art itself reads a little flat against all the
               motion around it — brightness/contrast/saturation plus a
               colored glow (matching this tier's own color) makes it pop
-              the way the animated ring around it always has. */}
+              the way the animated ring around it always has. A slow
+              pulse layers on top during the anticipation hold, applied
+              here rather than on the wrapper above so it can't collide
+              with (and accidentally restart) that wrapper's own
+              level-up/materialize animation. */}
           <Icon
-            className="h-full w-full"
+            className={`h-full w-full ${stage === "anticipating" ? "reveal-anticipation-pulse" : ""}`}
             style={{
               filter: `brightness(1.3) contrast(1.15) saturate(1.25) drop-shadow(0 0 22px ${color}99)`,
             }}
@@ -312,6 +348,18 @@ export function RatingReveal({
         </p>
         <p className="text-xl font-semibold tabular-nums text-white/90">{displayedValue.toFixed(2)}</p>
       </div>
+
+      {/* The reveal used to hand off straight to the tier + score, with
+          the actual "why" living only on the garage card afterward —
+          landing the number and then saying nothing about it undersells
+          the moment. Same copy the garage card already shows, just
+          surfaced here first. */}
+      {stage === "settled" && result && (
+        <div className="reveal-text-in relative mt-5 max-w-xs px-6 text-center">
+          <p className="text-sm leading-relaxed text-white/80">{result.strengths}</p>
+          <p className="mt-2 text-sm leading-relaxed text-white/45">{result.limitingFactors}</p>
+        </div>
+      )}
 
       {!landed && !skipRequested && (
         <button
