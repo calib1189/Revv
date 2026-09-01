@@ -275,7 +275,8 @@ export function RatingReveal({
         <button
           type="button"
           onClick={onDone}
-          className="reveal-text-in relative mt-10 rounded-full bg-accent px-8 py-3 text-sm font-semibold text-accent-foreground"
+          className="reveal-text-in relative mt-10 rounded-full px-8 py-3 text-sm font-semibold"
+          style={{ backgroundColor: color, color: "#0a0a0b" }}
         >
           Continue
         </button>
