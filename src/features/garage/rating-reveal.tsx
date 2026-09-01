@@ -229,20 +229,32 @@ export function RatingReveal({
           className="tier-levelup-ring pointer-events-none absolute inset-0 rounded-full border-2"
           style={{ borderColor: color }}
         />
+        {/* Confetti needs real room to fly outward and fade before it
+            runs out of canvas — sized to the small icon box itself, it
+            hit a hard clip right at that box's edge, which read as a
+            square frame around the icon once enough particles piled up
+            against it (worst on the final burst, with the most
+            particles). This wrapper gives it a canvas several times
+            bigger than the icon, well past where particles have already
+            faded out by the time they'd reach its edge. */}
         {levelUpKey > 0 && (
-          <ParticleBurst key={`sparkle-${levelUpKey}`} burstKey={levelUpKey} colors={[color, "#ffffff"]} />
+          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2">
+            <ParticleBurst key={`sparkle-${levelUpKey}`} burstKey={levelUpKey} colors={[color, "#ffffff"]} />
+          </div>
         )}
 
         {stage === "landed" && (
           <span aria-hidden className="reveal-flash absolute inset-0 rounded-full bg-white" />
         )}
         {landed && (
-          <ParticleBurst
-            burstKey={`final-${result?.score ?? 0}`}
-            colors={[color, "#ffffff", `${color}99`, "#ffd166"]}
-            count={160}
-            speedMultiplier={1.4}
-          />
+          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2">
+            <ParticleBurst
+              burstKey={`final-${result?.score ?? 0}`}
+              colors={[color, "#ffffff", `${color}99`, "#ffd166"]}
+              count={160}
+              speedMultiplier={1.4}
+            />
+          </div>
         )}
       </div>
 

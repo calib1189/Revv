@@ -53,6 +53,15 @@ export function ParticleBurst({
 
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
+    // The canvas is only ever as big as its container, and the fastest
+    // particles can still reach that edge well before their time-based
+    // fade (below) makes them transparent — without this, they'd get
+    // hard-clipped by the canvas boundary while still visibly opaque,
+    // which reads as a "box" drawn right where the canvas ends. Fading
+    // every particle out over the last stretch of the container's own
+    // radius guarantees nothing is still visible by the time it would
+    // hit that edge, regardless of how fast it's moving.
+    const maxRadius = Math.min(canvas.width, canvas.height) / 2;
     const particles: Particle[] = Array.from({ length: count }, () => {
       const angle = Math.random() * Math.PI * 2;
       const speed = (2.5 + Math.random() * 6) * devicePixelRatio * speedMultiplier;
@@ -84,7 +93,13 @@ export function ParticleBurst({
         p.y += p.vy;
         p.vy += GRAVITY * devicePixelRatio;
         p.rotation += p.vRotation;
-        p.life = 1 - t;
+
+        const distFromCenter = Math.hypot(p.x - cx, p.y - cy);
+        // 1 near the center, ramping down to 0 over the outer 35% of the
+        // available radius — comfortably faded out before the actual
+        // canvas edge, not right at it.
+        const edgeFade = 1 - Math.min(1, Math.max(0, (distFromCenter / maxRadius - 0.65) / 0.35));
+        p.life = (1 - t) * edgeFade;
 
         ctx!.save();
         ctx!.globalAlpha = Math.max(0, p.life);
