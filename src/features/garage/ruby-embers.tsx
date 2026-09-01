@@ -1,9 +1,12 @@
 /** Ruby-only backdrop for the build-rating reveal's final landing —
  * same idea as CosmicStarfield/EmeraldAura/DiamondPrism, themed to
- * ruby: rising embers over a slow-pulsing heat glow, like the inside of
- * a forge rather than a flat red wash. Pure CSS, generated once at
- * module load since it's decorative and never needs to change after
- * that. */
+ * ruby: a rotating flame-vortex sweep and a slow-pulsing heat glow,
+ * with embers rising through both — the inside of a forge, not a flat
+ * red wash. Ruby sits right below cosmic on the ladder and asked for
+ * "insane cinematic" specifically, so this carries as many active
+ * layers as diamond's sweep + cosmic's stars/planets, not just embers
+ * alone. Pure CSS, generated once at module load since it's decorative
+ * and never needs to change after that. */
 
 interface Ember {
   left: number;
@@ -23,11 +26,14 @@ function generateEmbers(count: number): Ember[] {
   }));
 }
 
-const EMBERS = generateEmbers(30);
+const EMBERS = generateEmbers(38);
 
 export function RubyEmbers() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+      {/* A rotating flame-vortex sweep — same technique as diamond's
+          prism sweep, warm tones instead of cold. */}
+      <div className="reveal-flame-vortex absolute inset-0" />
       {/* A slow-pulsing heat glow underneath the embers — the forge
           they're rising out of, not just a static backdrop. */}
       <div className="reveal-heat-pulse absolute inset-0" />

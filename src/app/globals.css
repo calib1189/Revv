@@ -775,6 +775,57 @@ html.native-app body::-webkit-scrollbar {
     50% { transform: translate(-5vw, -5vh) scale(0.9); }
   }
 
+  .reveal-planet-drift-c {
+    top: 55%;
+    left: 60%;
+    animation: reveal-planet-drift-c-move 18s ease-in-out infinite;
+  }
+
+  @keyframes reveal-planet-drift-c-move {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(4vw, -3vh) scale(1.2); }
+  }
+
+  /* Cosmic's own rotating nebula, underneath the stars and planets —
+     the top of the ladder carries the most layers of anything here
+     (nebula + three star depths + three drifting planets), not just a
+     bigger version of the sweep every other bespoke tier gets. */
+  .reveal-nebula-swirl {
+    background: conic-gradient(
+      from var(--rank-angle, 0deg) at 50% 50%,
+      rgba(167, 139, 250, 0.22),
+      transparent 14%,
+      rgba(96, 165, 250, 0.18) 32%,
+      transparent 50%,
+      rgba(244, 114, 182, 0.16) 68%,
+      transparent 84%,
+      rgba(167, 139, 250, 0.2) 100%
+    );
+    filter: blur(55px);
+    animation: rank-angle-spin 34s linear infinite;
+  }
+
+  /* A shooting star only actually moves during a small slice (0-4%) of
+     its own long cycle — the rest of the duration it just sits
+     invisible at rest, waiting to loop. Staggered delays/durations per
+     star (set in cosmic-starfield.tsx) keep them from all streaking on
+     the same beat, reading as occasional rather than a barrage. */
+  .reveal-shooting-star-trail {
+    width: 130px;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), transparent);
+    animation-name: reveal-shooting-star-streak;
+    animation-timing-function: ease-out;
+    animation-iteration-count: infinite;
+  }
+
+  @keyframes reveal-shooting-star-streak {
+    0% { transform: translateX(0); opacity: 0; }
+    1% { opacity: 1; }
+    4% { transform: translateX(220px); opacity: 0; }
+    100% { transform: translateX(220px); opacity: 0; }
+  }
+
   /* Shared rising-particle motion — emerald's fireflies and ruby's
      embers are the same drift-up-and-fade arc, just different colors
      and sizes set per-particle via inline style (--drift-x). */
@@ -788,7 +839,7 @@ html.native-app body::-webkit-scrollbar {
     0% { transform: translate(0, 0); opacity: 0; }
     12% { opacity: 1; }
     88% { opacity: 1; }
-    100% { transform: translate(var(--drift-x, 0), -85vh); opacity: 0; }
+    100% { transform: translate(var(--drift-x, 0), -118vh); opacity: 0; }
   }
 
   /* Emerald: soft vertical light shafts, like sunlight breaking through
@@ -835,6 +886,24 @@ html.native-app body::-webkit-scrollbar {
   @keyframes reveal-heat-pulse-glow {
     0%, 100% { opacity: 0.7; }
     50% { opacity: 1; }
+  }
+
+  /* Ruby: a rotating flame-vortex sweep, same conic-gradient-rotation
+     technique as diamond's prism sweep — warm reds/oranges/golds
+     turning like heat rising off a fire, instead of diamond's cold
+     blue/white refraction. */
+  .reveal-flame-vortex {
+    background: conic-gradient(
+      from var(--rank-angle, 0deg) at 50% 50%,
+      rgba(255, 90, 60, 0.26),
+      transparent 16%,
+      rgba(251, 191, 36, 0.18) 38%,
+      transparent 58%,
+      rgba(244, 63, 94, 0.24) 78%,
+      transparent 96%
+    );
+    filter: blur(38px);
+    animation: rank-angle-spin 7s linear infinite;
   }
 
   /* A light sweep across the emblem itself, not just the ring around it
