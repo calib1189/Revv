@@ -218,13 +218,17 @@ export class RevealSoundEngine {
         break;
 
       case "ruby":
-        // A very powerful, cinematic impact — a bigger, harder-edged
-        // chord plus a short rising energy-zap layered on top of it.
-        [523.25, 659.25, 830.61].forEach((freq, i) => {
-          this.tone(freq, now + i * 0.05, 0.75, { type: "sawtooth", gain: 0.12 });
+        // A deep, warm, happy chord — a real major triad over a heavy
+        // bass hit, rather than the harsher augmented/sawtooth chord
+        // this used to be (C-E-G# is inherently dissonant, and sawtooth
+        // reads as buzzy/aggressive no matter what notes it plays).
+        // Ruby should feel like a rich, satisfying payoff one step
+        // below Cosmic's full triumphant finish, not an edgy impact.
+        this.tone(55, now, 0.65, { type: "sine", gain: 0.18 });
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+          this.tone(freq, now + i * 0.05, 0.85, { type: "triangle", gain: 0.13 });
         });
-        this.tone(50, now, 0.5, { type: "sine", gain: 0.14 });
-        this.sweep(220, 1400, now + 0.05, 0.22, { type: "sawtooth", gain: 0.09 });
+        this.tone(1567.98, now + 0.22, 0.45, { type: "sine", gain: 0.06 });
         break;
 
       case "cosmic":
