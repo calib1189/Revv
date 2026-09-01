@@ -2,16 +2,16 @@ import Image from "next/image";
 import type { RankTier } from "@/lib/rating/rank";
 
 const RANK_ICON_SRC: Record<RankTier, string> = {
-  bronze: "/ranks/bronze.png",
-  copper: "/ranks/copper.png",
-  iron: "/ranks/iron.png",
-  silver: "/ranks/silver.png",
-  gold: "/ranks/gold.png",
-  platinum: "/ranks/platinum.png",
-  emerald: "/ranks/emerald.png",
-  diamond: "/ranks/diamond.png",
-  ruby: "/ranks/ruby.png",
-  cosmic: "/ranks/cosmic.png",
+  bronze: "/ranks/bronze.webp",
+  copper: "/ranks/copper.webp",
+  iron: "/ranks/iron.webp",
+  silver: "/ranks/silver.webp",
+  gold: "/ranks/gold.webp",
+  platinum: "/ranks/platinum.webp",
+  emerald: "/ranks/emerald.webp",
+  diamond: "/ranks/diamond.webp",
+  ruby: "/ranks/ruby.webp",
+  cosmic: "/ranks/cosmic.webp",
 };
 
 /**
@@ -19,6 +19,9 @@ const RANK_ICON_SRC: Record<RankTier, string> = {
  * crest images the user supplied for each tier, background-keyed to
  * transparent and cropped to just the badge (the tier name text baked
  * into the originals is cut off; RANK_LABELS already renders that).
+ * Re-exported here as 1024px WebP (Lanczos upscale + a light sharpen
+ * from the original 320px source) — the originals looked visibly soft
+ * once stretched to the size the build-rating reveal renders them at.
  */
 function RankIcon({
   tier,
