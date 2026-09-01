@@ -11,15 +11,26 @@ import type { RankTier } from "@/lib/rating/rank";
  * bonus on top of the animation, never something its absence should
  * break.
  *
- * Deliberately has no continuous tone anywhere in it — every method
- * fires a short, self-contained sound and then goes quiet. The reveal
- * used to run one long background hum the whole time the score was
- * climbing; it's gone entirely in favor of a discrete cue on each real
- * event (a climb tick, a tier crossing, the anticipation beat, a
- * correction, the final lock), with real silence in between.
+ * Almost every method here fires a short, self-contained sound and then
+ * goes quiet — the tier-crossing chime, the correction blip, and the
+ * per-tier landing sounds all work this way. The one exception is the
+ * climb riser (startClimbRiser/updateClimbRiser/stopClimbRiser): a
+ * continuous but quiet, evolving airy swell that tracks the climb's own
+ * progress, built from filtered noise rather than a bare oscillator so
+ * it reads as "building energy" (a slot machine's reels picking up
+ * speed) rather than the flat, buzzy engine-hum drone this reveal used
+ * to run — a plain oscillator's pitch/gain that never changes timbre is
+ * exactly what made the old hum feel like a background drone; noise
+ * swept through a moving filter keeps changing character as it plays,
+ * which is what stops it from reading the same way.
  */
 export class RevealSoundEngine {
   private ctx: AudioContext | null = null;
+  private noiseBuffer: AudioBuffer | null = null;
+  private riserSource: AudioBufferSourceNode | null = null;
+  private riserFilter: BiquadFilterNode | null = null;
+  private riserGain: GainNode | null = null;
+  private riserLfo: OscillatorNode | null = null;
 
   private getContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -92,21 +103,94 @@ export class RevealSoundEngine {
     osc.stop(startTime + duration + 0.05);
   }
 
-  /** A soft, low tick — the "spinning reel" texture behind the climbing
-   * and landing numbers, standing in for the old continuous hum. The
-   * caller fires this once per whole point the displayed number
-   * crosses (rate-limited on its side so the fast early climb doesn't
-   * turn it into a machine-gun clatter), so it still spaces itself out
-   * further on its own as the curve decelerates into diamond/ruby and
-   * the landing approach. A rounded sine rather than triangle, quiet
-   * and short, so a run of these reads as a soft patter, not a click
-   * track — with a little pitch jitter so it never sounds mechanical. */
-  playClimbTick() {
+  /** A few seconds of looping white noise, generated once per
+   * AudioContext and reused by every riser start — the raw material the
+   * riser's bandpass filter sweeps through to make it sound airy rather
+   * than like a pitched tone. */
+  private getNoiseBuffer(ctx: AudioContext): AudioBuffer {
+    if (!this.noiseBuffer) {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      this.noiseBuffer = buffer;
+    }
+    return this.noiseBuffer;
+  }
+
+  /** Starts the climb riser — looping filtered noise, silent until the
+   * first updateClimbRiser call ramps it up. A slow LFO wobbles the
+   * filter's center frequency the whole time it plays, so even while
+   * updateClimbRiser is holding a steady value (the anticipation pause)
+   * it keeps a little life to it instead of sitting on one frozen tone.
+   * Safe to call again while already running — it no-ops rather than
+   * layering a second one underneath. */
+  startClimbRiser() {
     const ctx = this.getContext();
-    if (!ctx) return;
+    if (!ctx || this.riserSource) return;
     const now = ctx.currentTime;
-    const jitter = 1 + (Math.random() - 0.5) * 0.15;
-    this.tone(360 * jitter, now, 0.07, { type: "sine", gain: 0.028 });
+
+    const source = ctx.createBufferSource();
+    source.buffer = this.getNoiseBuffer(ctx);
+    source.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(150, now);
+    filter.Q.setValueAtTime(1.1, now);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+
+    const lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.setValueAtTime(0.5, now);
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(35, now);
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    source.start(now);
+    lfo.start(now);
+
+    this.riserSource = source;
+    this.riserFilter = filter;
+    this.riserGain = gain;
+    this.riserLfo = lfo;
+  }
+
+  /** Moves the riser's filter sweep and volume toward wherever the climb
+   * currently sits — `progress` is 0 (climb just started) to 1 (right at
+   * the real score's ceiling). Smoothly targeted rather than snapped, so
+   * many calls a second from the reveal's RAF loop sound like one
+   * continuous swell, not a stutter of little jumps. */
+  updateClimbRiser(progress: number) {
+    if (!this.riserFilter || !this.riserGain || !this.ctx) return;
+    const p = Math.min(1, Math.max(0, progress));
+    const now = this.ctx.currentTime;
+    this.riserFilter.frequency.setTargetAtTime(150 + p * 1600, now, 0.15);
+    this.riserGain.gain.setTargetAtTime(0.0001 + p * 0.05, now, 0.15);
+  }
+
+  /** Fades the riser out and tears it down — called right as the reveal
+   * locks in its final tier, so the swell cuts away just before
+   * playRankLocked's impact rather than the two overlapping. */
+  stopClimbRiser() {
+    const ctx = this.ctx;
+    if (!ctx || !this.riserSource || !this.riserGain || !this.riserLfo) return;
+    const now = ctx.currentTime;
+    this.riserGain.gain.cancelScheduledValues(now);
+    this.riserGain.gain.setValueAtTime(this.riserGain.gain.value, now);
+    this.riserGain.gain.linearRampToValueAtTime(0.0001, now + 0.12);
+    this.riserSource.stop(now + 0.15);
+    this.riserLfo.stop(now + 0.15);
+    this.riserSource = null;
+    this.riserFilter = null;
+    this.riserGain = null;
+    this.riserLfo = null;
   }
 
   /** Short two-note chime on every tier crossing during the climb —
@@ -260,6 +344,10 @@ export class RevealSoundEngine {
     if (this.ctx) {
       const ctx = this.ctx;
       this.ctx = null;
+      this.riserSource = null;
+      this.riserFilter = null;
+      this.riserGain = null;
+      this.riserLfo = null;
       void ctx.close().catch(() => {});
     }
   }

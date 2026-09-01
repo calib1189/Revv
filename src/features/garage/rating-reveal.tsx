@@ -35,11 +35,13 @@ const CORRECTION_DURATION_MS = 750;
 const LANDING_DURATION_MS = 1800;
 const LANDING_RUNWAY = 7;
 const SETTLE_DELAY_MS = 1600;
-// Floors the gap between climb ticks — the fast early climb crosses a
-// whole point roughly every 60ms on its own, which read as a machine-gun
-// clicking rather than a slot-machine reel. The later, already-slower
-// segments are unaffected since their natural gap already exceeds this.
-const MIN_TICK_INTERVAL_MS = 130;
+// The climb riser's progress is driven by the displayed value itself
+// rather than elapsed time, normalized against this ceiling — a plain
+// /100 would nearly always fall short of 1 during the unknown-phase
+// climb (which tops out around 92) and only reach it once the real
+// score's landing pushes past that, which is exactly the swell-building-
+// toward-the-finish shape this is going for.
+const RISER_CEILING = 100;
 
 // RANK_TIERS is ordered highest tier first (cosmic) to lowest (bronze);
 // the sound engine wants the opposite — ascending rank, 0 for bronze —
@@ -123,25 +125,12 @@ export function RatingReveal({
   const correctionFromRef = useRef(0);
   const correctionToRef = useRef(0);
   const prevTierRef = useRef<RankTier>("bronze");
-  // The highest whole point a climb tick has already fired for — ticking
-  // off this rather than a fixed timer means the tick rate falls out of
-  // the curve itself (fast while climbing quickly, sparse as it
-  // decelerates) instead of needing its own separate schedule. Only
-  // moves forward: a downward correction doesn't fire ticks for ground
-  // already covered, so re-crossing it during landing stays quiet.
-  const tickHighWaterRef = useRef(0);
-  // Real time (ms) the last tick actually played — the fast early climb
-  // crosses a whole point roughly every 60ms on its own, which read as a
-  // machine-gun clicking rather than a slot-machine reel. This floors the
-  // gap between ticks so the early climb still feels lively without
-  // firing on almost every frame; the later, already-slower segments are
-  // unaffected since their natural gap already exceeds it.
-  const lastTickAtRef = useRef(0);
 
   const [sound] = useState(() => new RevealSoundEngine());
 
   useEffect(() => {
     startedAtRef.current = performance.now();
+    sound.startClimbRiser();
     return () => {
       sound.dispose();
     };
@@ -162,15 +151,6 @@ export function RatingReveal({
       const start = startedAtRef.current ?? now;
       const elapsed = now - start;
 
-      function maybeTick(value: number) {
-        const floor = Math.floor(value);
-        if (floor > tickHighWaterRef.current && now - lastTickAtRef.current >= MIN_TICK_INTERVAL_MS) {
-          tickHighWaterRef.current = floor;
-          lastTickAtRef.current = now;
-          sound.playClimbTick();
-        }
-      }
-
       if (stageRef.current === "climbing") {
         const currentResult = resultRef.current;
         const pastMinimum = skipRef.current || elapsed >= MIN_CLIMB_MS;
@@ -184,7 +164,7 @@ export function RatingReveal({
         } else {
           const value = unknownClimbValue(elapsed);
           setDisplayedValue(value);
-          maybeTick(value);
+          sound.updateClimbRiser(value / RISER_CEILING);
         }
       } else if (stageRef.current === "anticipating") {
         const anticipationElapsed = now - (anticipationStartedAtRef.current ?? now);
@@ -219,6 +199,7 @@ export function RatingReveal({
           correctionToRef.current,
         );
         setDisplayedValue(value);
+        sound.updateClimbRiser(value / RISER_CEILING);
         if (correctionElapsed >= CORRECTION_DURATION_MS) {
           setDisplayedValue(correctionToRef.current);
           landingFromRef.current = correctionToRef.current;
@@ -234,9 +215,10 @@ export function RatingReveal({
         const landingElapsed = now - (landingStartedAtRef.current ?? now);
         const value = landingValue(landingElapsed, LANDING_DURATION_MS, landingFromRef.current, currentResult.score);
         setDisplayedValue(value);
-        maybeTick(value);
+        sound.updateClimbRiser(value / RISER_CEILING);
         if (landingElapsed >= LANDING_DURATION_MS) {
           setDisplayedValue(currentResult.score);
+          sound.stopClimbRiser();
           sound.playRankLocked(rankForScore(currentResult.score));
           hapticLanding();
           setStage("landed");
