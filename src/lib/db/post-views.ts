@@ -60,3 +60,34 @@ export async function getViewCountsForPosts(
   }
   return counts;
 }
+
+/** post_id -> count of *distinct* viewers, for a batch of posts — every
+ * rewatch counts toward getViewCountsForPosts' total, but a creator
+ * asking "how many different people saw this" needs the distinct
+ * count instead. PostgREST's count option counts rows, not unique
+ * column values, so this has to dedupe client-side (same reasoning as
+ * getActiveUserCounts in lib/analytics/queries.ts). */
+export async function getUniqueViewerCountsForPosts(
+  supabase: SupabaseClient<Database>,
+  postIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (postIds.length === 0) return counts;
+
+  const { data, error } = await supabase
+    .from("post_views")
+    .select("post_id, viewer_id")
+    .in("post_id", postIds);
+  if (error) throw error;
+
+  const viewersByPost = new Map<string, Set<string>>();
+  for (const row of data) {
+    const viewers = viewersByPost.get(row.post_id) ?? new Set<string>();
+    viewers.add(row.viewer_id);
+    viewersByPost.set(row.post_id, viewers);
+  }
+  for (const [postId, viewers] of viewersByPost) {
+    counts.set(postId, viewers.size);
+  }
+  return counts;
+}

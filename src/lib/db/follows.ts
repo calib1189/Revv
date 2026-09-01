@@ -52,6 +52,24 @@ export async function getFollowerCount(
   return count ?? 0;
 }
 
+/** New followers gained since a given timestamp — for a creator's own
+ * "this week" summary. Not attributable to any specific post (a follow
+ * doesn't record what someone was looking at when they tapped it), so
+ * this is an account-level number only. */
+export async function getNewFollowerCount(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  sinceIso: string,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("follows")
+    .select("*", { count: "exact", head: true })
+    .eq("followee_id", userId)
+    .gte("created_at", sinceIso);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function getFollowingCount(
   supabase: SupabaseClient<Database>,
   userId: string,

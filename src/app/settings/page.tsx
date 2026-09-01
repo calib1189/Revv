@@ -33,6 +33,13 @@ export default async function SettingsPage() {
           <span className="text-sm font-medium">Activity</span>
           <span className="text-xs text-muted">Likes, comments, follows, and messages</span>
         </Link>
+        <Link
+          href="/studio"
+          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
+        >
+          <span className="text-sm font-medium">Creator Studio</span>
+          <span className="text-xs text-muted">Views, engagement, and how each post is doing</span>
+        </Link>
       </div>
 
       <div className="mb-8">
