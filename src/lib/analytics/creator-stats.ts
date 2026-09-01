@@ -8,6 +8,8 @@ import { getLikeCountsForPosts } from "@/lib/db/likes";
 import { getCommentCountsForPosts } from "@/lib/db/comments";
 import { getSaveCountsForPosts } from "@/lib/db/saves";
 import { getNewFollowerCount } from "@/lib/db/follows";
+import { getProfileVisitCountsBySourcePost } from "@/lib/db/profile-visits";
+import { getVehicleViewCountsBySourcePost } from "@/lib/db/vehicle-views";
 import { computeEngagementScore } from "@/lib/ranking/feed-score";
 import { relativePercentDiff } from "@/lib/format/percent";
 
@@ -23,6 +25,12 @@ export interface CreatorPostStats {
   comments: number;
   shares: number;
   saves: number;
+  /** Profile visits and garage visits attributed to this post via its
+   * `?from=<postId>` links — undercounts real traffic, since only the
+   * single hop straight off the post is tracked (see the ?from= link
+   * sites in swipe-slide.tsx / post-card.tsx). */
+  profileVisits: number;
+  garageVisits: number;
   /** How this post's engagement score compares to the average of this
    * creator's *other* posts — null when there's nothing else to compare
    * against yet (their first post, or their only post). */
@@ -40,15 +48,18 @@ export async function getCreatorPostStats(
   if (posts.length === 0) return [];
   const postIds = posts.map((p) => p.id);
 
-  const [views, uniqueViewers, completions, shares, likes, comments, saves] = await Promise.all([
-    getViewCountsForPosts(supabase, postIds),
-    getUniqueViewerCountsForPosts(supabase, postIds),
-    getCompletionCountsForPosts(supabase, postIds),
-    getShareCountsForPosts(supabase, postIds),
-    getLikeCountsForPosts(supabase, postIds),
-    getCommentCountsForPosts(supabase, postIds),
-    getSaveCountsForPosts(supabase, postIds),
-  ]);
+  const [views, uniqueViewers, completions, shares, likes, comments, saves, profileVisits, garageVisits] =
+    await Promise.all([
+      getViewCountsForPosts(supabase, postIds),
+      getUniqueViewerCountsForPosts(supabase, postIds),
+      getCompletionCountsForPosts(supabase, postIds),
+      getShareCountsForPosts(supabase, postIds),
+      getLikeCountsForPosts(supabase, postIds),
+      getCommentCountsForPosts(supabase, postIds),
+      getSaveCountsForPosts(supabase, postIds),
+      getProfileVisitCountsBySourcePost(supabase, postIds),
+      getVehicleViewCountsBySourcePost(supabase, postIds),
+    ]);
 
   const now = Date.now();
   const scored = posts.map((post) => {
@@ -88,6 +99,8 @@ export async function getCreatorPostStats(
       comments: comments.get(post.id) ?? 0,
       shares: shares.get(post.id) ?? 0,
       saves: saves.get(post.id) ?? 0,
+      profileVisits: profileVisits.get(post.id) ?? 0,
+      garageVisits: garageVisits.get(post.id) ?? 0,
       vsAveragePercent:
         otherPostsAverage != null ? relativePercentDiff(engagementScore, otherPostsAverage) : null,
     };

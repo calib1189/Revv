@@ -331,7 +331,7 @@ export function SwipeSlide({
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 pb-6">
         <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.5rem)] text-white">
           <Link
-            href={`/u/${data.authorUsername}`}
+            href={`/u/${data.authorUsername}?from=${data.post.id}`}
             className="flex items-center gap-1.5 text-base font-bold hover:underline"
           >
             @{data.authorUsername}
@@ -341,7 +341,7 @@ export function SwipeSlide({
           </Link>
           {data.vehicleTitle && data.post.vehicle_id && (
             <Link
-              href={`/garage/${data.post.vehicle_id}`}
+              href={`/garage/${data.post.vehicle_id}?from=${data.post.id}`}
               className="block text-xs text-white/70 hover:text-white"
             >
               • {data.vehicleTitle}
@@ -362,7 +362,7 @@ export function SwipeSlide({
 
       <div className="pointer-events-auto absolute bottom-6 right-3 flex flex-col items-center gap-6 text-white [&_svg]:drop-shadow-[0_1px_5px_rgb(0_0_0_/_0.7)]">
         <div className="relative">
-          <Link href={`/u/${data.authorUsername}`}>
+          <Link href={`/u/${data.authorUsername}?from=${data.post.id}`}>
             <RankFrame
               score={data.authorBestRatingScore}
               compact

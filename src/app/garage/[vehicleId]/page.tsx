@@ -28,6 +28,7 @@ import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { BudgetCard } from "@/features/builds/budget-card";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
 import { listMaintenanceForVehicle } from "@/lib/db/maintenance";
+import { recordVehicleView } from "@/lib/db/vehicle-views";
 import { MaintenanceList } from "@/features/maintenance/maintenance-list";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
@@ -60,10 +61,18 @@ export async function generateMetadata({
 
 export default async function VehiclePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ vehicleId: string }>;
+  /** `from` is set to a post id when this vehicle was reached via a
+   * post's tagged-vehicle link (see swipe-slide.tsx / post-card.tsx) —
+   * lets Creator Studio attribute a garage visit back to the post that
+   * drove it. Never present for a direct link or a garage-grid browse,
+   * which is a real "unknown source", not an error. */
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { vehicleId } = await params;
+  const { from: sourcePostId } = await searchParams;
   const supabase = await createClient();
 
   const [vehicle, user] = await Promise.all([
@@ -72,6 +81,17 @@ export default async function VehiclePage({
   ]);
   if (!vehicle) notFound();
 
+  const isOwner = user?.id === vehicle.owner_id;
+
+  // Best-effort, same reasoning as the profile page's equivalent: never
+  // let a failed visit record break the page, skip it for a logged-out
+  // viewer, and skip it for the vehicle's own owner (not a meaningful
+  // "visit" for their own stats).
+  const recordVisit =
+    sourcePostId && user && !isOwner
+      ? recordVehicleView(supabase, user.id, vehicleId, sourcePostId).catch(() => {})
+      : Promise.resolve();
+
   const [owner, gallery, heroMedia, activeBuild] = await Promise.all([
     getProfileByUserId(supabase, vehicle.owner_id),
     listVehicleMedia(supabase, vehicleId),
@@ -79,6 +99,7 @@ export default async function VehiclePage({
       ? getMediaById(supabase, vehicle.hero_media_id)
       : Promise.resolve(null),
     getActiveBuild(supabase, vehicleId),
+    recordVisit,
   ]);
   const buildParts = activeBuild
     ? await listBuildParts(supabase, activeBuild.id)
@@ -100,7 +121,6 @@ export default async function VehiclePage({
     partMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
 
-  const isOwner = user?.id === vehicle.owner_id;
   const maintenanceRecords = isOwner
     ? await listMaintenanceForVehicle(supabase, vehicleId)
     : [];

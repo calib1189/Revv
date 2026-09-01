@@ -71,14 +71,14 @@ export function PostCard({ data }: { data: PostCardData }) {
         <Avatar username={authorUsername} avatarUrl={authorAvatarUrl} />
         <div className="min-w-0 flex-1">
           <Link
-            href={`/u/${authorUsername}`}
+            href={`/u/${authorUsername}?from=${post.id}`}
             className="truncate text-sm font-medium hover:underline"
           >
             @{authorUsername}
           </Link>
           {vehicleTitle && post.vehicle_id && (
             <Link
-              href={`/garage/${post.vehicle_id}`}
+              href={`/garage/${post.vehicle_id}?from=${post.id}`}
               className="truncate text-xs text-muted hover:text-foreground"
             >
               {vehicleTitle}

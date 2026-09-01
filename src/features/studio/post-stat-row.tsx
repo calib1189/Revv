@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { EyeIcon, HeartIcon, CommentIcon, ShareIcon, BookmarkIcon, ArrowUpIcon, ArrowDownIcon } from "@/components/ui/icons";
+import { EyeIcon, HeartIcon, CommentIcon, ShareIcon, BookmarkIcon, ArrowUpIcon, ArrowDownIcon, PersonIcon, WrenchIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { formatDateOnly } from "@/lib/format/date";
 import type { CreatorPostStats } from "@/lib/analytics/creator-stats";
@@ -70,6 +70,8 @@ export function PostStatRow({
           <Stat icon={CommentIcon} value={stats.comments} />
           <Stat icon={ShareIcon} value={stats.shares} />
           <Stat icon={BookmarkIcon} value={stats.saves} />
+          {stats.profileVisits > 0 && <Stat icon={PersonIcon} value={stats.profileVisits} />}
+          {stats.garageVisits > 0 && <Stat icon={WrenchIcon} value={stats.garageVisits} />}
         </div>
       </div>
     </li>

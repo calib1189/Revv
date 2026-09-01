@@ -339,6 +339,42 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["post_view_completions"]["Insert"]>;
         Relationships: never[];
       };
+      profile_visits: {
+        Row: {
+          id: string;
+          visitor_id: string;
+          profile_id: string;
+          source_post_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          visitor_id: string;
+          profile_id: string;
+          source_post_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["profile_visits"]["Insert"]>;
+        Relationships: never[];
+      };
+      vehicle_views: {
+        Row: {
+          id: string;
+          viewer_id: string;
+          vehicle_id: string;
+          source_post_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          viewer_id: string;
+          vehicle_id: string;
+          source_post_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["vehicle_views"]["Insert"]>;
+        Relationships: never[];
+      };
       post_shares: {
         Row: {
           id: string;
