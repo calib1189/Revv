@@ -296,12 +296,18 @@ html.native-app body::-webkit-scrollbar {
      shared as-is. Two-class selector wins over the shared 3px rules the
      same way .rank-frame-compact already overrides border-radius. */
   .rank-frame.rank-frame-screen {
-    /* Approximates an iPhone's own screen-corner curvature (roughly
-       40-55px on real devices, not the 20-26px the previous 6vw formula
-       actually produced at phone widths) rather than a flat 0 — still
-       scales down on narrower viewports instead of one fixed px value,
-       and caps out for desktop/tablet widths. */
-    border-radius: clamp(24px, 12vw, 55px);
+    /* Approximates an iPhone's own screen-corner curvature — real
+       devices with Dynamic Island run 55-63pt, not the 47-55px the
+       previous 12vw formula actually produced at phone widths — while
+       still scaling down on narrower viewports and capping out for
+       desktop/tablet. A circular border-radius is still only an
+       approximation of iOS's own continuous ("squircle") corner curve;
+       corner-shape below closes that gap on WebKit versions that
+       support it (Safari 26 / iOS 18.4+), and is a no-op — falling back
+       to this circular radius — everywhere else. */
+    border-radius: clamp(28px, 16vw, 64px);
+    corner-shape: squircle;
+    -webkit-corner-shape: squircle;
   }
   .rank-frame.rank-frame-screen::before,
   .rank-frame.rank-frame-screen::after {
@@ -317,6 +323,8 @@ html.native-app body::-webkit-scrollbar {
     position: absolute;
     inset: 0;
     border-radius: inherit;
+    corner-shape: inherit;
+    -webkit-corner-shape: inherit;
     pointer-events: none;
     box-sizing: border-box;
   }
@@ -342,6 +350,8 @@ html.native-app body::-webkit-scrollbar {
     inset: 0;
     z-index: 8;
     border-radius: inherit;
+    corner-shape: inherit;
+    -webkit-corner-shape: inherit;
     pointer-events: none;
     box-sizing: border-box;
     padding: 3px;
