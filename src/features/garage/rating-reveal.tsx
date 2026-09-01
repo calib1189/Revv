@@ -6,6 +6,7 @@ import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { ParticleBurst } from "@/features/garage/particle-burst";
 import { unknownClimbValue, landingValue, landingStartValue } from "@/features/garage/climb-math";
 import { RevealSoundEngine } from "@/features/garage/reveal-sound";
+import { hapticTierUp, hapticLanding } from "@/lib/haptics";
 import type { BuildRating } from "@/lib/providers/rating-provider";
 
 type Stage = "climbing" | "anticipating" | "landing" | "landed" | "settled";
@@ -167,6 +168,7 @@ export function RatingReveal({
           setDisplayedValue(currentResult.score);
           sound.stopClimbHum();
           sound.playLanding();
+          hapticLanding();
           setStage("landed");
           return;
         }
@@ -199,6 +201,7 @@ export function RatingReveal({
       prevTierRef.current = displayedTier;
       setLevelUpKey((k) => k + 1);
       sound.playLevelUp(ascendingRank(displayedTier), RANK_TIERS.length);
+      hapticTierUp();
 
       setOutgoingTier(previousTier);
       if (outgoingTimeoutRef.current) clearTimeout(outgoingTimeoutRef.current);
