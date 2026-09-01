@@ -288,33 +288,20 @@ html.native-app body::-webkit-scrollbar {
     border-radius: 1rem;
   }
 
-  /* Reveal-only variant: the same masked-ring technique as every other
-     .rank-frame usage, traced around the screen's own edge instead of a
-     small circle around the icon. Only the ring's thickness needs to
-     change at that scale — each tier's own gradient/animation/glow
-     (rank-bronze::before, rank-gold-glow-pulse, etc.) is untouched and
-     shared as-is. Two-class selector wins over the shared 3px rules the
-     same way .rank-frame-compact already overrides border-radius. */
-  .rank-frame.rank-frame-screen {
-    /* Approximates an iPhone's own screen-corner curvature — real
-       devices with Dynamic Island run 55-63pt, not the 47-55px the
-       previous 12vw formula actually produced at phone widths — while
-       still scaling down on narrower viewports and capping out for
-       desktop/tablet. A circular border-radius is still only an
-       approximation of iOS's own continuous ("squircle") corner curve;
-       corner-shape below closes that gap on WebKit versions that
-       support it (Safari 26 / iOS 18.4+), and is a no-op — falling back
-       to this circular radius — everywhere else. */
+  /* The reveal's own screen-corner rounding — used to be paired with a
+     colored material ring traced right at the screen edge (the same
+     rank-frame system RankFrame uses for small avatar badges, scaled
+     up), but a bold border drawn right at the device edge reads as a
+     phone bezel/mockup graphic drawn on top of the app, not "the screen
+     itself lit up," per real device screenshots. The ambient glow
+     (reveal-ambient-glow/-sweep, already borderless) carries the tier's
+     color instead; this class only exists so the black backdrop's own
+     corners are still rounded to match the device rather than square. */
+  .reveal-screen-corners {
     border-radius: clamp(28px, 16vw, 64px);
     corner-shape: squircle;
     -webkit-corner-shape: squircle;
-  }
-  .rank-frame.rank-frame-screen::before,
-  .rank-frame.rank-frame-screen::after {
-    padding: 16px;
-  }
-  .rank-frame-screen .rank-glint {
-    padding: 16px;
+    overflow: hidden;
   }
 
   .rank-frame::before,
@@ -687,10 +674,27 @@ html.native-app body::-webkit-scrollbar {
      both setting `animation` on the same element don't combine, the
      later one simply wins, which is exactly the bug this avoids. */
   @keyframes tier-levelup-icon-bounce {
-    0% { transform: scale(0.75) rotate(0deg); opacity: 0; filter: blur(3px); }
+    0% { transform: scale(0.8) rotate(0deg); opacity: 0; filter: blur(3px); }
     30% { opacity: 1; }
-    45% { transform: scale(1.2) rotate(-4deg); opacity: 1; filter: blur(1.5px); }
+    45% { transform: scale(1.1) rotate(-4deg); opacity: 1; filter: blur(1.5px); }
     100% { transform: scale(1) rotate(0deg); opacity: 1; filter: blur(0px); }
+  }
+
+  /* The quieter counterpart for a downgrade during "correcting" — a
+     settling flicker/jitter rather than the celebratory bounce above,
+     so a correction reads as the system steadying itself, not another
+     impact playing in reverse. */
+  .tier-correction-glitch {
+    animation: tier-correction-glitch-jitter 320ms ease-out;
+  }
+
+  @keyframes tier-correction-glitch-jitter {
+    0% { transform: translateX(0); opacity: 1; filter: blur(0px) saturate(1); }
+    20% { transform: translateX(-3px); opacity: 0.55; filter: blur(2px) saturate(0.4); }
+    40% { transform: translateX(3px); opacity: 0.8; filter: blur(1px) saturate(0.6); }
+    60% { transform: translateX(-1.5px); opacity: 0.65; filter: blur(1.5px) saturate(0.5); }
+    80% { transform: translateX(1px); opacity: 0.9; filter: blur(0.5px) saturate(0.8); }
+    100% { transform: translateX(0); opacity: 1; filter: blur(0px) saturate(1); }
   }
 
   /* The outgoing tier's icon during a crossfade — shrinks and fades away
@@ -717,6 +721,58 @@ html.native-app body::-webkit-scrollbar {
   @keyframes reveal-anticipation-pulse-scale {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.06); }
+  }
+
+  /* A slow idle tilt once the final icon has settled — a "trophy on a
+     stand" quality rather than a static image. Deliberately a gentle
+     back-and-forth rock, not a full spin: the art is flat 2D shading
+     baked in for a front-on view, and a full rotation would expose that
+     (a flat badge spinning like a coin, lit from a fixed angle that
+     doesn't turn with it, looks wrong — a slight tilt doesn't). */
+  .reveal-icon-idle-tilt {
+    animation: reveal-icon-idle-tilt-rock 6s ease-in-out infinite;
+  }
+
+  @keyframes reveal-icon-idle-tilt-rock {
+    0%, 100% { transform: rotate(-2.5deg); }
+    50% { transform: rotate(2.5deg); }
+  }
+
+  /* Cosmic-only starfield (see cosmic-starfield.tsx) — each box-shadow
+     "star" is a single element, so the twinkle has to animate opacity
+     on the whole layer at once; three layers with staggered durations/
+     delays keep that from reading as one uniform pulse. */
+  .reveal-star-twinkle {
+    animation-name: reveal-star-twinkle-pulse;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+
+  @keyframes reveal-star-twinkle-pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+
+  .reveal-planet-drift-a {
+    top: 12%;
+    left: 8%;
+    animation: reveal-planet-drift-a-move 22s ease-in-out infinite;
+  }
+
+  @keyframes reveal-planet-drift-a-move {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(6vw, 4vh) scale(1.15); }
+  }
+
+  .reveal-planet-drift-b {
+    bottom: 15%;
+    right: 10%;
+    animation: reveal-planet-drift-b-move 26s ease-in-out infinite;
+  }
+
+  @keyframes reveal-planet-drift-b-move {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-5vw, -5vh) scale(0.9); }
   }
 
   /* A light sweep across the emblem itself, not just the ring around it

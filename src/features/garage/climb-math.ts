@@ -35,13 +35,26 @@ export function landingValue(elapsedMs: number, durationMs: number, from: number
 
 /** Where the final landing animation should start from — always at
  * least `runway` points below the real target (clamped to never go
- * negative), regardless of where the unknown-phase climb happened to
- * be sitting when the real result arrived. Without this, a build that
- * scores low (say, bronze) could have already climbed well past that
- * number during the unknown phase and would have to visibly count
- * *down* into the real score — which reads as a mistake, not a
- * landing. This guarantees the final approach always climbs upward
- * into the exact number, never backward. */
+ * negative). When `currentValue` is already at or below that point,
+ * this returns `currentValue` itself unchanged, so the final approach
+ * never visibly moves backward from wherever the number is already
+ * sitting. When `currentValue` sits *above* `target - runway` (the
+ * unknown-phase climb went further than the real score needs, or the
+ * real score is a genuine overshoot past the target — see
+ * needsCorrection below), the caller is expected to run an explicit,
+ * visible correction down to this value first — see
+ * rating-reveal.tsx's "correcting" stage — rather than jumping straight
+ * here, which is what silently produces the "score drops when the rank
+ * changes" glitch. */
 export function landingStartValue(currentValue: number, target: number, runway: number): number {
-  return Math.max(0, Math.min(currentValue, target - runway));
+  const runwayStart = Math.max(0, target - runway);
+  return Math.min(currentValue, runwayStart);
+}
+
+/** True when `currentValue` sits far enough above `target` that landing
+ * can't simply climb upward into it without first visibly correcting
+ * downward — the exact condition that produces an unexplained score
+ * drop if it isn't handled as its own explicit animated stage first. */
+export function needsCorrection(currentValue: number, target: number, runway: number): boolean {
+  return currentValue > Math.max(0, target - runway);
 }

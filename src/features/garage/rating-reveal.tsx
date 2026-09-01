@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, RANK_AMBIENT_COLORS, RANK_TIERS, type RankTier } from "@/lib/rating/rank";
 import { RANK_MATERIAL_ICONS, RANK_ICON_SRC } from "@/features/garage/rank-material-icons";
 import { ParticleBurst } from "@/features/garage/particle-burst";
-import { unknownClimbValue, landingValue, landingStartValue } from "@/features/garage/climb-math";
+import { CosmicStarfield } from "@/features/garage/cosmic-starfield";
+import { unknownClimbValue, landingValue, landingStartValue, needsCorrection } from "@/features/garage/climb-math";
 import { RevealSoundEngine } from "@/features/garage/reveal-sound";
 import { hapticTierUp, hapticLanding } from "@/lib/haptics";
 import type { BuildRating } from "@/lib/providers/rating-provider";
 
-type Stage = "climbing" | "anticipating" | "landing" | "landed" | "settled";
+type Stage = "climbing" | "anticipating" | "correcting" | "landing" | "landed" | "settled";
 
 // However fast the real result comes back, the climb always gets at
 // least this long before it's allowed to start its final approach —
@@ -23,6 +24,11 @@ const MIN_CLIMB_MS = 6200;
 // pulse, all as a genuine "is it going to land here" pause rather than
 // going straight from climbing into landing.
 const ANTICIPATION_MS = 550;
+// How long the unknown-phase climb overshot past where the real score
+// needs it to land takes to visibly correct back down — a real,
+// explained animated stage (see needsCorrection in climb-math.ts),
+// never a silent instant jump.
+const CORRECTION_DURATION_MS = 750;
 const LANDING_DURATION_MS = 1800;
 const LANDING_RUNWAY = 7;
 const SETTLE_DELAY_MS = 1600;
@@ -73,6 +79,13 @@ export function RatingReveal({
   }
   const [skipRequested, setSkipRequested] = useState(false);
   const [levelUpKey, setLevelUpKey] = useState(0);
+  // Whether the *most recent* tier change was a downgrade (only possible
+  // during the "correcting" stage) — gates off the confetti/shockwave/
+  // screen-flash/haptic fanfare for that one change, so a correction
+  // reads as "settling on the real number" rather than another
+  // celebratory level-up playing in reverse. The icon crossfade and a
+  // quiet sound cue still happen either way.
+  const [isDowngrade, setIsDowngrade] = useState(false);
   // The tier being faded out during a crossfade — kept mounted just long
   // enough to shrink away while the new tier's icon pops in over it,
   // instead of the old one vanishing the instant the new one appears.
@@ -98,6 +111,9 @@ export function RatingReveal({
   const landingFromRef = useRef(0);
   const landingStartedAtRef = useRef<number | null>(null);
   const anticipationStartedAtRef = useRef<number | null>(null);
+  const correctionStartedAtRef = useRef<number | null>(null);
+  const correctionFromRef = useRef(0);
+  const correctionToRef = useRef(0);
   const prevTierRef = useRef<RankTier>("bronze");
 
   const [sound] = useState(() => new RevealSoundEngine());
@@ -145,14 +161,39 @@ export function RatingReveal({
         if (anticipationElapsed >= ANTICIPATION_MS) {
           const currentResult = resultRef.current;
           if (currentResult) {
-            landingFromRef.current = landingStartValue(
-              displayedValueRef.current,
-              currentResult.score,
-              LANDING_RUNWAY,
-            );
-            landingStartedAtRef.current = now;
-            setStage("landing");
+            const frozen = displayedValueRef.current;
+            if (needsCorrection(frozen, currentResult.score, LANDING_RUNWAY)) {
+              // The unknown-phase climb overshot past where the real
+              // score needs the final approach to start from — rather
+              // than silently snapping down to that point (the score
+              // visibly dropping the instant landing began), run the
+              // drop itself as its own explained stage first.
+              correctionFromRef.current = frozen;
+              correctionToRef.current = landingStartValue(frozen, currentResult.score, LANDING_RUNWAY);
+              correctionStartedAtRef.current = now;
+              sound.playCorrection();
+              setStage("correcting");
+            } else {
+              landingFromRef.current = frozen;
+              landingStartedAtRef.current = now;
+              setStage("landing");
+            }
           }
+        }
+      } else if (stageRef.current === "correcting") {
+        const correctionElapsed = now - (correctionStartedAtRef.current ?? now);
+        const value = landingValue(
+          correctionElapsed,
+          CORRECTION_DURATION_MS,
+          correctionFromRef.current,
+          correctionToRef.current,
+        );
+        setDisplayedValue(value);
+        if (correctionElapsed >= CORRECTION_DURATION_MS) {
+          setDisplayedValue(correctionToRef.current);
+          landingFromRef.current = correctionToRef.current;
+          landingStartedAtRef.current = now;
+          setStage("landing");
         }
       } else if (stageRef.current === "landing") {
         const currentResult = resultRef.current;
@@ -194,14 +235,21 @@ export function RatingReveal({
 
   // Fires the level-up effect every time the *displayed* tier changes —
   // during the fast climb, during the slower landing approach, doesn't
-  // matter which. Deliberately not gated to any particular stage.
+  // matter which. Deliberately not gated to any particular stage. A
+  // downgrade (only possible during "correcting") gets the icon
+  // crossfade and a quiet cue but not the full fanfare — see
+  // isDowngrade above.
   useEffect(() => {
     if (prevTierRef.current !== displayedTier) {
       const previousTier = prevTierRef.current;
+      const downgrade = ascendingRank(displayedTier) < ascendingRank(previousTier);
       prevTierRef.current = displayedTier;
       setLevelUpKey((k) => k + 1);
-      sound.playLevelUp(ascendingRank(displayedTier), RANK_TIERS.length);
-      hapticTierUp();
+      setIsDowngrade(downgrade);
+      if (!downgrade) {
+        sound.playLevelUp(ascendingRank(displayedTier), RANK_TIERS.length);
+        hapticTierUp();
+      }
 
       setOutgoingTier(previousTier);
       if (outgoingTimeoutRef.current) clearTimeout(outgoingTimeoutRef.current);
@@ -227,19 +275,23 @@ export function RatingReveal({
   // the size of the final confetti burst so the actual top tier is the
   // biggest-feeling landing, not every tier hitting the same.
   const dramaIntensity = ascendingRank(displayedTier) / Math.max(1, RANK_TIERS.length - 1);
+  // A screen shake on every single landing (bronze included) undersells
+  // the ones that should actually feel like an impact — only gold and
+  // above (dramaIntensity > 0.4, roughly the top half of the ladder)
+  // shake at all.
+  const isMajorReveal = dramaIntensity > 0.4;
 
   return (
     <div
-      className={`fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden bg-black rank-frame rank-frame-screen rank-${displayedTier} ${
-        stage === "landed" ? "reveal-landing-shake" : ""
+      className={`fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black reveal-screen-corners ${
+        stage === "landed" && isMajorReveal ? "reveal-landing-shake" : ""
       }`}
       style={{ "--shake-intensity": 1 + dramaIntensity * 1.3 } as React.CSSProperties}
     >
-      {/* The tier's own material ring (gold shine, diamond facets, etc.)
-          traced around the screen's own edge — same rank-frame system
-          RankFrame uses everywhere else, just scaled up to frame the
-          whole reveal instead of a small circle around the icon. */}
-      <span aria-hidden className="rank-glint" />
+      {/* The single bespoke top-tier moment — cosmic's own landing
+          turns the whole screen into a starfield rather than just being
+          a bigger version of every other tier's effects. */}
+      {landed && displayedTier === "cosmic" && <CosmicStarfield />}
 
       {/* The reveal's whole background — always the current tier's
           color, always moving, cross-fading smoothly as the tier
@@ -256,13 +308,17 @@ export function RatingReveal({
       />
 
       {/* Full-screen color wash — replays on every tier-up via the
-          key-remount trick, same as the contained ring pulse. */}
-      <span
-        key={`screen-flash-${levelUpKey}`}
-        aria-hidden
-        className="reveal-screen-flash pointer-events-none absolute inset-0"
-        style={{ background: `radial-gradient(circle, ${color}66 0%, transparent 70%)` }}
-      />
+          key-remount trick, same as the contained ring pulse. Skipped
+          for a downgrade (a correction, not an achievement) — see
+          isDowngrade above. */}
+      {!isDowngrade && (
+        <span
+          key={`screen-flash-${levelUpKey}`}
+          aria-hidden
+          className="reveal-screen-flash pointer-events-none absolute inset-0"
+          style={{ background: `radial-gradient(circle, ${color}66 0%, transparent 70%)` }}
+        />
+      )}
 
       <div className="relative flex h-52 w-52 items-center justify-center">
         {/* Confetti renders before (so it paints behind) the icon itself
@@ -279,9 +335,15 @@ export function RatingReveal({
             text color, its ambient wash, white for sparkle) rather than
             mixing in an unrelated fixed color, so the burst actually
             reads as "this tier," not just "confetti." */}
-        {levelUpKey > 0 && (
+        {levelUpKey > 0 && !isDowngrade && (
           <div className="pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2">
-            <ParticleBurst key={`sparkle-${levelUpKey}`} burstKey={levelUpKey} colors={[color, ambientColor, "#ffffff"]} />
+            <ParticleBurst
+              key={`sparkle-${levelUpKey}`}
+              burstKey={levelUpKey}
+              colors={[color, ambientColor, "#ffffff"]}
+              count={Math.round(40 + dramaIntensity * 70)}
+              speedMultiplier={0.8 + dramaIntensity * 0.6}
+            />
           </div>
         )}
         {landed && (
@@ -313,18 +375,23 @@ export function RatingReveal({
 
         <div
           key={`ring-${levelUpKey}`}
-          className={`flex h-full w-full items-center justify-center ${landed ? "reveal-materialize" : "tier-levelup-icon-pop"}`}
+          className={`flex h-full w-full items-center justify-center ${
+            landed ? "reveal-materialize" : isDowngrade ? "tier-correction-glitch" : "tier-levelup-icon-pop"
+          }`}
         >
           {/* The source art itself reads a little flat against all the
               motion around it — brightness/contrast/saturation plus a
               colored glow (matching this tier's own color) makes it pop
               the way the animated ring around it always has. A slow
-              pulse layers on top during the anticipation hold, applied
-              here rather than on the wrapper above so it can't collide
-              with (and accidentally restart) that wrapper's own
-              level-up/materialize animation. */}
+              pulse during the anticipation hold, or a slow idle tilt
+              once truly settled — applied here rather than on the
+              wrapper above so neither can collide with (and
+              accidentally restart) that wrapper's own level-up/
+              materialize animation. */}
           <Icon
-            className={`h-full w-full ${stage === "anticipating" ? "reveal-anticipation-pulse" : ""}`}
+            className={`h-full w-full ${
+              stage === "anticipating" ? "reveal-anticipation-pulse" : stage === "settled" ? "reveal-icon-idle-tilt" : ""
+            }`}
             style={{
               filter: `brightness(1.3) contrast(1.15) saturate(1.25) drop-shadow(0 0 22px ${color}99)`,
             }}
@@ -350,13 +417,17 @@ export function RatingReveal({
         </div>
 
         {/* Shockwave ring on every tier crossing, key-remounted so the
-            one-shot CSS animation replays each time. */}
-        <span
-          key={`pulse-${levelUpKey}`}
-          aria-hidden
-          className="tier-levelup-ring pointer-events-none absolute inset-0 rounded-full border-2"
-          style={{ borderColor: color }}
-        />
+            one-shot CSS animation replays each time. Skipped for a
+            downgrade — a correction settling quietly, not another
+            impact. */}
+        {!isDowngrade && (
+          <span
+            key={`pulse-${levelUpKey}`}
+            aria-hidden
+            className="tier-levelup-ring pointer-events-none absolute inset-0 rounded-full border-2"
+            style={{ borderColor: color }}
+          />
+        )}
 
         {stage === "landed" && (
           <span aria-hidden className="reveal-flash absolute inset-0 rounded-full bg-white" />
@@ -365,7 +436,9 @@ export function RatingReveal({
 
       <div className="relative mt-7 flex flex-col items-center gap-1 text-center">
         {!landed && (
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">Rating your build…</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
+            {stage === "correcting" ? "Recalculating…" : "Rating your build…"}
+          </p>
         )}
         {landed && result && (
           <p className="reveal-text-in text-xs font-semibold uppercase tracking-[0.2em] text-white/50">

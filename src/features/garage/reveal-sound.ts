@@ -153,8 +153,31 @@ export class RevealSoundEngine {
     this.humOsc.frequency.linearRampToValueAtTime(current * 1.15, now + durationSec);
   }
 
-  /** The final landing moment — a small ascending major chord. */
-  /** `rank`/`totalTiers` scale how big the hit feels — bronze gets the
+  /** A quiet descending blip — the sound of the number correcting back
+   * down toward where it actually needs to land, distinct from (and
+   * much less exciting than) the ascending tier-crossing chime, so a
+   * correction reads as "the system settling on the real number," not
+   * another achievement. */
+  playCorrection() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(420, now);
+    osc.frequency.exponentialRampToValueAtTime(260, now + 0.5);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.6);
+  }
+
+  /** The final landing moment — a small ascending major chord.
+   * `rank`/`totalTiers` scale how big the hit feels — bronze gets the
    * base chord, cosmic gets that same chord plus an extra ringing
    * octave on top and more of it, so the actual highest tier is the
    * biggest-sounding landing, not every tier hitting identically. */

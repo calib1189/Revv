@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { unknownClimbValue, landingValue, landingStartValue } from "./climb-math";
+import { unknownClimbValue, landingValue, landingStartValue, needsCorrection } from "./climb-math";
 
 describe("unknownClimbValue", () => {
   it("starts at exactly 0", () => {
@@ -78,6 +78,33 @@ describe("landingStartValue", () => {
       [0, 0.5],
     ] as const) {
       expect(landingStartValue(current, target, 7)).toBeLessThan(target || 0.001);
+    }
+  });
+});
+
+describe("needsCorrection", () => {
+  it("is true for the exact scenario that used to produce a silent score drop: current sits above target minus runway", () => {
+    // Climb reached 70.71 (displaying Emerald), real score is 68.25
+    // (Platinum) — landingStartValue would clamp down to 61.25, a drop
+    // from what's currently on screen unless this is flagged first.
+    expect(needsCorrection(70.71, 68.25, 7)).toBe(true);
+  });
+
+  it("is false when the current value is already at or below the landing runway's start", () => {
+    expect(needsCorrection(10, 91.25, 7)).toBe(false);
+    expect(needsCorrection(84.25, 91.25, 7)).toBe(false);
+  });
+
+  it("agrees with landingStartValue: true exactly when landingStartValue would return something less than currentValue", () => {
+    for (const [current, target] of [
+      [70.71, 68.25],
+      [10, 91.25],
+      [90, 91.25],
+      [95, 12],
+      [0, 0.5],
+    ] as const) {
+      const wouldDrop = landingStartValue(current, target, 7) < current;
+      expect(needsCorrection(current, target, 7)).toBe(wouldDrop);
     }
   });
 });
