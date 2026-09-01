@@ -296,10 +296,12 @@ html.native-app body::-webkit-scrollbar {
      shared as-is. Two-class selector wins over the shared 3px rules the
      same way .rank-frame-compact already overrides border-radius. */
   .rank-frame.rank-frame-screen {
-    /* Approximates an iPhone's own screen-corner curvature rather than a
-       flat 0 — scales down gracefully on narrower viewports instead of
-       one fixed px value looking right on only one screen size. */
-    border-radius: clamp(20px, 6vw, 55px);
+    /* Approximates an iPhone's own screen-corner curvature (roughly
+       40-55px on real devices, not the 20-26px the previous 6vw formula
+       actually produced at phone widths) rather than a flat 0 — still
+       scales down on narrower viewports instead of one fixed px value,
+       and caps out for desktop/tablet widths. */
+    border-radius: clamp(24px, 12vw, 55px);
   }
   .rank-frame.rank-frame-screen::before,
   .rank-frame.rank-frame-screen::after {
