@@ -13,6 +13,8 @@ export class RevealSoundEngine {
   private ctx: AudioContext | null = null;
   private humOsc: OscillatorNode | null = null;
   private humGain: GainNode | null = null;
+  private rumbleOsc: OscillatorNode | null = null;
+  private rumbleGain: GainNode | null = null;
 
   private getContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -72,6 +74,23 @@ export class RevealSoundEngine {
     osc.start();
     this.humOsc = osc;
     this.humGain = gain;
+
+    // A low rumble underneath the rising hum — "the machine is working"
+    // texture. Deliberately held near-fixed rather than climbing with
+    // the hum, so it reads as a floor the sound sits on rather than a
+    // second rising tone competing with the one that's actually meant
+    // to carry the climb.
+    const rOsc = ctx.createOscillator();
+    const rGain = ctx.createGain();
+    rOsc.type = "sawtooth";
+    rOsc.frequency.setValueAtTime(42, ctx.currentTime);
+    rGain.gain.setValueAtTime(0, ctx.currentTime);
+    rGain.gain.linearRampToValueAtTime(0.03, ctx.currentTime + 0.8);
+    rOsc.connect(rGain);
+    rGain.connect(ctx.destination);
+    rOsc.start();
+    this.rumbleOsc = rOsc;
+    this.rumbleGain = rGain;
   }
 
   updateClimbPitch(score0to100: number) {
@@ -84,15 +103,27 @@ export class RevealSoundEngine {
 
   stopClimbHum() {
     const ctx = this.ctx;
-    if (!ctx || !this.humOsc || !this.humGain) return;
-    const osc = this.humOsc;
-    const gain = this.humGain;
-    gain.gain.cancelScheduledValues(ctx.currentTime);
-    gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-    osc.stop(ctx.currentTime + 0.4);
-    this.humOsc = null;
-    this.humGain = null;
+    if (!ctx) return;
+    if (this.humOsc && this.humGain) {
+      const osc = this.humOsc;
+      const gain = this.humGain;
+      gain.gain.cancelScheduledValues(ctx.currentTime);
+      gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+      osc.stop(ctx.currentTime + 0.4);
+      this.humOsc = null;
+      this.humGain = null;
+    }
+    if (this.rumbleOsc && this.rumbleGain) {
+      const osc = this.rumbleOsc;
+      const gain = this.rumbleGain;
+      gain.gain.cancelScheduledValues(ctx.currentTime);
+      gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+      osc.stop(ctx.currentTime + 0.4);
+      this.rumbleOsc = null;
+      this.rumbleGain = null;
+    }
   }
 
   /** Short two-note chime on every tier crossing, pitched higher for
@@ -123,14 +154,28 @@ export class RevealSoundEngine {
   }
 
   /** The final landing moment — a small ascending major chord. */
-  playLanding() {
+  /** `rank`/`totalTiers` scale how big the hit feels — bronze gets the
+   * base chord, cosmic gets that same chord plus an extra ringing
+   * octave on top and more of it, so the actual highest tier is the
+   * biggest-sounding landing, not every tier hitting identically. */
+  playLanding(rank = 0, totalTiers = 1) {
     const ctx = this.getContext();
     if (!ctx) return;
     const now = ctx.currentTime;
+    const intensity = rank / Math.max(1, totalTiers - 1);
     const chord = [523.25, 659.25, 783.99, 1046.5]; // C5 E5 G5 C6
     chord.forEach((freq, i) => {
-      this.tone(freq, now + i * 0.09, 0.65, { type: "triangle", gain: 0.12 });
+      this.tone(freq, now + i * 0.09, 0.65 + intensity * 0.35, {
+        type: "triangle",
+        gain: 0.12 + intensity * 0.05,
+      });
     });
+    if (intensity > 0.6) {
+      // The top few tiers ring on with one more note above the chord,
+      // a beat later — the "cinematic" tail the base chord alone doesn't
+      // have room for.
+      this.tone(1568.0, now + 0.32, 0.9, { type: "sine", gain: 0.1 + intensity * 0.06 });
+    }
   }
 
   dispose() {

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { RankTier } from "@/lib/rating/rank";
 
-const RANK_ICON_SRC: Record<RankTier, string> = {
+export const RANK_ICON_SRC: Record<RankTier, string> = {
   bronze: "/ranks/bronze.webp",
   copper: "/ranks/copper.webp",
   iron: "/ranks/iron.webp",

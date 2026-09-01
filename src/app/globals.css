@@ -645,9 +645,9 @@ html.native-app body::-webkit-scrollbar {
   }
 
   @keyframes reveal-materialize-in {
-    0% { transform: scale(0.25); opacity: 0; }
-    60% { transform: scale(1.08); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
+    0% { transform: scale(0.25); opacity: 0; filter: blur(6px); }
+    60% { transform: scale(1.08); opacity: 1; filter: blur(0.5px); }
+    100% { transform: scale(1); opacity: 1; filter: blur(0px); }
   }
 
   .reveal-text-in {
@@ -678,11 +678,19 @@ html.native-app body::-webkit-scrollbar {
     animation: tier-levelup-icon-bounce 650ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
+  /* filter: blur() rides along with the same keyframes as the transform
+     that's actually moving the element — a directional/real motion blur
+     isn't something a flat CSS filter can do, but a blur that spikes
+     exactly when (and only when) the icon is moving fastest and clears
+     once it settles reads the same way at this scale. Deliberately part
+     of these same keyframes rather than a separate class: two classes
+     both setting `animation` on the same element don't combine, the
+     later one simply wins, which is exactly the bug this avoids. */
   @keyframes tier-levelup-icon-bounce {
-    0% { transform: scale(0.75) rotate(0deg); opacity: 0; }
+    0% { transform: scale(0.75) rotate(0deg); opacity: 0; filter: blur(3px); }
     30% { opacity: 1; }
-    45% { transform: scale(1.2) rotate(-4deg); opacity: 1; }
-    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    45% { transform: scale(1.2) rotate(-4deg); opacity: 1; filter: blur(1.5px); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; filter: blur(0px); }
   }
 
   /* The outgoing tier's icon during a crossfade — shrinks and fades away
@@ -693,8 +701,8 @@ html.native-app body::-webkit-scrollbar {
   }
 
   @keyframes tier-icon-fade-out-shrink {
-    0% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(0.7); opacity: 0; }
+    0% { transform: scale(1); opacity: 1; filter: blur(0px); }
+    100% { transform: scale(0.7); opacity: 0; filter: blur(2px); }
   }
 
   /* The held beat between the climb stopping and the final approach
@@ -710,6 +718,19 @@ html.native-app body::-webkit-scrollbar {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.06); }
   }
+
+  /* A light sweep across the emblem itself, not just the ring around it
+     — masked to that tier's own icon (mask-image defaults to using the
+     image's alpha channel), via an inline mask-image set per-tier in
+     rating-reveal.tsx, so the highlight only ever paints over the
+     badge's actual silhouette, never a flat rectangle around it. */
+  .icon-sweep-highlight {
+    background: linear-gradient(115deg, transparent 34%, rgba(255, 255, 255, 0.85) 50%, transparent 66%);
+    background-size: 260% 260%;
+    mix-blend-mode: overlay;
+    animation: rank-glint-sweep 4.5s ease-in-out infinite;
+  }
+
 
   /* ------------------------------------------------------------------- *
    * Casino-jackpot dressing for the reveal — a full-screen color wash on
@@ -770,11 +791,15 @@ html.native-app body::-webkit-scrollbar {
     animation: reveal-shake-wobble 600ms ease-in-out;
   }
 
+  /* Scaled by --shake-intensity (set inline per-tier in
+     rating-reveal.tsx) — the higher the tier landed on, the bigger this
+     gets, so cosmic actually feels like a bigger hit than bronze rather
+     than every landing shaking the screen by the same fixed amount. */
   @keyframes reveal-shake-wobble {
     0%, 100% { transform: translate(0, 0); }
-    20% { transform: translate(-4px, 1.5px); }
-    40% { transform: translate(3px, -2px); }
-    60% { transform: translate(-2.5px, -1.5px); }
-    80% { transform: translate(2px, 2px); }
+    20% { transform: translate(calc(-4px * var(--shake-intensity, 1)), calc(1.5px * var(--shake-intensity, 1))); }
+    40% { transform: translate(calc(3px * var(--shake-intensity, 1)), calc(-2px * var(--shake-intensity, 1))); }
+    60% { transform: translate(calc(-2.5px * var(--shake-intensity, 1)), calc(-1.5px * var(--shake-intensity, 1))); }
+    80% { transform: translate(calc(2px * var(--shake-intensity, 1)), calc(2px * var(--shake-intensity, 1))); }
   }
 }

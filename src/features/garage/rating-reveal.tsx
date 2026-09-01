@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, RANK_AMBIENT_COLORS, RANK_TIERS, type RankTier } from "@/lib/rating/rank";
-import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
+import { RANK_MATERIAL_ICONS, RANK_ICON_SRC } from "@/features/garage/rank-material-icons";
 import { ParticleBurst } from "@/features/garage/particle-burst";
 import { unknownClimbValue, landingValue, landingStartValue } from "@/features/garage/climb-math";
 import { RevealSoundEngine } from "@/features/garage/reveal-sound";
@@ -167,7 +167,7 @@ export function RatingReveal({
         if (landingElapsed >= LANDING_DURATION_MS) {
           setDisplayedValue(currentResult.score);
           sound.stopClimbHum();
-          sound.playLanding();
+          sound.playLanding(ascendingRank(rankForScore(currentResult.score)), RANK_TIERS.length);
           hapticLanding();
           setStage("landed");
           return;
@@ -220,12 +220,20 @@ export function RatingReveal({
   const ambientColor = RANK_AMBIENT_COLORS[displayedTier];
   const Icon = RANK_MATERIAL_ICONS[displayedTier];
   const OutgoingIcon = outgoingTier ? RANK_MATERIAL_ICONS[outgoingTier] : null;
+  // 0 (bronze) through 1 (cosmic) — once landed, displayedTier already
+  // *is* the final tier (displayedValue was just set to the exact
+  // final score), so this can be read straight off it rather than
+  // needing the result prop's score again. Scales the landing shake and
+  // the size of the final confetti burst so the actual top tier is the
+  // biggest-feeling landing, not every tier hitting the same.
+  const dramaIntensity = ascendingRank(displayedTier) / Math.max(1, RANK_TIERS.length - 1);
 
   return (
     <div
       className={`fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden bg-black rank-frame rank-frame-screen rank-${displayedTier} ${
         stage === "landed" ? "reveal-landing-shake" : ""
       }`}
+      style={{ "--shake-intensity": 1 + dramaIntensity * 1.3 } as React.CSSProperties}
     >
       {/* The tier's own material ring (gold shine, diamond facets, etc.)
           traced around the screen's own edge — same rank-frame system
@@ -281,8 +289,8 @@ export function RatingReveal({
             <ParticleBurst
               burstKey={`final-${result?.score ?? 0}`}
               colors={[color, ambientColor, `${color}cc`, "#ffffff"]}
-              count={160}
-              speedMultiplier={1.4}
+              count={Math.round(130 + dramaIntensity * 90)}
+              speedMultiplier={1.25 + dramaIntensity * 0.35}
             />
           </div>
         )}
@@ -319,6 +327,24 @@ export function RatingReveal({
             className={`h-full w-full ${stage === "anticipating" ? "reveal-anticipation-pulse" : ""}`}
             style={{
               filter: `brightness(1.3) contrast(1.15) saturate(1.25) drop-shadow(0 0 22px ${color}99)`,
+            }}
+          />
+          {/* A light sweep across the emblem itself (not just the ring
+              around it) — masked to this tier's own icon, using its
+              alpha channel, so the highlight only ever paints over the
+              badge's actual silhouette. */}
+          <span
+            aria-hidden
+            className="icon-sweep-highlight pointer-events-none absolute inset-0"
+            style={{
+              maskImage: `url(${RANK_ICON_SRC[displayedTier]})`,
+              maskSize: "contain",
+              maskRepeat: "no-repeat",
+              maskPosition: "center",
+              WebkitMaskImage: `url(${RANK_ICON_SRC[displayedTier]})`,
+              WebkitMaskSize: "contain",
+              WebkitMaskRepeat: "no-repeat",
+              WebkitMaskPosition: "center",
             }}
           />
         </div>
