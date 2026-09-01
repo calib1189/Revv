@@ -2,19 +2,6 @@
 
 import type { RankTier } from "@/lib/rating/rank";
 
-// A short, bouncy major arpeggio — the "coin-line" plucked melody a real
-// slot machine loops while the reels spin — ping-ponging C5-E5-G5-C6 and
-// back down rather than climbing in one direction, so the loop itself
-// doesn't telegraph where it starts and ends.
-const MUSIC_PATTERN = [523.25, 659.25, 783.99, 1046.5, 783.99, 659.25];
-const MUSIC_STEP_SEC = 0.15;
-// How far ahead of the audio clock notes get scheduled on each
-// updateClimbMusic call — long enough that a slow frame never leaves a
-// gap in the loop, short enough that the loop can still be faded out and
-// torn down (stopClimbMusic) without much already-queued material left
-// to ring out.
-const MUSIC_LOOKAHEAD_SEC = 0.2;
-
 /**
  * Tiny hand-rolled Web Audio sound engine for the rating reveal — plain
  * oscillators with gain envelopes, no audio files and no new dependency
@@ -24,25 +11,17 @@ const MUSIC_LOOKAHEAD_SEC = 0.2;
  * bonus on top of the animation, never something its absence should
  * break.
  *
- * Most methods here fire a short, self-contained sound and then go quiet
- * — the tier-crossing chime, the correction blip, and the per-tier
- * landing sounds all work this way. The one exception is the climb
- * music (startClimbMusic/updateClimbMusic/stopClimbMusic): an actual
- * looping arcade-style arpeggio, not a held tone — this reveal used to
- * run a continuous engine-hum drone here, which is exactly what a bare
- * oscillator's pitch/gain envelope always ends up sounding like no
- * matter how it's shaped. A real slot machine loops a short melodic
- * phrase instead, so this schedules one directly on the Web Audio clock
- * (a lookahead scheduler, not setInterval — a JS timer alone drifts and
- * stutters against the audio clock) rather than trying to synthesize
- * "music-ness" out of a single swelling tone.
+ * Every method here fires a short, self-contained sound and then goes
+ * quiet — the tier-crossing chime, the anticipation riser, the
+ * correction blip, and the per-tier landing sounds. The climb and
+ * landing are otherwise silent by design: this reveal has been through
+ * a continuous background hum, a per-point tick, a filtered-noise swell,
+ * and a full looping arpeggio here in turn, and none of them landed —
+ * real silence between the discrete cues turned out to be the right
+ * call after all.
  */
 export class RevealSoundEngine {
   private ctx: AudioContext | null = null;
-  private musicGain: GainNode | null = null;
-  private musicNextNoteTime = 0;
-  private musicStepIndex = 0;
-  private musicRunning = false;
 
   private getContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -63,15 +42,12 @@ export class RevealSoundEngine {
 
   /** A single short tone with a punchy linear attack and an exponential
    * decay — the one building block every sound in this file is made
-   * from. Routes to `opts.destination` when given (the climb music's
-   * notes route through its own gain node so the loop's volume can be
-   * swelled independent of every other sound) or straight to the
-   * speakers otherwise, same as before. */
+   * from. */
   private tone(
     freq: number,
     startTime: number,
     duration: number,
-    opts: { type?: OscillatorType; gain?: number; destination?: AudioNode } = {},
+    opts: { type?: OscillatorType; gain?: number } = {},
   ) {
     const ctx = this.ctx;
     if (!ctx) return;
@@ -84,7 +60,7 @@ export class RevealSoundEngine {
     gain.gain.linearRampToValueAtTime(peak, startTime + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
     osc.connect(gain);
-    gain.connect(opts.destination ?? ctx.destination);
+    gain.connect(ctx.destination);
     osc.start(startTime);
     osc.stop(startTime + duration + 0.05);
   }
@@ -116,72 +92,6 @@ export class RevealSoundEngine {
     gain.connect(ctx.destination);
     osc.start(startTime);
     osc.stop(startTime + duration + 0.05);
-  }
-
-  /** One step of the arpeggio plus, every third step, a low "chick" bass
-   * note underneath it — the "boom-chick" backing that keeps the melody
-   * from feeling like a bare sequence of plucks. Both route through
-   * `musicGain` rather than straight to the speakers, so their combined
-   * volume is what updateClimbMusic actually swells. */
-  private scheduleMusicStep(step: number, time: number) {
-    if (!this.musicGain) return;
-    this.tone(MUSIC_PATTERN[step], time, 0.16, { type: "triangle", gain: 0.1, destination: this.musicGain });
-    if (step % 3 === 0) {
-      this.tone(130.81, time, 0.22, { type: "sine", gain: 0.16, destination: this.musicGain });
-    }
-  }
-
-  /** Starts the climb music loop — silent until the first
-   * updateClimbMusic call ramps its gain up, at which point notes are
-   * already scheduled and playing right on the beat. Safe to call again
-   * while already running — it no-ops rather than layering a second
-   * loop underneath. */
-  startClimbMusic() {
-    const ctx = this.getContext();
-    if (!ctx || this.musicRunning) return;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.connect(ctx.destination);
-    this.musicGain = gain;
-    this.musicNextNoteTime = ctx.currentTime;
-    this.musicStepIndex = 0;
-    this.musicRunning = true;
-  }
-
-  /** Keeps the loop's notes scheduled a short window ahead of the audio
-   * clock and swells its overall volume toward wherever the climb
-   * currently sits — `progress` is 0 (climb just started) to 1 (right at
-   * the real score's ceiling). Meant to be called every animation frame
-   * from the reveal's RAF loop; scheduling off the Web Audio clock
-   * rather than off those calls' own timing is what keeps the tempo
-   * steady even if a frame or two runs late. */
-  updateClimbMusic(progress: number) {
-    const ctx = this.ctx;
-    if (!ctx || !this.musicGain || !this.musicRunning) return;
-    const p = Math.min(1, Math.max(0, progress));
-    const now = ctx.currentTime;
-    this.musicGain.gain.setTargetAtTime(0.02 + p * 0.045, now, 0.2);
-    while (this.musicNextNoteTime < now + MUSIC_LOOKAHEAD_SEC) {
-      this.scheduleMusicStep(this.musicStepIndex, this.musicNextNoteTime);
-      this.musicStepIndex = (this.musicStepIndex + 1) % MUSIC_PATTERN.length;
-      this.musicNextNoteTime += MUSIC_STEP_SEC;
-    }
-  }
-
-  /** Fades the loop out and stops scheduling further notes — called
-   * right as the reveal locks in its final tier, so the music cuts away
-   * just before playRankLocked's impact rather than the two overlapping.
-   * Whatever's already scheduled inside the lookahead window rings out
-   * naturally rather than being yanked. */
-  stopClimbMusic() {
-    const ctx = this.ctx;
-    if (!ctx || !this.musicGain || !this.musicRunning) return;
-    this.musicRunning = false;
-    const now = ctx.currentTime;
-    this.musicGain.gain.cancelScheduledValues(now);
-    this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, now);
-    this.musicGain.gain.linearRampToValueAtTime(0.0001, now + 0.12);
-    this.musicGain = null;
   }
 
   /** Short two-note chime on every tier crossing during the climb —
@@ -335,8 +245,6 @@ export class RevealSoundEngine {
     if (this.ctx) {
       const ctx = this.ctx;
       this.ctx = null;
-      this.musicGain = null;
-      this.musicRunning = false;
       void ctx.close().catch(() => {});
     }
   }

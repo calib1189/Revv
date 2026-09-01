@@ -35,13 +35,6 @@ const CORRECTION_DURATION_MS = 750;
 const LANDING_DURATION_MS = 1800;
 const LANDING_RUNWAY = 7;
 const SETTLE_DELAY_MS = 1600;
-// The climb music's intensity is driven by the displayed value itself
-// rather than elapsed time, normalized against this ceiling — a plain
-// /100 would nearly always fall short of 1 during the unknown-phase
-// climb (which tops out around 92) and only reach it once the real
-// score's landing pushes past that, which is exactly the swell-building-
-// toward-the-finish shape this is going for.
-const MUSIC_INTENSITY_CEILING = 100;
 
 // RANK_TIERS is ordered highest tier first (cosmic) to lowest (bronze);
 // the sound engine wants the opposite — ascending rank, 0 for bronze —
@@ -125,12 +118,23 @@ export function RatingReveal({
   const correctionFromRef = useRef(0);
   const correctionToRef = useRef(0);
   const prevTierRef = useRef<RankTier>("bronze");
+  // The tier that was showing right before a correction started, held
+  // fixed for the whole "correcting" stage. Without this, the fast
+  // numeric drop from a high unknown-phase climb value down to a much
+  // lower real score can cross several tier boundaries in the space of
+  // CORRECTION_DURATION_MS, and the tier-change effect below fires its
+  // full icon-crossfade for every one of them — a demotion is supposed
+  // to read as one settling motion, not a rapid flicker through 3 or 4
+  // ranks. Pinning the displayed tier here collapses that down to
+  // exactly one transition: frozen tier straight to the real corrected
+  // tier, the instant "correcting" ends. State rather than a ref since
+  // it feeds directly into render (displayedTier below).
+  const [frozenCorrectionTier, setFrozenCorrectionTier] = useState<RankTier | null>(null);
 
   const [sound] = useState(() => new RevealSoundEngine());
 
   useEffect(() => {
     startedAtRef.current = performance.now();
-    sound.startClimbMusic();
     return () => {
       sound.dispose();
     };
@@ -164,7 +168,6 @@ export function RatingReveal({
         } else {
           const value = unknownClimbValue(elapsed);
           setDisplayedValue(value);
-          sound.updateClimbMusic(value / MUSIC_INTENSITY_CEILING);
         }
       } else if (stageRef.current === "anticipating") {
         const anticipationElapsed = now - (anticipationStartedAtRef.current ?? now);
@@ -181,6 +184,10 @@ export function RatingReveal({
               correctionFromRef.current = frozen;
               correctionToRef.current = landingStartValue(frozen, currentResult.score, LANDING_RUNWAY);
               correctionStartedAtRef.current = now;
+              // Freeze the displayed *tier* at whatever it was showing
+              // before the drop — see frozenCorrectionTier's own comment
+              // for why.
+              setFrozenCorrectionTier(rankForScore(frozen));
               sound.playCorrection();
               setStage("correcting");
             } else {
@@ -199,7 +206,6 @@ export function RatingReveal({
           correctionToRef.current,
         );
         setDisplayedValue(value);
-        sound.updateClimbMusic(value / MUSIC_INTENSITY_CEILING);
         if (correctionElapsed >= CORRECTION_DURATION_MS) {
           setDisplayedValue(correctionToRef.current);
           landingFromRef.current = correctionToRef.current;
@@ -215,10 +221,8 @@ export function RatingReveal({
         const landingElapsed = now - (landingStartedAtRef.current ?? now);
         const value = landingValue(landingElapsed, LANDING_DURATION_MS, landingFromRef.current, currentResult.score);
         setDisplayedValue(value);
-        sound.updateClimbMusic(value / MUSIC_INTENSITY_CEILING);
         if (landingElapsed >= LANDING_DURATION_MS) {
           setDisplayedValue(currentResult.score);
-          sound.stopClimbMusic();
           sound.playRankLocked(rankForScore(currentResult.score));
           hapticLanding();
           setStage("landed");
@@ -242,7 +246,8 @@ export function RatingReveal({
     return () => clearTimeout(t);
   }, [stage]);
 
-  const displayedTier = rankForScore(displayedValue);
+  const displayedTier =
+    stage === "correcting" && frozenCorrectionTier ? frozenCorrectionTier : rankForScore(displayedValue);
 
   // Fires the level-up effect every time the *displayed* tier changes —
   // during the fast climb, during the slower landing approach, doesn't
