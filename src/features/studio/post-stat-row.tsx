@@ -3,6 +3,7 @@ import Image from "next/image";
 import { EyeIcon, HeartIcon, CommentIcon, ShareIcon, BookmarkIcon, ArrowUpIcon, ArrowDownIcon, PersonIcon, WrenchIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { formatDateOnly } from "@/lib/format/date";
+import { VideoThumbnail } from "@/features/profile/video-thumbnail";
 import type { CreatorPostStats } from "@/lib/analytics/creator-stats";
 import type { Post } from "@/lib/db/posts";
 
@@ -37,7 +38,10 @@ export function PostStatRow({
   return (
     <li className="flex gap-3 border-b border-border py-4 last:border-b-0">
       <Link href={href} className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-raised">
-        {thumbnailUrl && (
+        {thumbnailUrl && post.post_type === "video" && (
+          <VideoThumbnail url={thumbnailUrl} className="h-full w-full object-cover" />
+        )}
+        {thumbnailUrl && post.post_type !== "video" && (
           <Image src={thumbnailUrl} alt="" fill sizes="64px" className="object-cover" />
         )}
       </Link>

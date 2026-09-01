@@ -29,6 +29,7 @@ import { BudgetCard } from "@/features/builds/budget-card";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
 import { listMaintenanceForVehicle } from "@/lib/db/maintenance";
 import { recordVehicleView } from "@/lib/db/vehicle-views";
+import { getPartClickCountsForBuildParts } from "@/lib/db/part-clicks";
 import { MaintenanceList } from "@/features/maintenance/maintenance-list";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
@@ -120,6 +121,11 @@ export default async function VehiclePage({
   const partMediaUrlById = new Map(
     partMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
+  // Only ever shown to the owner (see ModificationList), so skip the
+  // query entirely for everyone else.
+  const clickCountsByBuildPart = isOwner
+    ? await getPartClickCountsForBuildParts(supabase, buildParts.map((p) => p.id))
+    : new Map<string, number>();
 
   const maintenanceRecords = isOwner
     ? await listMaintenanceForVehicle(supabase, vehicleId)
@@ -341,6 +347,7 @@ export default async function VehiclePage({
             vehicleLabel={[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")}
             userId={user?.id ?? null}
             isOwner={isOwner}
+            clickCountsByBuildPart={clickCountsByBuildPart}
           />
         </div>
 

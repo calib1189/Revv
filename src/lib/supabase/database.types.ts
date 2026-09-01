@@ -375,6 +375,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["vehicle_views"]["Insert"]>;
         Relationships: never[];
       };
+      part_clicks: {
+        Row: {
+          id: string;
+          build_part_id: string;
+          clicker_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          build_part_id: string;
+          clicker_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["part_clicks"]["Insert"]>;
+        Relationships: never[];
+      };
       post_shares: {
         Row: {
           id: string;

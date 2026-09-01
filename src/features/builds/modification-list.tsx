@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { SearchIcon } from "@/components/ui/icons";
 import { formatCents } from "@/lib/format/money";
 import { formatDateOnly } from "@/lib/format/date";
+import { formatCompactNumber } from "@/lib/format/compact-number";
+import { PointerIcon } from "@/components/ui/icons";
 import type { BuildPart } from "@/lib/db/build-parts";
 import type { Part } from "@/lib/db/parts";
 
@@ -68,6 +70,7 @@ function ModificationRow({
   vehicleLabel,
   userId,
   isOwner,
+  clickCount,
 }: {
   part: BuildPart;
   linkedPart: Part | null;
@@ -76,6 +79,10 @@ function ModificationRow({
   vehicleLabel: string;
   userId: string | null;
   isOwner: boolean;
+  /** Total Buy-button clicks on this listing — only ever shown to the
+   * owner (see render below), so it's fine to always compute this for
+   * every viewer rather than threading isOwner into the query itself. */
+  clickCount: number;
 }) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -137,8 +144,18 @@ function ModificationRow({
           {linkedPart ? (
             <div className="mt-2 max-w-sm">
               <ProductCard part={linkedPart} />
-              <div className="mt-2">
-                <BuyButton partId={linkedPart.id} ownerAffiliateUrl={part.owner_affiliate_url} />
+              <div className="mt-2 flex items-center gap-3">
+                <BuyButton
+                  partId={linkedPart.id}
+                  ownerAffiliateUrl={part.owner_affiliate_url}
+                  buildPartId={part.id}
+                />
+                {isOwner && clickCount > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-muted">
+                    <PointerIcon className="h-3.5 w-3.5" />
+                    {formatCompactNumber(clickCount)}
+                  </span>
+                )}
               </div>
             </div>
           ) : (
@@ -186,6 +203,7 @@ export function ModificationList({
   vehicleLabel,
   userId,
   isOwner,
+  clickCountsByBuildPart,
 }: {
   buildParts: BuildPart[];
   partsById: Map<string, Part>;
@@ -194,6 +212,7 @@ export function ModificationList({
   vehicleLabel: string;
   userId: string | null;
   isOwner: boolean;
+  clickCountsByBuildPart: Map<string, number>;
 }) {
   const [isAdding, setIsAdding] = useState(false);
 
@@ -237,6 +256,7 @@ export function ModificationList({
               vehicleLabel={vehicleLabel}
               userId={userId}
               isOwner={isOwner}
+              clickCount={clickCountsByBuildPart.get(part.id) ?? 0}
             />
           ))}
         </ul>

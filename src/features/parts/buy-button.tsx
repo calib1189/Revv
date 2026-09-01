@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { getAffiliateLinkAction } from "@/features/parts/actions";
+import { getAffiliateLinkAction, recordPartClickAction } from "@/features/parts/actions";
 import { Button } from "@/components/ui/button";
 
 export function BuyButton({
   partId,
   ownerAffiliateUrl,
+  buildPartId,
 }: {
   partId: string;
   /** The build_part owner's own affiliate link, if they added one — used
@@ -14,6 +15,12 @@ export function BuyButton({
    * pays the owner directly instead of through REVV. No server round
    * trip needed for this case; the link is already known client-side. */
   ownerAffiliateUrl?: string | null;
+  /** Present only when this button is rendered against a specific
+   * build_part (a build's own modification list) rather than the
+   * general parts catalog browser — lets the build owner see how many
+   * clicks their listed mod is getting. Omitted in the catalog browser,
+   * where there's no build to attribute the click to. */
+  buildPartId?: string;
 }) {
   const [link, setLink] = useState<{ url: string; isOwnerLink: boolean; isMock: boolean } | null>(
     null,
@@ -50,6 +57,8 @@ export function BuyButton({
       className="px-3 py-1.5 text-sm"
       disabled={isPending}
       onClick={() => {
+        if (buildPartId) void recordPartClickAction(buildPartId);
+
         if (ownerAffiliateUrl) {
           setLink({ url: ownerAffiliateUrl, isOwnerLink: true, isMock: false });
           return;
