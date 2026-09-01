@@ -35,13 +35,13 @@ const CORRECTION_DURATION_MS = 750;
 const LANDING_DURATION_MS = 1800;
 const LANDING_RUNWAY = 7;
 const SETTLE_DELAY_MS = 1600;
-// The climb riser's progress is driven by the displayed value itself
+// The climb music's intensity is driven by the displayed value itself
 // rather than elapsed time, normalized against this ceiling — a plain
 // /100 would nearly always fall short of 1 during the unknown-phase
 // climb (which tops out around 92) and only reach it once the real
 // score's landing pushes past that, which is exactly the swell-building-
 // toward-the-finish shape this is going for.
-const RISER_CEILING = 100;
+const MUSIC_INTENSITY_CEILING = 100;
 
 // RANK_TIERS is ordered highest tier first (cosmic) to lowest (bronze);
 // the sound engine wants the opposite — ascending rank, 0 for bronze —
@@ -130,7 +130,7 @@ export function RatingReveal({
 
   useEffect(() => {
     startedAtRef.current = performance.now();
-    sound.startClimbRiser();
+    sound.startClimbMusic();
     return () => {
       sound.dispose();
     };
@@ -164,7 +164,7 @@ export function RatingReveal({
         } else {
           const value = unknownClimbValue(elapsed);
           setDisplayedValue(value);
-          sound.updateClimbRiser(value / RISER_CEILING);
+          sound.updateClimbMusic(value / MUSIC_INTENSITY_CEILING);
         }
       } else if (stageRef.current === "anticipating") {
         const anticipationElapsed = now - (anticipationStartedAtRef.current ?? now);
@@ -199,7 +199,7 @@ export function RatingReveal({
           correctionToRef.current,
         );
         setDisplayedValue(value);
-        sound.updateClimbRiser(value / RISER_CEILING);
+        sound.updateClimbMusic(value / MUSIC_INTENSITY_CEILING);
         if (correctionElapsed >= CORRECTION_DURATION_MS) {
           setDisplayedValue(correctionToRef.current);
           landingFromRef.current = correctionToRef.current;
@@ -215,10 +215,10 @@ export function RatingReveal({
         const landingElapsed = now - (landingStartedAtRef.current ?? now);
         const value = landingValue(landingElapsed, LANDING_DURATION_MS, landingFromRef.current, currentResult.score);
         setDisplayedValue(value);
-        sound.updateClimbRiser(value / RISER_CEILING);
+        sound.updateClimbMusic(value / MUSIC_INTENSITY_CEILING);
         if (landingElapsed >= LANDING_DURATION_MS) {
           setDisplayedValue(currentResult.score);
-          sound.stopClimbRiser();
+          sound.stopClimbMusic();
           sound.playRankLocked(rankForScore(currentResult.score));
           hapticLanding();
           setStage("landed");
