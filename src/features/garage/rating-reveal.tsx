@@ -35,6 +35,11 @@ const CORRECTION_DURATION_MS = 750;
 const LANDING_DURATION_MS = 1800;
 const LANDING_RUNWAY = 7;
 const SETTLE_DELAY_MS = 1600;
+// Floors the gap between climb ticks — the fast early climb crosses a
+// whole point roughly every 60ms on its own, which read as a machine-gun
+// clicking rather than a slot-machine reel. The later, already-slower
+// segments are unaffected since their natural gap already exceeds this.
+const MIN_TICK_INTERVAL_MS = 130;
 
 // RANK_TIERS is ordered highest tier first (cosmic) to lowest (bronze);
 // the sound engine wants the opposite — ascending rank, 0 for bronze —
@@ -125,6 +130,13 @@ export function RatingReveal({
   // moves forward: a downward correction doesn't fire ticks for ground
   // already covered, so re-crossing it during landing stays quiet.
   const tickHighWaterRef = useRef(0);
+  // Real time (ms) the last tick actually played — the fast early climb
+  // crosses a whole point roughly every 60ms on its own, which read as a
+  // machine-gun clicking rather than a slot-machine reel. This floors the
+  // gap between ticks so the early climb still feels lively without
+  // firing on almost every frame; the later, already-slower segments are
+  // unaffected since their natural gap already exceeds it.
+  const lastTickAtRef = useRef(0);
 
   const [sound] = useState(() => new RevealSoundEngine());
 
@@ -152,8 +164,9 @@ export function RatingReveal({
 
       function maybeTick(value: number) {
         const floor = Math.floor(value);
-        if (floor > tickHighWaterRef.current) {
+        if (floor > tickHighWaterRef.current && now - lastTickAtRef.current >= MIN_TICK_INTERVAL_MS) {
           tickHighWaterRef.current = floor;
+          lastTickAtRef.current = now;
           sound.playClimbTick();
         }
       }

@@ -92,22 +92,21 @@ export class RevealSoundEngine {
     osc.stop(startTime + duration + 0.05);
   }
 
-  /** A quick, light mechanical tick — the "spinning reel" texture behind
-   * the climbing and landing numbers, standing in for the old
-   * continuous hum. The caller fires this once per whole point the
-   * displayed number crosses rather than on a fixed timer, so it
-   * naturally races during the fast early climb and spaces itself out
-   * as the curve decelerates into diamond/ruby and the landing approach
-   * — a real slot machine's "winding down" feel, for free, just from
-   * following the number instead of a clock. Slight per-call pitch
-   * jitter keeps a couple hundred of these in a row from reading as a
-   * metronome. */
+  /** A soft, low tick — the "spinning reel" texture behind the climbing
+   * and landing numbers, standing in for the old continuous hum. The
+   * caller fires this once per whole point the displayed number
+   * crosses (rate-limited on its side so the fast early climb doesn't
+   * turn it into a machine-gun clatter), so it still spaces itself out
+   * further on its own as the curve decelerates into diamond/ruby and
+   * the landing approach. A rounded sine rather than triangle, quiet
+   * and short, so a run of these reads as a soft patter, not a click
+   * track — with a little pitch jitter so it never sounds mechanical. */
   playClimbTick() {
     const ctx = this.getContext();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const jitter = 1 + (Math.random() - 0.5) * 0.3;
-    this.tone(720 * jitter, now, 0.045, { type: "triangle", gain: 0.045 });
+    const jitter = 1 + (Math.random() - 0.5) * 0.15;
+    this.tone(360 * jitter, now, 0.07, { type: "sine", gain: 0.028 });
   }
 
   /** Short two-note chime on every tier crossing during the climb —
