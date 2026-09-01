@@ -171,10 +171,16 @@ export function RatingReveal({
 
   return (
     <div
-      className={`fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden bg-black ${
+      className={`fixed inset-0 z-[60] flex flex-col items-center justify-center overflow-hidden bg-black rank-frame rank-frame-screen rank-${displayedTier} ${
         stage === "landed" ? "reveal-landing-shake" : ""
       }`}
     >
+      {/* The tier's own material ring (gold shine, diamond facets, etc.)
+          traced around the screen's own edge — same rank-frame system
+          RankFrame uses everywhere else, just scaled up to frame the
+          whole reveal instead of a small circle around the icon. */}
+      <span aria-hidden className="rank-glint" />
+
       {/* The reveal's whole background — always the current tier's
           color, always moving, cross-fading smoothly as the tier
           changes (the transition lives on the CSS custom property). */}
@@ -198,11 +204,21 @@ export function RatingReveal({
         style={{ background: `radial-gradient(circle, ${color}66 0%, transparent 70%)` }}
       />
 
-      <div className="relative flex h-44 w-44 items-center justify-center">
-        <div key={`ring-${levelUpKey}`} className={landed ? "reveal-materialize" : "tier-levelup-icon-pop"}>
-          <div className={`rank-frame rank-${displayedTier} flex h-40 w-40 items-center justify-center rounded-full p-6`}>
-            <Icon className="h-full w-full drop-shadow-lg" />
-          </div>
+      <div className="relative flex h-64 w-64 items-center justify-center">
+        <div
+          key={`ring-${levelUpKey}`}
+          className={`flex h-full w-full items-center justify-center ${landed ? "reveal-materialize" : "tier-levelup-icon-pop"}`}
+        >
+          {/* The source art itself reads a little flat against all the
+              motion around it — brightness/contrast/saturation plus a
+              colored glow (matching this tier's own color) makes it pop
+              the way the animated ring around it always has. */}
+          <Icon
+            className="h-full w-full"
+            style={{
+              filter: `brightness(1.3) contrast(1.15) saturate(1.25) drop-shadow(0 0 22px ${color}99)`,
+            }}
+          />
         </div>
 
         {/* Shockwave ring on every tier crossing, key-remounted so the

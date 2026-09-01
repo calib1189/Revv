@@ -288,6 +288,24 @@ html.native-app body::-webkit-scrollbar {
     border-radius: 1rem;
   }
 
+  /* Reveal-only variant: the same masked-ring technique as every other
+     .rank-frame usage, traced around the screen's own edge instead of a
+     small circle around the icon. Only the ring's thickness needs to
+     change at that scale — each tier's own gradient/animation/glow
+     (rank-bronze::before, rank-gold-glow-pulse, etc.) is untouched and
+     shared as-is. Two-class selector wins over the shared 3px rules the
+     same way .rank-frame-compact already overrides border-radius. */
+  .rank-frame.rank-frame-screen {
+    border-radius: 0;
+  }
+  .rank-frame.rank-frame-screen::before,
+  .rank-frame.rank-frame-screen::after {
+    padding: 10px;
+  }
+  .rank-frame-screen .rank-glint {
+    padding: 10px;
+  }
+
   .rank-frame::before,
   .rank-frame::after {
     content: "";
