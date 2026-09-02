@@ -212,6 +212,21 @@ export function UsersIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function FlagIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      {...props}
+    >
+      <path d="M6 3v18" strokeLinecap="round" />
+      <path d="M6 4c2-1.2 4-1.2 6 0s4 1.2 6 0v9c-2 1.2-4 1.2-6 0s-4-1.2-6 0V4Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function PersonIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

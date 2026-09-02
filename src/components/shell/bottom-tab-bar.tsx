@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon, UsersIcon, PlusIcon, CommentIcon, PersonIcon } from "@/components/ui/icons";
+import { HomeIcon, UsersIcon, PlusIcon, CommentIcon, PersonIcon, FlagIcon } from "@/components/ui/icons";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -26,6 +26,7 @@ export function BottomTabBar({
 
   const home = isActive(pathname, "/feed");
   const friends = isActive(pathname, "/friends");
+  const crews = isActive(pathname, "/crews");
   const inbox = isActive(pathname, "/messages") || isActive(pathname, "/notifications");
   const profile = isActive(pathname, profileHref);
 
@@ -51,6 +52,17 @@ export function BottomTabBar({
       >
         <UsersIcon className="h-7 w-7" />
         <span className={`text-[11px] ${friends ? "font-bold" : "font-medium"}`}>Friends</span>
+      </Link>
+
+      <Link
+        href="/crews"
+        aria-label="Crews"
+        className={`flex flex-col items-center gap-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
+          crews ? `${ACTIVE_GLOW} text-foreground` : "text-muted"
+        }`}
+      >
+        <FlagIcon className="h-7 w-7" />
+        <span className={`text-[11px] ${crews ? "font-bold" : "font-medium"}`}>Crews</span>
       </Link>
 
       <Link
