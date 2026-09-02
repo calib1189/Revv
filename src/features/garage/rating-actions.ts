@@ -6,6 +6,7 @@ import { getVehicleById } from "@/lib/db/vehicles";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
 import { getActiveBuild, getOrCreateActiveBuild, updateBuildRating } from "@/lib/db/builds";
+import { insertBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { listBuildParts } from "@/lib/db/build-parts";
 import { buildRatingSummary } from "@/lib/rating/build-summary";
 import { getRatingProvider } from "@/lib/providers/get-rating-provider";
@@ -103,6 +104,7 @@ export async function confirmBuildRatingAction(
   strengths: string,
   limitingFactors: string,
   subscores: BuildRatingSubscores,
+  isMock: boolean,
 ): Promise<ConfirmRatingState> {
   if (!Number.isFinite(score) || score < 0 || score > 100) {
     return { error: "Invalid rating." };
@@ -126,6 +128,16 @@ export async function confirmBuildRatingAction(
 
   try {
     await updateBuildRating(supabase, build.id, { score, strengths, limitingFactors, subscores });
+    // Best-effort: the current rating is already saved by this point —
+    // a failed history write shouldn't fail the whole confirm action,
+    // just mean this one re-rate is missing from the timeline.
+    await insertBuildRatingHistory(supabase, build.id, {
+      score,
+      strengths,
+      limitingFactors,
+      subscores,
+      isMock,
+    }).catch((err) => console.error("insertBuildRatingHistory failed:", err));
   } catch (err) {
     // No logging here before meant a failed save was a total black box —
     // same fix as identifyVehicleAction's equivalent catch: log the real

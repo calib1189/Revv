@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { RANK_LABELS, RANK_TEXT_COLORS, rankForScore } from "@/lib/rating/rank";
 import { CloseIcon } from "@/components/ui/icons";
+import { RatingSparkline } from "@/features/garage/rating-sparkline";
+import { formatDateOnly } from "@/lib/format/date";
 import type { BuildRatingSubscores } from "@/lib/providers/rating-provider";
+
+export interface RatingHistoryPoint {
+  score: number;
+  ratedAt: string;
+}
 
 const SUBSCORE_LABELS: Record<keyof BuildRatingSubscores, string> = {
   appearance: "Appearance",
@@ -36,11 +43,15 @@ export function RatingBreakdownTrigger({
   score,
   subscores,
   topPercent,
+  history = [],
   children,
 }: {
   score: number;
   subscores: BuildRatingSubscores | null;
   topPercent: number | null;
+  /** Oldest first. Fewer than 2 points isn't a trend, so the chart only
+   * renders once there's an actual second data point to compare against. */
+  history?: RatingHistoryPoint[];
   children: React.ReactNode;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -102,6 +113,18 @@ export function RatingBreakdownTrigger({
               <p className="text-sm text-muted">
                 This build was rated before subscores existed — re-rate to see a full breakdown.
               </p>
+            )}
+
+            {history.length >= 2 && (
+              <div className="mt-6 border-t border-border pt-5">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
+                  Rating history
+                </p>
+                <RatingSparkline scores={history.map((h) => h.score)} />
+                <p className="mt-2 text-xs text-muted">
+                  {history.length} ratings since {formatDateOnly(history[0].ratedAt)}
+                </p>
+              </div>
             )}
           </div>
         </div>

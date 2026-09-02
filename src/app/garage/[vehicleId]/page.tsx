@@ -8,6 +8,7 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
 import { getActiveBuild, listAllRatingScores } from "@/lib/db/builds";
+import { listBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { computeTopPercent } from "@/lib/rating/percentile";
 import { RatingBreakdownTrigger } from "@/features/garage/rating-breakdown-modal";
 import type { BuildRatingSubscores } from "@/lib/providers/rating-provider";
@@ -143,6 +144,7 @@ export default async function VehiclePage({
     activeBuild?.ai_rating_score != null
       ? computeTopPercent(activeBuild.ai_rating_score, await listAllRatingScores(supabase))
       : null;
+  const ratingHistory = activeBuild ? await listBuildRatingHistory(supabase, activeBuild.id) : [];
 
   const heroUrl = heroMedia
     ? publicMediaUrl(supabase, heroMedia.storage_path)
@@ -218,6 +220,7 @@ export default async function VehiclePage({
               currentLimitingFactors={activeBuild?.ai_rating_limiting_factors ?? null}
               currentSubscores={currentSubscores}
               topPercent={topPercent}
+              ratingHistory={ratingHistory}
             />
           </div>
         )}
@@ -233,6 +236,7 @@ export default async function VehiclePage({
                     score={activeBuild.ai_rating_score!}
                     subscores={currentSubscores}
                     topPercent={topPercent}
+                    history={ratingHistory}
                   >
                     <div className="flex items-center gap-3">
                       <span

@@ -178,6 +178,30 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["builds"]["Insert"]>;
         Relationships: never[];
       };
+      build_rating_history: {
+        Row: {
+          id: string;
+          build_id: string;
+          score: number;
+          subscores: Json | null;
+          strengths: string;
+          limiting_factors: string;
+          is_mock: boolean;
+          rated_at: string;
+        };
+        Insert: {
+          id?: string;
+          build_id: string;
+          score: number;
+          subscores?: Json | null;
+          strengths: string;
+          limiting_factors: string;
+          is_mock?: boolean;
+          rated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["build_rating_history"]["Insert"]>;
+        Relationships: never[];
+      };
       parts: {
         Row: {
           id: string;
