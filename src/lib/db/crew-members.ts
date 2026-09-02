@@ -114,6 +114,23 @@ export async function listCrewMembers(
   return data;
 }
 
+/** Approved members across several crews at once — one query for a
+ * discover-page grid instead of one per card, same empty-array-guard
+ * convention as getProfilesByIds. Group by crew_id at the call site. */
+export async function listApprovedMembersForCrews(
+  supabase: SupabaseClient<Database>,
+  crewIds: string[],
+): Promise<CrewMember[]> {
+  if (crewIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("crew_members")
+    .select("*")
+    .in("crew_id", crewIds)
+    .eq("status", "approved");
+  if (error) throw error;
+  return data;
+}
+
 /** The Requests page's source list — oldest request first, so the queue
  * clears in the order people actually asked. */
 export async function listPendingJoinRequests(

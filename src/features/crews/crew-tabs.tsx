@@ -3,19 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PostThumbnailGrid, type PostThumbnail } from "@/features/profile/post-thumbnail-grid";
-import { MemberRow, type MemberVehicleChip } from "@/features/crews/member-row";
+import { MemberRow } from "@/features/crews/member-row";
+import { CrewCarsGrid, type CrewCarItem } from "@/features/crews/crew-cars-grid";
 import { formatDateTime } from "@/lib/format/date";
 import type { Crew } from "@/lib/db/crews";
 import type { CrewMember, CrewMemberRole } from "@/lib/db/crew-members";
 import type { Meetup } from "@/lib/db/meetups";
 
-type Tab = "feed" | "members" | "events" | "about";
+type Tab = "cars" | "feed" | "members" | "events" | "about";
 
 export interface CrewTabMember {
   member: CrewMember;
   username: string;
   avatarUrl: string | null;
-  vehicles: MemberVehicleChip[];
+  bestScore: number | null;
 }
 
 function TabButton({
@@ -45,6 +46,7 @@ function TabButton({
 export function CrewTabs({
   crewId,
   crew,
+  cars,
   posts,
   members,
   events,
@@ -53,17 +55,21 @@ export function CrewTabs({
 }: {
   crewId: string;
   crew: Crew;
+  cars: CrewCarItem[];
   posts: PostThumbnail[];
   members: CrewTabMember[];
   events: Meetup[];
   canManageMembers: boolean;
   viewerRole: CrewMemberRole | null;
 }) {
-  const [tab, setTab] = useState<Tab>("feed");
+  const [tab, setTab] = useState<Tab>("cars");
 
   return (
     <div className="mt-8">
       <div className="glass mb-4 inline-flex flex-wrap gap-1 rounded-full p-1">
+        <TabButton active={tab === "cars"} onClick={() => setTab("cars")}>
+          Cars ({cars.length})
+        </TabButton>
         <TabButton active={tab === "feed"} onClick={() => setTab("feed")}>
           Feed ({posts.length})
         </TabButton>
@@ -78,6 +84,8 @@ export function CrewTabs({
         </TabButton>
       </div>
 
+      {tab === "cars" && <CrewCarsGrid cars={cars} />}
+
       {tab === "feed" &&
         (posts.length === 0 ? (
           <p className="text-sm text-muted">No posts tagged to this crew yet.</p>
@@ -90,14 +98,14 @@ export function CrewTabs({
           <p className="text-sm text-muted">No members yet.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {members.map(({ member, username, avatarUrl, vehicles }) => (
+            {members.map(({ member, username, avatarUrl, bestScore }) => (
               <MemberRow
                 key={member.id}
                 crewId={crewId}
                 member={member}
                 username={username}
                 avatarUrl={avatarUrl}
-                vehicles={vehicles}
+                bestScore={bestScore}
                 canManage={canManageMembers}
                 viewerRole={viewerRole}
                 isCrewOwner={member.user_id === crew.owner_id}

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Avatar } from "@/features/feed/avatar";
+import { RankFrame } from "@/features/garage/rank-frame";
 import { Button } from "@/components/ui/button";
 import { updateMemberRoleAction, removeMemberAction } from "@/features/crews/actions";
 import type { CrewMember, CrewMemberRole } from "@/lib/db/crew-members";
@@ -14,25 +14,21 @@ const ROLE_LABELS: Record<CrewMemberRole, string> = {
   member: "Member",
 };
 
-export interface MemberVehicleChip {
-  id: string;
-  title: string;
-  heroUrl: string | null;
-}
-
-/** One row in the Members tab — the member's identity, role, and their
- * own vehicles (small chips, not full VehicleCard tiles, since a member
- * list needs to stay scannable even when everyone has several cars).
- * Management controls (role change, remove) only render for a
- * leader/admin viewer, and only on rows that aren't the crew's owner —
- * there's no ownership-transfer flow, so the owner's role/membership
- * can't be touched at all. */
+/** One row in the Members tab — identity, role, and management controls.
+ * Their actual cars live on the Cars tab now, not duplicated here; this
+ * stays a lean roster for leader/admin housekeeping. The avatar still
+ * gets the same rank-ring treatment as everywhere else in the app (their
+ * best build rating across their whole garage), so "who's actually good"
+ * is visible at a glance even in the plain member list. Management
+ * controls only render for a leader/admin viewer, and only on rows that
+ * aren't the crew's owner — there's no ownership-transfer flow, so the
+ * owner's role/membership can't be touched at all. */
 export function MemberRow({
   crewId,
   member,
   username,
   avatarUrl,
-  vehicles,
+  bestScore,
   canManage,
   viewerRole,
   isCrewOwner,
@@ -41,7 +37,7 @@ export function MemberRow({
   member: CrewMember;
   username: string;
   avatarUrl: string | null;
-  vehicles: MemberVehicleChip[];
+  bestScore: number | null;
   canManage: boolean;
   viewerRole: CrewMemberRole | null;
   isCrewOwner: boolean;
@@ -78,55 +74,35 @@ export function MemberRow({
   }
 
   return (
-    <div className="glass flex flex-col gap-3 rounded-2xl p-4">
-      <div className="flex items-center gap-3">
-        <Link href={`/u/${username}`}>
+    <div className="glass flex items-center gap-3 rounded-2xl p-4">
+      <Link href={`/u/${username}`}>
+        <RankFrame score={bestScore} compact hideBadge>
           <Avatar username={username} avatarUrl={avatarUrl} className="h-10 w-10 text-sm" />
+        </RankFrame>
+      </Link>
+      <div className="min-w-0 flex-1">
+        <Link href={`/u/${username}`} className="truncate text-sm font-medium hover:underline">
+          @{username}
         </Link>
-        <div className="min-w-0 flex-1">
-          <Link href={`/u/${username}`} className="truncate text-sm font-medium hover:underline">
-            @{username}
-          </Link>
-          <p className="text-xs text-muted">{ROLE_LABELS[role]}</p>
-        </div>
-
-        {canManage && !isCrewOwner && (
-          <div className="flex items-center gap-2">
-            {canChangeRole ? (
-              <select
-                value={role}
-                onChange={(e) => handleRoleChange(e.target.value as CrewMemberRole)}
-                className="glass-inset rounded-lg px-2 py-1 text-xs text-foreground focus:border-accent/60 focus:outline-none"
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                {viewerRole === "leader" && <option value="leader">Leader</option>}
-              </select>
-            ) : null}
-            <Button variant="ghost" className="px-2 py-1 text-xs" onClick={handleRemove}>
-              Remove
-            </Button>
-          </div>
-        )}
+        <p className="text-xs text-muted">{ROLE_LABELS[role]}</p>
       </div>
 
-      {vehicles.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto">
-          {vehicles.map((vehicle) => (
-            <Link
-              key={vehicle.id}
-              href={`/garage/${vehicle.id}`}
-              className="relative h-14 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-surface"
+      {canManage && !isCrewOwner && (
+        <div className="flex items-center gap-2">
+          {canChangeRole ? (
+            <select
+              value={role}
+              onChange={(e) => handleRoleChange(e.target.value as CrewMemberRole)}
+              className="glass-inset rounded-lg px-2 py-1 text-xs text-foreground focus:border-accent/60 focus:outline-none"
             >
-              {vehicle.heroUrl ? (
-                <Image src={vehicle.heroUrl} alt={vehicle.title} fill sizes="80px" className="object-cover" />
-              ) : (
-                <div className="flex h-full items-center justify-center px-1 text-center text-[10px] text-muted">
-                  {vehicle.title}
-                </div>
-              )}
-            </Link>
-          ))}
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+              {viewerRole === "leader" && <option value="leader">Leader</option>}
+            </select>
+          ) : null}
+          <Button variant="ghost" className="px-2 py-1 text-xs" onClick={handleRemove}>
+            Remove
+          </Button>
         </div>
       )}
     </div>

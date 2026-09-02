@@ -14,11 +14,14 @@ import { listCrewFeedPosts } from "@/lib/db/posts";
 import { listCrewMeetups } from "@/lib/db/meetups";
 import { getProfilesByIds } from "@/lib/db/profiles";
 import { listVehiclesByOwnerIds } from "@/lib/db/vehicles";
+import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { CREW_CATEGORY_LABELS } from "@/lib/crews/category";
+import { maxScore } from "@/lib/crews/best-rank";
 import { JoinButton } from "@/features/crews/join-button";
 import { CrewTabs, type CrewTabMember } from "@/features/crews/crew-tabs";
+import type { CrewCarItem } from "@/features/crews/crew-cars-grid";
 import { Button } from "@/components/ui/button";
 
 export default async function CrewPage({ params }: { params: Promise<{ crewId: string }> }) {
@@ -50,12 +53,19 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
   const profileById = new Map(profiles.map((p) => [p.id, p]));
 
   const heroIds = memberVehicles.map((v) => v.hero_media_id).filter((id): id is string => Boolean(id));
-  const [heroMedia, logoMedia, bannerMedia] = await Promise.all([
+  const avatarIds = profiles.map((p) => p.avatar_media_id).filter((id): id is string => Boolean(id));
+  const [heroMedia, avatarMedia, logoMedia, bannerMedia, scoreByVehicleId] = await Promise.all([
     getMediaByIds(supabase, heroIds),
+    getMediaByIds(supabase, avatarIds),
     crew.logo_media_id ? getMediaByIds(supabase, [crew.logo_media_id]) : Promise.resolve([]),
     crew.banner_media_id ? getMediaByIds(supabase, [crew.banner_media_id]) : Promise.resolve([]),
+    listActiveBuildsByVehicleIds(
+      supabase,
+      memberVehicles.map((v) => v.id),
+    ),
   ]);
   const heroUrlById = new Map(heroMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]));
+  const avatarUrlById = new Map(avatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]));
   const logoUrl = logoMedia[0] ? publicMediaUrl(supabase, logoMedia[0].storage_path) : null;
   const bannerUrl = bannerMedia[0] ? publicMediaUrl(supabase, bannerMedia[0].storage_path) : null;
 
@@ -66,17 +76,42 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
     vehiclesByOwner.set(vehicle.owner_id, list);
   }
 
+  // Each member's best rank — their highest-rated build across their
+  // whole garage, not just one car — feeds both the avatar ring on the
+  // Members tab and the owner badge on every one of their cars in the
+  // Cars tab below.
+  const bestScoreByOwner = new Map<string, number | null>();
+  for (const userId of memberUserIds) {
+    const scores = (vehiclesByOwner.get(userId) ?? []).map(
+      (vehicle) => scoreByVehicleId.get(vehicle.id)?.ai_rating_score ?? null,
+    );
+    bestScoreByOwner.set(userId, maxScore(scores));
+  }
+
   const tabMembers: CrewTabMember[] = members.map((member) => {
     const profile = profileById.get(member.user_id);
     return {
       member,
       username: profile?.username ?? "unknown",
-      avatarUrl: null,
-      vehicles: (vehiclesByOwner.get(member.user_id) ?? []).map((vehicle) => ({
-        id: vehicle.id,
-        title: vehicle.nickname || `${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim(),
-        heroUrl: vehicle.hero_media_id ? (heroUrlById.get(vehicle.hero_media_id) ?? null) : null,
-      })),
+      avatarUrl: profile?.avatar_media_id ? (avatarUrlById.get(profile.avatar_media_id) ?? null) : null,
+      bestScore: bestScoreByOwner.get(member.user_id) ?? null,
+    };
+  });
+
+  // The Cars tab's flat grid — one entry per vehicle across every
+  // member, not grouped by owner, so the crew reads as one shared
+  // garage. This is deliberately the page's default view (CrewTabs
+  // starts on "cars"), not Feed.
+  const cars: CrewCarItem[] = memberVehicles.map((vehicle) => {
+    const profile = profileById.get(vehicle.owner_id);
+    const username = profile?.username ?? "unknown";
+    return {
+      vehicle,
+      heroUrl: vehicle.hero_media_id ? (heroUrlById.get(vehicle.hero_media_id) ?? null) : null,
+      vehicleScore: scoreByVehicleId.get(vehicle.id)?.ai_rating_score ?? null,
+      ownerUsername: username,
+      ownerAvatarUrl: profile?.avatar_media_id ? (avatarUrlById.get(profile.avatar_media_id) ?? null) : null,
+      ownerBestScore: bestScoreByOwner.get(vehicle.owner_id) ?? null,
     };
   });
 
@@ -144,6 +179,7 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
         <CrewTabs
           crewId={crew.id}
           crew={crew}
+          cars={cars}
           posts={postThumbnails}
           members={tabMembers}
           events={events}
