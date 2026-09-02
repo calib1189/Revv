@@ -367,7 +367,18 @@ export function SwipeSlide({
               score={data.authorBestRatingScore}
               compact
               hideBadge
-              className="rounded-full shadow-[0_0_0_2px_rgb(255_68_51_/_0.35),0_0_16px_2px_rgb(255_68_51_/_0.35)]"
+              // The fixed accent-red halo is only for an unranked
+              // author (RankFrame renders no ring at all when score is
+              // null, so without this the avatar reads flat against a
+              // busy video background) — applying it unconditionally
+              // used to layer a constant red glow behind every ranked
+              // tier's own ring too, which looked like a second Ruby
+              // ring bleeding through non-red tiers (Cosmic especially).
+              className={`rounded-full ${
+                data.authorBestRatingScore == null
+                  ? "shadow-[0_0_0_2px_rgb(255_68_51_/_0.35),0_0_16px_2px_rgb(255_68_51_/_0.35)]"
+                  : ""
+              }`}
             >
               <Avatar
                 username={data.authorUsername}
