@@ -288,6 +288,18 @@ html.native-app body::-webkit-scrollbar {
     border-radius: 1rem;
   }
 
+  /* Compact covers everything from a 24px leaderboard avatar up to a
+     96px profile photo — the same 4.5px ring the big single-subject
+     hero photo uses (below) reads as a thin accent there, but on a
+     small list avatar it's proportionally huge (nearly 40% of the
+     circle's diameter at 24px). A flat, thinner ring for every compact
+     size looks intentional at all of them, where the shared 4.5px only
+     worked at the larger end of that range. */
+  .rank-frame.rank-frame-compact::before,
+  .rank-frame.rank-frame-compact::after {
+    padding: 2px;
+  }
+
   /* The reveal's own screen-corner rounding — used to be paired with a
      colored material ring traced right at the screen edge (the same
      rank-frame system RankFrame uses for small avatar badges, scaled

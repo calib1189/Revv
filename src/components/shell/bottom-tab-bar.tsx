@@ -14,6 +14,13 @@ function isActive(pathname: string, href: string) {
 // active tab gets a subtle glow without the "glow bleeding past the
 // edges of an invisible box" bug the top tab bar's underline had.
 const ACTIVE_GLOW = "drop-shadow-[0_0_5px_rgb(255_68_51_/_0.55)]";
+// FlagIcon's thin, curvy outline (a separate pole line plus a wavy flag
+// stroke, both close together) blurs into a visibly brighter halo than
+// the bulkier Home/Users/Comment/Person icons at the same drop-shadow
+// values — same filter, but a thin multi-stroke silhouette scatters more
+// of it. Tuned down specifically so Crews reads at the same intensity as
+// every other tab instead of "lighting up" more than the rest.
+const CREWS_ACTIVE_GLOW = "drop-shadow-[0_0_2px_rgb(255_68_51_/_0.35)]";
 
 export function BottomTabBar({
   username,
@@ -59,7 +66,7 @@ export function BottomTabBar({
         href="/crews"
         aria-label="Crews"
         className={`flex flex-col items-center gap-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
-          crews ? `${ACTIVE_GLOW} text-foreground` : "text-muted"
+          crews ? `${CREWS_ACTIVE_GLOW} text-foreground` : "text-muted"
         }`}
       >
         <FlagIcon className="h-7 w-7" />
