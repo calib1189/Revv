@@ -14,6 +14,25 @@ const ROLE_LABELS: Record<CrewMemberRole, string> = {
   member: "Member",
 };
 
+/** Only Leader and Admin get a colored pill — Member is the common case,
+ * and giving every row a badge would just be noise. Leader uses the
+ * brand accent (the one role that actually controls the crew); Admin
+ * gets a quieter neutral pill one step up from plain text. */
+function RoleBadge({ role }: { role: CrewMemberRole }) {
+  if (role === "member") {
+    return <p className="text-xs text-muted">Member</p>;
+  }
+  return (
+    <span
+      className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+        role === "leader" ? "bg-accent/15 text-accent" : "bg-white/10 text-foreground"
+      }`}
+    >
+      {ROLE_LABELS[role]}
+    </span>
+  );
+}
+
 /** One row in the Members tab — identity, role, and management controls.
  * Their actual cars live on the Cars tab now, not duplicated here; this
  * stays a lean roster for leader/admin housekeeping. The avatar still
@@ -74,21 +93,23 @@ export function MemberRow({
   }
 
   return (
-    <div className="glass flex items-center gap-3 rounded-2xl p-4">
-      <Link href={`/u/${username}`}>
-        <RankFrame score={bestScore} compact hideBadge>
-          <Avatar username={username} avatarUrl={avatarUrl} className="h-10 w-10 text-sm" />
+    <div className="glass flex items-center gap-3.5 rounded-2xl p-4 transition-colors hover:brightness-110">
+      <Link href={`/u/${username}`} className="flex-shrink-0">
+        <RankFrame score={bestScore} compact hideBadge className="rounded-full">
+          <Avatar username={username} avatarUrl={avatarUrl} className="h-11 w-11 text-sm" />
         </RankFrame>
       </Link>
       <div className="min-w-0 flex-1">
         <Link href={`/u/${username}`} className="truncate text-sm font-medium hover:underline">
           @{username}
         </Link>
-        <p className="text-xs text-muted">{ROLE_LABELS[role]}</p>
+        <div className="mt-1">
+          <RoleBadge role={role} />
+        </div>
       </div>
 
       {canManage && !isCrewOwner && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-2">
           {canChangeRole ? (
             <select
               value={role}
@@ -100,7 +121,7 @@ export function MemberRow({
               {viewerRole === "leader" && <option value="leader">Leader</option>}
             </select>
           ) : null}
-          <Button variant="ghost" className="px-2 py-1 text-xs" onClick={handleRemove}>
+          <Button variant="ghost" className="px-2 py-1 text-xs text-danger hover:bg-danger/10" onClick={handleRemove}>
             Remove
           </Button>
         </div>

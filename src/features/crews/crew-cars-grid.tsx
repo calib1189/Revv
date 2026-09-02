@@ -37,7 +37,7 @@ export function CrewCarsGrid({ cars }: { cars: CrewCarItem[] }) {
             aria-label={`@${car.ownerUsername}`}
             className="absolute left-2 top-2 z-10"
           >
-            <RankFrame score={car.ownerBestScore} compact hideBadge>
+            <RankFrame score={car.ownerBestScore} compact hideBadge className="rounded-full">
               <Avatar username={car.ownerUsername} avatarUrl={car.ownerAvatarUrl} className="h-9 w-9 text-xs" />
             </RankFrame>
           </Link>
