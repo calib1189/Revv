@@ -1,3 +1,14 @@
+export interface BuildRatingSubscores {
+  /** All 0-100. Sum/average has no special meaning — each is the AI's
+   * independent read of that one facet, not a weighted component of
+   * `score` (the headline score is its own holistic judgment call, not
+   * derived from these). */
+  style: number;
+  execution: number;
+  mods: number;
+  photography: number;
+}
+
 export interface BuildRating {
   /** 0-100, two decimal places. */
   score: number;
@@ -5,6 +16,7 @@ export interface BuildRating {
   strengths: string;
   /** What's specifically holding it back from a higher score, 1-2 sentences. */
   limitingFactors: string;
+  subscores: BuildRatingSubscores;
   isMock: boolean;
 }
 

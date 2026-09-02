@@ -9,7 +9,7 @@ import { getActiveBuild, getOrCreateActiveBuild, updateBuildRating } from "@/lib
 import { listBuildParts } from "@/lib/db/build-parts";
 import { buildRatingSummary } from "@/lib/rating/build-summary";
 import { getRatingProvider } from "@/lib/providers/get-rating-provider";
-import type { RatingPhoto, BuildRating } from "@/lib/providers/rating-provider";
+import type { RatingPhoto, BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 
 const RATE_LIMIT_HOURS = 24;
 const MAX_PHOTOS = 4;
@@ -91,11 +91,18 @@ export interface ConfirmRatingState {
   error: string | null;
 }
 
+function isValidSubscores(value: BuildRatingSubscores): boolean {
+  return (["style", "execution", "mods", "photography"] as const).every(
+    (key) => Number.isFinite(value[key]) && value[key] >= 0 && value[key] <= 100,
+  );
+}
+
 export async function confirmBuildRatingAction(
   vehicleId: string,
   score: number,
   strengths: string,
   limitingFactors: string,
+  subscores: BuildRatingSubscores,
 ): Promise<ConfirmRatingState> {
   if (!Number.isFinite(score) || score < 0 || score > 100) {
     return { error: "Invalid rating." };
@@ -110,12 +117,15 @@ export async function confirmBuildRatingAction(
   ) {
     return { error: "Invalid rating." };
   }
+  if (!subscores || !isValidSubscores(subscores)) {
+    return { error: "Invalid rating." };
+  }
 
   const { supabase } = await requireOwner(vehicleId);
   const build = await getOrCreateActiveBuild(supabase, vehicleId);
 
   try {
-    await updateBuildRating(supabase, build.id, { score, strengths, limitingFactors });
+    await updateBuildRating(supabase, build.id, { score, strengths, limitingFactors, subscores });
   } catch (err) {
     // No logging here before meant a failed save was a total black box —
     // same fix as identifyVehicleAction's equivalent catch: log the real

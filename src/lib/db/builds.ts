@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database, Json } from "@/lib/supabase/database.types";
+import type { BuildRatingSubscores } from "@/lib/providers/rating-provider";
 
 export type Build = Database["public"]["Tables"]["builds"]["Row"];
 export type BuildInsert = Database["public"]["Tables"]["builds"]["Insert"];
@@ -114,7 +115,12 @@ export async function updateBuildStatus(
 export async function updateBuildRating(
   supabase: SupabaseClient<Database>,
   id: string,
-  rating: { score: number; strengths: string; limitingFactors: string },
+  rating: {
+    score: number;
+    strengths: string;
+    limitingFactors: string;
+    subscores: BuildRatingSubscores;
+  },
 ): Promise<Build> {
   const { data, error } = await supabase
     .from("builds")
@@ -122,6 +128,7 @@ export async function updateBuildRating(
       ai_rating_score: rating.score,
       ai_rating_strengths: rating.strengths,
       ai_rating_limiting_factors: rating.limitingFactors,
+      ai_rating_subscores: rating.subscores as unknown as Json,
       ai_rating_rated_at: new Date().toISOString(),
     })
     .eq("id", id)
@@ -130,6 +137,30 @@ export async function updateBuildRating(
 
   if (error) throw error;
   return data;
+}
+
+/** Just the score column, for percentile math (see lib/rating/percentile.ts)
+ * — the leaderboard's own eligibility population (active, rated, and
+ * optionally scoped to a category's verified vehicle ids), not every
+ * build ever rated. */
+export async function listAllRatingScores(
+  supabase: SupabaseClient<Database>,
+  vehicleIds?: string[],
+): Promise<number[]> {
+  let query = supabase
+    .from("builds")
+    .select("ai_rating_score")
+    .eq("status", "active")
+    .not("ai_rating_score", "is", null);
+
+  if (vehicleIds) {
+    if (vehicleIds.length === 0) return [];
+    query = query.in("vehicle_id", vehicleIds);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data.map((b) => b.ai_rating_score).filter((s): s is number => s != null);
 }
 
 export async function updateBuildBudget(

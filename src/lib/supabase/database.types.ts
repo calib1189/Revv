@@ -156,6 +156,7 @@ export interface Database {
           ai_rating_summary: string | null;
           ai_rating_strengths: string | null;
           ai_rating_limiting_factors: string | null;
+          ai_rating_subscores: Json | null;
           ai_rating_rated_at: string | null;
           created_at: string;
         };
@@ -170,6 +171,7 @@ export interface Database {
           ai_rating_summary?: string | null;
           ai_rating_strengths?: string | null;
           ai_rating_limiting_factors?: string | null;
+          ai_rating_subscores?: Json | null;
           ai_rating_rated_at?: string | null;
           created_at?: string;
         };

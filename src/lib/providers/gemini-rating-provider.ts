@@ -29,12 +29,29 @@ const PROMPT =
   "things holding the score back from being higher — what looks " +
   "unfinished, inconsistent, or missing, or if the build is already " +
   "excellent, what the very highest tier would still require. Never say " +
-  "something vague like 'needs more mods' without naming what kind.";
+  "something vague like 'needs more mods' without naming what kind.\n\n" +
+  "Finally, break your read of the build down into four independent " +
+  "0-100 subscores — each is your own honest judgment of that one facet " +
+  "alone, not a component that has to add up to the headline score: " +
+  "`style` (design coherence, color/theme choices, how well the parts " +
+  "work together visually), `execution` (fit, finish, and build " +
+  "quality — how cleanly the work was done), `mods` (the scope and " +
+  "ambition of the modifications themselves, stock being low here), " +
+  "and `photography` (how well these specific photos show the car off — " +
+  "lighting, angles, background — separate from the car itself).";
 
 interface GeminiRatingResponse {
   score: number;
   strengths: string;
   limitingFactors: string;
+  style: number;
+  execution: number;
+  mods: number;
+  photography: number;
+}
+
+function clampScore(value: number): number {
+  return Math.round(Math.max(0, Math.min(100, value)) * 100) / 100;
 }
 
 /**
@@ -72,8 +89,20 @@ export class GeminiRatingProvider implements RatingProvider {
               score: { type: "NUMBER" },
               strengths: { type: "STRING" },
               limitingFactors: { type: "STRING" },
+              style: { type: "NUMBER" },
+              execution: { type: "NUMBER" },
+              mods: { type: "NUMBER" },
+              photography: { type: "NUMBER" },
             },
-            required: ["score", "strengths", "limitingFactors"],
+            required: [
+              "score",
+              "strengths",
+              "limitingFactors",
+              "style",
+              "execution",
+              "mods",
+              "photography",
+            ],
           },
         },
       }),
@@ -91,12 +120,17 @@ export class GeminiRatingProvider implements RatingProvider {
     }
 
     const parsed: GeminiRatingResponse = JSON.parse(text);
-    const score = Math.round(Math.max(0, Math.min(100, parsed.score)) * 100) / 100;
 
     return {
-      score,
+      score: clampScore(parsed.score),
       strengths: parsed.strengths,
       limitingFactors: parsed.limitingFactors,
+      subscores: {
+        style: clampScore(parsed.style),
+        execution: clampScore(parsed.execution),
+        mods: clampScore(parsed.mods),
+        photography: clampScore(parsed.photography),
+      },
       isMock: false,
     };
   }

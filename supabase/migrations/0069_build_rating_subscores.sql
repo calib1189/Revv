@@ -1,0 +1,13 @@
+-- Rank breakdown: the AI rating already produces one headline score —
+-- this adds structured sub-scores (style/execution/mods/photography)
+-- alongside it, so tapping a rank badge can show a real breakdown
+-- instead of one number. Still "AI proposes, owner confirms" (see
+-- rating-actions.ts): the provider proposes subscores the same way it
+-- already proposes the headline score and strengths/limitingFactors,
+-- and only confirmBuildRatingAction's write actually persists them.
+--
+-- jsonb, not four columns — this is a single cohesive "the AI's
+-- breakdown of this rating" value, same reasoning as parts.specs.
+-- Nullable: an existing rated build has no subscores until it's re-rated
+-- (the confirm UI doesn't build a fake score for old ratings).
+alter table builds add column ai_rating_subscores jsonb;

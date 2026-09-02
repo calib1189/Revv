@@ -7,7 +7,10 @@ import { getVehicleById } from "@/lib/db/vehicles";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
-import { getActiveBuild } from "@/lib/db/builds";
+import { getActiveBuild, listAllRatingScores } from "@/lib/db/builds";
+import { computeTopPercent } from "@/lib/rating/percentile";
+import { RatingBreakdownTrigger } from "@/features/garage/rating-breakdown-modal";
+import type { BuildRatingSubscores } from "@/lib/providers/rating-provider";
 import { listBuildParts } from "@/lib/db/build-parts";
 import { getPartsByIds } from "@/lib/db/parts";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
@@ -130,6 +133,17 @@ export default async function VehiclePage({
     : [];
   const vehiclePosts = await listFeedPosts(supabase, { vehicleIds: [vehicleId], limit: 60 });
   const postThumbnails = await composeThumbnails(supabase, vehiclePosts);
+
+  const currentSubscores = (activeBuild?.ai_rating_subscores ?? null) as BuildRatingSubscores | null;
+  // Population is every active, rated build on REVV — deliberately not
+  // scoped to verified-only (the leaderboard's own population), since an
+  // unverified vehicle can still have a rating and this modal isn't
+  // claiming leaderboard rank, just "of rated builds" generally.
+  const topPercent =
+    activeBuild?.ai_rating_score != null
+      ? computeTopPercent(activeBuild.ai_rating_score, await listAllRatingScores(supabase))
+      : null;
+
   const heroUrl = heroMedia
     ? publicMediaUrl(supabase, heroMedia.storage_path)
     : null;
@@ -202,6 +216,8 @@ export default async function VehiclePage({
               currentScore={activeBuild?.ai_rating_score ?? null}
               currentStrengths={activeBuild?.ai_rating_strengths ?? null}
               currentLimitingFactors={activeBuild?.ai_rating_limiting_factors ?? null}
+              currentSubscores={currentSubscores}
+              topPercent={topPercent}
             />
           </div>
         )}
@@ -213,25 +229,31 @@ export default async function VehiclePage({
               const Icon = RANK_MATERIAL_ICONS[tier];
               return (
                 <>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
-                      style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26` }}
-                    >
-                      <Icon className="h-9 w-9" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                        Build rating
-                      </p>
-                      <p
-                        className="truncate text-xl font-bold tracking-tight"
-                        style={{ color: RANK_TEXT_COLORS[tier] }}
+                  <RatingBreakdownTrigger
+                    score={activeBuild.ai_rating_score!}
+                    subscores={currentSubscores}
+                    topPercent={topPercent}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
+                        style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26` }}
                       >
-                        {RANK_LABELS[tier]} · {activeBuild.ai_rating_score!.toFixed(2)}
-                      </p>
+                        <Icon className="h-9 w-9" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                          Build rating
+                        </p>
+                        <p
+                          className="truncate text-xl font-bold tracking-tight"
+                          style={{ color: RANK_TEXT_COLORS[tier] }}
+                        >
+                          {RANK_LABELS[tier]} · {activeBuild.ai_rating_score!.toFixed(2)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  </RatingBreakdownTrigger>
                   {(activeBuild.ai_rating_strengths || activeBuild.ai_rating_summary) && (
                     <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
                       {activeBuild.ai_rating_strengths ? (

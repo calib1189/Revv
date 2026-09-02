@@ -6,22 +6,27 @@ import { useRouter } from "next/navigation";
 import { generateBuildRatingAction, confirmBuildRatingAction } from "@/features/garage/rating-actions";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { RatingReveal } from "@/features/garage/rating-reveal";
+import { RatingBreakdownTrigger } from "@/features/garage/rating-breakdown-modal";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { GemIcon } from "@/components/ui/icons";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import type { BuildRating } from "@/lib/providers/rating-provider";
+import type { BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 
 export function RateBuildPanel({
   vehicleId,
   currentScore,
   currentStrengths,
   currentLimitingFactors,
+  currentSubscores,
+  topPercent,
 }: {
   vehicleId: string;
   currentScore: number | null;
   currentStrengths: string | null;
   currentLimitingFactors: string | null;
+  currentSubscores: BuildRatingSubscores | null;
+  topPercent: number | null;
 }) {
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -77,6 +82,7 @@ export function RateBuildPanel({
         pending.score,
         pending.strengths,
         pending.limitingFactors,
+        pending.subscores,
       );
       if (result.error) {
         setError(result.error);
@@ -156,18 +162,20 @@ export function RateBuildPanel({
         {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} />}
         <div className="glass-raised rounded-3xl p-6">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Icon className="h-16 w-16 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted">Build rating</p>
-              <p
-                className="truncate text-xl font-bold tracking-tight"
-                style={{ color: RANK_TEXT_COLORS[tier] }}
-              >
-                {RANK_LABELS[tier]} · {currentScore.toFixed(2)}
-              </p>
+          <RatingBreakdownTrigger score={currentScore} subscores={currentSubscores} topPercent={topPercent}>
+            <div className="flex min-w-0 items-center gap-3">
+              <Icon className="h-16 w-16 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted">Build rating</p>
+                <p
+                  className="truncate text-xl font-bold tracking-tight"
+                  style={{ color: RANK_TEXT_COLORS[tier] }}
+                >
+                  {RANK_LABELS[tier]} · {currentScore.toFixed(2)}
+                </p>
+              </div>
             </div>
-          </div>
+          </RatingBreakdownTrigger>
           <Button
             type="button"
             variant="secondary"
