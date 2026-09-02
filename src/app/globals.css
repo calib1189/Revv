@@ -318,48 +318,16 @@ html.native-app body::-webkit-scrollbar {
 
   .rank-frame::before {
     z-index: 5;
-    padding: 3px;
+    padding: 4.5px;
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     mask-composite: exclude;
-  }
-
-  /* A real child element, not a third pseudo-element (CSS only gives a
-     ::before/::after per element, both already spoken for above) — a
-     periodic light streak that sweeps across the ring every few
-     seconds, same "premium loot-card" shine every tier gets regardless
-     of its own material animation. Masked exactly like ::before/::after
-     so it obeys the same ring-only guarantee — it can never paint over
-     the photo in the middle no matter how bright it gets. */
-  .rank-glint {
-    position: absolute;
-    inset: 0;
-    z-index: 8;
-    border-radius: inherit;
-    corner-shape: inherit;
-    -webkit-corner-shape: inherit;
-    pointer-events: none;
-    box-sizing: border-box;
-    padding: 3px;
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.95) 48%, transparent 64%);
-    background-size: 260% 260%;
-    animation: rank-glint-sweep 5s ease-in-out infinite;
-  }
-
-  @keyframes rank-glint-sweep {
-    0% { background-position: -70% -70%; }
-    16% { background-position: 170% 170%; }
-    100% { background-position: 170% 170%; }
   }
 
   .rank-frame::after {
     z-index: 6;
-    padding: 3px;
+    padding: 4.5px;
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
@@ -459,8 +427,15 @@ html.native-app body::-webkit-scrollbar {
   }
 
   /* ---- cosmic: slow-rotating starfield + nebula ring ---- */
+  /* The original gradient dipped to #150826 (near-black) at 3 of its 7
+     stops — against the app's own near-black background (#0a0a0b), that
+     meant close to half the ring's circumference was nearly invisible
+     at any given moment, reading as "thin"/incomplete rather than as a
+     full ring rotating through color. Every stop here stays clearly
+     lighter than the page background so the ring reads as solid all
+     the way around, still cycling through the same deep-space palette. */
   .rank-cosmic::before {
-    background: conic-gradient(from var(--rank-angle, 0deg), #150826, #4c1d95, #be185d, #1e3a8a, #150826, #7c3aed, #150826);
+    background: conic-gradient(from var(--rank-angle, 0deg), #351768, #7c3aed, #ec4899, #3b5bdb, #351768, #9d5cff, #351768);
     animation: rank-angle-spin 14s linear infinite, rank-cosmic-glow-pulse 3.2s ease-in-out infinite;
   }
 

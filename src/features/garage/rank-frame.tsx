@@ -25,7 +25,6 @@ export function RankFrame({
       className={`rank-frame rank-${tier} ${compact ? "rank-frame-compact" : ""} ${className}`}
     >
       {children}
-      <span aria-hidden className="rank-glint" />
       {!hideBadge && (
         <div
           className={`rank-badge ${compact ? "text-[0.65rem]" : ""}`}
