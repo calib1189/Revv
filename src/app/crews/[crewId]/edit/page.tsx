@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +7,7 @@ import { CrewForm } from "@/features/crews/crew-form";
 import { CrewLogoUploader } from "@/features/crews/crew-logo-uploader";
 import { CrewBannerUploader } from "@/features/crews/crew-banner-uploader";
 import { updateCrewAction } from "@/features/crews/actions";
+import { BackIcon } from "@/components/ui/icons";
 
 export default async function EditCrewPage({ params }: { params: Promise<{ crewId: string }> }) {
   const { crewId } = await params;
@@ -19,6 +21,13 @@ export default async function EditCrewPage({ params }: { params: Promise<{ crewI
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
+      <Link
+        href={`/crews/${crewId}`}
+        className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
+      >
+        <BackIcon className="h-4 w-4" />
+        {crew.name}
+      </Link>
       <h1 className="mb-8 text-2xl font-semibold tracking-tight">Edit crew</h1>
 
       <div className="mb-8 flex flex-wrap gap-3">

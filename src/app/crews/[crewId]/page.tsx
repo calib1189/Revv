@@ -23,6 +23,7 @@ import { JoinButton } from "@/features/crews/join-button";
 import { CrewTabs, type CrewTabMember } from "@/features/crews/crew-tabs";
 import type { CrewCarItem } from "@/features/crews/crew-cars-grid";
 import { Button } from "@/components/ui/button";
+import { PinIcon, LockIcon, GlobeIcon } from "@/components/ui/icons";
 
 export default async function CrewPage({ params }: { params: Promise<{ crewId: string }> }) {
   const { crewId } = await params;
@@ -119,35 +120,62 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
     <div className="flex-1">
       <div className="relative h-40 w-full bg-surface sm:h-56">
         {bannerUrl && <Image src={bannerUrl} alt="" fill sizes="100vw" className="object-cover" priority />}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background to-transparent" />
       </div>
 
       <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
         <div className="flex items-start gap-4">
-          <div className="relative -mt-12 h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-4 border-background bg-surface-raised sm:h-24 sm:w-24">
+          <div className="relative -mt-16 h-24 w-24 flex-shrink-0 overflow-hidden rounded-full border-4 border-background bg-surface-raised shadow-lg sm:h-28 sm:w-28">
             {logoUrl ? (
-              <Image src={logoUrl} alt="" fill sizes="96px" className="object-cover" />
+              <Image src={logoUrl} alt="" fill sizes="112px" className="object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-2xl font-semibold">
+              <div className="flex h-full w-full items-center justify-center text-3xl font-semibold">
                 {crew.name.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
 
-          <div className="min-w-0 flex-1 pt-1">
-            <h1 className="truncate text-2xl font-bold tracking-tight">{crew.name}</h1>
-            <p className="text-sm text-muted">
-              {CREW_CATEGORY_LABELS[crew.category]}
-              {crew.location_text ? ` · ${crew.location_text}` : ""}
-              {" · "}
-              {crew.visibility === "private" ? "Private" : "Public"}
-            </p>
-            <p className="mt-1 text-sm text-muted">
-              {memberCount} member{memberCount === 1 ? "" : "s"}
-            </p>
+          <div className="min-w-0 flex-1 pt-2">
+            <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{crew.name}</h1>
+
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="glass flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-muted">
+                {crew.visibility === "private" ? (
+                  <LockIcon className="h-3 w-3" />
+                ) : (
+                  <GlobeIcon className="h-3 w-3" />
+                )}
+                {crew.visibility === "private" ? "Private" : "Public"}
+              </span>
+              <span className="glass rounded-full px-2.5 py-1 text-xs font-medium text-muted">
+                {CREW_CATEGORY_LABELS[crew.category]}
+              </span>
+              {crew.location_text && (
+                <span className="glass flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-muted">
+                  <PinIcon className="h-3 w-3" />
+                  {crew.location_text}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-5 flex gap-6">
+          <div>
+            <p className="text-lg font-bold leading-none">{memberCount}</p>
+            <p className="mt-1.5 text-xs text-muted">Member{memberCount === 1 ? "" : "s"}</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold leading-none">{cars.length}</p>
+            <p className="mt-1.5 text-xs text-muted">Car{cars.length === 1 ? "" : "s"}</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold leading-none">{postThumbnails.length}</p>
+            <p className="mt-1.5 text-xs text-muted">Post{postThumbnails.length === 1 ? "" : "s"}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
           {currentUser ? (
             <JoinButton
               crewId={crew.id}

@@ -11,25 +11,30 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listVehiclesByOwnerIds } from "@/lib/db/vehicles";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { maxScore } from "@/lib/crews/best-rank";
-import { CrewCard } from "@/features/crews/crew-card";
+import { CrewDiscoverGrid, type CrewCardData } from "@/features/crews/crew-discover-grid";
+import { FlagIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import type { Crew } from "@/lib/db/crews";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.types";
 
-async function CrewGrid({
-  crews,
-  supabase,
-}: {
-  crews: Crew[];
-  supabase: Awaited<ReturnType<typeof createClient>>;
-}) {
+async function buildCardData(
+  supabase: SupabaseClient<Database>,
+  crews: Crew[],
+): Promise<CrewCardData[]> {
+  if (crews.length === 0) return [];
+
   const crewIds = crews.map((c) => c.id);
   const logoIds = crews.map((c) => c.logo_media_id).filter((id): id is string => Boolean(id));
-  const [logoMedia, memberCounts, approvedMembers] = await Promise.all([
+  const bannerIds = crews.map((c) => c.banner_media_id).filter((id): id is string => Boolean(id));
+  const [logoMedia, bannerMedia, memberCounts, approvedMembers] = await Promise.all([
     getMediaByIds(supabase, logoIds),
+    getMediaByIds(supabase, bannerIds),
     getCrewMemberCountsForCrews(supabase, crewIds),
     listApprovedMembersForCrews(supabase, crewIds),
   ]);
   const logoUrlById = new Map(logoMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]));
+  const bannerUrlById = new Map(bannerMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]));
 
   // Best rank in each crew, for the glowing border — every approved
   // member's best-rated vehicle, maxed within that crew. Batched across
@@ -56,28 +61,19 @@ async function CrewGrid({
     memberIdsByCrew.set(member.crew_id, list);
   }
 
-  const bestScoreByCrew = new Map<string, number | null>();
-  for (const crew of crews) {
+  return crews.map((crew) => {
     const memberIds = memberIdsByCrew.get(crew.id) ?? [];
     const scores = memberIds.flatMap((userId) =>
       (vehicleIdsByOwner.get(userId) ?? []).map((vehicleId) => scoreByVehicleId.get(vehicleId)?.ai_rating_score ?? null),
     );
-    bestScoreByCrew.set(crew.id, maxScore(scores));
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {crews.map((crew) => (
-        <CrewCard
-          key={crew.id}
-          crew={crew}
-          logoUrl={crew.logo_media_id ? (logoUrlById.get(crew.logo_media_id) ?? null) : null}
-          memberCount={memberCounts.get(crew.id) ?? 0}
-          bestScore={bestScoreByCrew.get(crew.id) ?? null}
-        />
-      ))}
-    </div>
-  );
+    return {
+      crew,
+      logoUrl: crew.logo_media_id ? (logoUrlById.get(crew.logo_media_id) ?? null) : null,
+      bannerUrl: crew.banner_media_id ? (bannerUrlById.get(crew.banner_media_id) ?? null) : null,
+      memberCount: memberCounts.get(crew.id) ?? 0,
+      bestScore: maxScore(scores),
+    };
+  });
 }
 
 export default async function CrewsPage() {
@@ -90,35 +86,50 @@ export default async function CrewsPage() {
   ]);
   const yourCrews = user ? await getCrewsByIds(supabase, yourCrewIds) : [];
 
+  const [yourCardData, publicCardData] = await Promise.all([
+    buildCardData(supabase, yourCrews),
+    buildCardData(supabase, publicCrews),
+  ]);
+
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Crews</h1>
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/15 text-accent">
+            <FlagIcon className="h-5 w-5" />
+          </span>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Crews</h1>
+        </div>
         <Link href="/crews/new">
-          <Button className="px-3 py-1.5 text-sm">Create a crew</Button>
+          <Button className="px-4 py-2 text-sm">Create a crew</Button>
         </Link>
       </div>
 
-      {user && yourCrews.length > 0 && (
-        <div className="mb-8">
+      {user && yourCardData.length > 0 && (
+        <div className="mb-10">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Your crews</h2>
-          <CrewGrid crews={yourCrews} supabase={supabase} />
+          <CrewDiscoverGrid crews={yourCardData} showFilter={false} />
         </div>
       )}
 
       <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Discover</h2>
-      {publicCrews.length === 0 ? (
+      {publicCardData.length === 0 ? (
         <div className="glass flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
-          <p className="text-lg font-medium">No crews yet</p>
-          <p className="max-w-xs text-sm text-muted">
-            Start one around your car, your area, or your scene.
-          </p>
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-accent">
+            <FlagIcon className="h-7 w-7" />
+          </span>
+          <div>
+            <p className="text-lg font-medium">No crews yet</p>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-muted">
+              Start one around your car, your area, or your scene.
+            </p>
+          </div>
           <Link href="/crews/new">
             <Button>Create the first crew</Button>
           </Link>
         </div>
       ) : (
-        <CrewGrid crews={publicCrews} supabase={supabase} />
+        <CrewDiscoverGrid crews={publicCardData} />
       )}
     </div>
   );
