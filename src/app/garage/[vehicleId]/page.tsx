@@ -3,13 +3,14 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
-import { getVehicleById } from "@/lib/db/vehicles";
+import { getVehicleById, listVerifiedVehicleIds } from "@/lib/db/vehicles";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
 import { getActiveBuild, listAllRatingScores } from "@/lib/db/builds";
 import { listBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { computeTopPercent } from "@/lib/rating/percentile";
+import { computeRankPosition, type RankPosition } from "@/lib/rating/rank-position";
 import { RatingBreakdownTrigger } from "@/features/garage/rating-breakdown-modal";
 import type { BuildRatingSubscores } from "@/lib/providers/rating-provider";
 import { listBuildParts } from "@/lib/db/build-parts";
@@ -145,6 +146,19 @@ export default async function VehiclePage({
       ? computeTopPercent(activeBuild.ai_rating_score, await listAllRatingScores(supabase))
       : null;
   const ratingHistory = activeBuild ? await listBuildRatingHistory(supabase, activeBuild.id) : [];
+  // Unlike topPercent, this is scoped to the exact same population the
+  // leaderboard itself ranks against — verified vehicles only — so the
+  // rank number shown here is never a claim the real leaderboard
+  // wouldn't back up. A not-yet-verified vehicle simply doesn't get one,
+  // rather than a rank that would be wrong the moment they checked
+  // /leaderboard themselves.
+  const rankPosition: RankPosition | null =
+    isOwner && activeBuild?.ai_rating_score != null && vehicle.ownership_verification_status === "approved"
+      ? computeRankPosition(
+          activeBuild.ai_rating_score,
+          await listAllRatingScores(supabase, await listVerifiedVehicleIds(supabase)),
+        )
+      : null;
 
   const heroUrl = heroMedia
     ? publicMediaUrl(supabase, heroMedia.storage_path)
@@ -221,6 +235,7 @@ export default async function VehiclePage({
               currentSubscores={currentSubscores}
               topPercent={topPercent}
               ratingHistory={ratingHistory}
+              rankPosition={rankPosition}
             />
           </div>
         )}

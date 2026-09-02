@@ -9,9 +9,10 @@ import { RatingReveal } from "@/features/garage/rating-reveal";
 import { RatingBreakdownTrigger, type RatingHistoryPoint } from "@/features/garage/rating-breakdown-modal";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
-import { GemIcon } from "@/components/ui/icons";
+import { GemIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import type { BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
+import type { RankPosition } from "@/lib/rating/rank-position";
 
 export function RateBuildPanel({
   vehicleId,
@@ -21,6 +22,7 @@ export function RateBuildPanel({
   currentSubscores,
   topPercent,
   ratingHistory,
+  rankPosition,
 }: {
   vehicleId: string;
   currentScore: number | null;
@@ -29,6 +31,7 @@ export function RateBuildPanel({
   currentSubscores: BuildRatingSubscores | null;
   topPercent: number | null;
   ratingHistory: RatingHistoryPoint[];
+  rankPosition: RankPosition | null;
 }) {
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -214,6 +217,23 @@ export function RateBuildPanel({
               </div>
             )}
           </div>
+        )}
+
+        {rankPosition && (
+          <Link
+            href="/leaderboard"
+            className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-accent/10 p-3 transition-colors hover:bg-accent/15"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">#{rankPosition.rank} on the leaderboard</p>
+              <p className="mt-0.5 text-xs text-muted">
+                {rankPosition.gapToNext != null
+                  ? `${rankPosition.gapToNext.toFixed(2)} points to pass #${rankPosition.rank - 1}`
+                  : "Nobody's ahead of you"}
+              </p>
+            </div>
+            <ChevronRightIcon className="h-5 w-5 flex-shrink-0 text-muted" />
+          </Link>
         )}
 
         {error && (
