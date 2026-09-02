@@ -4,7 +4,7 @@ import { TabPagerShell } from "@/components/shell/tab-pager-shell";
 import { TAB_HREFS } from "@/components/shell/tab-order";
 import { FeedPageContent } from "@/features/feed/feed-page-content";
 import { DiscoverPageContent } from "@/features/meetups/discover-page-content";
-import { LeaderboardPageContent } from "@/features/leaderboard/leaderboard-page-content";
+import { LeaderboardPageContent, type LeaderboardScope } from "@/features/leaderboard/leaderboard-page-content";
 import type { VehicleCategory } from "@/lib/vehicles/category";
 
 /** Rendered identically (same three panels, same order) by all three of
@@ -25,9 +25,11 @@ import type { VehicleCategory } from "@/lib/vehicles/category";
 export async function TabsShellContent({
   initialHref,
   leaderboardCategory = null,
+  leaderboardScope,
 }: {
   initialHref: string;
   leaderboardCategory?: VehicleCategory | null;
+  leaderboardScope?: LeaderboardScope;
 }) {
   const user = await getCurrentUser();
 
@@ -38,7 +40,9 @@ export async function TabsShellContent({
   const contentByHref: Record<(typeof TAB_HREFS)[number], ReactNode> = {
     "/feed": <FeedPageContent />,
     "/discover": <DiscoverPageContent />,
-    "/leaderboard": <LeaderboardPageContent initialCategory={leaderboardCategory} />,
+    "/leaderboard": (
+      <LeaderboardPageContent initialCategory={leaderboardCategory} initialScope={leaderboardScope} />
+    ),
   };
 
   return (
