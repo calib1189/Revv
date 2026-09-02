@@ -11,6 +11,7 @@ import { RubyEmbers } from "@/features/garage/ruby-embers";
 import {
   unknownClimbValue,
   cappedClimbValue,
+  climbCeilingForScore,
   landingValue,
   landingStartValue,
   needsCorrection,
@@ -161,6 +162,22 @@ export function RatingReveal({
         const currentResult = resultRef.current;
         const pastMinimum = skipRef.current || elapsed >= MIN_CLIMB_MS;
         if (currentResult && pastMinimum) {
+          // If the real result took longer to arrive than MIN_CLIMB_MS,
+          // currentResult was null on every prior frame, so the climb
+          // ran the plain uncapped unknownClimbValue the whole time —
+          // cappedClimbValue below never got a chance to run, since it
+          // only applies once currentResult is already known. Clamping
+          // right here, at the one-time freeze, catches that case too:
+          // regardless of how the number got this high, it can never be
+          // shown any higher than one tier above the real score from
+          // this point on. A hard clamp is fine here specifically
+          // because we're freezing anyway — there's no ongoing
+          // animation for it to visibly interrupt.
+          const cappedFreezeValue = Math.min(
+            displayedValueRef.current,
+            climbCeilingForScore(currentResult.score),
+          );
+          setDisplayedValue(cappedFreezeValue);
           // Freeze right here rather than jumping straight into landing
           // — landingFromRef is computed once anticipation ends, from
           // whatever value it was frozen at, not a live climb value.

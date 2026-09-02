@@ -94,6 +94,13 @@ describe("climbCeilingForScore", () => {
     expect(climbCeilingForScore(12.4)).toBeCloseTo(29.99, 5);
   });
 
+  it("caps a platinum score (the exact scenario reported: 68 climbing to 94/ruby) at emerald's top", () => {
+    // 68 is platinum (60-69.99) — one tier up is emerald, whose top is
+    // 79.99 (just under diamond's 80 floor). It should never be
+    // possible to see this climb reach ruby (90+).
+    expect(climbCeilingForScore(68)).toBeCloseTo(79.99, 5);
+  });
+
   it("returns no cap (Infinity) once the real score is already ruby or cosmic", () => {
     expect(climbCeilingForScore(92)).toBe(Infinity); // ruby
     expect(climbCeilingForScore(98)).toBe(Infinity); // cosmic
