@@ -6,7 +6,7 @@ import { updateReportStatus, type Report } from "@/lib/db/reports";
 import { deletePost } from "@/lib/db/posts";
 import { deleteComment } from "@/lib/db/comments";
 import { deleteVehicle, updateVehicle } from "@/lib/db/vehicles";
-import { setUserBanned } from "@/lib/db/profiles";
+import { setUserBanned, setUserVerified, setUserFounder } from "@/lib/db/profiles";
 import { createAuditLog } from "@/lib/db/audit-logs";
 
 export async function dismissReportAction(reportId: string): Promise<void> {
@@ -77,6 +77,37 @@ export async function unbanUserAction(userId: string): Promise<void> {
     targetId: userId,
   });
   revalidatePath("/admin/reports");
+}
+
+/** Grants/revokes the "Verified" checkmark — the account-level REVV
+ * badge (0038), distinct from parts.verified or vehicle ownership
+ * verification. No self-service path exists for this at all; it's only
+ * ever reachable through this admin action. */
+export async function setUserVerifiedAction(userId: string, verified: boolean): Promise<void> {
+  const { supabase, userId: actorId } = await requireAdmin();
+  await setUserVerified(supabase, userId, verified);
+  await createAuditLog(supabase, {
+    actorId,
+    action: verified ? "user.verified" : "user.unverified",
+    targetType: "profile",
+    targetId: userId,
+  });
+  revalidatePath("/admin/users");
+}
+
+/** Grants/revokes the "Founder & Owner" title (0063). By convention a
+ * single-account badge — nothing in the schema enforces that, this admin
+ * UI is what does. */
+export async function setUserFounderAction(userId: string, isFounder: boolean): Promise<void> {
+  const { supabase, userId: actorId } = await requireAdmin();
+  await setUserFounder(supabase, userId, isFounder);
+  await createAuditLog(supabase, {
+    actorId,
+    action: isFounder ? "user.founder_granted" : "user.founder_revoked",
+    targetType: "profile",
+    targetId: userId,
+  });
+  revalidatePath("/admin/users");
 }
 
 export async function setOwnershipVerificationStatusAction(

@@ -20,6 +20,7 @@ const LINKS: { href: string; label: string; countKey?: keyof AdminNavCounts }[] 
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/audit-log", label: "Audit log" },
   { href: "/admin/parts", label: "Parts" },
+  { href: "/admin/users", label: "Users" },
 ];
 
 /** Reads the active tab from the URL itself (usePathname) rather than

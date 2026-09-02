@@ -104,6 +104,30 @@ export async function searchProfilesByUsername(
   return data;
 }
 
+/** Admin-only in practice — see 0068_admin_manage_profile_badges.sql's
+ * protect_is_verified_column trigger, which reverts this column for any
+ * non-admin write regardless of what the caller passes. */
+export async function setUserVerified(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  verified: boolean,
+): Promise<void> {
+  const { error } = await supabase.from("profiles").update({ is_verified: verified }).eq("id", userId);
+  if (error) throw error;
+}
+
+/** Admin-only in practice — see protect_is_founder_column. Founder is a
+ * single-account title by convention, not enforced as unique in the
+ * schema; the admin UI is what keeps it meaningful. */
+export async function setUserFounder(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  isFounder: boolean,
+): Promise<void> {
+  const { error } = await supabase.from("profiles").update({ is_founder: isFounder }).eq("id", userId);
+  if (error) throw error;
+}
+
 export async function updateProfileBio(
   supabase: SupabaseClient<Database>,
   userId: string,
