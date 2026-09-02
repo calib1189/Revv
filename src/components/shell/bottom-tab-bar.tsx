@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon, UsersIcon, CommentIcon, PersonIcon, FlagIcon } from "@/components/ui/icons";
+import { UsersIcon, CommentIcon, PersonIcon, FlagIcon } from "@/components/ui/icons";
 import { CreateMenu } from "@/components/shell/create-menu";
 
 function isActive(pathname: string, href: string) {
@@ -16,12 +16,16 @@ function isActive(pathname: string, href: string) {
 const ACTIVE_GLOW = "drop-shadow-[0_0_5px_rgb(255_68_51_/_0.55)]";
 // FlagIcon's thin, curvy outline (a separate pole line plus a wavy flag
 // stroke, both close together) blurs into a visibly brighter halo than
-// the bulkier Home/Users/Comment/Person icons at the same drop-shadow
-// values — same filter, but a thin multi-stroke silhouette scatters more
-// of it. Tuned down specifically so Crews reads at the same intensity as
-// every other tab instead of "lighting up" more than the rest.
+// the bulkier Users/Comment/Person icons at the same drop-shadow values
+// — same filter, but a thin multi-stroke silhouette scatters more of it.
+// Tuned down specifically so Crews reads at the same intensity as every
+// other tab instead of "lighting up" more than the rest.
 const CREWS_ACTIVE_GLOW = "drop-shadow-[0_0_2px_rgb(255_68_51_/_0.35)]";
 
+// Feed no longer gets its own icon here — it's the top tab bar's first
+// tab (top-tab-bar.tsx) now, and having it in both places was
+// redundant once Feed became a real swipeable tab there rather than a
+// separate destination.
 export function BottomTabBar({
   username,
   unreadInboxCount,
@@ -32,7 +36,6 @@ export function BottomTabBar({
   const pathname = usePathname();
   const profileHref = username ? `/u/${username}` : "/settings/profile";
 
-  const home = isActive(pathname, "/feed");
   const friends = isActive(pathname, "/friends");
   const crews = isActive(pathname, "/crews");
   const inbox = isActive(pathname, "/messages") || isActive(pathname, "/notifications");
@@ -40,17 +43,6 @@ export function BottomTabBar({
 
   return (
     <div className="mx-auto flex h-16 max-w-5xl items-center justify-around px-4">
-      <Link
-        href="/feed"
-        aria-label="Feed"
-        className={`flex flex-col items-center gap-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
-          home ? `${ACTIVE_GLOW} text-foreground` : "text-muted"
-        }`}
-      >
-        <HomeIcon className="h-7 w-7" />
-        <span className={`text-[11px] ${home ? "font-bold" : "font-medium"}`}>Feed</span>
-      </Link>
-
       <Link
         href="/friends"
         aria-label="Friends"

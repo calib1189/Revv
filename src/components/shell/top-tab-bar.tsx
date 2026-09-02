@@ -7,7 +7,7 @@ import { useTabPagerContext } from "@/components/shell/tab-pager-context";
 import { TAB_HREFS } from "@/components/shell/tab-order";
 
 const LABELS: Record<(typeof TAB_HREFS)[number], string> = {
-  "/feed": "For You",
+  "/feed": "Feed",
   "/discover": "Discover",
   "/leaderboard": "Leaderboard",
 };
@@ -28,7 +28,7 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
   // all (a specific vehicle, settings, a post) — there, activeIndex is
   // null and a tab click is a real navigation instead of a scroll.
   const onPager = activeIndex !== null;
-  // For You is a full-bleed vertical video feed — the bar floats over the
+  // Feed is a full-bleed vertical video feed — the bar floats over the
   // video (text only, no background) instead of sitting above it, so the
   // video can run edge to edge behind it.
   const isImmersive = onPager ? TABS[activeIndex]?.href === "/feed" : pathname === "/feed";
