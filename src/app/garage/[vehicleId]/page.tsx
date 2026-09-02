@@ -11,26 +11,24 @@ import { getActiveBuild } from "@/lib/db/builds";
 import { listBuildParts } from "@/lib/db/build-parts";
 import { getPartsByIds } from "@/lib/db/parts";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
+import { listFeedPosts } from "@/lib/db/posts";
+import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { VehicleSpecs } from "@/features/garage/vehicle-specs";
 import { CoverPhotoUploader } from "@/features/garage/cover-photo-uploader";
-import { GalleryUploader } from "@/features/garage/gallery-uploader";
-import { GalleryGrid } from "@/features/garage/gallery-grid";
 import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ReportButton } from "@/features/feed/report-button";
 import { OwnershipVerification } from "@/features/garage/ownership-verification";
 import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
-import { ModificationList } from "@/features/builds/modification-list";
+import { VehicleTabs } from "@/features/garage/vehicle-tabs";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
-import { BudgetCard } from "@/features/builds/budget-card";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
 import { listMaintenanceForVehicle } from "@/lib/db/maintenance";
 import { recordVehicleView } from "@/lib/db/vehicle-views";
 import { getPartClickCountsForBuildParts } from "@/lib/db/part-clicks";
-import { MaintenanceList } from "@/features/maintenance/maintenance-list";
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
@@ -130,6 +128,8 @@ export default async function VehiclePage({
   const maintenanceRecords = isOwner
     ? await listMaintenanceForVehicle(supabase, vehicleId)
     : [];
+  const vehiclePosts = await listFeedPosts(supabase, { vehicleIds: [vehicleId], limit: 60 });
+  const postThumbnails = await composeThumbnails(supabase, vehiclePosts);
   const heroUrl = heroMedia
     ? publicMediaUrl(supabase, heroMedia.storage_path)
     : null;
@@ -302,64 +302,23 @@ export default async function VehiclePage({
           </div>
         )}
 
-        <div className="mt-10">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Photos</h2>
-            {isOwner && (
-              <GalleryUploader
-                vehicleId={vehicle.id}
-                userId={user!.id}
-                nextPosition={gallery.length}
-              />
-            )}
-          </div>
-
-          <GalleryGrid
-            photos={gallery.map((g) => ({
-              vehicleMediaId: g.id,
-              url: publicMediaUrl(supabase, g.media.storage_path),
-            }))}
-            isOwner={isOwner}
-          />
-
-          {gallery.length === 0 && (
-            <p className="text-sm text-muted">No photos in the gallery yet.</p>
-          )}
-        </div>
-
-        <div className="mt-10">
-          <BudgetCard
-            summary={calculateBudgetSummary(
-              buildParts,
-              activeBuild?.budget_cents ?? null,
-            )}
-            vehicleId={vehicle.id}
-            isOwner={isOwner}
-          />
-        </div>
-
-        <div className="mt-10">
-          <ModificationList
-            buildParts={buildParts}
-            partsById={partsById}
-            partMediaUrlById={partMediaUrlById}
-            vehicleId={vehicle.id}
-            vehicleLabel={[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")}
-            userId={user?.id ?? null}
-            isOwner={isOwner}
-            clickCountsByBuildPart={clickCountsByBuildPart}
-          />
-        </div>
-
-        {isOwner && (
-          <div className="mt-10">
-            <MaintenanceList
-              records={maintenanceRecords}
-              vehicleId={vehicle.id}
-              isOwner={isOwner}
-            />
-          </div>
-        )}
+        <VehicleTabs
+          vehicleId={vehicle.id}
+          vehicleLabel={[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")}
+          userId={user?.id ?? null}
+          isOwner={isOwner}
+          budgetSummary={calculateBudgetSummary(buildParts, activeBuild?.budget_cents ?? null)}
+          buildParts={buildParts}
+          partsById={partsById}
+          partMediaUrlById={partMediaUrlById}
+          clickCountsByBuildPart={clickCountsByBuildPart}
+          photos={gallery.map((g) => ({
+            vehicleMediaId: g.id,
+            url: publicMediaUrl(supabase, g.media.storage_path),
+          }))}
+          posts={postThumbnails}
+          maintenanceRecords={maintenanceRecords}
+        />
       </div>
     </div>
   );
