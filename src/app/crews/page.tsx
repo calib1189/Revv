@@ -12,6 +12,7 @@ import { listVehiclesByOwnerIds } from "@/lib/db/vehicles";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { maxScore } from "@/lib/crews/best-rank";
 import { CrewDiscoverGrid, type CrewCardData } from "@/features/crews/crew-discover-grid";
+import { CrewsPageTabs } from "@/features/crews/crews-page-tabs";
 import { FlagIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import type { Crew } from "@/lib/db/crews";
@@ -112,7 +113,6 @@ export default async function CrewsPage() {
         </div>
       )}
 
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Discover</h2>
       {publicCardData.length === 0 ? (
         <div className="glass flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-accent">
@@ -129,7 +129,7 @@ export default async function CrewsPage() {
           </Link>
         </div>
       ) : (
-        <CrewDiscoverGrid crews={publicCardData} />
+        <CrewsPageTabs crews={publicCardData} />
       )}
     </div>
   );
