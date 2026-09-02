@@ -33,6 +33,14 @@
  * "same category" and "same make" are both real, separately-informative
  * signals (someone who likes JDM builds broadly is a different signal
  * from someone who specifically keeps engaging with Honda content).
+ *
+ * Following the author is its own, larger boost, independent of and
+ * stacking with category/make — it's a deliberate, explicit relationship
+ * rather than something inferred from past engagement, so it counts for
+ * more than either inferred signal. Without this, a post from someone
+ * you follow competed on pure engagement math exactly like a stranger's,
+ * which is backwards for a feed that's supposed to feel like "your
+ * people" show up reliably.
  */
 
 export interface PostEngagementSignals {
@@ -56,9 +64,17 @@ export interface ViewerAffinity {
   /** True if the viewer has recently done the same for the same vehicle
    * make specifically (a narrower, independent signal from category). */
   matchesMake: boolean;
+  /** True if the viewer follows this post's author. An explicit,
+   * deliberate relationship — not inferred the way category/make are —
+   * so it gets its own, larger boost (see FOLLOW_BOOST). */
+  isFollowedAuthor: boolean;
 }
 
-export const NO_AFFINITY: ViewerAffinity = { matchesCategory: false, matchesMake: false };
+export const NO_AFFINITY: ViewerAffinity = {
+  matchesCategory: false,
+  matchesMake: false,
+  isFollowedAuthor: false,
+};
 
 const WEIGHTS = {
   view: 1,
@@ -81,6 +97,9 @@ const GRAVITY = 1.5;
 
 const CATEGORY_AFFINITY_BOOST = 0.5;
 const MAKE_AFFINITY_BOOST = 0.25;
+// Bigger than either inferred-affinity boost — following someone is a
+// direct choice the viewer made, not a guess from past behavior.
+const FOLLOW_BOOST = 0.75;
 
 export function computeEngagementScore(signals: PostEngagementSignals): number {
   return (
@@ -101,6 +120,9 @@ export function computeHotScore(
   const engagement = computeEngagementScore(signals);
   const decay = Math.pow(Math.max(0, signals.ageHours) + 2, GRAVITY);
   const boost =
-    1 + (affinity.matchesCategory ? CATEGORY_AFFINITY_BOOST : 0) + (affinity.matchesMake ? MAKE_AFFINITY_BOOST : 0);
+    1 +
+    (affinity.matchesCategory ? CATEGORY_AFFINITY_BOOST : 0) +
+    (affinity.matchesMake ? MAKE_AFFINITY_BOOST : 0) +
+    (affinity.isFollowedAuthor ? FOLLOW_BOOST : 0);
   return (engagement / decay) * boost;
 }

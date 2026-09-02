@@ -9,6 +9,7 @@ import { getShareCountsForPosts } from "@/lib/db/post-shares";
 import { getCompletionCountsForPosts } from "@/lib/db/post-view-completions";
 import { getViewerAffinity, EMPTY_AFFINITY } from "@/lib/ranking/viewer-affinity";
 import { computeHotScore, NO_AFFINITY, type ViewerAffinity } from "@/lib/ranking/feed-score";
+import { listFollowingIds } from "@/lib/db/follows";
 
 // Bounds the ranking computation to posts from the last month, capped at
 // a fixed count — the "For You" feed re-ranks live on every request
@@ -96,32 +97,44 @@ export async function listRankedFeedPosts(
     ...new Set(candidates.map((p) => p.vehicle_id).filter((id): id is string => Boolean(id))),
   ];
 
-  const [likeCounts, commentCounts, saveCounts, viewCounts, shareCounts, completionCounts, affinity, vehicleRows] =
-    await Promise.all([
-      getLikeCountsForPosts(supabase, postIds),
-      getCommentCountsForPosts(supabase, postIds),
-      getSaveCountsForPosts(supabase, postIds),
-      getViewCountsForPosts(supabase, postIds),
-      getShareCountsForPosts(supabase, postIds),
-      getCompletionCountsForPosts(supabase, postIds),
-      viewerId ? getViewerAffinity(supabase, viewerId) : Promise.resolve(EMPTY_AFFINITY),
-      candidateVehicleIds.length > 0
-        ? supabase.from("vehicles").select("id, category, make").in("id", candidateVehicleIds)
-        : Promise.resolve({ data: [] as { id: string; category: string; make: string | null }[], error: null }),
-    ]);
+  const [
+    likeCounts,
+    commentCounts,
+    saveCounts,
+    viewCounts,
+    shareCounts,
+    completionCounts,
+    affinity,
+    followingIds,
+    vehicleRows,
+  ] = await Promise.all([
+    getLikeCountsForPosts(supabase, postIds),
+    getCommentCountsForPosts(supabase, postIds),
+    getSaveCountsForPosts(supabase, postIds),
+    getViewCountsForPosts(supabase, postIds),
+    getShareCountsForPosts(supabase, postIds),
+    getCompletionCountsForPosts(supabase, postIds),
+    viewerId ? getViewerAffinity(supabase, viewerId) : Promise.resolve(EMPTY_AFFINITY),
+    viewerId ? listFollowingIds(supabase, viewerId) : Promise.resolve([] as string[]),
+    candidateVehicleIds.length > 0
+      ? supabase.from("vehicles").select("id, category, make").in("id", candidateVehicleIds)
+      : Promise.resolve({ data: [] as { id: string; category: string; make: string | null }[], error: null }),
+  ]);
   if (vehicleRows.error) throw vehicleRows.error;
+  const followingSet = new Set(followingIds);
 
   const vehicleById = new Map((vehicleRows.data ?? []).map((v) => [v.id, v]));
   const now = Date.now();
 
   const scored = candidates.map((post) => {
     const vehicle = post.vehicle_id ? vehicleById.get(post.vehicle_id) : null;
-    const postAffinity: ViewerAffinity = vehicle
-      ? {
-          matchesCategory: affinity.categories.has(vehicle.category),
-          matchesMake: Boolean(vehicle.make) && affinity.makes.has(vehicle.make!.toLowerCase()),
-        }
-      : NO_AFFINITY;
+    const postAffinity: ViewerAffinity = {
+      matchesCategory: vehicle ? affinity.categories.has(vehicle.category) : NO_AFFINITY.matchesCategory,
+      matchesMake: vehicle
+        ? Boolean(vehicle.make) && affinity.makes.has(vehicle.make!.toLowerCase())
+        : NO_AFFINITY.matchesMake,
+      isFollowedAuthor: followingSet.has(post.author_id),
+    };
     const ageHours = (now - new Date(post.created_at).getTime()) / (1000 * 60 * 60);
     const score = computeHotScore(
       {

@@ -69,6 +69,7 @@ describe("computeHotScore", () => {
     const boosted = computeHotScore(signals({ likes: 10, ageHours: 2 }), {
       matchesCategory: true,
       matchesMake: false,
+      isFollowedAuthor: false,
     });
     expect(boosted).toBeGreaterThan(base);
   });
@@ -78,6 +79,7 @@ describe("computeHotScore", () => {
     const boosted = computeHotScore(signals({ likes: 10, ageHours: 2 }), {
       matchesCategory: false,
       matchesMake: true,
+      isFollowedAuthor: false,
     });
     expect(boosted).toBeGreaterThan(base);
   });
@@ -86,12 +88,52 @@ describe("computeHotScore", () => {
     const categoryOnly = computeHotScore(signals({ likes: 10, ageHours: 2 }), {
       matchesCategory: true,
       matchesMake: false,
+      isFollowedAuthor: false,
     });
     const both = computeHotScore(signals({ likes: 10, ageHours: 2 }), {
       matchesCategory: true,
       matchesMake: true,
+      isFollowedAuthor: false,
     });
     expect(both).toBeGreaterThan(categoryOnly);
+  });
+
+  it("following the author strictly increases the score", () => {
+    const base = computeHotScore(signals({ likes: 10, ageHours: 2 }), NO_AFFINITY);
+    const boosted = computeHotScore(signals({ likes: 10, ageHours: 2 }), {
+      matchesCategory: false,
+      matchesMake: false,
+      isFollowedAuthor: true,
+    });
+    expect(boosted).toBeGreaterThan(base);
+  });
+
+  it("the follow boost is bigger than category affinity alone (the larger of the two inferred signals)", () => {
+    const followed = computeHotScore(signals({ likes: 10, ageHours: 2 }), {
+      matchesCategory: false,
+      matchesMake: false,
+      isFollowedAuthor: true,
+    });
+    const categoryOnly = computeHotScore(signals({ likes: 10, ageHours: 2 }), {
+      matchesCategory: true,
+      matchesMake: false,
+      isFollowedAuthor: false,
+    });
+    expect(followed).toBeGreaterThan(categoryOnly);
+  });
+
+  it("follow boost stacks with category/make affinity rather than replacing it", () => {
+    const followedOnly = computeHotScore(signals({ likes: 10, ageHours: 2 }), {
+      matchesCategory: false,
+      matchesMake: false,
+      isFollowedAuthor: true,
+    });
+    const followedAndAffinity = computeHotScore(signals({ likes: 10, ageHours: 2 }), {
+      matchesCategory: true,
+      matchesMake: true,
+      isFollowedAuthor: true,
+    });
+    expect(followedAndAffinity).toBeGreaterThan(followedOnly);
   });
 
   it("a wildly popular old post can still outrank a fresh, unengaged one", () => {
