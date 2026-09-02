@@ -92,9 +92,9 @@ export interface ConfirmRatingState {
 }
 
 function isValidSubscores(value: BuildRatingSubscores): boolean {
-  return (["style", "execution", "mods", "photography"] as const).every(
-    (key) => Number.isFinite(value[key]) && value[key] >= 0 && value[key] <= 100,
-  );
+  return (
+    ["appearance", "performance", "wheelsFitment", "interior", "modifications"] as const
+  ).every((key) => Number.isFinite(value[key]) && value[key] >= 0 && value[key] <= 100);
 }
 
 export async function confirmBuildRatingAction(

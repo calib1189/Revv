@@ -3,10 +3,11 @@ export interface BuildRatingSubscores {
    * independent read of that one facet, not a weighted component of
    * `score` (the headline score is its own holistic judgment call, not
    * derived from these). */
-  style: number;
-  execution: number;
-  mods: number;
-  photography: number;
+  appearance: number;
+  performance: number;
+  wheelsFitment: number;
+  interior: number;
+  modifications: number;
 }
 
 export interface BuildRating {

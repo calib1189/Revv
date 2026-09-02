@@ -6,13 +6,25 @@ import { CloseIcon } from "@/components/ui/icons";
 import type { BuildRatingSubscores } from "@/lib/providers/rating-provider";
 
 const SUBSCORE_LABELS: Record<keyof BuildRatingSubscores, string> = {
-  style: "Style",
-  execution: "Execution",
-  mods: "Mods",
-  photography: "Photography",
+  appearance: "Appearance",
+  performance: "Performance",
+  wheelsFitment: "Wheels/Fitment",
+  interior: "Interior",
+  modifications: "Modifications",
 };
 
 const SUBSCORE_KEYS = Object.keys(SUBSCORE_LABELS) as (keyof BuildRatingSubscores)[];
+
+/** A build rated under the old (style/execution/mods/photography) or a
+ * future taxonomy would otherwise render `undefined` for whichever keys
+ * don't match — this is what makes that case fall back to the "rated
+ * before subscores existed" message instead, same as truly missing
+ * subscores. */
+function hasCompleteSubscores(
+  subscores: BuildRatingSubscores | null,
+): subscores is BuildRatingSubscores {
+  return !!subscores && SUBSCORE_KEYS.every((key) => typeof subscores[key] === "number");
+}
 
 /** Wraps whatever badge/score text a page already shows and makes it
  * open a breakdown sheet — the "tap a rank badge to see sub-scores and a
@@ -33,6 +45,7 @@ export function RatingBreakdownTrigger({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const tier = rankForScore(score);
+  const validSubscores = hasCompleteSubscores(subscores) ? subscores : null;
 
   return (
     <>
@@ -68,18 +81,18 @@ export function RatingBreakdownTrigger({
               )}
             </p>
 
-            {subscores ? (
+            {validSubscores ? (
               <div className="flex flex-col gap-4">
                 {SUBSCORE_KEYS.map((key) => (
                   <div key={key}>
                     <div className="mb-1.5 flex items-center justify-between text-sm">
                       <span className="font-medium">{SUBSCORE_LABELS[key]}</span>
-                      <span className="tabular-nums text-muted">{subscores[key].toFixed(0)}</span>
+                      <span className="tabular-nums text-muted">{validSubscores[key].toFixed(0)}</span>
                     </div>
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                       <div
                         className="h-full rounded-full bg-accent"
-                        style={{ width: `${subscores[key]}%` }}
+                        style={{ width: `${validSubscores[key]}%` }}
                       />
                     </div>
                   </div>

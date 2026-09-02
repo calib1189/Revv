@@ -21,10 +21,11 @@ export class MockRatingProvider implements RatingProvider {
       strengths: "This is a mock rating — no real model reviewed your build.",
       limitingFactors: "Mock ratings don't identify real limiting factors.",
       subscores: {
-        style: randomSubscore(),
-        execution: randomSubscore(),
-        mods: randomSubscore(),
-        photography: randomSubscore(),
+        appearance: randomSubscore(),
+        performance: randomSubscore(),
+        wheelsFitment: randomSubscore(),
+        interior: randomSubscore(),
+        modifications: randomSubscore(),
       },
       isMock: true,
     };

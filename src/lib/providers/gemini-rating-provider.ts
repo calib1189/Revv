@@ -30,24 +30,30 @@ const PROMPT =
   "unfinished, inconsistent, or missing, or if the build is already " +
   "excellent, what the very highest tier would still require. Never say " +
   "something vague like 'needs more mods' without naming what kind.\n\n" +
-  "Finally, break your read of the build down into four independent " +
+  "Finally, break your read of the build down into five independent " +
   "0-100 subscores — each is your own honest judgment of that one facet " +
   "alone, not a component that has to add up to the headline score: " +
-  "`style` (design coherence, color/theme choices, how well the parts " +
-  "work together visually), `execution` (fit, finish, and build " +
-  "quality — how cleanly the work was done), `mods` (the scope and " +
-  "ambition of the modifications themselves, stock being low here), " +
-  "and `photography` (how well these specific photos show the car off — " +
-  "lighting, angles, background — separate from the car itself).";
+  "`appearance` (paint, body condition, panel gaps, overall visual " +
+  "presentation), `performance` (engine/drivetrain mods, exhaust, " +
+  "intake, tuning — actual go-fast work, not looks), `wheelsFitment` " +
+  "(wheel choice, wheel/tire fitment, stance, ride height), `interior` " +
+  "(condition and any interior modifications — seats, gauges, audio, " +
+  "trim), and `modifications` (the overall scope and ambition of the " +
+  "build's mods as a whole, stock being low here). Score each facet on " +
+  "what's actually visible — a car with no interior photos still gets " +
+  "an honest `interior` score based on what little is visible or, if " +
+  "truly nothing is visible, a neutral middle-of-the-road score rather " +
+  "than guessing high or low.";
 
 interface GeminiRatingResponse {
   score: number;
   strengths: string;
   limitingFactors: string;
-  style: number;
-  execution: number;
-  mods: number;
-  photography: number;
+  appearance: number;
+  performance: number;
+  wheelsFitment: number;
+  interior: number;
+  modifications: number;
 }
 
 function clampScore(value: number): number {
@@ -89,19 +95,21 @@ export class GeminiRatingProvider implements RatingProvider {
               score: { type: "NUMBER" },
               strengths: { type: "STRING" },
               limitingFactors: { type: "STRING" },
-              style: { type: "NUMBER" },
-              execution: { type: "NUMBER" },
-              mods: { type: "NUMBER" },
-              photography: { type: "NUMBER" },
+              appearance: { type: "NUMBER" },
+              performance: { type: "NUMBER" },
+              wheelsFitment: { type: "NUMBER" },
+              interior: { type: "NUMBER" },
+              modifications: { type: "NUMBER" },
             },
             required: [
               "score",
               "strengths",
               "limitingFactors",
-              "style",
-              "execution",
-              "mods",
-              "photography",
+              "appearance",
+              "performance",
+              "wheelsFitment",
+              "interior",
+              "modifications",
             ],
           },
         },
@@ -126,10 +134,11 @@ export class GeminiRatingProvider implements RatingProvider {
       strengths: parsed.strengths,
       limitingFactors: parsed.limitingFactors,
       subscores: {
-        style: clampScore(parsed.style),
-        execution: clampScore(parsed.execution),
-        mods: clampScore(parsed.mods),
-        photography: clampScore(parsed.photography),
+        appearance: clampScore(parsed.appearance),
+        performance: clampScore(parsed.performance),
+        wheelsFitment: clampScore(parsed.wheelsFitment),
+        interior: clampScore(parsed.interior),
+        modifications: clampScore(parsed.modifications),
       },
       isMock: false,
     };
