@@ -7,7 +7,6 @@ import { useTabPagerContext } from "@/components/shell/tab-pager-context";
 import { TAB_HREFS } from "@/components/shell/tab-order";
 
 const LABELS: Record<(typeof TAB_HREFS)[number], string> = {
-  "/garage": "Garage",
   "/feed": "For You",
   "/discover": "Discover",
   "/leaderboard": "Leaderboard",
@@ -41,16 +40,16 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
       }`}
     >
       {/* flex, not grid, for the same "nav needs to actually shrink"
-          reason as before. justify-between (no fixed gap) spreads the 4
+          reason as before. justify-between (no fixed gap) spreads the 3
           tabs across the nav's full width instead of packing them to the
           left with all the slack space left over after the last one —
           which is exactly what a fixed gap does, since it only ever
-          creates space where explicitly told to. Confirmed there's
-          actually room for this rather than it silently re-clipping
-          "Leaderboard": measured real gaps between tabs directly
-          (15px, not just "looks fine") and confirmed the last tab still
-          lands exactly at the nav's own edge even when bolded for being
-          active — the worst case — not past it. */}
+          creates space where explicitly told to. With only 3 tabs now
+          (Garage moved out to its own route, see tab-order.ts) there's
+          comfortably more room than the old 4-tab layout ever had, so
+          the same "does 'Leaderboard' still fit without clipping"
+          concern that motivated this approach applies even more loosely
+          than before. */}
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-3">
         <nav className="no-scrollbar flex min-w-0 flex-1 items-center justify-between overflow-x-auto">
           {TABS.map((tab, index) => {

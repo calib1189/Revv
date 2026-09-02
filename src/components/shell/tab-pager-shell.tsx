@@ -11,18 +11,19 @@ export interface TabPagerTab {
 
 export const HEADER_HEIGHT = "calc(3.5rem + env(safe-area-inset-top))";
 
-/** The actual swipeable pager behind all five top-level tabs (Garage, For
- * You, Discover, Leaderboard, Marketplace) — every panel is mounted
- * together in one native horizontal scroll-snap row, so dragging slowly
- * genuinely reveals the neighboring tab's real content in real time and
- * lets go to settle wherever you release, the way a native app's tab
- * pager does. There's no custom drag-tracking JS driving that part at
- * all — it's the browser's own scroll physics; a canned animation (what
- * this used to be, via View Transitions) can only ever play after the
- * fact and never actually follow a slow drag.
+/** The actual swipeable pager behind the top-level tabs (currently For
+ * You, Discover, Leaderboard — Garage and Marketplace both used to be
+ * panels here too, see tab-order.ts) — every panel is mounted together
+ * in one native horizontal scroll-snap row, so dragging slowly genuinely
+ * reveals the neighboring tab's real content in real time and lets go to
+ * settle wherever you release, the way a native app's tab pager does.
+ * There's no custom drag-tracking JS driving that part at all — it's the
+ * browser's own scroll physics; a canned animation (what this used to
+ * be, via View Transitions) can only ever play after the fact and never
+ * actually follow a slow drag.
  *
- * Rendered identically by all five route page.tsx files (only
- * `initialHref` differs) — see PROJECT_NOTES in each for why. */
+ * Rendered identically by every route that uses it (only `initialHref`
+ * differs) — see tabs-shell-content.tsx for why. */
 export function TabPagerShell({
   tabs,
   initialHref,

@@ -15,6 +15,7 @@ import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { ProfileTabs } from "@/features/profile/profile-tabs";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
@@ -161,6 +162,22 @@ export default async function ProfilePage({
         </RankFrame>
       </div>
 
+      {bestRatingScore != null && (
+        // Its own row below the header, not crammed into the stats row next
+        // to the 96px avatar — four stats plus that avatar don't fit at
+        // mobile width (found by visual check: the tier name rendered
+        // clipped behind the avatar circle).
+        <p className="mt-4 text-sm">
+          <span
+            className="font-bold"
+            style={{ color: RANK_TEXT_COLORS[rankForScore(bestRatingScore)] }}
+          >
+            {RANK_LABELS[rankForScore(bestRatingScore)]}
+          </span>
+          <span className="text-muted"> · Best build {bestRatingScore.toFixed(2)}</span>
+        </p>
+      )}
+
       {profile.bio && (
         <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">
           {profile.bio}
@@ -169,11 +186,18 @@ export default async function ProfilePage({
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {isOwnProfile ? (
-          <Link href="/settings/profile">
-            <Button variant="secondary" className="px-4 py-1.5 text-sm">
-              Edit profile
-            </Button>
-          </Link>
+          <>
+            <Link href="/settings/profile">
+              <Button variant="secondary" className="px-4 py-1.5 text-sm">
+                Edit profile
+              </Button>
+            </Link>
+            <Link href="/garage">
+              <Button variant="secondary" className="px-4 py-1.5 text-sm">
+                Garage
+              </Button>
+            </Link>
+          </>
         ) : currentUser ? (
           <>
             {!amBlocking && (

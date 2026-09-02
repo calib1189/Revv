@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon, UsersIcon, PlusIcon, CommentIcon, PersonIcon, FlagIcon } from "@/components/ui/icons";
+import { HomeIcon, UsersIcon, CommentIcon, PersonIcon, FlagIcon } from "@/components/ui/icons";
+import { CreateMenu } from "@/components/shell/create-menu";
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -34,13 +35,13 @@ export function BottomTabBar({
     <div className="mx-auto flex h-16 max-w-5xl items-center justify-around px-4">
       <Link
         href="/feed"
-        aria-label="Home"
+        aria-label="Feed"
         className={`flex flex-col items-center gap-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
           home ? `${ACTIVE_GLOW} text-foreground` : "text-muted"
         }`}
       >
         <HomeIcon className="h-7 w-7" />
-        <span className={`text-[11px] ${home ? "font-bold" : "font-medium"}`}>Home</span>
+        <span className={`text-[11px] ${home ? "font-bold" : "font-medium"}`}>Feed</span>
       </Link>
 
       <Link
@@ -65,13 +66,7 @@ export function BottomTabBar({
         <span className={`text-[11px] ${crews ? "font-bold" : "font-medium"}`}>Crews</span>
       </Link>
 
-      <Link
-        href="/feed/new"
-        aria-label="New post"
-        className="flex h-12 w-16 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255_/_0.3),0_0_0_1px_rgb(255_68_51_/_0.4),0_10px_28px_-8px_rgb(255_68_51_/_0.9)] transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90"
-      >
-        <PlusIcon className="h-7 w-7" strokeWidth={2.5} />
-      </Link>
+      <CreateMenu />
 
       <Link
         href="/messages"
