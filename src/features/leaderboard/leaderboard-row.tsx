@@ -59,7 +59,7 @@ export function LeaderboardRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{entry.vehicleTitle}</p>
         <div className="mt-1 flex items-center gap-1.5">
-          <RankFrame score={entry.score} compact hideBadge className="rounded-full">
+          <RankFrame score={entry.score} compact hideBadge className="flex-shrink-0 rounded-full">
             <Avatar
               username={entry.ownerUsername}
               avatarUrl={entry.ownerAvatarUrl}
