@@ -15,6 +15,22 @@ export async function listCompletedChallengeIds(
   return new Set(data.map((row) => row.challenge_id));
 }
 
+/** Every completion this user has ever recorded, across every week —
+ * for lifetime achievement thresholds (first_challenge, perfect_week),
+ * distinct from listCompletedChallengeIds which is scoped to one week
+ * for the live progress card. */
+export async function listAllChallengeCompletions(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<{ challengeId: string; weekStart: string }[]> {
+  const { data, error } = await supabase
+    .from("user_challenge_completions")
+    .select("challenge_id, week_start")
+    .eq("user_id", userId);
+  if (error) throw error;
+  return data.map((row) => ({ challengeId: row.challenge_id, weekStart: row.week_start }));
+}
+
 /** Same upsert-with-ignoreDuplicates pattern as insertAchievementUnlocks
  * — the unique (user_id, challenge_id, week_start) constraint is the
  * real race guard, not an existence check beforehand. */

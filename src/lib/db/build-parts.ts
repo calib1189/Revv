@@ -22,6 +22,20 @@ export async function listBuildParts(
   return data;
 }
 
+/** Every part across several builds in one query — for aggregating mod
+ * counts/spend across a user's whole garage (see
+ * lib/achievements/unlock.ts), where per-build totals don't matter, only
+ * the sum. */
+export async function listBuildPartsForBuilds(
+  supabase: SupabaseClient<Database>,
+  buildIds: string[],
+): Promise<BuildPart[]> {
+  if (buildIds.length === 0) return [];
+  const { data, error } = await supabase.from("build_parts").select("*").in("build_id", buildIds);
+  if (error) throw error;
+  return data;
+}
+
 export async function createBuildPart(
   supabase: SupabaseClient<Database>,
   input: BuildPartInsert,

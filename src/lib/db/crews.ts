@@ -26,6 +26,15 @@ export async function listPublicCrews(
   return data;
 }
 
+export async function listCrewsOwnedBy(
+  supabase: SupabaseClient<Database>,
+  ownerId: string,
+): Promise<Crew[]> {
+  const { data, error } = await supabase.from("crews").select("*").eq("owner_id", ownerId);
+  if (error) throw error;
+  return data;
+}
+
 export async function getCrewById(
   supabase: SupabaseClient<Database>,
   id: string,

@@ -19,6 +19,22 @@ export async function listMaintenanceForVehicle(
   return data;
 }
 
+/** Total maintenance record count across several vehicles at once — for
+ * garage-wide achievement thresholds, where per-vehicle counts don't
+ * matter, only the sum. */
+export async function countMaintenanceForVehicles(
+  supabase: SupabaseClient<Database>,
+  vehicleIds: string[],
+): Promise<number> {
+  if (vehicleIds.length === 0) return 0;
+  const { count, error } = await supabase
+    .from("maintenance")
+    .select("*", { count: "exact", head: true })
+    .in("vehicle_id", vehicleIds);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function createMaintenanceRecord(
   supabase: SupabaseClient<Database>,
   input: MaintenanceInsert,

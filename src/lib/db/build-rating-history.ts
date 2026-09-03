@@ -11,6 +11,10 @@ export interface BuildRatingHistoryEntry {
   isMock: boolean;
 }
 
+export interface BuildRatingHistoryEntryWithBuild extends BuildRatingHistoryEntry {
+  buildId: string;
+}
+
 /** One row per confirmed rating (see confirmBuildRatingAction) — never
  * updated or deleted, so this is a true history, not the build's
  * current rating (that's still builds.ai_rating_score, read separately). */
@@ -52,6 +56,30 @@ export async function listBuildRatingHistory(
     .limit(limit);
   if (error) throw error;
   return data.map((row) => ({
+    score: row.score,
+    subscores: row.subscores as unknown as BuildRatingSubscores | null,
+    ratedAt: row.rated_at,
+    isMock: row.is_mock,
+  }));
+}
+
+/** Every rating history row across several builds in one query — for
+ * garage-wide achievement thresholds (see lib/achievements/unlock.ts),
+ * where the check needs both "across all builds" maxes and "within one
+ * build" facts (like all_rounder), so buildId is kept on each row. */
+export async function listBuildRatingHistoryForBuilds(
+  supabase: SupabaseClient<Database>,
+  buildIds: string[],
+): Promise<BuildRatingHistoryEntryWithBuild[]> {
+  if (buildIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("build_rating_history")
+    .select("build_id, score, subscores, rated_at, is_mock")
+    .in("build_id", buildIds)
+    .order("rated_at", { ascending: true });
+  if (error) throw error;
+  return data.map((row) => ({
+    buildId: row.build_id,
     score: row.score,
     subscores: row.subscores as unknown as BuildRatingSubscores | null,
     ratedAt: row.rated_at,

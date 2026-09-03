@@ -17,6 +17,22 @@ export async function listCommentsByPost(
   return data;
 }
 
+/** All-time comment count by this user — distinct from
+ * weekly-stats.ts's countCommentsSince, which is scoped to the current
+ * week for challenge progress. This one is for lifetime achievement
+ * thresholds. */
+export async function countCommentsByAuthor(
+  supabase: SupabaseClient<Database>,
+  authorId: string,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("comments")
+    .select("*", { count: "exact", head: true })
+    .eq("author_id", authorId);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function getCommentById(
   supabase: SupabaseClient<Database>,
   id: string,

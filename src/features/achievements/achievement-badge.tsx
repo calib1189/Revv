@@ -1,4 +1,4 @@
-import { LockIcon, StarIcon } from "@/components/ui/icons";
+import { LockIcon } from "@/components/ui/icons";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { achievementColor, type AchievementDef } from "@/lib/achievements/catalog";
 import { formatDateOnly } from "@/lib/format/date";
@@ -15,7 +15,11 @@ export function AchievementBadge({
 }) {
   const unlocked = unlockedAt != null;
   const color = achievementColor(achievement);
-  const Icon = achievement.tier ? RANK_MATERIAL_ICONS[achievement.tier] : null;
+  // A tier milestone uses the real crest artwork; every other achievement
+  // has its own explicit icon in the catalog now — there's no longer a
+  // generic star fallback to reach for.
+  const TierIcon = achievement.tier ? RANK_MATERIAL_ICONS[achievement.tier] : null;
+  const Icon = achievement.icon;
 
   return (
     <div
@@ -29,11 +33,11 @@ export function AchievementBadge({
       >
         {!unlocked ? (
           <LockIcon className="h-6 w-6 text-muted" />
+        ) : TierIcon ? (
+          <TierIcon className="h-10 w-10" />
         ) : Icon ? (
-          <Icon className="h-10 w-10" />
-        ) : (
-          <StarIcon className="h-7 w-7" style={{ color }} />
-        )}
+          <Icon className="h-7 w-7" style={{ color }} />
+        ) : null}
       </span>
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold">{achievement.name}</p>

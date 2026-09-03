@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { StarIcon } from "@/components/ui/icons";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { achievementColor, type AchievementDef } from "@/lib/achievements/catalog";
 import { hapticLanding } from "@/lib/haptics";
@@ -29,7 +28,8 @@ export function AchievementUnlockToast({ achievements }: { achievements: Achieve
   if (!current) return null;
 
   const color = achievementColor(current);
-  const Icon = current.tier ? RANK_MATERIAL_ICONS[current.tier] : null;
+  const TierIcon = current.tier ? RANK_MATERIAL_ICONS[current.tier] : null;
+  const Icon = current.icon;
 
   return (
     // top-4 alone sat right under the status bar/notch (the sticky
@@ -49,7 +49,11 @@ export function AchievementUnlockToast({ achievements }: { achievements: Achieve
           className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full"
           style={{ backgroundColor: `${color}26` }}
         >
-          {Icon ? <Icon className="h-8 w-8" /> : <StarIcon className="h-5 w-5" style={{ color }} />}
+          {TierIcon ? (
+            <TierIcon className="h-8 w-8" />
+          ) : Icon ? (
+            <Icon className="h-5 w-5" style={{ color }} />
+          ) : null}
         </span>
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">

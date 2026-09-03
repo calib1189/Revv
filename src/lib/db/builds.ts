@@ -220,3 +220,20 @@ export async function getOrCreateActiveBuild(
   if (error) throw error;
   return data;
 }
+
+/** How many OTHER builds have copy-built from any of `buildIds` — for
+ * the "someone copied your build" achievement. Never counts a build
+ * copying itself since copied_from_build_id always points at a
+ * different build's id. */
+export async function countBuildsCopiedFrom(
+  supabase: SupabaseClient<Database>,
+  buildIds: string[],
+): Promise<number> {
+  if (buildIds.length === 0) return 0;
+  const { count, error } = await supabase
+    .from("builds")
+    .select("*", { count: "exact", head: true })
+    .in("copied_from_build_id", buildIds);
+  if (error) throw error;
+  return count ?? 0;
+}
