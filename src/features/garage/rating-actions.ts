@@ -5,7 +5,12 @@ import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
 import { getVehicleById } from "@/lib/db/vehicles";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
-import { getActiveBuild, getOrCreateActiveBuild, updateBuildRating } from "@/lib/db/builds";
+import {
+  getActiveBuild,
+  getOrCreateActiveBuild,
+  updateBuildRating,
+  markBuildRatingAttempt,
+} from "@/lib/db/builds";
 import { insertBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { listBuildParts } from "@/lib/db/build-parts";
 import { buildRatingSummary } from "@/lib/rating/build-summary";
@@ -36,12 +41,16 @@ export async function generateBuildRatingAction(
   const { supabase, vehicle } = await requireOwner(vehicleId);
 
   const existingBuild = await getActiveBuild(supabase, vehicleId);
-  if (existingBuild?.ai_rating_rated_at) {
-    const hoursSince =
-      (Date.now() - new Date(existingBuild.ai_rating_rated_at).getTime()) / (1000 * 60 * 60);
+  // ai_rating_last_attempt_at (set below, right after a real AI call
+  // completes) is the actual gate — it's recorded even if the result
+  // never gets confirmed. Falling back to ai_rating_rated_at covers a
+  // build whose last rating predates this column existing at all.
+  const lastAttempt = existingBuild?.ai_rating_last_attempt_at ?? existingBuild?.ai_rating_rated_at;
+  if (lastAttempt) {
+    const hoursSince = (Date.now() - new Date(lastAttempt).getTime()) / (1000 * 60 * 60);
     if (hoursSince < RATE_LIMIT_HOURS) {
       const hoursLeft = Math.ceil(RATE_LIMIT_HOURS - hoursSince);
-      return { error: `You can re-rate this build in about ${hoursLeft}h.` };
+      return { error: `You can rate this build again in about ${hoursLeft}h.` };
     }
   }
 
@@ -82,6 +91,11 @@ export async function generateBuildRatingAction(
 
   try {
     const rating = await provider.rateBuild(photos, summary);
+    // Recorded the moment a real result comes back — before the caller
+    // has any chance to discard it — so the daily limit is on the AI
+    // call itself, not on choosing to keep the result.
+    const build = await getOrCreateActiveBuild(supabase, vehicleId);
+    await markBuildRatingAttempt(supabase, build.id);
     return { data: rating };
   } catch {
     return { error: "Couldn't rate that build right now. Try again in a bit." };

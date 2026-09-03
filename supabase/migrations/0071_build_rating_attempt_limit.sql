@@ -1,0 +1,11 @@
+-- Closes a real gap in the "rate once per 24h" limit: the limit was
+-- only ever checked/updated against ai_rating_rated_at, which is set
+-- by confirmBuildRatingAction (the CONFIRM step) — never by
+-- generateBuildRatingAction (the actual AI call). Generating a rating
+-- and discarding it left no trace at all, so a user could burn
+-- unlimited real Gemini calls per car per day just by never clicking
+-- "Show this rating." ai_rating_last_attempt_at tracks the AI call
+-- itself, independent of whether the result ever gets confirmed;
+-- ai_rating_rated_at keeps its existing meaning (when the CURRENT
+-- confirmed score was set, used for display).
+alter table builds add column ai_rating_last_attempt_at timestamptz;

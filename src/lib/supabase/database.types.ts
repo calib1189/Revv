@@ -158,6 +158,7 @@ export interface Database {
           ai_rating_limiting_factors: string | null;
           ai_rating_subscores: Json | null;
           ai_rating_rated_at: string | null;
+          ai_rating_last_attempt_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -173,6 +174,7 @@ export interface Database {
           ai_rating_limiting_factors?: string | null;
           ai_rating_subscores?: Json | null;
           ai_rating_rated_at?: string | null;
+          ai_rating_last_attempt_at?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["builds"]["Insert"]>;

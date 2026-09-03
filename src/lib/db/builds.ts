@@ -139,6 +139,22 @@ export async function updateBuildRating(
   return data;
 }
 
+/** Marks the moment an AI rating call actually happened — independent of
+ * ai_rating_rated_at (only set when a rating is confirmed). This is what
+ * the 24h rate limit checks in generateBuildRatingAction: without it, a
+ * generated-but-discarded rating left no trace, so re-rating could be
+ * spammed indefinitely just by never clicking "Show this rating". */
+export async function markBuildRatingAttempt(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("builds")
+    .update({ ai_rating_last_attempt_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
 /** Just the score column, for percentile math (see lib/rating/percentile.ts)
  * — the leaderboard's own eligibility population (active, rated, and
  * optionally scoped to a category's verified vehicle ids), not every
