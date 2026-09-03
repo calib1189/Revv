@@ -220,6 +220,24 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["user_achievements"]["Insert"]>;
         Relationships: never[];
       };
+      user_challenge_completions: {
+        Row: {
+          id: string;
+          user_id: string;
+          challenge_id: string;
+          week_start: string;
+          completed_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          challenge_id: string;
+          week_start: string;
+          completed_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["user_challenge_completions"]["Insert"]>;
+        Relationships: never[];
+      };
       parts: {
         Row: {
           id: string;
