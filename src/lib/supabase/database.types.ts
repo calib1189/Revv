@@ -204,6 +204,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["build_rating_history"]["Insert"]>;
         Relationships: never[];
       };
+      user_achievements: {
+        Row: {
+          id: string;
+          user_id: string;
+          achievement_id: string;
+          unlocked_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          achievement_id: string;
+          unlocked_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["user_achievements"]["Insert"]>;
+        Relationships: never[];
+      };
       parts: {
         Row: {
           id: string;

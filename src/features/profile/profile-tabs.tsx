@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PostThumbnailGrid, type PostThumbnail } from "@/features/profile/post-thumbnail-grid";
 import { VehicleCard } from "@/features/garage/vehicle-card";
+import { AchievementsGrid } from "@/features/achievements/achievements-grid";
 import type { Vehicle } from "@/lib/db/vehicles";
 
 export interface ProfileVehicleItem {
@@ -11,7 +12,7 @@ export interface ProfileVehicleItem {
   ratingScore: number | null;
 }
 
-type Tab = "posts" | "garage" | "saved" | "liked";
+type Tab = "posts" | "garage" | "achievements" | "saved" | "liked";
 
 function TabButton({
   active,
@@ -38,12 +39,14 @@ function TabButton({
 export function ProfileTabs({
   posts,
   vehicles,
+  unlockedAtById,
   savedPosts,
   likedPosts,
   isOwnProfile,
 }: {
   posts: PostThumbnail[];
   vehicles: ProfileVehicleItem[];
+  unlockedAtById: Map<string, string>;
   savedPosts?: PostThumbnail[];
   likedPosts?: PostThumbnail[];
   isOwnProfile: boolean;
@@ -58,6 +61,9 @@ export function ProfileTabs({
         </TabButton>
         <TabButton active={tab === "garage"} onClick={() => setTab("garage")}>
           Garage ({vehicles.length})
+        </TabButton>
+        <TabButton active={tab === "achievements"} onClick={() => setTab("achievements")}>
+          Achievements ({unlockedAtById.size})
         </TabButton>
         {isOwnProfile && (
           <>
@@ -93,6 +99,8 @@ export function ProfileTabs({
             ))}
           </div>
         ))}
+
+      {tab === "achievements" && <AchievementsGrid unlockedAtById={unlockedAtById} />}
 
       {tab === "saved" &&
         isOwnProfile &&

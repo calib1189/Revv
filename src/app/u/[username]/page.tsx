@@ -17,6 +17,9 @@ import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { ProfileTabs } from "@/features/profile/profile-tabs";
+import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
+import { listUnlockedAchievements } from "@/lib/db/user-achievements";
+import { AchievementUnlockToast } from "@/features/achievements/achievement-unlock-toast";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
 import { MessageButton } from "@/features/messages/message-button";
@@ -108,8 +111,19 @@ export default async function ProfilePage({
   ]);
   const totalLikes = [...likeCountsByPost.values()].reduce((sum, n) => sum + n, 0);
 
+  // Only the owner's own visit triggers a check (see garage-page-content.tsx
+  // for the other trigger point) — a stranger viewing this profile
+  // shouldn't run the full stats-gathering query on the owner's behalf.
+  // The trophy case itself (below) is still fully public regardless.
+  const [newlyUnlocked, unlockedAchievements] = await Promise.all([
+    isOwnProfile ? checkAndUnlockAchievements(supabase, profile.id) : Promise.resolve([]),
+    listUnlockedAchievements(supabase, profile.id),
+  ]);
+  const unlockedAtById = new Map(unlockedAchievements.map((a) => [a.achievement_id, a.unlocked_at]));
+
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
+      <AchievementUnlockToast achievements={newlyUnlocked} />
       {isOwnProfile && (
         <div className="mb-2 flex justify-end">
           <Link
@@ -221,6 +235,7 @@ export default async function ProfilePage({
 
       <ProfileTabs
         isOwnProfile={isOwnProfile}
+        unlockedAtById={unlockedAtById}
         posts={postThumbnails}
         savedPosts={isOwnProfile ? savedThumbnails : undefined}
         likedPosts={isOwnProfile ? likedThumbnails : undefined}

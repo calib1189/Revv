@@ -8,6 +8,8 @@ import { VehicleCard } from "@/features/garage/vehicle-card";
 import { Button } from "@/components/ui/button";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
+import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
+import { AchievementUnlockToast } from "@/features/achievements/achievement-unlock-toast";
 
 /** Garage is one panel of the swipeable tab pager now (tab-pager-shell.tsx)
  * — every panel is always mounted together, so a hard redirect() here
@@ -57,8 +59,15 @@ export async function GaragePageContent() {
   }, null);
   const bestTier = bestScore != null ? rankForScore(bestScore) : null;
 
+  // Garage is the loop's own home screen — visited constantly, so it's
+  // the natural place to lazily check for newly-earned achievements
+  // (see lib/achievements/unlock.ts) rather than needing a background
+  // job for every possible trigger.
+  const newlyUnlocked = await checkAndUnlockAchievements(supabase, user.id);
+
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+      <AchievementUnlockToast achievements={newlyUnlocked} />
       <div className="mb-2 flex items-center">
         {/* flex-1 makes this stretch from the left edge to right where the
             button group starts, so justify-center here centers "Garage"
