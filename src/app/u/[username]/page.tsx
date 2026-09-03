@@ -115,11 +115,23 @@ export default async function ProfilePage({
   // for the other trigger point) — a stranger viewing this profile
   // shouldn't run the full stats-gathering query on the owner's behalf.
   // The trophy case itself (below) is still fully public regardless.
-  const [newlyUnlocked, unlockedAchievements] = await Promise.all([
-    isOwnProfile ? checkAndUnlockAchievements(supabase, profile.id) : Promise.resolve([]),
-    listUnlockedAchievements(supabase, profile.id),
-  ]);
-  const unlockedAtById = new Map(unlockedAchievements.map((a) => [a.achievement_id, a.unlocked_at]));
+  //
+  // Degrade gracefully if the achievements migration hasn't been applied
+  // yet — every profile page runs this on every visit (any viewer, not
+  // just the owner), so an unhandled error here would take down every
+  // profile in the app, not just the trophy case tab.
+  let newlyUnlocked: Awaited<ReturnType<typeof checkAndUnlockAchievements>> = [];
+  let unlockedAtById = new Map<string, string>();
+  try {
+    const [unlocked, unlockedAchievements] = await Promise.all([
+      isOwnProfile ? checkAndUnlockAchievements(supabase, profile.id) : Promise.resolve([]),
+      listUnlockedAchievements(supabase, profile.id),
+    ]);
+    newlyUnlocked = unlocked;
+    unlockedAtById = new Map(unlockedAchievements.map((a) => [a.achievement_id, a.unlocked_at]));
+  } catch (err) {
+    console.error("Achievements check failed:", err);
+  }
 
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">

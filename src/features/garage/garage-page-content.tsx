@@ -67,10 +67,27 @@ export async function GaragePageContent() {
   // weekly challenge completions (see lib/achievements/unlock.ts and
   // lib/challenges/progress.ts) rather than needing a background job
   // for every possible trigger.
-  const [newlyUnlocked, { progress: challengeProgress, newlyCompleted }] = await Promise.all([
-    checkAndUnlockAchievements(supabase, user.id),
-    getWeeklyChallengeProgress(supabase, user.id),
-  ]);
+  //
+  // Degrade gracefully if their migrations haven't been applied yet —
+  // Garage is now mounted on every route via the tab pager (see
+  // tab-order.ts), so an unhandled error here doesn't just break this
+  // panel, it takes down every page for every logged-in user. Same
+  // "missing table shouldn't take down the nav" reasoning header.tsx
+  // already uses for messaging.
+  let newlyUnlocked: Awaited<ReturnType<typeof checkAndUnlockAchievements>> = [];
+  let challengeProgress: Awaited<ReturnType<typeof getWeeklyChallengeProgress>>["progress"] = [];
+  let newlyCompleted: Awaited<ReturnType<typeof getWeeklyChallengeProgress>>["newlyCompleted"] = [];
+  try {
+    const [unlocked, challenges] = await Promise.all([
+      checkAndUnlockAchievements(supabase, user.id),
+      getWeeklyChallengeProgress(supabase, user.id),
+    ]);
+    newlyUnlocked = unlocked;
+    challengeProgress = challenges.progress;
+    newlyCompleted = challenges.newlyCompleted;
+  } catch (err) {
+    console.error("Achievements/challenges check failed:", err);
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">

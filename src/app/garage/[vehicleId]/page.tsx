@@ -145,7 +145,18 @@ export default async function VehiclePage({
     activeBuild?.ai_rating_score != null
       ? computeTopPercent(activeBuild.ai_rating_score, await listAllRatingScores(supabase))
       : null;
-  const ratingHistory = activeBuild ? await listBuildRatingHistory(supabase, activeBuild.id) : [];
+  // Degrade gracefully if the rating-history migration hasn't been
+  // applied yet — every rated vehicle's page runs this on every visit,
+  // so an unhandled error here would take down the whole page, not just
+  // the sparkline in the breakdown modal.
+  let ratingHistory: Awaited<ReturnType<typeof listBuildRatingHistory>> = [];
+  if (activeBuild) {
+    try {
+      ratingHistory = await listBuildRatingHistory(supabase, activeBuild.id);
+    } catch (err) {
+      console.error("listBuildRatingHistory failed:", err);
+    }
+  }
   // Unlike topPercent, this is scoped to the exact same population the
   // leaderboard itself ranks against — verified vehicles only — so the
   // rank number shown here is never a claim the real leaderboard
