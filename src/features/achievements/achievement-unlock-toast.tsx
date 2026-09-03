@@ -32,7 +32,15 @@ export function AchievementUnlockToast({ achievements }: { achievements: Achieve
   const Icon = current.tier ? RANK_MATERIAL_ICONS[current.tier] : null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+    // top-4 alone sat right under the status bar/notch (the sticky
+    // header itself accounts for env(safe-area-inset-top); this didn't)
+    // and overlapped the top tab bar's own tabs, making it easy to miss
+    // entirely. Anchored below the real header height instead, same
+    // calc TabPagerShell uses for its own layout.
+    <div
+      className="pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4"
+      style={{ top: "calc(3.5rem + env(safe-area-inset-top) + 0.75rem)" }}
+    >
       <div
         key={current.id}
         className="animate-achievement-toast glass-raised pointer-events-none flex items-center gap-3 rounded-2xl px-4 py-3 shadow-lg"

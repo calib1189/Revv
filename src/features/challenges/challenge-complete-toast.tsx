@@ -26,11 +26,14 @@ export function ChallengeCompleteToast({ challenges }: { challenges: ChallengeDe
   if (!current) return null;
 
   return (
-    // Offset below AchievementUnlockToast's own top-4 position — both can
-    // fire on the same page load (e.g. a post that both completes
-    // Triple Threat and pushes a rating past a new tier), and stacking
-    // at the same spot would overlap.
-    <div className="pointer-events-none fixed inset-x-0 top-20 z-50 flex justify-center px-4">
+    // Anchored below the real header (see AchievementUnlockToast — top-4
+    // alone sat under the status bar/notch and the top tab bar's own
+    // tabs), then offset further down from that so both toasts can fire
+    // on the same page load without overlapping.
+    <div
+      className="pointer-events-none fixed inset-x-0 z-50 flex justify-center px-4"
+      style={{ top: "calc(3.5rem + env(safe-area-inset-top) + 4.5rem)" }}
+    >
       <div
         key={current.id}
         className="animate-achievement-toast glass-raised pointer-events-none flex items-center gap-3 rounded-2xl px-4 py-3 shadow-lg"
