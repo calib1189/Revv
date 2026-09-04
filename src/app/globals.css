@@ -178,6 +178,25 @@ html.native-app body::-webkit-scrollbar {
   animation: heart-pop 900ms ease-out forwards;
 }
 
+/* Profile tab content settling in after a switch (profile-tabs.tsx) — a
+   small rise-and-fade rather than an instant swap, paired with the tab
+   strip's own sliding highlight so the whole switch reads as one
+   considered motion instead of two unrelated changes happening at once. */
+@keyframes tab-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tab-content-in {
+  animation: tab-content-in 280ms ease-out;
+}
+
 /* Achievement-unlock toast — slides down into place, holds so it's
    actually readable, slides back up and fades. Remounted via a
    changing `key` per achievement (achievement-unlock-toast.tsx) so a
