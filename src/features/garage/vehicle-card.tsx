@@ -7,10 +7,15 @@ export function VehicleCard({
   vehicle,
   heroUrl,
   ratingScore = null,
+  priority = false,
 }: {
   vehicle: Vehicle;
   heroUrl: string | null;
   ratingScore?: number | null;
+  /** True for the first card in the grid — it's the one that ends up
+   * as the page's Largest Contentful Paint, so it should load eagerly
+   * instead of lazily like every card below the fold. */
+  priority?: boolean;
 }) {
   const title = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
   const subtitle = vehicle.nickname
@@ -28,6 +33,7 @@ export function VehicleCard({
             src={heroUrl}
             alt={title}
             fill
+            priority={priority}
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
           />

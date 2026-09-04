@@ -29,7 +29,7 @@ export function PostThumbnailGrid({ posts }: { posts: PostThumbnail[] }) {
 
   return (
     <div className="grid grid-cols-3 gap-1">
-      {posts.map((post) => (
+      {posts.map((post, index) => (
         <Link
           key={post.postId}
           href={
@@ -44,6 +44,10 @@ export function PostThumbnailGrid({ posts }: { posts: PostThumbnail[] }) {
               src={post.url}
               alt=""
               fill
+              // The top-left tile is the one that ends up as the page's
+              // Largest Contentful Paint — load it eagerly instead of
+              // lazily like the rest of the grid.
+              priority={index === 0}
               sizes="33vw"
               className="object-cover"
             />

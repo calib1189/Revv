@@ -20,6 +20,10 @@ export interface MeetupCardData {
   photoUrl: string | null;
   photoCount: number;
   distanceMiles: number | null;
+  /** True for the first card in the list — it's the one that ends up
+   * as the page's Largest Contentful Paint, so it should load eagerly
+   * instead of lazily like every card below the fold. */
+  priority?: boolean;
 }
 
 export function MeetupCard({
@@ -28,6 +32,7 @@ export function MeetupCard({
   photoUrl,
   photoCount,
   distanceMiles,
+  priority,
 }: MeetupCardData) {
   return (
     <Link
@@ -40,6 +45,7 @@ export function MeetupCard({
             src={photoUrl}
             alt=""
             fill
+            priority={priority}
             sizes="(min-width: 640px) 600px, 100vw"
             className="object-cover"
           />

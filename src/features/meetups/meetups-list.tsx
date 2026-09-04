@@ -137,7 +137,7 @@ export function MeetupsList({
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {sorted.map(({ meetup, hostUsername, photoUrl, photoCount }) => (
+          {sorted.map(({ meetup, hostUsername, photoUrl, photoCount }, index) => (
             <MeetupCard
               key={meetup.id}
               meetup={meetup}
@@ -145,6 +145,7 @@ export function MeetupsList({
               photoUrl={photoUrl}
               photoCount={photoCount}
               distanceMiles={distanceFor(meetup)}
+              priority={index === 0}
             />
           ))}
         </div>
