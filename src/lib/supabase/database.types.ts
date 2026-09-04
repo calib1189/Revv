@@ -238,6 +238,26 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["user_challenge_completions"]["Insert"]>;
         Relationships: never[];
       };
+      peer_ratings: {
+        Row: {
+          id: string;
+          vehicle_id: string;
+          rater_id: string;
+          stars: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          vehicle_id: string;
+          rater_id: string;
+          stars: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["peer_ratings"]["Insert"]>;
+        Relationships: never[];
+      };
       parts: {
         Row: {
           id: string;

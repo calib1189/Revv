@@ -12,6 +12,8 @@ import { listBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { computeTopPercent } from "@/lib/rating/percentile";
 import { computeRankPosition, type RankPosition } from "@/lib/rating/rank-position";
 import { RatingBreakdownTrigger } from "@/features/garage/rating-breakdown-modal";
+import { PeerRatingCard } from "@/features/garage/peer-rating-card";
+import { getPeerRatingSummary, getMyPeerRating } from "@/lib/db/peer-ratings";
 import type { BuildRatingSubscores } from "@/lib/providers/rating-provider";
 import { listBuildParts } from "@/lib/db/build-parts";
 import { getPartsByIds } from "@/lib/db/parts";
@@ -171,6 +173,18 @@ export default async function VehiclePage({
         )
       : null;
 
+  // Degrade gracefully if the peer-ratings migration hasn't been
+  // applied yet — same "missing table shouldn't take down the page"
+  // reasoning as ratingHistory above.
+  let peerRatingSummary: Awaited<ReturnType<typeof getPeerRatingSummary>> = { average: null, count: 0 };
+  let myPeerRating: number | null = null;
+  try {
+    peerRatingSummary = await getPeerRatingSummary(supabase, vehicle.id);
+    myPeerRating = user && !isOwner ? await getMyPeerRating(supabase, vehicle.id, user.id) : null;
+  } catch (err) {
+    console.error("Peer rating fetch failed:", err);
+  }
+
   const heroUrl = heroMedia
     ? publicMediaUrl(supabase, heroMedia.storage_path)
     : null;
@@ -315,6 +329,15 @@ export default async function VehiclePage({
             })()}
           </div>
         )}
+
+        <div className="mb-6">
+          <PeerRatingCard
+            vehicleId={vehicle.id}
+            summary={peerRatingSummary}
+            myInitialRating={myPeerRating}
+            canRate={Boolean(user) && !isOwner}
+          />
+        </div>
 
         {!isOwner && user && buildParts.length > 0 && (
           <div className="mb-6">

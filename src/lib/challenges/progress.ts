@@ -4,6 +4,7 @@ import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { listPostsByAuthor } from "@/lib/db/posts";
 import { countPostsSince, countCommentsSince, countLikesReceivedSince } from "@/lib/db/weekly-stats";
+import { countPeerRatingsGivenSince } from "@/lib/db/peer-ratings";
 import { listCompletedChallengeIds, insertChallengeCompletions } from "@/lib/db/user-challenge-completions";
 import { getWeekStart, weekStartKey } from "@/lib/challenges/week";
 import { evaluateChallenges, type ChallengeProgress } from "@/lib/challenges/evaluate";
@@ -45,9 +46,21 @@ export async function getWeeklyChallengeProgress(
     ),
   ]);
 
-  const ratingAttemptsThisWeek = [...activeBuildByVehicle.values()].filter(
+  const ownRatingAttempts = [...activeBuildByVehicle.values()].filter(
     (b) => b.ai_rating_last_attempt_at != null && b.ai_rating_last_attempt_at >= weekStartIso,
   ).length;
+  // Rating someone else's build (the new peer-rating system, completely
+  // separate from the AI's REVV Rating) satisfies "rate a build" just as
+  // much as rating your own — isolated in its own try/catch so a
+  // not-yet-migrated peer_ratings table degrades this one number to 0
+  // instead of failing the whole weekly check.
+  let peerRatingsGiven = 0;
+  try {
+    peerRatingsGiven = await countPeerRatingsGivenSince(supabase, userId, weekStartIso);
+  } catch (err) {
+    console.error("countPeerRatingsGivenSince failed:", err);
+  }
+  const ratingAttemptsThisWeek = ownRatingAttempts + peerRatingsGiven;
 
   const progress = evaluateChallenges({
     postsThisWeek,

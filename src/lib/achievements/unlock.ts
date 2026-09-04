@@ -20,6 +20,7 @@ import { listCrewIdsForUser, getCrewMemberCount } from "@/lib/db/crew-members";
 import { listCrewsOwnedBy } from "@/lib/db/crews";
 import { listMeetupsByHost } from "@/lib/db/meetups";
 import { listAllChallengeCompletions } from "@/lib/db/user-challenge-completions";
+import { countPeerRatingsGivenByUser } from "@/lib/db/peer-ratings";
 import { listUnlockedAchievements, insertAchievementUnlocks } from "@/lib/db/user-achievements";
 import { computeRankPosition } from "@/lib/rating/rank-position";
 import { evaluateAchievements, type SubscoreMax } from "@/lib/achievements/evaluate";
@@ -100,6 +101,7 @@ export async function checkAndUnlockAchievements(
     commentsMadeTotal,
     buildCopiedByOthersCount,
     ownedCrewSizes,
+    peerRatingsGiven,
   ] = await Promise.all([
     listBuildRatingHistoryForBuilds(supabase, buildIds),
     listBuildPartsForBuilds(supabase, buildIds),
@@ -112,6 +114,7 @@ export async function checkAndUnlockAchievements(
     countCommentsByAuthor(supabase, userId),
     countBuildsCopiedFrom(supabase, buildIds),
     Promise.all(ownedCrews.map((c) => getCrewMemberCount(supabase, c.id))),
+    countPeerRatingsGivenByUser(supabase, userId),
   ]);
 
   // Rating: history + current score, same union the percentile/history
@@ -218,7 +221,12 @@ export async function checkAndUnlockAchievements(
 
     hasBeenRated: activeBuilds.some((b) => b.ai_rating_score != null),
     maxScoreEver,
-    ratingCount: ratingHistory.length,
+    // Counts both rating your own build (AI, confirmed) and rating
+    // someone else's (the peer star system) — both are real "you engaged
+    // with rating a build" actions, so both count toward this family.
+    // Doesn't affect tier/subscore achievements, which stay scoped to
+    // your own build's real, confirmed AI score.
+    ratingCount: ratingHistory.length + peerRatingsGiven,
     maxScoreImprovement,
     maxSubscoreEver,
     hasAllRounderBuild,
