@@ -17,12 +17,12 @@ import type { VehicleCategory } from "@/lib/vehicles/category";
  *
  * Garage briefly lived at its own standalone route (reached only from
  * Profile) — back here now that the core-loop-first direction puts
- * Garage on equal footing with Feed/Leaderboard. Marketplace was pulled
- * for a "nothing real to show yet" reason that no longer applies either
- * (see features/parts/*, app/parts/page.tsx, now reachable from
- * Discover's Parts tab) but stays a standalone route for now, not a
- * pager panel — it doesn't need swipe access the way the loop's own
- * screens do. */
+ * Garage on equal footing with Feed/Leaderboard. Marketplace
+ * (features/parts/*, app/parts/page.tsx) stays a standalone route, not
+ * a pager panel or a Discover tab — the catalog has zero verified
+ * parts today, so it doesn't earn a permanent nav slot yet (see
+ * discover-tabs.tsx). It doesn't need swipe access the way the loop's
+ * own screens do, either. */
 export async function TabsShellContent({
   initialHref,
   leaderboardCategory = null,
