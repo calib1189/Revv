@@ -45,7 +45,7 @@ function StarRow({
 }
 
 /** A community star rating — deliberately a different shape entirely
- * from the AI's REVV Rating (1-5 stars in gold, not a 0-100 score in a
+ * from the AI's SORZA Rating (1-5 stars in gold, not a 0-100 score in a
  * tier color), so the two are never visually confused. No AI involved,
  * no owner confirmation needed — a third party's direct opinion, the
  * same reasoning likes/comments don't need approval either. The

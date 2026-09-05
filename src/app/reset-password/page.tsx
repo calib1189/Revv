@@ -8,7 +8,7 @@ export default async function ResetPasswordPage() {
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
       <Link href="/" className="mb-8 text-lg font-semibold tracking-tight">
-        REVV
+        SORZA
       </Link>
       <h1 className="mb-6 text-xl font-semibold">Set a new password</h1>
 

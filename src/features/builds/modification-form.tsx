@@ -133,7 +133,7 @@ export function ModificationForm({
         />
         <p className="mt-1.5 text-xs text-muted">
           Have your own affiliate link for this part? Add it here and it&apos;s what people see
-          instead of REVV&apos;s — you get paid directly by the retailer, not through REVV.
+          instead of SORZA&apos;s — you get paid directly by the retailer, not through SORZA.
         </p>
       </div>
 

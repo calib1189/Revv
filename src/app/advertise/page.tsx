@@ -41,7 +41,7 @@ export default async function AdvertisePage({
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Advertise on REVV</h1>
+      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Advertise on SORZA</h1>
       <p className="mb-6 text-sm text-muted">
         Put your shop, brand, or product in front of real car builders. Every
         ad is clearly labeled &ldquo;Sponsored&rdquo; and reviewed before it
@@ -115,7 +115,7 @@ export default async function AdvertisePage({
       )}
 
       <Link href="/feed" className="mt-8 inline-block text-sm text-muted hover:text-foreground">
-        ← Back to REVV
+        ← Back to SORZA
       </Link>
     </div>
   );

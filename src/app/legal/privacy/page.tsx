@@ -1,6 +1,6 @@
 import { LegalDisclaimer } from "@/features/legal/legal-disclaimer";
 
-export const metadata = { title: "Privacy Policy — REVV" };
+export const metadata = { title: "Privacy Policy — SORZA" };
 
 export default function PrivacyPage() {
   return (
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold">4. Who we share it with</h2>
           <ul className="ml-5 list-disc space-y-1">
-            <li>Infrastructure providers (hosting, database, storage) needed to run REVV</li>
+            <li>Infrastructure providers (hosting, database, storage) needed to run SORZA</li>
             <li>The AI providers behind AI-assisted features and moderation, for the request you initiate</li>
             <li>Google, for shop search and meet locations, when you use those features — only the coordinates needed for that search</li>
             <li>Stripe, for billing, if you subscribe to a paid feature — we never see your card details</li>
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="mb-2 text-base font-semibold">8. Children&apos;s privacy</h2>
-          <p>REVV is not directed at children under 13, and we do not knowingly collect their data.</p>
+          <p>SORZA is not directed at children under 13, and we do not knowingly collect their data.</p>
         </section>
 
         <section>

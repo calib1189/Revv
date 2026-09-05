@@ -264,7 +264,7 @@ export function CameraRecorder({
         setError(null);
       } catch {
         setError(
-          "Couldn't access your camera. Check that REVV has camera and microphone permission in your device settings.",
+          "Couldn't access your camera. Check that SORZA has camera and microphone permission in your device settings.",
         );
       }
     })();
@@ -930,7 +930,7 @@ export function CameraRecorder({
                 {fps === 120 && (
                   <p className="mt-1.5 text-xs text-white/50">
                     Most phones cap real capture around 30-60fps through the web camera even when
-                    120 is requested — REVV will use whatever your device actually delivers.
+                    120 is requested — SORZA will use whatever your device actually delivers.
                   </p>
                 )}
               </div>

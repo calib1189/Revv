@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getVehicleById } from "@/lib/db/vehicles";
 import { getProfileByUserId } from "@/lib/db/profiles";
 
-export const alt = "REVV vehicle build";
+export const alt = "SORZA vehicle build";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -21,7 +21,7 @@ export default async function OgImage({
 
   const title = vehicle
     ? vehicle.nickname || `${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim()
-    : "REVV";
+    : "SORZA";
   const subtitle = [vehicle?.year, vehicle?.make, vehicle?.model]
     .filter(Boolean)
     .join(" ");
@@ -40,7 +40,7 @@ export default async function OgImage({
         }}
       >
         <div style={{ display: "flex", color: "#f4f4f5", fontSize: 32, fontWeight: 600 }}>
-          REVV
+          SORZA
         </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>

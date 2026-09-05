@@ -11,8 +11,8 @@ export function BuyButton({
 }: {
   partId: string;
   /** The build_part owner's own affiliate link, if they added one — used
-   * in place of REVV's own generated link when present, so the retailer
-   * pays the owner directly instead of through REVV. No server round
+   * in place of SORZA's own generated link when present, so the retailer
+   * pays the owner directly instead of through SORZA. No server round
    * trip needed for this case; the link is already known client-side. */
   ownerAffiliateUrl?: string | null;
   /** Present only when this button is rendered against a specific

@@ -174,7 +174,7 @@ export function ShopsBrowser() {
         <div className="glass flex flex-col items-center gap-3 rounded-2xl px-6 py-10 text-center">
           <p className="text-sm font-medium">Turn on location to see shops near you</p>
           <p className="max-w-xs text-xs text-muted">
-            REVV needs your location to find local shops — check your device or browser settings.
+            SORZA needs your location to find local shops — check your device or browser settings.
           </p>
           <form
             onSubmit={(e) => {
@@ -221,7 +221,7 @@ export function ShopsBrowser() {
             <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
               <p className="text-sm font-medium">Shops aren&apos;t set up yet</p>
               <p className="max-w-xs text-xs text-muted">
-                This needs a Google Places connection REVV hasn&apos;t configured yet — check back
+                This needs a Google Places connection SORZA hasn&apos;t configured yet — check back
                 soon.
               </p>
             </div>

@@ -51,7 +51,7 @@ export default async function LandingPage() {
         Your build. Documented. Rated. Seen.
       </h1>
       <p className="mt-5 max-w-lg text-balance text-lg text-muted">
-        REVV is the social platform built for your garage — log every mod as
+        SORZA is the social platform built for your garage — log every mod as
         real build data, get an AI-rated score, and find the meets and shops
         happening near you.
       </p>

@@ -24,7 +24,7 @@ export default function GlobalError({
         }}
       >
         <p style={{ fontSize: "0.9rem", color: "#a1a1aa" }}>
-          Something went wrong loading REVV.
+          Something went wrong loading SORZA.
         </p>
         <button
           onClick={reset}

@@ -4,7 +4,7 @@ import type { Part } from "@/lib/db/parts";
 /**
  * Links a matched catalog part to an Amazon search for it, tagged with
  * the site's Associates tag so a purchase can actually earn a commission.
- * Not a real product lookup — REVV doesn't have an Amazon catalog
+ * Not a real product lookup — SORZA doesn't have an Amazon catalog
  * integration, just a search query built from the part's own brand and
  * name, same honesty level as the "search for this part" fallback shown
  * for unmatched mods (buildPartSearchUrl). A search link, not a claim

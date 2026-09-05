@@ -28,7 +28,7 @@ export async function toggleFollowAction(
     after(async () => {
       const actor = await getProfileByUserId(supabase, user.id);
       await sendPushToUser(followeeId, {
-        title: "REVV",
+        title: "SORZA",
         body: `@${actor?.username ?? "Someone"} started following you`,
         url: `/u/${actor?.username ?? ""}`,
       });

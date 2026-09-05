@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "REVV",
-    short_name: "REVV",
+    name: "SORZA",
+    short_name: "SORZA",
     description: "The social platform for your build.",
     start_url: "/feed",
     display: "standalone",

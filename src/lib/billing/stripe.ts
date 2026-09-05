@@ -57,7 +57,7 @@ export async function createAdCheckoutSession({
     {
       mode: "payment",
       "line_items[0][price_data][currency]": "usd",
-      "line_items[0][price_data][product_data][name]": `REVV ad: ${headline}`,
+      "line_items[0][price_data][product_data][name]": `SORZA ad: ${headline}`,
       "line_items[0][price_data][unit_amount]": String(priceCents),
       "line_items[0][quantity]": "1",
       customer_email: customerEmail,
@@ -97,7 +97,7 @@ export async function createMeetupCheckoutSession({
     {
       mode: "payment",
       "line_items[0][price_data][currency]": "usd",
-      "line_items[0][price_data][product_data][name]": `REVV meetup: ${title}`,
+      "line_items[0][price_data][product_data][name]": `SORZA meetup: ${title}`,
       "line_items[0][price_data][unit_amount]": String(priceCents),
       "line_items[0][quantity]": "1",
       customer_email: customerEmail,
@@ -136,7 +136,7 @@ export async function createShopPromotionCheckoutSession({
     {
       mode: "payment",
       "line_items[0][price_data][currency]": "usd",
-      "line_items[0][price_data][product_data][name]": `REVV shop promotion: ${placeName}`,
+      "line_items[0][price_data][product_data][name]": `SORZA shop promotion: ${placeName}`,
       "line_items[0][price_data][unit_amount]": String(priceCents),
       "line_items[0][quantity]": "1",
       customer_email: customerEmail,

@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-// REVV is a server-rendered Next.js app (Server Components, Server
+// SORZA is a server-rendered Next.js app (Server Components, Server
 // Actions, middleware-based auth) — none of that survives a static
 // export, so this isn't a bundled-webDir Capacitor app. Instead the
 // native shell just points its WebView at the real deployed site. webDir
@@ -10,7 +10,7 @@ const config: CapacitorConfig = {
   // "com.revv.app" was already taken — bundle IDs are globally unique
   // across every Apple developer account, not just this one.
   appId: "com.calib1189.revv",
-  appName: "REVV",
+  appName: "SORZA",
   webDir: "public",
   // Without this, the WKWebView's own background defaults to white — every
   // overscroll/rubber-band bounce flashes white underneath the dark UI,

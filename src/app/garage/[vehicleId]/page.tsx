@@ -55,7 +55,7 @@ export async function generateMetadata({
     .join(" ");
 
   return {
-    title: `${title} · REVV`,
+    title: `${title} · SORZA`,
     description: description || undefined,
     openGraph: {
       title,
@@ -139,7 +139,7 @@ export default async function VehiclePage({
   const postThumbnails = await composeThumbnails(supabase, vehiclePosts);
 
   const currentSubscores = (activeBuild?.ai_rating_subscores ?? null) as BuildRatingSubscores | null;
-  // Population is every active, rated build on REVV — deliberately not
+  // Population is every active, rated build on SORZA — deliberately not
   // scoped to verified-only (the leaderboard's own population), since an
   // unverified vehicle can still have a rating and this modal isn't
   // claiming leaderboard rank, just "of rated builds" generally.

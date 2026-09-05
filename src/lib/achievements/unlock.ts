@@ -186,7 +186,7 @@ export async function checkAndUnlockAchievements(
 
     // Best position across any single category board the user actually
     // has a verified, rated vehicle in — bounded by their own category
-    // diversity (typically 1-3), not every category REVV supports.
+    // diversity (typically 1-3), not every category SORZA supports.
     const ownCategories = [...new Set(verifiedVehicles.map((v) => v.category))];
     const categoryRanks = await Promise.all(
       ownCategories.map(async (category) => {

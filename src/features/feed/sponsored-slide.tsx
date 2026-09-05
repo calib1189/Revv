@@ -14,7 +14,7 @@ export interface SponsoredSlideData {
 /** A paid placement, interleaved into the FYP alongside real posts
  * (swipe-feed.tsx) — same slide shape and object-cover treatment as an
  * organic post, so it doesn't feel jarring mid-scroll, but the
- * "Sponsored" label is real, not decorative: REVV never presents a paid
+ * "Sponsored" label is real, not decorative: SORZA never presents a paid
  * placement as an organic post. No like/comment/save here on purpose —
  * those are for the community's own content, not something bought. */
 export function SponsoredSlide({

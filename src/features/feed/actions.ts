@@ -147,7 +147,7 @@ async function notifyPostAuthor(
     if (!post || post.author_id === actorId) return;
     const actor = await getProfileByUserId(supabase, actorId);
     await sendPushToUser(post.author_id, {
-      title: "REVV",
+      title: "SORZA",
       body: `@${actor?.username ?? "Someone"} ${verb}`,
       url: `/p/${postId}`,
     });

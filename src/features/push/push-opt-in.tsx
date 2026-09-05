@@ -110,7 +110,7 @@ export function PushOptIn() {
     <div>
       {status === "ios-needs-install" ? (
         <p className="text-sm text-muted">
-          To get push notifications on iPhone, add REVV to your Home Screen
+          To get push notifications on iPhone, add SORZA to your Home Screen
           first: tap Share, then &quot;Add to Home Screen.&quot; Open it from
           there to turn notifications on.
         </p>

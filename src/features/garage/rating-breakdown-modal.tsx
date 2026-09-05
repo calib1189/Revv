@@ -88,7 +88,7 @@ export function RatingBreakdownTrigger({
             <p className="mb-6 text-sm font-medium" style={{ color: RANK_TEXT_COLORS[tier] }}>
               {RANK_LABELS[tier]} · {score.toFixed(2)}
               {topPercent != null && (
-                <span className="text-muted"> · Top {topPercent}% of rated builds on REVV</span>
+                <span className="text-muted"> · Top {topPercent}% of rated builds on SORZA</span>
               )}
             </p>
 

@@ -45,7 +45,7 @@ export function DirectionsButton({
  * sent anywhere, this just logs an inquiry event so the shop's Business
  * Analytics can show real interest, not a full contact/messaging
  * feature (there's no way to reach an arbitrary Google-sourced business
- * on REVV at all). */
+ * on SORZA at all). */
 export function GetAQuoteButton({ placeId }: { placeId: string }) {
   const [sent, setSent] = useState(false);
 

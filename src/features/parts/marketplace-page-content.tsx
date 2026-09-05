@@ -14,7 +14,7 @@ export function MarketplacePageContent() {
           the footer's mention alone, since this is the page where they're
           actually concentrated. */}
       <p className="mb-8 mt-1 text-xs text-muted/70">
-        As an Amazon Associate, REVV earns from qualifying purchases.
+        As an Amazon Associate, SORZA earns from qualifying purchases.
       </p>
       <PartsBrowser />
     </div>

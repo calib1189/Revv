@@ -13,16 +13,16 @@ export function Footer() {
         <Link href="/legal/guidelines" className="hover:text-foreground">
           Community guidelines
         </Link>
-        <span>© {new Date().getFullYear()} REVV</span>
+        <span>© {new Date().getFullYear()} SORZA</span>
       </nav>
-      {/* Required disclosure, not decoration — REVV earns a commission on
+      {/* Required disclosure, not decoration — SORZA earns a commission on
           qualifying purchases through Amazon links on modification pages.
           Site-wide here as the baseline. /parts (where these were most
           concentrated) currently redirects away — see marketplace-page-
           content.tsx and tabs-shell-content.tsx — since there's nothing
           real on it yet; this disclosure stays regardless. */}
       <p className="mt-3 text-[11px] text-muted/70">
-        As an Amazon Associate, REVV earns from qualifying purchases.
+        As an Amazon Associate, SORZA earns from qualifying purchases.
       </p>
     </footer>
   );

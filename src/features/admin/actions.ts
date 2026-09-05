@@ -79,7 +79,7 @@ export async function unbanUserAction(userId: string): Promise<void> {
   revalidatePath("/admin/reports");
 }
 
-/** Grants/revokes the "Verified" checkmark — the account-level REVV
+/** Grants/revokes the "Verified" checkmark — the account-level SORZA
  * badge (0038), distinct from parts.verified or vehicle ownership
  * verification. No self-service path exists for this at all; it's only
  * ever reachable through this admin action. */

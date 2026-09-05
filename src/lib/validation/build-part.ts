@@ -27,7 +27,7 @@ function validateMoneyField(value: string): string | undefined {
   return undefined;
 }
 
-/** Only checked for shape (a real http(s) URL) — REVV never verifies
+/** Only checked for shape (a real http(s) URL) — SORZA never verifies
  * this actually is the owner's own affiliate account, the same way it
  * doesn't verify any other free-text field. It's their link; they're
  * the one who gets paid or doesn't. */

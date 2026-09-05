@@ -20,7 +20,7 @@ const METRICS: {
 ];
 
 /**
- * Revv Business Analytics — the shop detail page's reporting surface
+ * SORZA Business Analytics — the shop detail page's reporting surface
  * for whoever has actually paid to promote this exact listing at some
  * point (get_shop_analytics_counts enforces that server-side; this
  * component just reflects whatever it's willing to hand back). Renders
@@ -56,7 +56,7 @@ export function ShopAnalyticsSection({ placeId }: { placeId: string }) {
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 text-accent">
           <GemIcon className="h-3.5 w-3.5" />
         </span>
-        <h2 className="text-sm font-semibold">Revv Business Analytics</h2>
+        <h2 className="text-sm font-semibold">SORZA Business Analytics</h2>
       </div>
 
       {total === 0 ? (

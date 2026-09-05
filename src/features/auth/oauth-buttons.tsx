@@ -23,7 +23,7 @@ export function OAuthButtons() {
       const { Browser } = await import("@capacitor/browser");
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: "revv://auth/callback", skipBrowserRedirect: true },
+        options: { redirectTo: "sorza://auth/callback", skipBrowserRedirect: true },
       });
       if (error || !data.url) {
         setPending(null);

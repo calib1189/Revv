@@ -1,6 +1,6 @@
 import { LegalDisclaimer } from "@/features/legal/legal-disclaimer";
 
-export const metadata = { title: "Terms of Service — REVV" };
+export const metadata = { title: "Terms of Service — SORZA" };
 
 export default function TermsPage() {
   return (
@@ -13,15 +13,15 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold">1. Acceptance of these terms</h2>
           <p>
-            By creating an account or using REVV, you agree to these Terms of Service and our
+            By creating an account or using SORZA, you agree to these Terms of Service and our
             Privacy Policy. If you do not agree, do not use the service.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-2 text-base font-semibold">2. What REVV is</h2>
+          <h2 className="mb-2 text-base font-semibold">2. What SORZA is</h2>
           <p>
-            REVV is a social platform for tracking, sharing, and discussing vehicle builds. It
+            SORZA is a social platform for tracking, sharing, and discussing vehicle builds. It
             combines a social feed (photos, video, comments, follows) with structured build data
             (a garage of vehicles, parts, and modifications you record against them).
           </p>
@@ -40,7 +40,7 @@ export default function TermsPage() {
           <h2 className="mb-2 text-base font-semibold">4. Your content</h2>
           <p>
             You own the photos, videos, captions, comments, and build data you post. By posting,
-            you grant REVV a worldwide, non-exclusive, royalty-free license to host, store,
+            you grant SORZA a worldwide, non-exclusive, royalty-free license to host, store,
             reproduce, and display that content for the purpose of operating and promoting the
             service (for example, showing your post in the feed or generating a share preview
             image for a public build page). This license ends when you delete the content or your
@@ -80,7 +80,7 @@ export default function TermsPage() {
 
         <section>
           <h2 className="mb-2 text-base font-semibold">7. Prohibited conduct</h2>
-          <p>Do not use REVV to:</p>
+          <p>Do not use SORZA to:</p>
           <ul className="ml-5 mt-2 list-disc space-y-1">
             <li>Harass, threaten, or impersonate another person</li>
             <li>Post illegal content, or content depicting reckless or illegal driving</li>
@@ -115,8 +115,8 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold">10. Disclaimers and limitation of liability</h2>
           <p>
-            REVV is provided &ldquo;as is&rdquo; without warranties of any kind. To the maximum
-            extent permitted by law, REVV is not liable for indirect, incidental, or consequential
+            SORZA is provided &ldquo;as is&rdquo; without warranties of any kind. To the maximum
+            extent permitted by law, SORZA is not liable for indirect, incidental, or consequential
             damages arising from your use of the service, including any damage, injury, or loss
             resulting from a modification, part, or fitment decision made using information on the
             platform.

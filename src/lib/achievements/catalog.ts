@@ -92,7 +92,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   ...tierMilestones(),
 
   // ---- Rating: activity & excellence ----
-  { id: "first_rating", name: "Rated", description: "Got your first REVV Rating", category: "rating", icon: GemIcon },
+  { id: "first_rating", name: "Rated", description: "Got your first SORZA Rating", category: "rating", icon: GemIcon },
   { id: "rated_5_times", name: "Dialing It In", description: "Rated a build 5 times total", category: "rating", icon: GemIcon },
   { id: "rated_10_times", name: "Perfectionist", description: "Rated a build 10 times total", category: "rating", icon: GemIcon },
   { id: "rated_25_times", name: "Obsessed", description: "Rated a build 25 times total", category: "rating", icon: GemIcon },
@@ -160,7 +160,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "followers_100", name: "Small Following", description: "Reached 100 followers", category: "social", icon: UsersIcon },
   { id: "followers_500", name: "Rising Star", description: "Reached 500 followers", category: "social", icon: UsersIcon },
   { id: "followers_1000", name: "Influencer", description: "Reached 1,000 followers", category: "social", icon: UsersIcon },
-  { id: "followers_5000", name: "REVV Celebrity", description: "Reached 5,000 followers", category: "social", icon: UsersIcon },
+  { id: "followers_5000", name: "SORZA Celebrity", description: "Reached 5,000 followers", category: "social", icon: UsersIcon },
   { id: "following_10", name: "Curating Your Feed", description: "Followed 10 accounts", category: "social", icon: UsersIcon },
   { id: "following_50", name: "Plugged In", description: "Followed 50 accounts", category: "social", icon: UsersIcon },
 
@@ -193,16 +193,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
 
   // ---- Profile ----
   { id: "profile_complete", name: "Profile Complete", description: "Added a bio and profile photo", category: "profile", icon: PersonIcon },
-  { id: "verified_badge", name: "REVV Verified", description: "Earned the REVV verified badge", category: "profile", icon: VerifiedBadgeIcon },
+  { id: "verified_badge", name: "SORZA Verified", description: "Earned the SORZA verified badge", category: "profile", icon: VerifiedBadgeIcon },
 
   // ---- Weekly challenges ----
   { id: "first_challenge", name: "Challenger", description: "Completed your first weekly challenge", category: "challenges", icon: BoltIcon },
   { id: "perfect_week", name: "Perfect Week", description: "Completed every challenge in a single week", category: "challenges", icon: BoltIcon },
 
   // ---- Membership ----
-  { id: "member_30_days", name: "One Month In", description: "Been on REVV for 30 days", category: "profile", icon: StarIcon },
-  { id: "member_100_days", name: "Regular", description: "Been on REVV for 100 days", category: "profile", icon: StarIcon },
-  { id: "member_1_year", name: "REVV Veteran", description: "Been on REVV for a full year", category: "profile", icon: StarIcon },
+  { id: "member_30_days", name: "One Month In", description: "Been on SORZA for 30 days", category: "profile", icon: StarIcon },
+  { id: "member_100_days", name: "Regular", description: "Been on SORZA for 100 days", category: "profile", icon: StarIcon },
+  { id: "member_1_year", name: "SORZA Veteran", description: "Been on SORZA for a full year", category: "profile", icon: StarIcon },
 ];
 
 const ACHIEVEMENT_BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));

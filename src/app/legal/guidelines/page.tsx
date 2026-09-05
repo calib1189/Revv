@@ -1,6 +1,6 @@
 import { LegalDisclaimer } from "@/features/legal/legal-disclaimer";
 
-export const metadata = { title: "Community Guidelines — REVV" };
+export const metadata = { title: "Community Guidelines — SORZA" };
 
 export default function GuidelinesPage() {
   return (
@@ -46,7 +46,7 @@ export default function GuidelinesPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold">No sexual or explicit content</h2>
           <p>
-            REVV is about cars, not people — nudity, sexual content, and sexually explicit
+            SORZA is about cars, not people — nudity, sexual content, and sexually explicit
             material are never allowed, regardless of context. Every photo and video is screened
             before it goes live, and accounts that post this kind of content are banned.
           </p>
@@ -64,7 +64,7 @@ export default function GuidelinesPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold">No spam</h2>
           <p>
-            Don&apos;t flood comments, mass-message people, or use REVV to push unrelated
+            Don&apos;t flood comments, mass-message people, or use SORZA to push unrelated
             products, links, or scams.
           </p>
         </section>

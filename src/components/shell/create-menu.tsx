@@ -11,10 +11,10 @@ const ITEMS = [
   { href: "/crews/new", label: "Create Crew", subtitle: "Start a community", icon: FlagIcon },
 ] as const;
 
-/** The "+" button's REVV-specific creation hub — every real thing this
+/** The "+" button's SORZA-specific creation hub — every real thing this
  * app lets you make, not just "compose a post" the way a general social
  * app's plus button would. Deliberately doesn't include a shop listing:
- * REVV's shops come from an external places directory (you can promote
+ * SORZA's shops come from an external places directory (you can promote
  * an existing one, see features/shops/promote-this-shop.tsx), there's no
  * "create a shop" flow to link to. */
 export function CreateMenu() {

@@ -50,7 +50,7 @@ export async function getWeeklyChallengeProgress(
     (b) => b.ai_rating_last_attempt_at != null && b.ai_rating_last_attempt_at >= weekStartIso,
   ).length;
   // Rating someone else's build (the new peer-rating system, completely
-  // separate from the AI's REVV Rating) satisfies "rate a build" just as
+  // separate from the AI's SORZA Rating) satisfies "rate a build" just as
   // much as rating your own — isolated in its own try/catch so a
   // not-yet-migrated peer_ratings table degrades this one number to 0
   // instead of failing the whole weekly check.

@@ -58,7 +58,7 @@ export async function sendMessageAction(
       conversation.user_a_id === user.id ? conversation.user_b_id : conversation.user_a_id;
     const actor = await getProfileByUserId(supabase, user.id);
     await sendPushToUser(otherUserId, {
-      title: "REVV",
+      title: "SORZA",
       body: `@${actor?.username ?? "Someone"} sent you a message`,
       url: `/messages/${conversationId}`,
     });

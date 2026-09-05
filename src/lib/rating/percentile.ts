@@ -1,4 +1,4 @@
-/** "Top X% of REVV builds" — computed at read time from the same
+/** "Top X% of SORZA builds" — computed at read time from the same
  * leaderboard-eligible population (see listAllRatingScores), never
  * stored. `allScores` should include this build's own score. Returns
  * null when there's no real population to compare against (an empty or

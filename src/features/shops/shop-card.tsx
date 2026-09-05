@@ -69,7 +69,7 @@ export function ShopCard({
   return (
     // A plain div, not an <a>, because it needs a real nested link
     // (Google Maps) inside it — two <a> tags can't nest in valid HTML.
-    // Tapping the card itself now opens the shop's own REVV page (a
+    // Tapping the card itself now opens the shop's own SORZA page (a
     // "profile visit", recorded server-side there) instead of jumping
     // straight to Maps — "Open in Google Maps" below is the fast-skip
     // path for someone who just wants directions.

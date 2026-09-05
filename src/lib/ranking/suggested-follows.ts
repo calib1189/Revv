@@ -19,10 +19,10 @@ export interface SuggestedFollow {
  * viewer's own recent category/make affinity (the same signal that
  * boosts their posts in the feed, see viewer-affinity.ts), ranked by
  * their best rated build rather than follower count or recency. This
- * ties the suggestion surface back to the thing REVV is actually about
+ * ties the suggestion surface back to the thing SORZA is actually about
  * — good builds — instead of being a generic "people you may know"
  * feature. A viewer with no affinity yet (brand new, hasn't engaged
- * with anything) falls back to the best verified builders on REVV
+ * with anything) falls back to the best verified builders on SORZA
  * overall, so the row still has something real to show rather than
  * nothing. Only ever surfaces accounts with an actual rated, verified
  * build — never a fabricated or empty suggestion. */

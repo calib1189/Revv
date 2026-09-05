@@ -102,8 +102,8 @@ export async function LeaderboardPageContent({
       <h1 className="mb-2 text-2xl font-semibold tracking-tight">Leaderboard</h1>
       <p className="mb-5 text-sm text-muted">
         {initialCategory
-          ? `The highest-rated ${VEHICLE_CATEGORY_LABELS[initialCategory]} builds on REVV, ranked by AI.`
-          : "The highest-rated builds on REVV right now, ranked by AI."}
+          ? `The highest-rated ${VEHICLE_CATEGORY_LABELS[initialCategory]} builds on SORZA, ranked by AI.`
+          : "The highest-rated builds on SORZA right now, ranked by AI."}
       </p>
 
       {currentUser && (

@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# REVV
+# SORZA
 
 Automotive social platform: social feed + digital garage + structured build data. Think Instagram/TikTok for the content layer, PCPartPicker for the data layer.
 
@@ -135,7 +135,7 @@ Numbering follows the version prompts. Three deliberate changes from the origina
 * V12 Messaging + blocking (notifications already shipped in V2)
 * V13 Parts discovery + affiliate abstraction
 * V14 Monetization (Stripe-ready, env-gated)
-* ~~V15 REVV AI assistant over the user's own data~~ — built, then removed: real per-message Gemini cost with no revenue behind it.
+* ~~V15 SORZA AI assistant over the user's own data~~ — built, then removed: real per-message Gemini cost with no revenue behind it.
 * V16 Admin + moderation + audit logs
 * V17 Analytics
 * V18 Launch polish

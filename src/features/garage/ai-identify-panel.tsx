@@ -86,7 +86,7 @@ export function AiIdentifyPanel({
         <div>
           <p className="text-sm font-medium">Identify with a photo</p>
           <p className="text-xs text-muted">
-            Upload a photo and REVV will guess year, make, model, trim, and category.
+            Upload a photo and SORZA will guess year, make, model, trim, and category.
           </p>
         </div>
         <Button

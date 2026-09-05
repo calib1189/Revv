@@ -315,7 +315,7 @@ export interface CreateShopPromotionResult {
 
 /**
  * Anyone can promote any shop — there's no ownership to verify since
- * shops come from Google, not a REVV account. Combines draft-creation and
+ * shops come from Google, not a SORZA account. Combines draft-creation and
  * checkout in one action (unlike meetups, which need a separate step in
  * between to attach photos) — same shape as createAdCampaignAction.
  */
@@ -521,11 +521,11 @@ export interface ShopAnalyticsResponse {
   requiresAuth: boolean;
 }
 
-/** Backs the "Revv Business Analytics" section of the shop detail page.
+/** Backs the "SORZA Business Analytics" section of the shop detail page.
  * Only returns real counts for someone who has actually paid to promote
  * this exact place at some point — enforced server-side by
  * get_shop_analytics_counts itself, not just this action, since shops
- * have no REVV-account ownership model beyond "you promoted this
+ * have no SORZA-account ownership model beyond "you promoted this
  * listing". */
 export async function getShopAnalyticsAction(placeId: string): Promise<ShopAnalyticsResponse> {
   const user = await getCurrentUser();

@@ -7,7 +7,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16">
       <Link href="/" className="mb-8 text-lg font-semibold tracking-tight">
-        REVV
+        SORZA
       </Link>
       <h1 className="mb-2 text-xl font-semibold">Reset your password</h1>
       <p className="mb-6 text-sm text-muted">

@@ -63,7 +63,7 @@ export default async function NotificationsPage() {
           {notifications.map((n) => {
             const username = n.actor_id
               ? (usernameByActorId.get(n.actor_id) ?? "unknown")
-              : "REVV";
+              : "SORZA";
             const verb = KIND_VERB[n.kind] ?? n.kind;
             const href =
               n.kind === "follow"

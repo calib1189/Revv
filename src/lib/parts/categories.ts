@@ -28,7 +28,7 @@ type IconComponent = (props: SVGProps<SVGSVGElement>) => ReactElement;
  *
  * `searchKeyword` powers the "shop this category" affiliate link shown
  * when a category has no verified catalog rows yet — null for "merch"
- * on purpose: there's no honest generic search for a REVV-branded
+ * on purpose: there's no honest generic search for a SORZA-branded
  * product that doesn't exist yet, unlike a real named part category,
  * which genuinely can be searched for on a real retailer. */
 export interface PartCategory {

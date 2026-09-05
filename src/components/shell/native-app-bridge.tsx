@@ -32,24 +32,24 @@ export function NativeAppBridge() {
       // OAuth has to run in the system browser view rather than this
       // WebView (Google outright refuses to show its login page inside
       // an embedded WebView) and hands control back to the app via a
-      // revv://auth?... custom-scheme URL — oauth-buttons.tsx is the
+      // sorza://auth?... custom-scheme URL — oauth-buttons.tsx is the
       // other half, opening Google/Apple's own URL via Browser.open()
       // with this as the redirect target. Checkout (ads, shop/meetup
-      // promotion) used to have its own revv:// routes here too, back
+      // promotion) used to have its own sorza:// routes here too, back
       // when it ran through this same in-app-browser-then-bounce-back
       // pattern — see createWebHandoffAction's doc comment for why that
       // no longer happens at all: those purchases now hand off to the
       // real external browser instead, which never comes back through
       // this app-open listener.
-      const REVV_SCHEME_ROUTES: Record<string, string> = {
+      const SORZA_SCHEME_ROUTES: Record<string, string> = {
         auth: "/auth/callback",
       };
 
       const listener = await App.addListener("appUrlOpen", async ({ url }) => {
-        if (!url.startsWith("revv://")) return;
+        if (!url.startsWith("sorza://")) return;
         await Browser.close().catch(() => {});
         const parsed = new URL(url);
-        const targetPath = REVV_SCHEME_ROUTES[parsed.hostname];
+        const targetPath = SORZA_SCHEME_ROUTES[parsed.hostname];
         if (!targetPath) return;
         // A real full-page navigation, not client routing — these are
         // real routes/Route Handlers that need a genuine request (e.g.

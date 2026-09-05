@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "REVV",
+  title: "SORZA",
   description: "The social platform for your build.",
   // iOS only treats "Add to Home Screen" as a standalone app (full-screen,
   // no Safari chrome) with this set — and push notifications only work
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "REVV",
+    title: "SORZA",
   },
 };
 

@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     if (metadata?.type === "shop_promotion") {
       // Payment confirmed — straight to 'active' for a fixed 30-day
       // window starting now, no review step (this is a paid placement
-      // over Google's own listing data, not REVV-hosted content).
+      // over Google's own listing data, not SORZA-hosted content).
       const promotionId = metadata.promotion_id;
       if (promotionId) {
         const now = new Date();

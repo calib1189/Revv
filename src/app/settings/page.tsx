@@ -66,7 +66,7 @@ export default async function SettingsPage() {
           href="/advertise"
           className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
         >
-          <span className="text-sm font-medium">Advertise on REVV</span>
+          <span className="text-sm font-medium">Advertise on SORZA</span>
           <span className="text-xs text-muted">Put your shop or brand in front of real builders</span>
         </Link>
         {profile?.is_admin && (

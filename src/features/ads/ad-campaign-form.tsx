@@ -269,7 +269,7 @@ export function AdCampaignForm({ userId }: { userId: string }) {
           </Button>
           <p className="mt-3 text-xs text-muted">
             Every ad is reviewed before it goes live in the feed. It&apos;s
-            clearly labeled &ldquo;Sponsored&rdquo; there — REVV never presents
+            clearly labeled &ldquo;Sponsored&rdquo; there — SORZA never presents
             paid placements as organic posts.
           </p>
         </div>

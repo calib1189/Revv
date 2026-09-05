@@ -57,7 +57,7 @@ export function SignInForm({ next }: { next?: string }) {
       </Button>
 
       <p className="text-center text-sm text-muted">
-        New to REVV?{" "}
+        New to SORZA?{" "}
         <Link href="/signup" className="text-foreground underline">
           Create an account
         </Link>

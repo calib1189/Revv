@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>REVV</string>
+        <string>SORZA</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -25,22 +25,22 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>REVV uses your camera to record videos and photos of your build for posts.</string>
+	<string>SORZA uses your camera to record videos and photos of your build for posts.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>REVV uses your microphone to record audio with videos you post.</string>
+	<string>SORZA uses your microphone to record audio with videos you post.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>REVV uses your location to show car meets and shops near you.</string>
+	<string>SORZA uses your location to show car meets and shops near you.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.calib1189.revv.oauth</string>
+			<string>com.calib1189.sorza.oauth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<!-- Not a real web origin — exists only so Google/Apple's
 				     OAuth redirect can hand control back to this app after
 				     login completes in the system browser view. -->
-				<string>revv</string>
+				<string>sorza</string>
 			</array>
 		</dict>
 	</array>
