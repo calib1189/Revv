@@ -9,6 +9,8 @@ import { listCompletedChallengeIds, insertChallengeCompletions } from "@/lib/db/
 import { getWeekStart, weekStartKey } from "@/lib/challenges/week";
 import { evaluateChallenges, type ChallengeProgress } from "@/lib/challenges/evaluate";
 import { getChallenge, type ChallengeDef } from "@/lib/challenges/catalog";
+import { insertPointsEarned } from "@/lib/db/points";
+import { CHALLENGE_COMPLETION_POINTS } from "@/lib/points/values";
 
 export interface WeeklyChallengesResult {
   progress: ChallengeProgress[];
@@ -75,6 +77,25 @@ export async function getWeeklyChallengeProgress(
 
   if (newlyCompletedIds.length > 0) {
     await insertChallengeCompletions(supabase, userId, newlyCompletedIds, key);
+
+    // Best-effort, same reasoning as the achievement side: a
+    // not-yet-migrated points_ledger shouldn't block the completion
+    // itself. source_id includes the week key so the same challenge id
+    // earns points again next week instead of being blocked by the
+    // ledger's own unique(user_id, source_type, source_id) constraint.
+    try {
+      await insertPointsEarned(
+        supabase,
+        userId,
+        "challenge",
+        newlyCompletedIds.map((id) => ({
+          sourceId: `${id}:${key}`,
+          amount: CHALLENGE_COMPLETION_POINTS,
+        })),
+      );
+    } catch (err) {
+      console.error("insertPointsEarned (challenge) failed:", err);
+    }
   }
 
   return {

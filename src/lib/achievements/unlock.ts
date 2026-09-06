@@ -22,6 +22,8 @@ import { listMeetupsByHost } from "@/lib/db/meetups";
 import { listAllChallengeCompletions } from "@/lib/db/user-challenge-completions";
 import { countPeerRatingsGivenByUser } from "@/lib/db/peer-ratings";
 import { listUnlockedAchievements, insertAchievementUnlocks } from "@/lib/db/user-achievements";
+import { insertPointsEarned } from "@/lib/db/points";
+import { pointsForAchievement } from "@/lib/points/values";
 import { computeRankPosition } from "@/lib/rating/rank-position";
 import { evaluateAchievements, type SubscoreMax } from "@/lib/achievements/evaluate";
 import { ACHIEVEMENTS, getAchievement, type AchievementDef } from "@/lib/achievements/catalog";
@@ -278,5 +280,20 @@ export async function checkAndUnlockAchievements(
   if (newIds.length === 0) return [];
 
   await insertAchievementUnlocks(supabase, userId, newIds);
+
+  // Best-effort: a not-yet-migrated points_ledger table shouldn't stop
+  // the achievement itself from unlocking — the toast and trophy case
+  // are the real feature, points are a bonus layered on top of it.
+  try {
+    await insertPointsEarned(
+      supabase,
+      userId,
+      "achievement",
+      newIds.map((id) => ({ sourceId: id, amount: pointsForAchievement(id) })),
+    );
+  } catch (err) {
+    console.error("insertPointsEarned (achievement) failed:", err);
+  }
+
   return newIds.map((id) => getAchievement(id)).filter((a): a is AchievementDef => Boolean(a));
 }

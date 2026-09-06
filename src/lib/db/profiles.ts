@@ -223,6 +223,37 @@ export async function updateShowcasedAchievements(
   return data;
 }
 
+export type EquipCategory = "name_color" | "profile_background" | "showcase_frame";
+
+/** `itemId: null` unequips — back to the default look for that slot.
+ * Ownership is checked by the caller (features/store/actions.ts), not
+ * here; this is just the write. Explicit per-category update objects
+ * rather than a computed column key — Supabase's generated Update type
+ * rejects an arbitrary string index. */
+export async function updateEquippedCosmetic(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  category: EquipCategory,
+  itemId: string | null,
+): Promise<Profile> {
+  const patch =
+    category === "name_color"
+      ? { equipped_name_color: itemId }
+      : category === "profile_background"
+        ? { equipped_profile_background: itemId }
+        : { equipped_showcase_frame: itemId };
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(patch)
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function updateProfileAvatar(
   supabase: SupabaseClient<Database>,
   userId: string,

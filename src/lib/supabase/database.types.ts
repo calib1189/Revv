@@ -27,6 +27,9 @@ export interface Database {
           banned_at: string | null;
           onboarded_at: string | null;
           showcased_achievement_ids: string[];
+          equipped_name_color: string | null;
+          equipped_profile_background: string | null;
+          equipped_showcase_frame: string | null;
           created_at: string;
         };
         Insert: {
@@ -42,6 +45,9 @@ export interface Database {
           banned_at?: string | null;
           onboarded_at?: string | null;
           showcased_achievement_ids?: string[];
+          equipped_name_color?: string | null;
+          equipped_profile_background?: string | null;
+          equipped_showcase_frame?: string | null;
           created_at?: string;
         };
         Update: {
@@ -57,8 +63,47 @@ export interface Database {
           banned_at?: string | null;
           onboarded_at?: string | null;
           showcased_achievement_ids?: string[];
+          equipped_name_color?: string | null;
+          equipped_profile_background?: string | null;
+          equipped_showcase_frame?: string | null;
           created_at?: string;
         };
+        Relationships: never[];
+      };
+      points_ledger: {
+        Row: {
+          id: string;
+          user_id: string;
+          amount: number;
+          source_type: "achievement" | "challenge" | "purchase";
+          source_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          amount: number;
+          source_type: "achievement" | "challenge" | "purchase";
+          source_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["points_ledger"]["Insert"]>;
+        Relationships: never[];
+      };
+      store_items_owned: {
+        Row: {
+          id: string;
+          user_id: string;
+          item_id: string;
+          purchased_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          item_id: string;
+          purchased_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["store_items_owned"]["Insert"]>;
         Relationships: never[];
       };
       media: {

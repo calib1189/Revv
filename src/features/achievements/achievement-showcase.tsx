@@ -2,8 +2,11 @@ import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { achievementColor, getAchievement } from "@/lib/achievements/catalog";
 
 /** Same icon-in-a-colored-circle language as AchievementBadge, just
- * smaller — this sits inline in the profile header, not in a grid. */
-function ShowcaseBadge({ id }: { id: string }) {
+ * smaller — this sits inline in the profile header, not in a grid.
+ * `frameClassName` is the owner's equipped store cosmetic (a decorative
+ * ring, see the .frame-* classes in globals.css) — unrelated to the
+ * real rank-tier ring system, purely a purchased look. */
+function ShowcaseBadge({ id, frameClassName }: { id: string; frameClassName?: string }) {
   const achievement = getAchievement(id);
   if (!achievement) return null;
 
@@ -14,7 +17,7 @@ function ShowcaseBadge({ id }: { id: string }) {
   return (
     <div className="glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3">
       <span
-        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
+        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${frameClassName ?? ""}`}
         style={{ backgroundColor: `${color}26` }}
       >
         {TierIcon ? (
@@ -33,13 +36,21 @@ function ShowcaseBadge({ id }: { id: string }) {
  * Achievements tab. Renders nothing at all if the owner hasn't picked
  * any, rather than an empty-state placeholder — a stranger's profile
  * with no showcase shouldn't announce that absence. */
-export function ProfileShowcase({ achievementIds }: { achievementIds: string[] }) {
+export function ProfileShowcase({
+  achievementIds,
+  frameClassName,
+}: {
+  achievementIds: string[];
+  /** The owner's equipped showcase-frame cosmetic, if any (store item,
+   * see lib/store/catalog.ts) — applied to every pinned badge. */
+  frameClassName?: string;
+}) {
   if (achievementIds.length === 0) return null;
 
   return (
     <div className="mt-4 flex flex-wrap gap-2">
       {achievementIds.map((id) => (
-        <ShowcaseBadge key={id} id={id} />
+        <ShowcaseBadge key={id} id={id} frameClassName={frameClassName} />
       ))}
     </div>
   );

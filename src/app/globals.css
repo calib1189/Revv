@@ -284,6 +284,51 @@ html.native-app body::-webkit-scrollbar {
   }
 }
 
+/* Store cosmetics (achievement-showcase.tsx) — purely decorative rings
+   around a showcase badge's icon, unrelated to the real rank-tier ring
+   system above (.rank-frame etc.). Simple box-shadow rings for the
+   first three; the premium Prism Ring gets the same masked
+   conic-gradient + spin technique as .rank-cosmic, just scaled down to
+   badge size, since a $-tier cosmetic should look like it. */
+@layer components {
+  .frame-bronze-ring {
+    box-shadow: 0 0 0 2px #c98a52, 0 0 10px rgb(201 138 82 / 0.45);
+  }
+
+  .frame-gold-ring {
+    box-shadow: 0 0 0 2px #fbbf24, 0 0 12px rgb(251 191 36 / 0.5);
+  }
+
+  .frame-neon-ring {
+    box-shadow: 0 0 0 2px #22d3ee, 0 0 14px rgb(34 211 238 / 0.7);
+    animation: showcase-neon-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes showcase-neon-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px #22d3ee, 0 0 10px rgb(34 211 238 / 0.55); }
+    50% { box-shadow: 0 0 0 2px #67e8f9, 0 0 18px rgb(34 211 238 / 0.9); }
+  }
+
+  .frame-prism-ring {
+    position: relative;
+  }
+  .frame-prism-ring::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    padding: 2px;
+    pointer-events: none;
+    box-sizing: border-box;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    background: conic-gradient(from var(--rank-angle, 0deg), #351768, #7c3aed, #ec4899, #3b5bdb, #351768, #9d5cff, #351768);
+    animation: rank-angle-spin 6s linear infinite;
+  }
+}
+
 @layer components {
   /* Liquid-glass surface: frosted, translucent, with a hairline border that
      catches light on its top edge. Two tiers — .glass for standard cards,

@@ -24,9 +24,11 @@ import { ProfileShowcase } from "@/features/achievements/achievement-showcase";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
 import { MessageButton } from "@/features/messages/message-button";
+import { getPointsBalance } from "@/lib/db/points";
+import { getStoreItem } from "@/lib/store/catalog";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { SettingsIcon, VerifiedBadgeIcon } from "@/components/ui/icons";
+import { SettingsIcon, VerifiedBadgeIcon, GemIcon } from "@/components/ui/icons";
 
 export default async function ProfilePage({
   params,
@@ -134,6 +136,35 @@ export default async function ProfilePage({
     console.error("Achievements check failed:", err);
   }
 
+  // Best-effort, same reasoning as the achievements try/catch above — a
+  // not-yet-migrated points_ledger shouldn't take down the whole
+  // profile. Only fetched for the owner; a visitor's Store link doesn't
+  // need to know a stranger's balance.
+  let pointsBalance = 0;
+  if (isOwnProfile) {
+    try {
+      pointsBalance = await getPointsBalance(supabase, profile.id);
+    } catch (err) {
+      console.error("Points balance fetch failed:", err);
+    }
+  }
+
+  // Equipped store cosmetics — every one of these is optional and
+  // simply renders as "nothing equipped" (the default look) if the
+  // profile's equipped_* column is null or names an item no longer in
+  // the catalog, same graceful-fallback spirit as the migration guards
+  // above.
+  const nameColorItem = profile.equipped_name_color
+    ? getStoreItem(profile.equipped_name_color)
+    : undefined;
+  const backgroundItem = profile.equipped_profile_background
+    ? getStoreItem(profile.equipped_profile_background)
+    : undefined;
+  const frameItem = profile.equipped_showcase_frame
+    ? getStoreItem(profile.equipped_showcase_frame)
+    : undefined;
+  const nameIsGradient = nameColorItem?.value.includes("gradient") ?? false;
+
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
       <AchievementUnlockToast achievements={newlyUnlocked} />
@@ -149,10 +180,28 @@ export default async function ProfilePage({
         </div>
       )}
 
+      <div
+        className={backgroundItem ? "rounded-3xl p-5" : ""}
+        style={backgroundItem ? { background: backgroundItem.value } : undefined}
+      >
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="flex min-w-0 items-center gap-1.5 truncate text-2xl font-bold tracking-tight">
-            <span className="truncate">{profile.display_name || `@${profile.username}`}</span>
+            {nameIsGradient ? (
+              <span
+                className="truncate bg-clip-text text-transparent"
+                style={{ backgroundImage: nameColorItem!.value }}
+              >
+                {profile.display_name || `@${profile.username}`}
+              </span>
+            ) : (
+              <span
+                className="truncate"
+                style={nameColorItem ? { color: nameColorItem.value } : undefined}
+              >
+                {profile.display_name || `@${profile.username}`}
+              </span>
+            )}
             {profile.is_verified && (
               <VerifiedBadgeIcon className="h-5 w-5 flex-shrink-0 text-accent" />
             )}
@@ -205,7 +254,10 @@ export default async function ProfilePage({
         </p>
       )}
 
-      <ProfileShowcase achievementIds={profile.showcased_achievement_ids ?? []} />
+      <ProfileShowcase
+        achievementIds={profile.showcased_achievement_ids ?? []}
+        frameClassName={frameItem?.value}
+      />
 
       {profile.bio && (
         <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">
@@ -224,6 +276,12 @@ export default async function ProfilePage({
             <Link href="/garage">
               <Button variant="secondary" className="px-4 py-1.5 text-sm">
                 Garage
+              </Button>
+            </Link>
+            <Link href="/store">
+              <Button variant="secondary" className="flex items-center gap-1.5 px-4 py-1.5 text-sm">
+                <GemIcon className="h-4 w-4 text-accent" />
+                {pointsBalance}
               </Button>
             </Link>
           </>
@@ -246,6 +304,7 @@ export default async function ProfilePage({
             />
           </>
         ) : null}
+      </div>
       </div>
 
       <ProfileTabs
