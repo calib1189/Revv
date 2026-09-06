@@ -74,13 +74,13 @@ export function AchievementShowcaseEditor({
         Pin up to {MAX_SHOWCASED} achievements to show on your profile.
       </p>
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
         {Array.from({ length: MAX_SHOWCASED }).map((_, i) => {
           const id = selected[i];
           if (id) {
             const achievement = getAchievement(id);
             return (
-              <div key={id} className="glass-raised flex flex-1 items-center gap-2 rounded-xl p-2">
+              <div key={id} className="glass-raised flex min-w-0 items-center gap-2 rounded-xl p-2">
                 <SlotIcon id={id} />
                 <span className="min-w-0 flex-1 truncate text-xs font-medium">
                   {achievement?.name}
@@ -103,7 +103,7 @@ export function AchievementShowcaseEditor({
               type="button"
               onClick={() => setPickerOpen((open) => !open)}
               disabled={isPending || eligible.length === 0}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border p-2 text-xs text-muted transition-colors hover:border-foreground/30 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border p-2 text-xs text-muted transition-colors hover:border-foreground/30 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               <PlusIcon className="h-4 w-4" />
               Add
