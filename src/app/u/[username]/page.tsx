@@ -213,7 +213,7 @@ export default async function ProfilePage({
               </span>
             ) : (
               <span
-                className="truncate"
+                className={`truncate ${nameColorItem?.effectClassName ?? ""}`}
                 style={nameColorItem ? { color: nameColorItem.value } : undefined}
               >
                 {profile.display_name || `@${profile.username}`}

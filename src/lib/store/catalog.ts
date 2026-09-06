@@ -88,6 +88,63 @@ export const STORE_ITEMS: StoreItem[] = [
       "linear-gradient(90deg, #f472b6, #a78bfa, #38bdf8, #4ade80, #fbbf24, #f472b6, #a78bfa)",
     effectClassName: "text-shimmer-anim",
   },
+  {
+    id: "name_carbon",
+    category: "name_color",
+    name: "Carbon Fiber",
+    price: 140,
+    // Same layered-weave technique as bg_carbon and frame_carbon, just a
+    // tighter period so the weave still reads at text size.
+    value:
+      "repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 1px, transparent 1px, transparent 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.45) 0px, rgba(0,0,0,0.45) 2px, transparent 2px, transparent 6px), repeating-linear-gradient(45deg, #4b4b52 0px, #4b4b52 3px, #1c1c1f 3px, #1c1c1f 6px)",
+  },
+  {
+    id: "name_bronze",
+    category: "name_color",
+    name: "Bronze",
+    price: 70,
+    value: "linear-gradient(120deg, #7c4a1e, #c98a52, #e8b989, #c98a52, #7c4a1e)",
+  },
+  {
+    id: "name_neon",
+    category: "name_color",
+    name: "Neon",
+    price: 90,
+    value: "#22d3ee",
+    effectClassName: "text-neon-pulse",
+  },
+  {
+    id: "name_cosmic",
+    category: "name_color",
+    name: "Cosmic",
+    price: 200,
+    value: "linear-gradient(120deg, #2e1065, #7c3aed, #a78bfa, #7c3aed, #2e1065)",
+  },
+  {
+    id: "name_aurora",
+    category: "name_color",
+    name: "Aurora",
+    price: 280,
+    value: "linear-gradient(90deg, #0f766e, #22d3ee, #4ade80, #22d3ee, #0f766e)",
+    effectClassName: "text-shimmer-anim",
+  },
+  {
+    id: "name_diamond",
+    category: "name_color",
+    name: "Diamond",
+    price: 420,
+    value:
+      "linear-gradient(90deg, #6bc4ea, #ffffff, #bff4ff, #7dd3fc, #ffffff, #a5f3fc, #ffffff, #6bc4ea)",
+    effectClassName: "text-shimmer-anim",
+  },
+  {
+    id: "name_legendary",
+    category: "name_color",
+    name: "Legendary",
+    price: 550,
+    value: "linear-gradient(90deg, #451a03, #fbbf24, #ef4444, #a21caf, #451a03, #fbbf24)",
+    effectClassName: "text-shimmer-anim",
+  },
 
   // ---- Profile backgrounds ----
   {
@@ -119,8 +176,11 @@ export const STORE_ITEMS: StoreItem[] = [
     category: "profile_background",
     name: "Carbon Fiber",
     price: 150,
+    // Three layered diagonal gradients (a light sheen, a dark cross-hatch,
+    // and the base weave) rather than one flat diagonal stripe — reads as
+    // an actual woven twill instead of a candy-cane pattern.
     value:
-      "repeating-linear-gradient(45deg, #1c1c1f 0px, #1c1c1f 6px, #0a0a0b 6px, #0a0a0b 12px)",
+      "repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 8px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.55) 0px, rgba(0,0,0,0.55) 4px, transparent 4px, transparent 8px), repeating-linear-gradient(45deg, #26262a 0px, #26262a 4px, #131315 4px, #131315 8px)",
   },
   {
     id: "bg_cosmic",
@@ -172,6 +232,61 @@ export const STORE_ITEMS: StoreItem[] = [
       "conic-gradient(from var(--rank-angle, 0deg) at 50% 50%, #0a0a1f, #2e1065, #7c3aed, #1e3a8a, #0a0a1f, #4c1d95, #0a0a1f)",
     effectClassName: "bg-galaxy-anim",
   },
+  {
+    id: "bg_bronze",
+    category: "profile_background",
+    name: "Bronze",
+    price: 130,
+    value: "linear-gradient(160deg, #2b1a0d, #7c4a1e, #c98a52, #3a2412)",
+  },
+  {
+    id: "bg_gold",
+    category: "profile_background",
+    name: "Gold",
+    price: 150,
+    value: "linear-gradient(160deg, #3a2c05, #b8860b, #fbbf24, #fff4c2, #b8860b)",
+  },
+  {
+    id: "bg_neon",
+    category: "profile_background",
+    name: "Neon",
+    price: 190,
+    value: "linear-gradient(160deg, #041016, #0e2a30, #041016)",
+    effectClassName: "bg-neon-pulse",
+  },
+  {
+    id: "bg_toxic",
+    category: "profile_background",
+    name: "Toxic",
+    price: 230,
+    value: "linear-gradient(160deg, #052e16, #14532d, #a3e635, #4ade80, #14532d, #052e16)",
+    effectClassName: "bg-inferno-anim",
+  },
+  {
+    id: "bg_titanium",
+    category: "profile_background",
+    name: "Titanium",
+    price: 250,
+    value:
+      "linear-gradient(100deg, #26262b, #71717a, #d4d4d8, #71717a, #26262b, #a1a1aa, #26262b)",
+    effectClassName: "bg-chrome-flow-anim",
+  },
+  {
+    id: "bg_diamond",
+    category: "profile_background",
+    name: "Diamond",
+    price: 420,
+    value: "linear-gradient(120deg, #0c1a24, #6bc4ea, #ffffff, #bff4ff, #6bc4ea, #0c1a24)",
+    effectClassName: "bg-chrome-flow-anim",
+  },
+  {
+    id: "bg_legendary",
+    category: "profile_background",
+    name: "Legendary",
+    price: 550,
+    value: "linear-gradient(150deg, #1c0a00, #451a03, #fbbf24, #ef4444, #a21caf, #1c0a00)",
+    effectClassName: "bg-inferno-anim",
+  },
 
   // ---- Showcase frames ----
   { id: "frame_bronze", category: "showcase_frame", name: "Bronze Ring", price: 40, value: "frame-bronze-ring" },
@@ -188,6 +303,16 @@ export const STORE_ITEMS: StoreItem[] = [
     price: 550,
     value: "frame-legendary-ring",
   },
+  { id: "frame_carbon", category: "showcase_frame", name: "Carbon Ring", price: 90, value: "frame-carbon-ring" },
+  { id: "frame_toxic", category: "showcase_frame", name: "Toxic Ring", price: 230, value: "frame-toxic-ring" },
+  {
+    id: "frame_titanium",
+    category: "showcase_frame",
+    name: "Titanium Ring",
+    price: 180,
+    value: "frame-titanium-ring",
+  },
+  { id: "frame_cosmic", category: "showcase_frame", name: "Cosmic Ring", price: 180, value: "frame-cosmic-ring" },
 ];
 
 const STORE_ITEM_BY_ID = new Map(STORE_ITEMS.map((item) => [item.id, item]));
