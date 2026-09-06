@@ -456,6 +456,16 @@ html.native-app body::-webkit-scrollbar {
     animation: rank-angle-spin 22s linear infinite;
   }
 
+  /* Photo-based Garage Backdrops — value is a real image (url(...)),
+     not a gradient, so it needs cover/center sizing instead of the
+     "auto" default that works fine for a procedural gradient but would
+     render a photo at its native pixel size. No animation; the photo
+     itself is the whole effect. */
+  .bg-cover {
+    background-size: cover;
+    background-position: center;
+  }
+
   /* Neon name/background — text-shadow and inset box-shadow can't be
      driven by a background-position sweep (there's no gradient to
      shift), so these get their own glow-pulse keyframes instead. Uses

@@ -380,7 +380,78 @@ const CREW_ITEMS: StoreItem[] = MATERIAL_THEMES.flatMap((theme) => [
   deriveItem(`frame_${theme}`, `cframe_${theme}`, "crew_frame"),
 ]);
 
-export const STORE_ITEMS: StoreItem[] = [...PROFILE_ITEMS, ...GARAGE_ITEMS, ...CREW_ITEMS];
+/** Real photography, not a CSS gradient — `value` is a url() pointing
+ * at public/images/store/garage, and `bg-cover` (globals.css) gives it
+ * cover/center sizing since a photo can't auto-fill a box the way a
+ * gradient does. Garage-only: a photographic scene doesn't have an
+ * obvious matching name-color/frame the way a material/color theme
+ * does, so these deliberately aren't run through deriveItem for the
+ * profile or crew shops. */
+const GARAGE_PHOTO_ITEMS: StoreItem[] = [
+  {
+    id: "gbackdrop_neon_tunnel",
+    category: "garage_backdrop",
+    name: "Neon Tunnel",
+    price: 400,
+    value: "url(/images/store/garage/neon-tunnel.jpg)",
+    effectClassName: "bg-cover",
+  },
+  {
+    id: "gbackdrop_crimson_corridor",
+    category: "garage_backdrop",
+    name: "Crimson Corridor",
+    price: 380,
+    value: "url(/images/store/garage/crimson-corridor.jpg)",
+    effectClassName: "bg-cover",
+  },
+  {
+    id: "gbackdrop_synthwave_portal",
+    category: "garage_backdrop",
+    name: "Synthwave Portal",
+    price: 450,
+    value: "url(/images/store/garage/synthwave-portal.jpg)",
+    effectClassName: "bg-cover",
+  },
+  {
+    id: "gbackdrop_voltage_hall",
+    category: "garage_backdrop",
+    name: "Voltage Hall",
+    price: 420,
+    value: "url(/images/store/garage/voltage-hall.jpg)",
+    effectClassName: "bg-cover",
+  },
+  {
+    id: "gbackdrop_parking_deck",
+    category: "garage_backdrop",
+    name: "Parking Deck",
+    price: 250,
+    value: "url(/images/store/garage/parking-deck.jpg)",
+    effectClassName: "bg-cover",
+  },
+  {
+    id: "gbackdrop_pit_garage",
+    category: "garage_backdrop",
+    name: "Pit Garage",
+    price: 480,
+    value: "url(/images/store/garage/pit-garage.jpg)",
+    effectClassName: "bg-cover",
+  },
+  {
+    id: "gbackdrop_andromeda",
+    category: "garage_backdrop",
+    name: "Andromeda",
+    price: 500,
+    value: "url(/images/store/garage/andromeda.jpg)",
+    effectClassName: "bg-cover",
+  },
+];
+
+export const STORE_ITEMS: StoreItem[] = [
+  ...PROFILE_ITEMS,
+  ...GARAGE_ITEMS,
+  ...GARAGE_PHOTO_ITEMS,
+  ...CREW_ITEMS,
+];
 
 const STORE_ITEM_BY_ID = new Map(STORE_ITEMS.map((item) => [item.id, item]));
 
