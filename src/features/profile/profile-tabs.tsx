@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type SVGProps } from "react";
 import { PostThumbnailGrid, type PostThumbnail } from "@/features/profile/post-thumbnail-grid";
-import { VehicleCard } from "@/features/garage/vehicle-card";
+import { VehicleBay } from "@/features/garage/vehicle-bay";
 import { AchievementsGrid } from "@/features/achievements/achievements-grid";
 import { AchievementShowcaseEditor } from "@/features/achievements/achievement-showcase-editor";
 import { GridIcon, WheelIcon, StarIcon, BookmarkIcon, HeartIcon } from "@/components/ui/icons";
@@ -154,9 +154,9 @@ export function ProfileTabs({
           (vehicles.length === 0 ? (
             <p className="text-sm text-muted">No vehicles yet.</p>
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-6">
               {vehicles.map(({ vehicle, heroUrl, ratingScore }) => (
-                <VehicleCard
+                <VehicleBay
                   key={vehicle.id}
                   vehicle={vehicle}
                   heroUrl={heroUrl}

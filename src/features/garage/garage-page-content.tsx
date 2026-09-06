@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
-import { VehicleCard } from "@/features/garage/vehicle-card";
+import { VehicleBay } from "@/features/garage/vehicle-bay";
 import { Button } from "@/components/ui/button";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
@@ -68,7 +68,7 @@ export async function GaragePageContent() {
   // Store (/store) — this just displays whatever's currently equipped.
   // Garage Backdrop, by contrast, lives on each vehicle row
   // (vehicles.equipped_backdrop, set from the Garage Editor at
-  // /garage/customize) and VehicleCard reads it directly off the
+  // /garage/customize) and VehicleBay reads it directly off the
   // vehicle it's given, so there's nothing to fetch for it here.
   // Best-effort: a not-yet-migrated equipped_* column shouldn't take
   // down the whole Garage panel (mounted on every route via the tab
@@ -114,18 +114,37 @@ export async function GaragePageContent() {
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
       <AchievementUnlockToast achievements={newlyUnlocked} />
       <ChallengeCompleteToast challenges={newlyCompleted} />
-      <div className="mb-6">
+      <div className="mb-8">
         <WeeklyChallengesCard progress={challengeProgress} />
       </div>
-      <div className="mb-2 flex items-center">
-        {/* flex-1 makes this stretch from the left edge to right where the
-            button group starts, so justify-center here centers "Garage"
-            in exactly that span — not across the whole row (which would
-            pull it right, off-center, once "Add vehicle" is factored in). */}
-        <div className="flex min-w-0 flex-1 justify-center px-2">
-          <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">Your Garage</h1>
+
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Your Garage</h1>
+          {vehicles.length > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
+              <span>
+                <span className="font-semibold text-foreground">{vehicles.length}</span>{" "}
+                vehicle{vehicles.length === 1 ? "" : "s"}
+              </span>
+              {bestTier && bestScore != null && (
+                <Link href="/leaderboard" className="flex items-center gap-1.5 hover:text-foreground">
+                  {(() => {
+                    const Icon = RANK_MATERIAL_ICONS[bestTier];
+                    return <Icon className="h-4 w-4" />;
+                  })()}
+                  Best:{" "}
+                  <span className="font-semibold" style={{ color: RANK_TEXT_COLORS[bestTier] }}>
+                    {RANK_LABELS[bestTier]} · {bestScore.toFixed(2)}
+                  </span>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted">Every build you own, in one showroom.</p>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-2">
           {vehicles.length > 0 && (
             <Link href="/garage/customize">
               <Button variant="secondary" className="px-3 py-1.5 text-sm">
@@ -139,32 +158,8 @@ export async function GaragePageContent() {
         </div>
       </div>
 
-      {vehicles.length > 0 && (
-        <div className="mb-8 mt-4 flex items-center gap-5 text-sm text-muted">
-          <span>
-            <span className="font-semibold text-foreground">{vehicles.length}</span>{" "}
-            vehicle{vehicles.length === 1 ? "" : "s"}
-          </span>
-          {bestTier && bestScore != null && (
-            <Link
-              href="/leaderboard"
-              className="flex items-center gap-1.5 hover:text-foreground"
-            >
-              {(() => {
-                const Icon = RANK_MATERIAL_ICONS[bestTier];
-                return <Icon className="h-4 w-4" />;
-              })()}
-              Best:{" "}
-              <span className="font-semibold" style={{ color: RANK_TEXT_COLORS[bestTier] }}>
-                {RANK_LABELS[bestTier]} · {bestScore.toFixed(2)}
-              </span>
-            </Link>
-          )}
-        </div>
-      )}
-
       {vehicles.length === 0 ? (
-        <div className="glass mt-6 flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
+        <div className="glass flex aspect-[16/10] flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-white/10 text-center">
           <p className="text-lg font-medium">No vehicles yet</p>
           <p className="max-w-xs text-sm text-muted">
             Add your first car to start tracking mods, photos, and builds.
@@ -174,14 +169,15 @@ export async function GaragePageContent() {
           </Link>
         </div>
       ) : (
-        // One consistent grid for every vehicle — a backdrop-equipped
-        // car renders its scene inside its own tile (VehicleCard does
-        // this itself, reading vehicle.equipped_backdrop directly), it
-        // never blows a single car up into its own oversized banner
-        // that makes the rest of the garage look like an afterthought.
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        // One big showroom bay per car instead of a grid of small
+        // tiles — a garage of one or two builds should look like a
+        // feature, not a thumbnail directory. VehicleBay handles its
+        // own equipped backdrop (vehicles.equipped_backdrop), so
+        // there's no page-level branching between "decorated" and
+        // "plain" cars here.
+        <div className="flex flex-col gap-8">
           {vehicles.map((vehicle, index) => (
-            <VehicleCard
+            <VehicleBay
               key={vehicle.id}
               vehicle={vehicle}
               heroUrl={
