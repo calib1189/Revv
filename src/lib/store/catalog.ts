@@ -157,6 +157,7 @@ const PROFILE_ITEMS: StoreItem[] = [
     value: "linear-gradient(90deg, #451a03, #fbbf24, #ef4444, #a21caf, #451a03, #fbbf24)",
     effectClassName: "text-shimmer-anim",
   },
+  { id: "name_ruby", category: "name_color", name: "Ruby", price: 110, value: "#e0115f" },
 
   // ---- Profile backgrounds ----
   {
@@ -380,6 +381,16 @@ const CREW_ITEMS: StoreItem[] = MATERIAL_THEMES.flatMap((theme) => [
   deriveItem(`frame_${theme}`, `cframe_${theme}`, "crew_frame"),
 ]);
 
+/** Themes that only need the name-color slot everywhere (no matching
+ * background/frame requested) — same deriveItem reuse as
+ * MATERIAL_THEMES, just for the one category instead of a full trio. */
+const NAME_COLOR_ONLY_THEMES = ["ruby"] as const;
+
+const NAME_COLOR_ONLY_ITEMS: StoreItem[] = NAME_COLOR_ONLY_THEMES.flatMap((theme) => [
+  deriveItem(`name_${theme}`, `vname_${theme}`, "vehicle_name_color"),
+  deriveItem(`name_${theme}`, `cname_${theme}`, "crew_name_color"),
+]);
+
 /** Real photography, not a CSS gradient — `value` is a url() pointing
  * at public/images/store/garage, and `bg-cover` (globals.css) gives it
  * cover/center sizing since a photo can't auto-fill a box the way a
@@ -451,6 +462,7 @@ export const STORE_ITEMS: StoreItem[] = [
   ...GARAGE_ITEMS,
   ...GARAGE_PHOTO_ITEMS,
   ...CREW_ITEMS,
+  ...NAME_COLOR_ONLY_ITEMS,
 ];
 
 const STORE_ITEM_BY_ID = new Map(STORE_ITEMS.map((item) => [item.id, item]));
