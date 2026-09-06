@@ -355,7 +355,7 @@ html.native-app body::-webkit-scrollbar {
      worked at the larger end of that range. */
   .rank-frame.rank-frame-compact::before,
   .rank-frame.rank-frame-compact::after {
-    padding: 2.5px;
+    padding: 3.5px;
   }
 
   /* The reveal's own screen-corner rounding — used to be paired with a
