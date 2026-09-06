@@ -3,8 +3,27 @@
 import { revalidatePath } from "next/cache";
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
 import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
-import { updateEquippedCosmetic } from "@/lib/db/profiles";
+import { updateEquippedCosmetic, type EquipCategory } from "@/lib/db/profiles";
 import { getStoreItem, type StoreCategory } from "@/lib/store/catalog";
+
+const EQUIP_CATEGORIES = new Set<StoreCategory>([
+  "name_color",
+  "profile_background",
+  "showcase_frame",
+  "vehicle_name_color",
+  "garage_backdrop",
+]);
+
+/** Narrows the store's full category union down to the ones this
+ * (profile + garage) equip action actually owns — crew categories go
+ * through equipCrewItemAction instead, since they write to a different
+ * table under a different authorization rule. Typed as a guard (not a
+ * plain comparison) so equipItemAction's signature can stay the wide
+ * StoreCategory that features/store/store-page-content.tsx's generic
+ * equipAction prop expects, matching equipCrewItemAction's bound shape. */
+function isEquipCategory(category: StoreCategory): category is EquipCategory {
+  return EQUIP_CATEGORIES.has(category);
+}
 
 export interface StoreActionState {
   error: string | null;
@@ -54,6 +73,8 @@ export async function equipItemAction(
   category: StoreCategory,
   itemId: string | null,
 ): Promise<StoreActionState> {
+  if (!isEquipCategory(category)) return { error: "Invalid item." };
+
   const { supabase, user } = await requireConfirmedUser();
 
   if (itemId) {
@@ -67,6 +88,7 @@ export async function equipItemAction(
   try {
     const profile = await updateEquippedCosmetic(supabase, user.id, category, itemId);
     revalidatePath("/store");
+    revalidatePath("/garage");
     revalidatePath(`/u/${profile.username}`);
   } catch (err) {
     console.error("equipItemAction failed:", err);

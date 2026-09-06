@@ -5,6 +5,7 @@ import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { VehicleCard } from "@/features/garage/vehicle-card";
+import { GarageTabs } from "@/features/garage/garage-tabs";
 import { Button } from "@/components/ui/button";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
@@ -13,6 +14,10 @@ import { AchievementUnlockToast } from "@/features/achievements/achievement-unlo
 import { getWeeklyChallengeProgress } from "@/lib/challenges/progress";
 import { WeeklyChallengesCard } from "@/features/challenges/weekly-challenges-card";
 import { ChallengeCompleteToast } from "@/features/challenges/challenge-complete-toast";
+import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
+import { getProfileByUserId } from "@/lib/db/profiles";
+import { getStoreItem } from "@/lib/store/catalog";
+import { StorePageContent } from "@/features/store/store-page-content";
 
 /** Garage is one panel of the swipeable tab pager now (tab-pager-shell.tsx)
  * — every panel is always mounted together, so a hard redirect() here
@@ -62,6 +67,31 @@ export async function GaragePageContent() {
   }, null);
   const bestTier = bestScore != null ? rankForScore(bestScore) : null;
 
+  // Garage Shop cosmetics — same best-effort/graceful-fallback shape as
+  // every other store fetch: a not-yet-migrated points_ledger or
+  // missing equipped_* column shouldn't take down the whole Garage
+  // panel (mounted on every route via the tab pager, see the comment
+  // below), it just opens with nothing owned/equipped.
+  let shopBalance = 0;
+  let ownedItemIds: string[] = [];
+  let equippedVehicleNameColor: string | null = null;
+  let equippedGarageBackdrop: string | null = null;
+  try {
+    const [balanceResult, ownedResult, profile] = await Promise.all([
+      getPointsBalance(supabase, user.id),
+      listOwnedItemIds(supabase, user.id),
+      getProfileByUserId(supabase, user.id),
+    ]);
+    shopBalance = balanceResult;
+    ownedItemIds = [...ownedResult];
+    equippedVehicleNameColor = profile?.equipped_vehicle_name_color ?? null;
+    equippedGarageBackdrop = profile?.equipped_garage_backdrop ?? null;
+  } catch (err) {
+    console.error("Garage shop data fetch failed:", err);
+  }
+  const nameColorItem = equippedVehicleNameColor ? getStoreItem(equippedVehicleNameColor) : undefined;
+  const backdropItem = equippedGarageBackdrop ? getStoreItem(equippedGarageBackdrop) : undefined;
+
   // Garage is the loop's own home screen — visited constantly, so it's
   // the natural place to lazily check for newly-earned achievements and
   // weekly challenge completions (see lib/achievements/unlock.ts and
@@ -89,6 +119,70 @@ export async function GaragePageContent() {
     console.error("Achievements/challenges check failed:", err);
   }
 
+  const carsPanel = (
+    <>
+      {vehicles.length === 0 ? (
+        <div className="glass mt-6 flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
+          <p className="text-lg font-medium">No vehicles yet</p>
+          <p className="max-w-xs text-sm text-muted">
+            Add your first car to start tracking mods, photos, and builds.
+          </p>
+          <Link href="/garage/new">
+            <Button>Add your first vehicle</Button>
+          </Link>
+        </div>
+      ) : (
+        // Same "cosmetic frames the outside, content stays on a plain
+        // readable surface" pattern as the equipped profile background
+        // (see u/[username]/page.tsx) — a busy or animated Garage
+        // Backdrop never sits directly behind a vehicle's photo/name.
+        <div
+          className={backdropItem ? `rounded-3xl p-2 ${backdropItem.effectClassName ?? ""}` : ""}
+          style={backdropItem ? { backgroundImage: backdropItem.value } : undefined}
+        >
+          <div className={backdropItem ? "rounded-2xl bg-surface p-4" : ""}>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {vehicles.map((vehicle, index) => (
+                <VehicleCard
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  heroUrl={
+                    vehicle.hero_media_id
+                      ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
+                      : null
+                  }
+                  ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
+                  priority={index === 0}
+                  nameColorValue={nameColorItem?.value}
+                  nameColorEffectClassName={nameColorItem?.effectClassName}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
+  const firstVehicleName = vehicles[0]
+    ? vehicles[0].nickname || `${vehicles[0].make} ${vehicles[0].model}`
+    : "My Car";
+
+  const shopPanel = (
+    <StorePageContent
+      title="Garage Shop"
+      subtitle="Spend your points on how your cars and garage look."
+      categories={["vehicle_name_color", "garage_backdrop"]}
+      initialBalance={shopBalance}
+      initialOwnedItemIds={ownedItemIds}
+      initialEquipped={{
+        vehicle_name_color: equippedVehicleNameColor,
+        garage_backdrop: equippedGarageBackdrop,
+      }}
+      previewLabel={firstVehicleName}
+    />
+  );
+
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
       <AchievementUnlockToast achievements={newlyUnlocked} />
@@ -112,7 +206,7 @@ export async function GaragePageContent() {
       </div>
 
       {vehicles.length > 0 && (
-        <div className="mb-8 mt-4 flex items-center gap-5 text-sm text-muted">
+        <div className="mb-6 mt-4 flex items-center gap-5 text-sm text-muted">
           <span>
             <span className="font-semibold text-foreground">{vehicles.length}</span>{" "}
             vehicle{vehicles.length === 1 ? "" : "s"}
@@ -135,33 +229,7 @@ export async function GaragePageContent() {
         </div>
       )}
 
-      {vehicles.length === 0 ? (
-        <div className="glass mt-6 flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
-          <p className="text-lg font-medium">No vehicles yet</p>
-          <p className="max-w-xs text-sm text-muted">
-            Add your first car to start tracking mods, photos, and builds.
-          </p>
-          <Link href="/garage/new">
-            <Button>Add your first vehicle</Button>
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {vehicles.map((vehicle, index) => (
-            <VehicleCard
-              key={vehicle.id}
-              vehicle={vehicle}
-              heroUrl={
-                vehicle.hero_media_id
-                  ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
-                  : null
-              }
-              ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
-              priority={index === 0}
-            />
-          ))}
-        </div>
-      )}
+      <GarageTabs carsPanel={carsPanel} shopPanel={shopPanel} />
     </div>
   );
 }

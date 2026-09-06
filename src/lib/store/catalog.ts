@@ -1,9 +1,22 @@
-export type StoreCategory = "name_color" | "profile_background" | "showcase_frame";
+export type StoreCategory =
+  | "name_color"
+  | "profile_background"
+  | "showcase_frame"
+  | "vehicle_name_color"
+  | "garage_backdrop"
+  | "crew_name_color"
+  | "crew_banner"
+  | "crew_frame";
 
 export const STORE_CATEGORY_LABELS: Record<StoreCategory, string> = {
   name_color: "Name Color",
   profile_background: "Profile Background",
   showcase_frame: "Showcase Frame",
+  vehicle_name_color: "Nameplate Color",
+  garage_backdrop: "Garage Backdrop",
+  crew_name_color: "Crew Name Color",
+  crew_banner: "Crew Banner",
+  crew_frame: "Crew Badge Frame",
 };
 
 export interface StoreItem {
@@ -11,19 +24,18 @@ export interface StoreItem {
   category: StoreCategory;
   name: string;
   price: number;
-  /** category="name_color": a CSS color or gradient applied to the
-   *  display name. category="profile_background": a CSS `background`
-   *  value for the header panel. category="showcase_frame": a className
-   *  (defined in globals.css) applied as a ring around a showcase
-   *  badge's icon — the whole effect, animation included, lives in the
-   *  class for this category. */
+  /** *_name_color categories: a CSS color or gradient applied to text.
+   *  *_background/*_banner categories: a CSS `background` value for a
+   *  panel. *_frame categories: a className (defined in globals.css)
+   *  applied as a ring — the whole effect, animation included, lives in
+   *  the class for this category. */
   value: string;
-  /** Epic-tier name_color / profile_background items only: an
+  /** Epic-tier *_name_color / *_background / *_banner items only: an
    *  additional className (defined in globals.css) that layers a moving
-   *  background-position animation on top of `value`'s gradient. Kept
-   *  separate from `value` because `value` alone still has to work as a
-   *  plain static color/gradient (e.g. nowhere else needs to know an
-   *  item is animated) — this field is the opt-in for the shimmer. */
+   *  background-position animation (or, for Neon, a glow-pulse) on top
+   *  of `value`. Kept separate from `value` because `value` alone still
+   *  has to work as a plain static color/gradient — this field is the
+   *  opt-in for the shimmer. */
   effectClassName?: string;
 }
 
@@ -33,7 +45,7 @@ export interface StoreItem {
  * Prices are looked up from here server-side (features/store/actions.ts),
  * never trusted from the client, so there's no way to buy an item for
  * less than its real price no matter what a request claims. */
-export const STORE_ITEMS: StoreItem[] = [
+const PROFILE_ITEMS: StoreItem[] = [
   // ---- Name colors ----
   { id: "name_ice", category: "name_color", name: "Ice Blue", price: 50, value: "#38bdf8" },
   { id: "name_emerald", category: "name_color", name: "Emerald", price: 50, value: "#22c55e" },
@@ -314,6 +326,61 @@ export const STORE_ITEMS: StoreItem[] = [
   },
   { id: "frame_cosmic", category: "showcase_frame", name: "Cosmic Ring", price: 180, value: "frame-cosmic-ring" },
 ];
+
+const PROFILE_ITEM_BY_ID = new Map(PROFILE_ITEMS.map((item) => [item.id, item]));
+
+/** Re-packages an existing profile-scope item's visual (value +
+ * effectClassName) under a new id/category for the garage and crew
+ * shops — same look, different slot. Keeps the CSS/gradients defined
+ * exactly once above instead of re-typing every color string per shop;
+ * throws at module load (not silently) if a theme id is ever wrong,
+ * since that's a real bug in this file, not user input. */
+function deriveItem(sourceId: string, newId: string, category: StoreCategory): StoreItem {
+  const source = PROFILE_ITEM_BY_ID.get(sourceId);
+  if (!source) throw new Error(`lib/store/catalog: unknown source item "${sourceId}"`);
+  return {
+    id: newId,
+    category,
+    name: source.name,
+    price: source.price,
+    value: source.value,
+    effectClassName: source.effectClassName,
+  };
+}
+
+/** Every theme below has a complete name/background/frame trio already
+ * built for the profile shop — reused as-is (same colors, same
+ * animations) for the garage and crew shops rather than inventing a
+ * second wardrobe of colors. Pattern-only profile items (Midnight,
+ * Sunset, Racing Stripes, Velocity, Chrome, Royal, Ice/Emerald/Violet/
+ * Pink solids, Holographic, Prism) don't have a full trio and are
+ * deliberately left as profile-only. */
+const MATERIAL_THEMES = [
+  "carbon",
+  "bronze",
+  "gold",
+  "neon",
+  "toxic",
+  "titanium",
+  "cosmic",
+  "aurora",
+  "diamond",
+  "legendary",
+  "inferno",
+] as const;
+
+const GARAGE_ITEMS: StoreItem[] = MATERIAL_THEMES.flatMap((theme) => [
+  deriveItem(`name_${theme}`, `vname_${theme}`, "vehicle_name_color"),
+  deriveItem(`bg_${theme}`, `gbackdrop_${theme}`, "garage_backdrop"),
+]);
+
+const CREW_ITEMS: StoreItem[] = MATERIAL_THEMES.flatMap((theme) => [
+  deriveItem(`name_${theme}`, `cname_${theme}`, "crew_name_color"),
+  deriveItem(`bg_${theme}`, `cbanner_${theme}`, "crew_banner"),
+  deriveItem(`frame_${theme}`, `cframe_${theme}`, "crew_frame"),
+]);
+
+export const STORE_ITEMS: StoreItem[] = [...PROFILE_ITEMS, ...GARAGE_ITEMS, ...CREW_ITEMS];
 
 const STORE_ITEM_BY_ID = new Map(STORE_ITEMS.map((item) => [item.id, item]));
 

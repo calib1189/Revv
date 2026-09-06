@@ -31,15 +31,20 @@ export default async function StorePage() {
   const profile = await getProfileByUserId(supabase, user.id);
 
   return (
-    <StorePageContent
-      initialBalance={balance}
-      initialOwnedItemIds={ownedItemIds}
-      initialEquipped={{
-        name_color: profile?.equipped_name_color ?? null,
-        profile_background: profile?.equipped_profile_background ?? null,
-        showcase_frame: profile?.equipped_showcase_frame ?? null,
-      }}
-      username={profile?.username ?? user.id}
-    />
+    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+      <StorePageContent
+        title="Store"
+        subtitle="Earned from achievements and weekly challenges — spend it on how your profile looks."
+        categories={["name_color", "profile_background", "showcase_frame"]}
+        initialBalance={balance}
+        initialOwnedItemIds={ownedItemIds}
+        initialEquipped={{
+          name_color: profile?.equipped_name_color ?? null,
+          profile_background: profile?.equipped_profile_background ?? null,
+          showcase_frame: profile?.equipped_showcase_frame ?? null,
+        }}
+        previewLabel={`@${profile?.username ?? user.id}`}
+      />
+    </div>
   );
 }

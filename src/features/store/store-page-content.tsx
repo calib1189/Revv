@@ -11,32 +11,48 @@ import { purchaseItemAction, equipItemAction } from "@/features/store/actions";
 import { GemIcon, CheckIcon, StarIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 
-type Equipped = Record<StoreCategory, string | null>;
+type Equipped = Partial<Record<StoreCategory, string | null>>;
 
-const CATEGORIES: StoreCategory[] = ["name_color", "profile_background", "showcase_frame"];
+/** Which of the three visual treatments a category's items use — every
+ * shop's categories fall into one of these, whether it's a profile
+ * name, a garage nameplate, or a crew name (same for backgrounds/
+ * banners and frames), so this table lets one ItemPreview handle every
+ * shop without a per-shop copy of the same three branches. */
+const CATEGORY_KIND: Record<StoreCategory, "text" | "background" | "ring"> = {
+  name_color: "text",
+  vehicle_name_color: "text",
+  crew_name_color: "text",
+  profile_background: "background",
+  garage_backdrop: "background",
+  crew_banner: "background",
+  showcase_frame: "ring",
+  crew_frame: "ring",
+};
 
 /** The live preview inside each item card — what you're actually
- * buying, shown as itself rather than described in text. Each category
- * renders its `value` completely differently (a color applied to real
- * sample text, a background as itself, a ring around a sample icon),
- * so there's no single generic "preview" — the point is showing the
- * real effect, not a placeholder. */
-function ItemPreview({ item, username }: { item: StoreItem; username: string }) {
-  if (item.category === "name_color") {
+ * buying, shown as itself rather than described in text. `previewLabel`
+ * is whatever text this shop should preview the color on (an
+ * @username for profile/garage, a crew's actual name for the crew
+ * shop) — the preview otherwise renders identically across shops since
+ * it's driven by CATEGORY_KIND, not the category name itself. */
+function ItemPreview({ item, previewLabel }: { item: StoreItem; previewLabel: string }) {
+  const kind = CATEGORY_KIND[item.category];
+
+  if (kind === "text") {
     const isGradient = item.value.includes("gradient");
     return (
       <div className="flex h-16 items-center justify-center rounded-xl bg-surface">
         <span
-          className={`text-lg font-bold ${isGradient ? "bg-clip-text text-transparent" : ""} ${item.effectClassName ?? ""}`}
+          className={`truncate px-2 text-lg font-bold ${isGradient ? "bg-clip-text text-transparent" : ""} ${item.effectClassName ?? ""}`}
           style={isGradient ? { backgroundImage: item.value } : { color: item.value }}
         >
-          @{username}
+          {previewLabel}
         </span>
       </div>
     );
   }
 
-  if (item.category === "profile_background") {
+  if (kind === "background") {
     return (
       <div
         className={`h-16 rounded-xl ${item.effectClassName ?? ""}`}
@@ -56,7 +72,7 @@ function ItemPreview({ item, username }: { item: StoreItem; username: string }) 
 
 function StoreItemCard({
   item,
-  username,
+  previewLabel,
   owned,
   equipped,
   canAfford,
@@ -65,7 +81,7 @@ function StoreItemCard({
   onEquip,
 }: {
   item: StoreItem;
-  username: string;
+  previewLabel: string;
   owned: boolean;
   equipped: boolean;
   canAfford: boolean;
@@ -79,7 +95,7 @@ function StoreItemCard({
         equipped ? "ring-1 ring-inset ring-accent/60" : ""
       }`}
     >
-      <ItemPreview item={item} username={username} />
+      <ItemPreview item={item} previewLabel={previewLabel} />
       <div>
         <p className="truncate text-sm font-semibold">{item.name}</p>
         {!owned && (
@@ -122,21 +138,38 @@ function StoreItemCard({
   );
 }
 
+type EquipAction = (category: StoreCategory, itemId: string | null) => Promise<{ error: string | null }>;
+
 /** The store's real state lives here (balance, ownership, equipped
  * selections) so a buy/equip click can update instantly — the server
  * action runs in the background and only the balance/ownership/equip
  * state actually needs rolling back if it fails, never a full page
- * reload just to reflect one purchase. */
+ * reload just to reflect one purchase.
+ *
+ * Shared by all three shops (profile /store, the Garage tab, a crew's
+ * Shop tab) — `categories` picks which slots this shop offers,
+ * `equipAction` picks where equipping actually writes (profiles vs a
+ * specific crew row; purchasing is always the same user-scoped
+ * purchaseItemAction regardless of shop, since owning an item is never
+ * shop-specific). */
 export function StorePageContent({
+  title,
+  subtitle,
+  categories,
   initialBalance,
   initialOwnedItemIds,
   initialEquipped,
-  username,
+  previewLabel,
+  equipAction = equipItemAction,
 }: {
+  title: string;
+  subtitle: string;
+  categories: StoreCategory[];
   initialBalance: number;
   initialOwnedItemIds: string[];
   initialEquipped: Equipped;
-  username: string;
+  previewLabel: string;
+  equipAction?: EquipAction;
 }) {
   const [balance, setBalance] = useState(initialBalance);
   const [owned, setOwned] = useState(new Set(initialOwnedItemIds));
@@ -168,13 +201,13 @@ export function StorePageContent({
 
   function equip(item: StoreItem) {
     const isEquipped = equipped[item.category] === item.id;
-    const previous = equipped[item.category];
+    const previous = equipped[item.category] ?? null;
     const nextId = isEquipped ? null : item.id;
     setError(null);
     setPendingId(item.id);
     setEquipped((prev) => ({ ...prev, [item.category]: nextId }));
     startTransition(async () => {
-      const result = await equipItemAction(item.category, nextId);
+      const result = await equipAction(item.category, nextId);
       if (result.error) {
         setEquipped((prev) => ({ ...prev, [item.category]: previous }));
         setError(result.error);
@@ -184,14 +217,11 @@ export function StorePageContent({
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+    <div>
       <div className="glass-raised flex items-center justify-between rounded-3xl p-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Store</h1>
-          <p className="mt-1 text-sm text-muted">
-            Earned from achievements and weekly challenges — spend it on how your
-            profile looks.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+          <p className="mt-1 text-sm text-muted">{subtitle}</p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2 rounded-full bg-surface-raised px-4 py-2">
           <GemIcon className="h-5 w-5 text-accent" />
@@ -203,7 +233,7 @@ export function StorePageContent({
         <p className="mt-4 rounded-xl bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>
       )}
 
-      {CATEGORIES.map((category) => (
+      {categories.map((category) => (
         <section key={category} className="mt-8">
           <h2 className="text-lg font-semibold tracking-tight">
             {STORE_CATEGORY_LABELS[category]}
@@ -213,7 +243,7 @@ export function StorePageContent({
               <StoreItemCard
                 key={item.id}
                 item={item}
-                username={username}
+                previewLabel={previewLabel}
                 owned={owned.has(item.id)}
                 equipped={equipped[item.category] === item.id}
                 canAfford={balance >= item.price}

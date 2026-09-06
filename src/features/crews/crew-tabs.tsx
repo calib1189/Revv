@@ -5,6 +5,8 @@ import Link from "next/link";
 import { PostThumbnailGrid, type PostThumbnail } from "@/features/profile/post-thumbnail-grid";
 import { MemberRow } from "@/features/crews/member-row";
 import { CrewCarsGrid, type CrewCarItem } from "@/features/crews/crew-cars-grid";
+import { StorePageContent } from "@/features/store/store-page-content";
+import { equipCrewItemAction } from "@/features/crews/actions";
 import { formatDateTime } from "@/lib/format/date";
 import {
   WheelIcon,
@@ -14,12 +16,13 @@ import {
   InfoIcon,
   PinIcon,
   ChevronRightIcon,
+  GemIcon,
 } from "@/components/ui/icons";
 import type { Crew } from "@/lib/db/crews";
 import type { CrewMember, CrewMemberRole } from "@/lib/db/crew-members";
 import type { Meetup } from "@/lib/db/meetups";
 
-type Tab = "cars" | "feed" | "members" | "events" | "about";
+type Tab = "cars" | "feed" | "members" | "events" | "about" | "shop";
 
 export interface CrewTabMember {
   member: CrewMember;
@@ -79,6 +82,9 @@ export function CrewTabs({
   events,
   canManageMembers,
   viewerRole,
+  isOwner,
+  shopBalance,
+  ownedItemIds,
 }: {
   crewId: string;
   crew: Crew;
@@ -88,6 +94,12 @@ export function CrewTabs({
   events: Meetup[];
   canManageMembers: boolean;
   viewerRole: CrewMemberRole | null;
+  /** Only the owner can spend their points on crew cosmetics — the Shop
+   * tab itself is hidden for everyone else rather than shown disabled,
+   * same reasoning as "Edit crew" only showing for the owner above. */
+  isOwner: boolean;
+  shopBalance: number;
+  ownedItemIds: string[];
 }) {
   const [tab, setTab] = useState<Tab>("cars");
 
@@ -117,6 +129,11 @@ export function CrewTabs({
         <TabButton active={tab === "about"} onClick={() => setTab("about")} icon={<InfoIcon className="h-4 w-4" />}>
           About
         </TabButton>
+        {isOwner && (
+          <TabButton active={tab === "shop"} onClick={() => setTab("shop")} icon={<GemIcon className="h-4 w-4" />}>
+            Shop
+          </TabButton>
+        )}
       </div>
 
       {tab === "cars" &&
@@ -202,6 +219,23 @@ export function CrewTabs({
             )}
           </div>
         </div>
+      )}
+
+      {tab === "shop" && isOwner && (
+        <StorePageContent
+          title="Crew Shop"
+          subtitle="Spend your points on how this crew's page looks — everyone who visits sees it."
+          categories={["crew_name_color", "crew_banner", "crew_frame"]}
+          initialBalance={shopBalance}
+          initialOwnedItemIds={ownedItemIds}
+          initialEquipped={{
+            crew_name_color: crew.equipped_crew_name_color,
+            crew_banner: crew.equipped_crew_banner,
+            crew_frame: crew.equipped_crew_frame,
+          }}
+          previewLabel={crew.name}
+          equipAction={equipCrewItemAction.bind(null, crewId)}
+        />
       )}
     </div>
   );

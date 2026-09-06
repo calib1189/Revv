@@ -30,6 +30,8 @@ export interface Database {
           equipped_name_color: string | null;
           equipped_profile_background: string | null;
           equipped_showcase_frame: string | null;
+          equipped_vehicle_name_color: string | null;
+          equipped_garage_backdrop: string | null;
           created_at: string;
         };
         Insert: {
@@ -48,6 +50,8 @@ export interface Database {
           equipped_name_color?: string | null;
           equipped_profile_background?: string | null;
           equipped_showcase_frame?: string | null;
+          equipped_vehicle_name_color?: string | null;
+          equipped_garage_backdrop?: string | null;
           created_at?: string;
         };
         Update: {
@@ -66,6 +70,8 @@ export interface Database {
           equipped_name_color?: string | null;
           equipped_profile_background?: string | null;
           equipped_showcase_frame?: string | null;
+          equipped_vehicle_name_color?: string | null;
+          equipped_garage_backdrop?: string | null;
           created_at?: string;
         };
         Relationships: never[];
@@ -591,6 +597,9 @@ export interface Database {
           visibility: "public" | "private";
           logo_media_id: string | null;
           banner_media_id: string | null;
+          equipped_crew_name_color: string | null;
+          equipped_crew_banner: string | null;
+          equipped_crew_frame: string | null;
           created_at: string;
         };
         Insert: {
@@ -603,6 +612,9 @@ export interface Database {
           visibility?: "public" | "private";
           logo_media_id?: string | null;
           banner_media_id?: string | null;
+          equipped_crew_name_color?: string | null;
+          equipped_crew_banner?: string | null;
+          equipped_crew_frame?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["crews"]["Insert"]>;

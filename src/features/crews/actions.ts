@@ -18,9 +18,15 @@ import {
   type CrewMemberRole,
 } from "@/lib/db/crew-members";
 import { trackEvent } from "@/lib/analytics/track";
+import { getStoreItem, type StoreCategory } from "@/lib/store/catalog";
+import { listOwnedItemIds } from "@/lib/db/points";
 import type { CrewInsert } from "@/lib/db/crews";
 
 export interface CrewFormState {
+  error: string | null;
+}
+
+export interface StoreActionState {
   error: string | null;
 }
 
@@ -170,4 +176,51 @@ export async function removeMemberAction(
 
   await removeMember(supabase, crewMemberId);
   revalidatePath(`/crews/${crewId}`);
+}
+
+/** Cosmetics equip onto the crew itself (shared, not per-viewer) but
+ * are still bought from the acting user's own points/ownership — same
+ * "server looks up the real price/ownership, never trusts the client"
+ * rule as purchaseItemAction. Ownership of the crew is enforced by RLS
+ * on the crews UPDATE below ("owners manage their own crews",
+ * 0064_crews.sql), same convention updateCrewAction already relies on
+ * — a non-owner's call here silently updates zero rows rather than
+ * throwing. Signature matches equipItemAction's (category: StoreCategory)
+ * once bound with crewId, so both can share the same generic
+ * store-page-content.tsx equipAction prop. */
+export async function equipCrewItemAction(
+  crewId: string,
+  category: StoreCategory,
+  itemId: string | null,
+): Promise<StoreActionState> {
+  if (category !== "crew_name_color" && category !== "crew_banner" && category !== "crew_frame") {
+    return { error: "Invalid item." };
+  }
+
+  const { supabase, user } = await requireConfirmedUser();
+
+  if (itemId) {
+    const item = getStoreItem(itemId);
+    if (!item || item.category !== category) return { error: "Invalid item." };
+
+    const owned = await listOwnedItemIds(supabase, user.id);
+    if (!owned.has(itemId)) return { error: "You don't own this item." };
+  }
+
+  const patch =
+    category === "crew_name_color"
+      ? { equipped_crew_name_color: itemId }
+      : category === "crew_banner"
+        ? { equipped_crew_banner: itemId }
+        : { equipped_crew_frame: itemId };
+
+  try {
+    await updateCrew(supabase, crewId, patch);
+    revalidatePath(`/crews/${crewId}`);
+  } catch (err) {
+    console.error("equipCrewItemAction failed:", err);
+    return { error: "Couldn't update the crew's equipped item. Try again." };
+  }
+
+  return { error: null };
 }

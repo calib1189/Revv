@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getVehicleById, listVerifiedVehicleIds } from "@/lib/db/vehicles";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { getStoreItem } from "@/lib/store/catalog";
 import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
 import { getActiveBuild, listAllRatingScores } from "@/lib/db/builds";
@@ -190,6 +191,10 @@ export default async function VehiclePage({
     : null;
 
   const title = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
+  const nameColorItem = owner?.equipped_vehicle_name_color
+    ? getStoreItem(owner.equipped_vehicle_name_color)
+    : undefined;
+  const nameIsGradient = nameColorItem?.value.includes("gradient") ?? false;
 
   return (
     <div className="flex-1 pb-16">
@@ -222,9 +227,21 @@ export default async function VehiclePage({
                   {vehicle.year}
                 </p>
               )}
-              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                {title}
-              </h1>
+              {nameIsGradient ? (
+                <h1
+                  className={`bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl ${nameColorItem?.effectClassName ?? ""}`}
+                  style={{ backgroundImage: nameColorItem!.value }}
+                >
+                  {title}
+                </h1>
+              ) : (
+                <h1
+                  className={`text-3xl font-semibold tracking-tight sm:text-4xl ${nameColorItem ? "" : "text-white"} ${nameColorItem?.effectClassName ?? ""}`}
+                  style={nameColorItem ? { color: nameColorItem.value } : undefined}
+                >
+                  {title}
+                </h1>
+              )}
               {owner && (
                 <Link
                   href={`/u/${owner.username}`}

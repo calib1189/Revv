@@ -19,6 +19,8 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { CREW_CATEGORY_LABELS } from "@/lib/crews/category";
 import { maxScore } from "@/lib/crews/best-rank";
+import { getStoreItem } from "@/lib/store/catalog";
+import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
 import { JoinButton } from "@/features/crews/join-button";
 import { CrewTabs, type CrewTabMember } from "@/features/crews/crew-tabs";
 import type { CrewCarItem } from "@/features/crews/crew-cars-grid";
@@ -44,6 +46,25 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
   ]);
 
   const canManageMembers = viewerRole === "leader" || viewerRole === "admin";
+
+  // Crew Shop data — only meaningful for the owner (only they can spend
+  // their points equipping crew cosmetics), so skipped entirely for
+  // everyone else. Same best-effort/graceful-fallback shape as every
+  // other store fetch in this app.
+  let shopBalance = 0;
+  let ownedItemIds: string[] = [];
+  if (isOwner && currentUser) {
+    try {
+      const [balanceResult, ownedResult] = await Promise.all([
+        getPointsBalance(supabase, currentUser.id),
+        listOwnedItemIds(supabase, currentUser.id),
+      ]);
+      shopBalance = balanceResult;
+      ownedItemIds = [...ownedResult];
+    } catch (err) {
+      console.error("Crew shop data fetch failed:", err);
+    }
+  }
 
   const memberUserIds = members.map((m) => m.user_id);
   const [profiles, memberVehicles, postThumbnails] = await Promise.all([
@@ -116,27 +137,53 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
     };
   });
 
+  const bannerItem = crew.equipped_crew_banner ? getStoreItem(crew.equipped_crew_banner) : undefined;
+  const crewNameColorItem = crew.equipped_crew_name_color ? getStoreItem(crew.equipped_crew_name_color) : undefined;
+  const crewFrameItem = crew.equipped_crew_frame ? getStoreItem(crew.equipped_crew_frame) : undefined;
+  const crewNameIsGradient = crewNameColorItem?.value.includes("gradient") ?? false;
+
   return (
     <div className="flex-1">
-      <div className="relative h-40 w-full bg-surface sm:h-56">
+      <div
+        className={`relative h-40 w-full bg-surface sm:h-56 ${!bannerUrl ? (bannerItem?.effectClassName ?? "") : ""}`}
+        style={!bannerUrl && bannerItem ? { backgroundImage: bannerItem.value } : undefined}
+      >
         {bannerUrl && <Image src={bannerUrl} alt="" fill sizes="100vw" className="object-cover" priority />}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background to-transparent" />
       </div>
 
       <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
         <div className="flex items-start gap-4">
-          <div className="relative -mt-16 h-24 w-24 flex-shrink-0 overflow-hidden rounded-full border-4 border-background bg-surface-raised shadow-lg sm:h-28 sm:w-28">
-            {logoUrl ? (
-              <Image src={logoUrl} alt="" fill sizes="112px" className="object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-3xl font-semibold">
-                {crew.name.charAt(0).toUpperCase()}
-              </div>
-            )}
+          <div
+            className={`relative -mt-16 h-24 w-24 flex-shrink-0 rounded-full sm:h-28 sm:w-28 ${crewFrameItem?.value ?? ""}`}
+          >
+            <div className="relative h-full w-full overflow-hidden rounded-full border-4 border-background bg-surface-raised shadow-lg">
+              {logoUrl ? (
+                <Image src={logoUrl} alt="" fill sizes="112px" className="object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-3xl font-semibold">
+                  {crew.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="min-w-0 flex-1 pt-2">
-            <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{crew.name}</h1>
+            {crewNameIsGradient ? (
+              <h1
+                className={`truncate bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-3xl ${crewNameColorItem?.effectClassName ?? ""}`}
+                style={{ backgroundImage: crewNameColorItem!.value }}
+              >
+                {crew.name}
+              </h1>
+            ) : (
+              <h1
+                className={`truncate text-2xl font-bold tracking-tight sm:text-3xl ${crewNameColorItem?.effectClassName ?? ""}`}
+                style={crewNameColorItem ? { color: crewNameColorItem.value } : undefined}
+              >
+                {crew.name}
+              </h1>
+            )}
 
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="glass flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-muted">
@@ -213,6 +260,9 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
           events={events}
           canManageMembers={canManageMembers}
           viewerRole={viewerRole}
+          isOwner={isOwner}
+          shopBalance={shopBalance}
+          ownedItemIds={ownedItemIds}
         />
       </div>
     </div>

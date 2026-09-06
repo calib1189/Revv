@@ -8,6 +8,8 @@ export function VehicleCard({
   heroUrl,
   ratingScore = null,
   priority = false,
+  nameColorValue,
+  nameColorEffectClassName,
 }: {
   vehicle: Vehicle;
   heroUrl: string | null;
@@ -16,11 +18,17 @@ export function VehicleCard({
    * as the page's Largest Contentful Paint, so it should load eagerly
    * instead of lazily like every card below the fold. */
   priority?: boolean;
+  /** The owner's equipped Nameplate Color store cosmetic (garage
+   * shop) — a CSS color/gradient, same `value`/`effectClassName` shape
+   * as every other store item. Undefined renders the default white. */
+  nameColorValue?: string;
+  nameColorEffectClassName?: string;
 }) {
   const title = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
   const subtitle = vehicle.nickname
     ? `${vehicle.year ?? ""} ${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim()
     : vehicle.trim;
+  const nameIsGradient = nameColorValue?.includes("gradient") ?? false;
 
   return (
     <RankFrame score={ratingScore} compact>
@@ -51,7 +59,21 @@ export function VehicleCard({
               {vehicle.year}
             </p>
           )}
-          <h3 className="truncate text-lg font-semibold text-white">{title}</h3>
+          {nameIsGradient ? (
+            <h3
+              className={`truncate bg-clip-text text-lg font-semibold text-transparent ${nameColorEffectClassName ?? ""}`}
+              style={{ backgroundImage: nameColorValue }}
+            >
+              {title}
+            </h3>
+          ) : (
+            <h3
+              className={`truncate text-lg font-semibold ${nameColorValue ? "" : "text-white"} ${nameColorEffectClassName ?? ""}`}
+              style={nameColorValue ? { color: nameColorValue } : undefined}
+            >
+              {title}
+            </h3>
+          )}
           {subtitle && (
             <p className="truncate text-sm text-white/70">{subtitle}</p>
           )}

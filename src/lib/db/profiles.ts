@@ -223,7 +223,12 @@ export async function updateShowcasedAchievements(
   return data;
 }
 
-export type EquipCategory = "name_color" | "profile_background" | "showcase_frame";
+export type EquipCategory =
+  | "name_color"
+  | "profile_background"
+  | "showcase_frame"
+  | "vehicle_name_color"
+  | "garage_backdrop";
 
 /** `itemId: null` unequips — back to the default look for that slot.
  * Ownership is checked by the caller (features/store/actions.ts), not
@@ -241,7 +246,11 @@ export async function updateEquippedCosmetic(
       ? { equipped_name_color: itemId }
       : category === "profile_background"
         ? { equipped_profile_background: itemId }
-        : { equipped_showcase_frame: itemId };
+        : category === "showcase_frame"
+          ? { equipped_showcase_frame: itemId }
+          : category === "vehicle_name_color"
+            ? { equipped_vehicle_name_color: itemId }
+            : { equipped_garage_backdrop: itemId };
 
   const { data, error } = await supabase
     .from("profiles")
