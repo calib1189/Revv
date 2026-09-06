@@ -75,7 +75,7 @@ export interface Database {
           id: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant";
           source_id: string;
           created_at: string;
         };
@@ -83,7 +83,7 @@ export interface Database {
           id?: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant";
           source_id: string;
           created_at?: string;
         };
