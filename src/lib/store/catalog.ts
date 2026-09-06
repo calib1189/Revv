@@ -370,10 +370,12 @@ const MATERIAL_THEMES = [
   "inferno",
 ] as const;
 
-const GARAGE_ITEMS: StoreItem[] = MATERIAL_THEMES.flatMap((theme) => [
+// Garage Backdrop deliberately has no CSS-gradient items — every one
+// is a real uploaded photo (GARAGE_PHOTO_ITEMS below). Nameplate Color
+// still gets the full material-theme treatment.
+const GARAGE_ITEMS: StoreItem[] = MATERIAL_THEMES.map((theme) =>
   deriveItem(`name_${theme}`, `vname_${theme}`, "vehicle_name_color"),
-  deriveItem(`bg_${theme}`, `gbackdrop_${theme}`, "garage_backdrop"),
-]);
+);
 
 const CREW_ITEMS: StoreItem[] = MATERIAL_THEMES.flatMap((theme) => [
   deriveItem(`name_${theme}`, `cname_${theme}`, "crew_name_color"),
