@@ -378,7 +378,15 @@ html.native-app body::-webkit-scrollbar {
   .rank-frame::after {
     content: "";
     position: absolute;
-    inset: 0;
+    /* Slightly past the true edge, not flush with it (inset: 0) — the
+       ring is drawn via a CSS mask, which anti-aliases its own outer
+       edge independently of the plain overflow:hidden clip the photo
+       underneath uses. Two separately-rasterized circles at the exact
+       same radius can still leave a sub-pixel gap where the photo
+       peeks through; the outer .rank-frame's own overflow:hidden crops
+       this back to the real boundary regardless, so the ring never
+       visibly grows, it just always fully covers the seam. */
+    inset: -1px;
     border-radius: inherit;
     corner-shape: inherit;
     -webkit-corner-shape: inherit;
