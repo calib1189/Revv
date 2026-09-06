@@ -185,7 +185,8 @@ export async function GaragePageContent() {
               several sharing it. A tall min-height keeps the photo
               reading as a real banner spanning the screen (rather than
               however tall one small card happens to be), with that one
-              VehicleCard floating centered on top. */}
+              VehicleCard sitting bottom-center like a subject standing
+              in front of the scene, not floating in the middle of it. */}
           {vehiclesWithBackdrop.map((vehicle, index) => {
             const backdropItem = vehicle.equipped_backdrop
               ? getStoreItem(vehicle.equipped_backdrop)
@@ -193,10 +194,10 @@ export async function GaragePageContent() {
             return (
               <div
                 key={vehicle.id}
-                className={`flex flex-col justify-center rounded-3xl p-4 sm:p-6 min-h-[280px] sm:min-h-[420px] ${backdropItem?.effectClassName ?? ""}`}
+                className={`flex flex-col justify-end rounded-3xl p-4 sm:p-6 min-h-[280px] sm:min-h-[420px] ${backdropItem?.effectClassName ?? ""}`}
                 style={backdropItem ? { backgroundImage: backdropItem.value } : undefined}
               >
-                <div className="mx-auto w-full max-w-xs">
+                <div className="mx-auto w-full max-w-[240px]">
                   <VehicleCard
                     vehicle={vehicle}
                     heroUrl={

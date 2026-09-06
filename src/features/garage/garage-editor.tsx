@@ -25,7 +25,7 @@ const BACKDROP_ITEMS = listStoreItemsByCategory("garage_backdrop");
  * /garage once a backdrop is equipped. */
 function PreviewCard({ vehicle }: { vehicle: EditorVehicle }) {
   return (
-    <div className="mx-auto w-full max-w-xs overflow-hidden rounded-2xl bg-surface shadow-2xl ring-1 ring-white/10">
+    <div className="mx-auto w-full max-w-[240px] overflow-hidden rounded-2xl bg-surface shadow-2xl ring-1 ring-white/10">
       <div className="relative aspect-[4/3]">
         {vehicle.heroUrl ? (
           <Image src={vehicle.heroUrl} alt={vehicle.title} fill sizes="320px" className="object-cover" />
@@ -240,10 +240,12 @@ export function GarageEditor({
 
         {/* The whole point of this screen: see it before you buy it. Same
             banner language as the real /garage page — a tall backdrop
-            with the one selected car floating on top, not a swatch. */}
+            with the one selected car floating on top, not a swatch. Car
+            sits bottom-center rather than dead center, like a subject
+            standing in front of a backdrop rather than floating in it. */}
         <div
           key={selectedId}
-          className={`flex min-h-[280px] flex-col justify-center rounded-3xl p-6 transition-all duration-300 sm:min-h-[380px] ${
+          className={`flex min-h-[280px] flex-col justify-end rounded-3xl p-6 transition-all duration-300 sm:min-h-[380px] ${
             equippedItem?.effectClassName ?? "bg-surface"
           }`}
           style={equippedItem ? { backgroundImage: equippedItem.value } : undefined}
