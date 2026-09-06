@@ -291,22 +291,33 @@ html.native-app body::-webkit-scrollbar {
    conic-gradient + spin technique as .rank-cosmic, just scaled down to
    badge size, since a $-tier cosmetic should look like it. */
 @layer components {
+  /* outline + filter, not box-shadow — these rings now wrap the whole
+     .glass showcase pill (icon + name), and .glass already owns
+     box-shadow for its inset highlight. Two classes fighting over the
+     same box-shadow property would just have one clobber the other;
+     outline/filter are separate properties so both effects render
+     together regardless of cascade order. */
   .frame-bronze-ring {
-    box-shadow: 0 0 0 2px #c98a52, 0 0 10px rgb(201 138 82 / 0.45);
+    outline: 2px solid #c98a52;
+    outline-offset: 2px;
+    filter: drop-shadow(0 0 6px rgb(201 138 82 / 0.45));
   }
 
   .frame-gold-ring {
-    box-shadow: 0 0 0 2px #fbbf24, 0 0 12px rgb(251 191 36 / 0.5);
+    outline: 2px solid #fbbf24;
+    outline-offset: 2px;
+    filter: drop-shadow(0 0 7px rgb(251 191 36 / 0.5));
   }
 
   .frame-neon-ring {
-    box-shadow: 0 0 0 2px #22d3ee, 0 0 14px rgb(34 211 238 / 0.7);
+    outline: 2px solid #22d3ee;
+    outline-offset: 2px;
     animation: showcase-neon-pulse 2s ease-in-out infinite;
   }
 
   @keyframes showcase-neon-pulse {
-    0%, 100% { box-shadow: 0 0 0 2px #22d3ee, 0 0 10px rgb(34 211 238 / 0.55); }
-    50% { box-shadow: 0 0 0 2px #67e8f9, 0 0 18px rgb(34 211 238 / 0.9); }
+    0%, 100% { filter: drop-shadow(0 0 5px rgb(34 211 238 / 0.55)); }
+    50% { filter: drop-shadow(0 0 10px rgb(34 211 238 / 0.9)); }
   }
 
   .frame-prism-ring {

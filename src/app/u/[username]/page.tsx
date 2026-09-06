@@ -192,9 +192,15 @@ export default async function ProfilePage({
       )}
 
       <div
-        className={`${backgroundItem ? "rounded-3xl p-5" : ""} ${backgroundItem?.effectClassName ?? ""}`}
+        className={backgroundItem ? `rounded-3xl p-3 ${backgroundItem.effectClassName ?? ""}` : ""}
         style={backgroundItem ? { background: backgroundItem.value } : undefined}
       >
+      {/* The equipped background cosmetic only shows in this outer
+          padding ring — the actual name/bio/stats sit on a plain
+          bg-surface panel one level in, so a busy pattern or moving
+          gradient never sits directly behind text a visitor has to
+          read. */}
+      <div className={backgroundItem ? "rounded-2xl bg-surface p-4" : ""}>
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="flex min-w-0 items-center gap-1.5 truncate text-2xl font-bold tracking-tight">
@@ -311,6 +317,7 @@ export default async function ProfilePage({
             />
           </>
         ) : null}
+      </div>
       </div>
       </div>
 

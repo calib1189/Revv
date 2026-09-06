@@ -5,7 +5,9 @@ import { achievementColor, getAchievement } from "@/lib/achievements/catalog";
  * smaller — this sits inline in the profile header, not in a grid.
  * `frameClassName` is the owner's equipped store cosmetic (a decorative
  * ring, see the .frame-* classes in globals.css) — unrelated to the
- * real rank-tier ring system, purely a purchased look. */
+ * real rank-tier ring system, purely a purchased look. Applied to the
+ * whole pill (icon + name), not just the icon circle, so it reads as
+ * the achievement's frame rather than a random ring on the emoji. */
 function ShowcaseBadge({ id, frameClassName }: { id: string; frameClassName?: string }) {
   const achievement = getAchievement(id);
   if (!achievement) return null;
@@ -15,9 +17,9 @@ function ShowcaseBadge({ id, frameClassName }: { id: string; frameClassName?: st
   const Icon = achievement.icon;
 
   return (
-    <div className="glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3">
+    <div className={`glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 ${frameClassName ?? ""}`}>
       <span
-        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full ${frameClassName ?? ""}`}
+        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
         style={{ backgroundColor: `${color}26` }}
       >
         {TierIcon ? (
