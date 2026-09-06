@@ -394,9 +394,11 @@ const NAME_COLOR_ONLY_ITEMS: StoreItem[] = NAME_COLOR_ONLY_THEMES.flatMap((theme
 ]);
 
 /** Real photography, not a CSS gradient — `value` is a url() pointing
- * at public/images/store/garage, and `bg-cover` (globals.css) gives it
- * cover/center sizing since a photo can't auto-fill a box the way a
- * gradient does. Garage-only: a photographic scene doesn't have an
+ * at public/images/store/garage. Every one gets the slow cinematic pan
+ * (bg-photo-pan, globals.css) instead of the plain bg-cover a static
+ * backdrop would use; the four neon-lit scenes also get a pulsing
+ * outer glow in their own signature color (bg-neon-photo-glow +
+ * glow-<name>). Garage-only: a photographic scene doesn't have an
  * obvious matching name-color/frame the way a material/color theme
  * does, so these deliberately aren't run through deriveItem for the
  * profile or crew shops. */
@@ -407,7 +409,7 @@ const GARAGE_PHOTO_ITEMS: StoreItem[] = [
     name: "Neon Tunnel",
     price: 400,
     value: "url(/images/store/garage/neon-tunnel.jpg)",
-    effectClassName: "bg-cover",
+    effectClassName: "bg-photo-pan bg-neon-photo-glow glow-neon-tunnel",
   },
   {
     id: "gbackdrop_crimson_corridor",
@@ -415,7 +417,7 @@ const GARAGE_PHOTO_ITEMS: StoreItem[] = [
     name: "Crimson Corridor",
     price: 380,
     value: "url(/images/store/garage/crimson-corridor.jpg)",
-    effectClassName: "bg-cover",
+    effectClassName: "bg-photo-pan bg-neon-photo-glow glow-crimson-corridor",
   },
   {
     id: "gbackdrop_synthwave_portal",
@@ -423,7 +425,7 @@ const GARAGE_PHOTO_ITEMS: StoreItem[] = [
     name: "Synthwave Portal",
     price: 450,
     value: "url(/images/store/garage/synthwave-portal.jpg)",
-    effectClassName: "bg-cover",
+    effectClassName: "bg-photo-pan bg-neon-photo-glow glow-synthwave-portal",
   },
   {
     id: "gbackdrop_voltage_hall",
@@ -431,7 +433,7 @@ const GARAGE_PHOTO_ITEMS: StoreItem[] = [
     name: "Voltage Hall",
     price: 420,
     value: "url(/images/store/garage/voltage-hall.jpg)",
-    effectClassName: "bg-cover",
+    effectClassName: "bg-photo-pan bg-neon-photo-glow glow-voltage-hall",
   },
   {
     id: "gbackdrop_parking_deck",
@@ -439,7 +441,7 @@ const GARAGE_PHOTO_ITEMS: StoreItem[] = [
     name: "Parking Deck",
     price: 250,
     value: "url(/images/store/garage/parking-deck.jpg)",
-    effectClassName: "bg-cover",
+    effectClassName: "bg-photo-pan",
   },
   {
     id: "gbackdrop_pit_garage",
@@ -447,7 +449,7 @@ const GARAGE_PHOTO_ITEMS: StoreItem[] = [
     name: "Pit Garage",
     price: 480,
     value: "url(/images/store/garage/pit-garage.jpg)",
-    effectClassName: "bg-cover",
+    effectClassName: "bg-photo-pan",
   },
   {
     id: "gbackdrop_andromeda",
@@ -455,7 +457,7 @@ const GARAGE_PHOTO_ITEMS: StoreItem[] = [
     name: "Andromeda",
     price: 500,
     value: "url(/images/store/garage/andromeda.jpg)",
-    effectClassName: "bg-cover",
+    effectClassName: "bg-photo-pan",
   },
 ];
 

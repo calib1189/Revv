@@ -171,18 +171,32 @@ export async function GaragePageContent() {
         // each VehicleCard already carries its own opaque photo/gradient
         // behind its name text, so an equipped Garage Backdrop can show
         // straight through the padding and the gaps between cards
-        // instead of hiding behind a solid panel. A small garage (under
-        // 4 cars — the common case) gets one big stacked column instead
-        // of shrinking down to grid-tile size for no reason; the
-        // multi-column grid only kicks in once there's enough cars to
-        // actually need it.
+        // instead of hiding behind a solid panel.
+        //
+        // Two different layouts depending on whether there's a backdrop
+        // to show off: with one equipped, a tall min-height keeps the
+        // photo reading as a real banner spanning the width of the
+        // screen (rather than however tall a couple of cards happen to
+        // be), and cards go small (compact grid) so the scene behind
+        // them is the star. With no backdrop equipped, a small garage
+        // (under 4 cars — the common case) instead gets one big stacked
+        // column, since there's no photo worth making room for and a
+        // shrunk-for-no-reason grid tile just reads as cramped.
         <div
-          className={backdropItem ? `rounded-3xl p-4 ${backdropItem.effectClassName ?? ""}` : ""}
+          className={
+            backdropItem
+              ? `flex flex-col justify-center rounded-3xl p-4 sm:p-6 min-h-[280px] sm:min-h-[420px] ${backdropItem.effectClassName ?? ""}`
+              : ""
+          }
           style={backdropItem ? { backgroundImage: backdropItem.value } : undefined}
         >
           <div
-            className={`grid gap-6 ${
-              vehicles.length < 4 ? "grid-cols-1" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+            className={`grid gap-4 sm:gap-6 ${
+              backdropItem
+                ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+                : vehicles.length < 4
+                  ? "grid-cols-1"
+                  : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
             }`}
           >
             {vehicles.map((vehicle, index) => (
