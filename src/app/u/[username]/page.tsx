@@ -174,6 +174,9 @@ export default async function ProfilePage({
   const frameItem = profile.equipped_showcase_frame
     ? getStoreItem(profile.equipped_showcase_frame)
     : undefined;
+  const vehicleNameColorItem = profile.equipped_vehicle_name_color
+    ? getStoreItem(profile.equipped_vehicle_name_color)
+    : undefined;
   const nameIsGradient = nameColorItem?.value.includes("gradient") ?? false;
 
   return (
@@ -329,6 +332,8 @@ export default async function ProfilePage({
         posts={postThumbnails}
         savedPosts={isOwnProfile ? savedThumbnails : undefined}
         likedPosts={isOwnProfile ? likedThumbnails : undefined}
+        vehicleNameColorValue={vehicleNameColorItem?.value}
+        vehicleNameColorEffectClassName={vehicleNameColorItem?.effectClassName}
         vehicles={vehicles.map((vehicle) => ({
           vehicle,
           heroUrl: vehicle.hero_media_id

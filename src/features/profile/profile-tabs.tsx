@@ -103,6 +103,8 @@ export function ProfileTabs({
   savedPosts,
   likedPosts,
   isOwnProfile,
+  vehicleNameColorValue,
+  vehicleNameColorEffectClassName,
 }: {
   posts: PostThumbnail[];
   vehicles: ProfileVehicleItem[];
@@ -113,6 +115,11 @@ export function ProfileTabs({
   savedPosts?: PostThumbnail[];
   likedPosts?: PostThumbnail[];
   isOwnProfile: boolean;
+  /** This profile's equipped Garage Shop Nameplate Color, if any — same
+   * cosmetic shown on the owner's own /garage, applied here too so a
+   * visitor sees it on the public Garage tab, not just the owner. */
+  vehicleNameColorValue?: string;
+  vehicleNameColorEffectClassName?: string;
 }) {
   const [tab, setTab] = useState<Tab>("posts");
 
@@ -154,6 +161,8 @@ export function ProfileTabs({
                   vehicle={vehicle}
                   heroUrl={heroUrl}
                   ratingScore={ratingScore}
+                  nameColorValue={vehicleNameColorValue}
+                  nameColorEffectClassName={vehicleNameColorEffectClassName}
                 />
               ))}
             </div>

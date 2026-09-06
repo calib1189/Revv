@@ -127,6 +127,9 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
   const cars: CrewCarItem[] = memberVehicles.map((vehicle) => {
     const profile = profileById.get(vehicle.owner_id);
     const username = profile?.username ?? "unknown";
+    const ownerNameColorItem = profile?.equipped_vehicle_name_color
+      ? getStoreItem(profile.equipped_vehicle_name_color)
+      : undefined;
     return {
       vehicle,
       heroUrl: vehicle.hero_media_id ? (heroUrlById.get(vehicle.hero_media_id) ?? null) : null,
@@ -134,6 +137,8 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
       ownerUsername: username,
       ownerAvatarUrl: profile?.avatar_media_id ? (avatarUrlById.get(profile.avatar_media_id) ?? null) : null,
       ownerBestScore: bestScoreByOwner.get(vehicle.owner_id) ?? null,
+      ownerNameColorValue: ownerNameColorItem?.value,
+      ownerNameColorEffectClassName: ownerNameColorItem?.effectClassName,
     };
   });
 

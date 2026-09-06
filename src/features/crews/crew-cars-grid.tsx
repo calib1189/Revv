@@ -11,6 +11,11 @@ export interface CrewCarItem {
   ownerUsername: string;
   ownerAvatarUrl: string | null;
   ownerBestScore: number | null;
+  /** The car owner's equipped Garage Shop Nameplate Color, if any —
+   * same cosmetic shown on their own /garage and profile Garage tab,
+   * applied here too so it's consistent everywhere their car shows up. */
+  ownerNameColorValue?: string;
+  ownerNameColorEffectClassName?: string;
 }
 
 /** The crew page's default view — every member's car in one flat grid,
@@ -31,7 +36,13 @@ export function CrewCarsGrid({ cars }: { cars: CrewCarItem[] }) {
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {cars.map((car) => (
         <div key={car.vehicle.id} className="relative">
-          <VehicleCard vehicle={car.vehicle} heroUrl={car.heroUrl} ratingScore={car.vehicleScore} />
+          <VehicleCard
+            vehicle={car.vehicle}
+            heroUrl={car.heroUrl}
+            ratingScore={car.vehicleScore}
+            nameColorValue={car.ownerNameColorValue}
+            nameColorEffectClassName={car.ownerNameColorEffectClassName}
+          />
           <Link
             href={`/u/${car.ownerUsername}`}
             aria-label={`@${car.ownerUsername}`}
