@@ -1,4 +1,14 @@
 export const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+
+// Tighter than MAX_IMAGE_BYTES on purpose: this one bounds a photo
+// headed for identifyVehicleAction, which base64-encodes it (~33%
+// larger) into a Server Action body (bodySizeLimit: "20mb" in
+// next.config.ts) and then into a Gemini inline-image request (which
+// has its own payload ceiling around 20MB). A file right at the normal
+// 15MB image cap becomes ~20MB of base64 — no headroom left for either
+// limit. 8MB raw becomes ~10.7MB encoded, comfortably under both.
+export const MAX_IDENTIFY_IMAGE_BYTES = 8 * 1024 * 1024;
+
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export function validateImageFile(file: {

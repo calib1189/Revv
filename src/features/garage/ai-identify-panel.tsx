@@ -5,6 +5,8 @@ import { identifyVehicleAction } from "@/features/garage/actions";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
+import { compressImageIfNeeded } from "@/lib/validation/compress-image";
+import { MAX_IDENTIFY_IMAGE_BYTES } from "@/lib/validation/media";
 import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleFormValues } from "@/features/garage/vehicle-form";
 
@@ -28,8 +30,16 @@ export function AiIdentifyPanel({
     setIsIdentifying(true);
 
     try {
+      // No upload here is ever too large — an oversized photo (a
+      // modern phone photo easily clears 15-20MB) gets downscaled and
+      // re-encoded client-side before it ever leaves the browser,
+      // instead of shipping the original over the network only to be
+      // rejected server-side (or by Gemini's own payload limit) after
+      // the fact. See compressImageIfNeeded's own comment for why this
+      // path targets a tighter cap than a plain cover-photo upload.
+      const uploadFile = await compressImageIfNeeded(file, MAX_IDENTIFY_IMAGE_BYTES);
       const formData = new FormData();
-      formData.set("photo", file);
+      formData.set("photo", uploadFile);
       const result = await identifyVehicleAction(formData);
       if (result.error) {
         setError(result.error);
