@@ -273,6 +273,45 @@ html.native-app body::-webkit-scrollbar {
   animation: countdown-pulse 500ms ease-out forwards;
 }
 
+/* Login page backdrop (auth-background.tsx) — each real build photo
+   holds fully transparent for most of the cycle, fades in, holds
+   visible with a slow zoom (the "Ken Burns" drift that keeps a static
+   photo from reading as a dead screenshot), then fades back out before
+   the next photo's turn. Percentages are fractions of one photo's own
+   slot within the shared N-photo cycle, not the whole loop — see the
+   inline animationDuration/animationDelay in auth-background.tsx for
+   how each photo gets staggered into its slot. */
+@keyframes auth-photo {
+  0% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  8% {
+    opacity: 0;
+  }
+  16%,
+  84% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+
+.animate-auth-photo {
+  animation: auth-photo linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-auth-photo {
+    animation-play-state: paused;
+  }
+}
+
 @layer components {
   /* Liquid-glass surface: frosted, translucent, with a hairline border that
      catches light on its top edge. Two tiers — .glass for standard cards,
