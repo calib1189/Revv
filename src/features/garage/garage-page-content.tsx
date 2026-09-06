@@ -167,32 +167,33 @@ export async function GaragePageContent() {
           </Link>
         </div>
       ) : (
-        // Same "cosmetic frames the outside, content stays on a plain
-        // readable surface" pattern as the equipped profile background
-        // (see u/[username]/page.tsx) — a busy or animated Garage
-        // Backdrop never sits directly behind a vehicle's photo/name.
+        // Unlike the profile header, no readable-surface panel here —
+        // each VehicleCard already carries its own opaque photo/gradient
+        // behind its name text, so an equipped Garage Backdrop can show
+        // straight through the padding and the gaps between cards
+        // instead of hiding behind a solid panel. Smaller cards (one
+        // extra column per breakpoint vs. before) plus a wider gap means
+        // more of the backdrop is visible around them.
         <div
-          className={backdropItem ? `rounded-3xl p-2 ${backdropItem.effectClassName ?? ""}` : ""}
+          className={backdropItem ? `rounded-3xl p-4 ${backdropItem.effectClassName ?? ""}` : ""}
           style={backdropItem ? { backgroundImage: backdropItem.value } : undefined}
         >
-          <div className={backdropItem ? "rounded-2xl bg-surface p-4" : ""}>
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {vehicles.map((vehicle, index) => (
-                <VehicleCard
-                  key={vehicle.id}
-                  vehicle={vehicle}
-                  heroUrl={
-                    vehicle.hero_media_id
-                      ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
-                      : null
-                  }
-                  ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
-                  priority={index === 0}
-                  nameColorValue={nameColorItem?.value}
-                  nameColorEffectClassName={nameColorItem?.effectClassName}
-                />
-              ))}
-            </div>
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+            {vehicles.map((vehicle, index) => (
+              <VehicleCard
+                key={vehicle.id}
+                vehicle={vehicle}
+                heroUrl={
+                  vehicle.hero_media_id
+                    ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
+                    : null
+                }
+                ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
+                priority={index === 0}
+                nameColorValue={nameColorItem?.value}
+                nameColorEffectClassName={nameColorItem?.effectClassName}
+              />
+            ))}
           </div>
         </div>
       )}
