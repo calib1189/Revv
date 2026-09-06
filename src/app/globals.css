@@ -835,6 +835,21 @@ html.native-app body::-webkit-scrollbar {
     backdrop-filter: blur(6px);
   }
 
+  /* VehicleCard is the one place a compact rank frame keeps its badge
+     visible (every avatar-ring usage of "compact" passes hideBadge) —
+     top-right instead of bottom-right so it never competes with the
+     name/subtitle text anchored bottom-left on the same photo, no
+     matter how small the card grid makes that photo. Smaller padding/
+     gap too, since the badge doesn't need to loom that large over a
+     grid tile the way it can over a full-width hero photo. */
+  .rank-frame-compact .rank-badge {
+    top: 0.5rem;
+    right: 0.5rem;
+    bottom: auto;
+    gap: 0.2rem;
+    padding: 0.2rem 0.5rem;
+  }
+
   /* ------------------------------------------------------------------- *
    * Rank mini chips — a small standalone "logo" version of the rank
    * material, for spots too small for a full frame (e.g. next to the
