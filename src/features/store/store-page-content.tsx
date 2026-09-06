@@ -40,7 +40,7 @@ function ItemPreview({ item, username }: { item: StoreItem; username: string }) 
     return (
       <div
         className={`h-16 rounded-xl ${item.effectClassName ?? ""}`}
-        style={{ background: item.value }}
+        style={{ backgroundImage: item.value }}
       />
     );
   }

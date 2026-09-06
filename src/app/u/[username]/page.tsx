@@ -193,7 +193,7 @@ export default async function ProfilePage({
 
       <div
         className={backgroundItem ? `rounded-3xl p-2 ${backgroundItem.effectClassName ?? ""}` : ""}
-        style={backgroundItem ? { background: backgroundItem.value } : undefined}
+        style={backgroundItem ? { backgroundImage: backgroundItem.value } : undefined}
       >
       {/* The equipped background cosmetic only shows in this outer
           padding ring — the actual name/bio/stats sit on a plain

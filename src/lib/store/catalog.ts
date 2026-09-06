@@ -109,8 +109,10 @@ export const STORE_ITEMS: StoreItem[] = [
     category: "profile_background",
     name: "Racing Stripes",
     price: 120,
+    // Two thick vertical stripes down the middle — classic Shelby/GT
+    // livery — rather than the old thin repeating diagonal pattern.
     value:
-      "repeating-linear-gradient(115deg, #18181b 0px, #18181b 40px, #ff4433 40px, #ff4433 46px, #18181b 46px, #18181b 86px)",
+      "linear-gradient(90deg, #18181b 0%, #18181b 40%, #ff4433 40%, #ff4433 48%, #18181b 48%, #18181b 52%, #ff4433 52%, #ff4433 60%, #18181b 60%, #18181b 100%)",
   },
   {
     id: "bg_carbon",
