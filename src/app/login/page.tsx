@@ -17,7 +17,7 @@ export default async function LoginPage({
       <AuthBackground />
       <div className="glass-raised rounded-3xl px-6 py-8">
         <Link href="/" className="mb-8 flex justify-center">
-          <Image src="/logo-full.png" alt="SORZA" width={160} height={160} quality={100} priority />
+          <Image src="/logo-full-v2.png" alt="SORZA" width={160} height={160} quality={100} priority />
         </Link>
         <h1 className="mb-6 text-xl font-semibold">Log in</h1>
 
