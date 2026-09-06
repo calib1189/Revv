@@ -192,15 +192,14 @@ export default async function ProfilePage({
       )}
 
       <div
-        className={backgroundItem ? `rounded-3xl p-4 sm:p-5 ${backgroundItem.effectClassName ?? ""}` : ""}
+        className={backgroundItem ? `rounded-3xl p-2 ${backgroundItem.effectClassName ?? ""}` : ""}
         style={backgroundItem ? { background: backgroundItem.value } : undefined}
       >
-      {/* The equipped background cosmetic fills this outer frame around
-          the whole profile section — header card and the Posts/Garage/
-          Achievements tab strip below it — not just a thin border. The
-          name/bio/stats and tab content still sit on plain bg-surface
-          panels one level in, so a busy pattern or moving gradient
-          never sits directly behind text a visitor has to read. */}
+      {/* The equipped background cosmetic only shows in this outer
+          padding ring — the actual name/bio/stats sit on a plain
+          bg-surface panel one level in, so a busy pattern or moving
+          gradient never sits directly behind text a visitor has to
+          read. */}
       <div className={backgroundItem ? "rounded-2xl bg-surface p-4" : ""}>
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -320,26 +319,24 @@ export default async function ProfilePage({
         ) : null}
       </div>
       </div>
+      </div>
 
-      <div className={backgroundItem ? "mt-6 rounded-2xl bg-surface p-4 sm:p-5" : ""}>
-        <ProfileTabs
-          isOwnProfile={isOwnProfile}
-          unlockedAtById={unlockedAtById}
-          claimedAtById={claimedAtById}
-          showcasedAchievementIds={profile.showcased_achievement_ids ?? []}
-          posts={postThumbnails}
-          savedPosts={isOwnProfile ? savedThumbnails : undefined}
-          likedPosts={isOwnProfile ? likedThumbnails : undefined}
-          vehicles={vehicles.map((vehicle) => ({
-            vehicle,
-            heroUrl: vehicle.hero_media_id
-              ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
-              : null,
-            ratingScore: activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null,
-          }))}
-        />
-      </div>
-      </div>
+      <ProfileTabs
+        isOwnProfile={isOwnProfile}
+        unlockedAtById={unlockedAtById}
+        claimedAtById={claimedAtById}
+        showcasedAchievementIds={profile.showcased_achievement_ids ?? []}
+        posts={postThumbnails}
+        savedPosts={isOwnProfile ? savedThumbnails : undefined}
+        likedPosts={isOwnProfile ? likedThumbnails : undefined}
+        vehicles={vehicles.map((vehicle) => ({
+          vehicle,
+          heroUrl: vehicle.hero_media_id
+            ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
+            : null,
+          ratingScore: activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null,
+        }))}
+      />
     </div>
   );
 }
