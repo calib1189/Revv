@@ -55,7 +55,7 @@ export default async function LandingPage() {
 
         <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center px-6 text-center">
           <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-            Your build. Documented. Rated. Seen.
+            Don&apos;t just post your build. Prove it.
           </h1>
           <p className="mt-5 max-w-lg text-balance text-lg text-muted">
             SORZA is the social platform built for your garage — log every mod as
