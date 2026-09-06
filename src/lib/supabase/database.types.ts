@@ -258,12 +258,14 @@ export interface Database {
           user_id: string;
           achievement_id: string;
           unlocked_at: string;
+          claimed_at: string | null;
         };
         Insert: {
           id?: string;
           user_id: string;
           achievement_id: string;
           unlocked_at?: string;
+          claimed_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["user_achievements"]["Insert"]>;
         Relationships: never[];
@@ -275,6 +277,7 @@ export interface Database {
           challenge_id: string;
           week_start: string;
           completed_at: string;
+          claimed_at: string | null;
         };
         Insert: {
           id?: string;
@@ -282,6 +285,7 @@ export interface Database {
           challenge_id: string;
           week_start: string;
           completed_at?: string;
+          claimed_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["user_challenge_completions"]["Insert"]>;
         Relationships: never[];

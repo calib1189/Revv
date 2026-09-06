@@ -3,8 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
 import { updateShowcasedAchievements } from "@/lib/db/profiles";
-import { listUnlockedAchievements } from "@/lib/db/user-achievements";
+import {
+  listUnlockedAchievements,
+  getUserAchievement,
+  markAchievementClaimed,
+} from "@/lib/db/user-achievements";
 import { getAchievement } from "@/lib/achievements/catalog";
+import { pointsForAchievement } from "@/lib/points/values";
 
 const MAX_SHOWCASED = 3;
 
@@ -45,4 +50,45 @@ export async function updateShowcaseAction(achievementIds: string[]): Promise<Sh
   }
 
   return { error: null };
+}
+
+export interface ClaimState {
+  error: string | null;
+  amount: number | null;
+}
+
+/** Claims the points for one already-unlocked achievement. Unlike
+ * updateShowcaseAction, this needs a real row lookup rather than
+ * listUnlockedAchievements' full list — it also has to know
+ * claimed_at, which the showcase check never needed. */
+export async function claimAchievementPointsAction(achievementId: string): Promise<ClaimState> {
+  const achievement = getAchievement(achievementId);
+  if (!achievement) return { error: "Invalid achievement.", amount: null };
+
+  const { supabase, user } = await requireConfirmedUser();
+
+  const row = await getUserAchievement(supabase, user.id, achievementId);
+  if (!row) return { error: "You haven't unlocked this yet.", amount: null };
+  if (row.claimed_at) return { error: "Already claimed.", amount: null };
+
+  const amount = pointsForAchievement(achievementId);
+  try {
+    const { error: ledgerError } = await supabase.from("points_ledger").insert({
+      user_id: user.id,
+      amount,
+      source_type: "achievement",
+      source_id: achievementId,
+    });
+    // A unique-constraint conflict here means someone else's concurrent
+    // claim already inserted this exact row — not a real failure, just
+    // a race this user lost to their own other tab/device.
+    if (ledgerError && ledgerError.code !== "23505") throw ledgerError;
+
+    await markAchievementClaimed(supabase, user.id, achievementId);
+  } catch (err) {
+    console.error("claimAchievementPointsAction failed:", err);
+    return { error: "Couldn't claim points. Try again.", amount: null };
+  }
+
+  return { error: null, amount };
 }

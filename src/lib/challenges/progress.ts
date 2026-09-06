@@ -5,24 +5,27 @@ import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { listPostsByAuthor } from "@/lib/db/posts";
 import { countPostsSince, countCommentsSince, countLikesReceivedSince } from "@/lib/db/weekly-stats";
 import { countPeerRatingsGivenSince } from "@/lib/db/peer-ratings";
-import { listCompletedChallengeIds, insertChallengeCompletions } from "@/lib/db/user-challenge-completions";
+import { listWeekCompletions, insertChallengeCompletions } from "@/lib/db/user-challenge-completions";
 import { getWeekStart, weekStartKey } from "@/lib/challenges/week";
 import { evaluateChallenges, type ChallengeProgress } from "@/lib/challenges/evaluate";
 import { getChallenge, type ChallengeDef } from "@/lib/challenges/catalog";
-import { insertPointsEarned } from "@/lib/db/points";
-import { CHALLENGE_COMPLETION_POINTS } from "@/lib/points/values";
 
 export interface WeeklyChallengesResult {
-  progress: ChallengeProgress[];
+  /** `claimed` is only meaningful when `completed` is true — an
+   * in-progress challenge is neither claimed nor unclaimed, it just
+   * isn't done yet. */
+  progress: (ChallengeProgress & { claimed: boolean })[];
   newlyCompleted: ChallengeDef[];
 }
 
 /** Gathers this week's real stats, evaluates progress against the fixed
  * catalog (see evaluate.ts), and records any newly-completed challenge
  * (a real, week-scoped row — see 0073_weekly_challenges.sql) so the
- * celebratory toast only ever fires once per completion. Meant to be
- * called from the same kind of frequently-visited page achievements
- * check from (Garage, own profile) — no cron job, no background worker. */
+ * celebratory toast only ever fires once per completion. Points aren't
+ * awarded here — the owner claims them explicitly via
+ * claimChallengePointsAction, same as achievements. Meant to be called
+ * from the same kind of frequently-visited page achievements check runs
+ * from (Garage, own profile) — no cron job, no background worker. */
 export async function getWeeklyChallengeProgress(
   supabase: SupabaseClient<Database>,
   userId: string,
@@ -31,11 +34,13 @@ export async function getWeeklyChallengeProgress(
   const weekStartIso = weekStart.toISOString();
   const key = weekStartKey(weekStart);
 
-  const [vehicles, posts, alreadyCompleted] = await Promise.all([
+  const [vehicles, posts, weekCompletions] = await Promise.all([
     listVehiclesByOwner(supabase, userId),
     listPostsByAuthor(supabase, userId),
-    listCompletedChallengeIds(supabase, userId, key),
+    listWeekCompletions(supabase, userId, key),
   ]);
+  const claimedById = new Map(weekCompletions.map((c) => [c.challengeId, c.claimedAt != null]));
+  const alreadyCompleted = new Set(weekCompletions.map((c) => c.challengeId));
 
   const [activeBuildByVehicle, postsThisWeek, commentsThisWeek, likesReceivedThisWeek] = await Promise.all([
     listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id)),
@@ -64,42 +69,23 @@ export async function getWeeklyChallengeProgress(
   }
   const ratingAttemptsThisWeek = ownRatingAttempts + peerRatingsGiven;
 
-  const progress = evaluateChallenges({
+  const rawProgress = evaluateChallenges({
     postsThisWeek,
     ratingAttemptsThisWeek,
     likesReceivedThisWeek,
     commentsMadeThisWeek: commentsThisWeek,
   });
 
-  const newlyCompletedIds = progress
+  const newlyCompletedIds = rawProgress
     .filter((p) => p.completed && !alreadyCompleted.has(p.id))
     .map((p) => p.id);
 
   if (newlyCompletedIds.length > 0) {
     await insertChallengeCompletions(supabase, userId, newlyCompletedIds, key);
-
-    // Best-effort, same reasoning as the achievement side: a
-    // not-yet-migrated points_ledger shouldn't block the completion
-    // itself. source_id includes the week key so the same challenge id
-    // earns points again next week instead of being blocked by the
-    // ledger's own unique(user_id, source_type, source_id) constraint.
-    try {
-      await insertPointsEarned(
-        supabase,
-        userId,
-        "challenge",
-        newlyCompletedIds.map((id) => ({
-          sourceId: `${id}:${key}`,
-          amount: CHALLENGE_COMPLETION_POINTS,
-        })),
-      );
-    } catch (err) {
-      console.error("insertPointsEarned (challenge) failed:", err);
-    }
   }
 
   return {
-    progress,
+    progress: rawProgress.map((p) => ({ ...p, claimed: claimedById.get(p.id) ?? false })),
     newlyCompleted: newlyCompletedIds
       .map((id) => getChallenge(id))
       .filter((c): c is ChallengeDef => Boolean(c)),

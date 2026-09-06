@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { LockIcon } from "@/components/ui/icons";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { achievementColor, type AchievementDef } from "@/lib/achievements/catalog";
@@ -6,12 +7,18 @@ import { formatDateOnly } from "@/lib/format/date";
 export function AchievementBadge({
   achievement,
   unlockedAt,
+  footer,
 }: {
   achievement: AchievementDef;
   /** Undefined means locked — still shown (grayed, with a lock glyph),
    * not hidden, so the trophy case reads as a real checklist rather than
    * only ever showing off what's already done. */
   unlockedAt?: string;
+  /** The claim button (a client component) when this achievement is
+   * unlocked but unclaimed — passed in rather than owned here so this
+   * component can stay a plain server component; see
+   * achievements-grid.tsx for where it decides when to pass one. */
+  footer?: ReactNode;
 }) {
   const unlocked = unlockedAt != null;
   const color = achievementColor(achievement);
@@ -44,6 +51,7 @@ export function AchievementBadge({
         <p className="mt-0.5 text-xs text-muted">{achievement.description}</p>
         {unlocked && <p className="mt-1 text-[10px] text-muted">{formatDateOnly(unlockedAt)}</p>}
       </div>
+      {footer}
     </div>
   );
 }

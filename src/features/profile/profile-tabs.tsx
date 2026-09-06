@@ -98,6 +98,7 @@ export function ProfileTabs({
   posts,
   vehicles,
   unlockedAtById,
+  claimedAtById,
   showcasedAchievementIds,
   savedPosts,
   likedPosts,
@@ -106,6 +107,8 @@ export function ProfileTabs({
   posts: PostThumbnail[];
   vehicles: ProfileVehicleItem[];
   unlockedAtById: Map<string, string>;
+  /** Only passed for the owner's own profile — see achievements-grid.tsx. */
+  claimedAtById?: Map<string, string>;
   showcasedAchievementIds: string[];
   savedPosts?: PostThumbnail[];
   likedPosts?: PostThumbnail[];
@@ -164,7 +167,7 @@ export function ProfileTabs({
                 unlockedAtById={unlockedAtById}
               />
             )}
-            <AchievementsGrid unlockedAtById={unlockedAtById} />
+            <AchievementsGrid unlockedAtById={unlockedAtById} claimedAtById={claimedAtById} />
           </div>
         )}
 

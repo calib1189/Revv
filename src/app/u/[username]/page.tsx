@@ -124,6 +124,10 @@ export default async function ProfilePage({
   // profile in the app, not just the trophy case tab.
   let newlyUnlocked: Awaited<ReturnType<typeof checkAndUnlockAchievements>> = [];
   let unlockedAtById = new Map<string, string>();
+  // Only built for the owner — a visitor never gets a claim button on a
+  // stranger's unclaimed points, so there's no reason to hand them this
+  // data at all (see achievements-grid.tsx's canClaim check).
+  let claimedAtById: Map<string, string> | undefined;
   try {
     const [unlocked, unlockedAchievements] = await Promise.all([
       isOwnProfile ? checkAndUnlockAchievements(supabase, profile.id) : Promise.resolve([]),
@@ -131,6 +135,13 @@ export default async function ProfilePage({
     ]);
     newlyUnlocked = unlocked;
     unlockedAtById = new Map(unlockedAchievements.map((a) => [a.achievement_id, a.unlocked_at]));
+    if (isOwnProfile) {
+      claimedAtById = new Map(
+        unlockedAchievements
+          .filter((a) => a.claimed_at != null)
+          .map((a) => [a.achievement_id, a.claimed_at as string]),
+      );
+    }
   } catch (err) {
     console.error("Achievements check failed:", err);
   }
@@ -291,6 +302,7 @@ export default async function ProfilePage({
       <ProfileTabs
         isOwnProfile={isOwnProfile}
         unlockedAtById={unlockedAtById}
+        claimedAtById={claimedAtById}
         showcasedAchievementIds={profile.showcased_achievement_ids ?? []}
         posts={postThumbnails}
         savedPosts={isOwnProfile ? savedThumbnails : undefined}

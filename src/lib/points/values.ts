@@ -17,16 +17,24 @@ const TIER_POINTS: Record<RankTier, number> = {
   cosmic: 200,
 };
 
-/** Every non-tier achievement is worth a flat amount — this is a
- * deliberate v1 simplification (CLAUDE.md: don't over-engineer) rather
- * than hand-tuning 90-odd individual values with no real difficulty
- * data behind them. Revisit if a real economy needs finer balance. */
-const FLAT_ACHIEVEMENT_POINTS = 15;
+/** Fallback only — every real catalog entry sets its own `points`
+ * (catalog.test.ts enforces this), so this should never actually be
+ * reached for a valid id. */
+const FALLBACK_POINTS = 10;
 
+/** Every non-tier achievement's value is hand-set in the catalog itself
+ * against a fixed 10 (trivial, one-time actions) / 20 (early progress)
+ * / 35 (real engagement) / 60 (dedicated effort) / 100 (elite, rare)
+ * ladder — a genuine difficulty read on what each one actually asks
+ * for, not a flat number or a guess from the id's threshold alone (a
+ * post reaching 1,000 views on its own is a different kind of hard than
+ * personally logging 50 mods, even though both involve a "50" and a
+ * "1000"). Tier milestones use TIER_POINTS above instead, on the same
+ * kind of rarity curve but keyed to real score gaps. */
 export function pointsForAchievement(achievementId: string): number {
   const achievement = getAchievement(achievementId);
   if (achievement?.tier) return TIER_POINTS[achievement.tier];
-  return FLAT_ACHIEVEMENT_POINTS;
+  return achievement?.points ?? FALLBACK_POINTS;
 }
 
 /** Flat per weekly challenge, regardless of which one — encourages
