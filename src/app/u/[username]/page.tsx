@@ -180,8 +180,19 @@ export default async function ProfilePage({
   const nameIsGradient = nameColorItem?.value.includes("gradient") ?? false;
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
       <AchievementUnlockToast achievements={newlyUnlocked} />
+
+      <div
+        className={backgroundItem ? `rounded-3xl p-1 ${backgroundItem.effectClassName ?? ""}` : ""}
+        style={backgroundItem ? { backgroundImage: backgroundItem.value } : undefined}
+      >
+      {/* The equipped background cosmetic only shows in this outer
+          padding ring — the actual name/bio/stats sit on a plain
+          bg-surface panel one level in, so a busy pattern or moving
+          gradient never sits directly behind text a visitor has to
+          read. */}
+      <div className={backgroundItem ? "rounded-2xl bg-surface p-6" : ""}>
       {isOwnProfile && (
         <div className="mb-2 flex justify-end">
           <Link
@@ -193,20 +204,9 @@ export default async function ProfilePage({
           </Link>
         </div>
       )}
-
-      <div
-        className={backgroundItem ? `rounded-3xl p-2 ${backgroundItem.effectClassName ?? ""}` : ""}
-        style={backgroundItem ? { backgroundImage: backgroundItem.value } : undefined}
-      >
-      {/* The equipped background cosmetic only shows in this outer
-          padding ring — the actual name/bio/stats sit on a plain
-          bg-surface panel one level in, so a busy pattern or moving
-          gradient never sits directly behind text a visitor has to
-          read. */}
-      <div className={backgroundItem ? "rounded-2xl bg-surface p-4" : ""}>
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="flex min-w-0 items-center gap-1.5 truncate text-2xl font-bold tracking-tight">
+          <h1 className="flex min-w-0 items-center gap-1.5 truncate text-3xl font-bold tracking-tight">
             {nameIsGradient ? (
               <span
                 className={`truncate bg-clip-text text-transparent ${nameColorItem?.effectClassName ?? ""}`}
@@ -237,15 +237,15 @@ export default async function ProfilePage({
 
           <div className="mt-4 flex gap-6">
             <div>
-              <p className="text-lg font-bold leading-none">{followingCount}</p>
+              <p className="text-xl font-bold leading-none">{followingCount}</p>
               <p className="mt-1.5 text-xs text-muted">Following</p>
             </div>
             <div>
-              <p className="text-lg font-bold leading-none">{followerCount}</p>
+              <p className="text-xl font-bold leading-none">{followerCount}</p>
               <p className="mt-1.5 text-xs text-muted">Followers</p>
             </div>
             <div>
-              <p className="text-lg font-bold leading-none">
+              <p className="text-xl font-bold leading-none">
                 {formatCompactNumber(totalLikes)}
               </p>
               <p className="mt-1.5 text-xs text-muted">Likes</p>
@@ -254,7 +254,7 @@ export default async function ProfilePage({
         </div>
 
         <RankFrame score={bestRatingScore} compact hideBadge className="flex-shrink-0 rounded-full">
-          <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-24 w-24 text-3xl" priority />
+          <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-28 w-28 text-4xl" priority />
         </RankFrame>
       </div>
 
