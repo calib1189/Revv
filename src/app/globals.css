@@ -327,6 +327,123 @@ html.native-app body::-webkit-scrollbar {
     background: conic-gradient(from var(--rank-angle, 0deg), #351768, #7c3aed, #ec4899, #3b5bdb, #351768, #9d5cff, #351768);
     animation: rank-angle-spin 6s linear infinite;
   }
+
+  /* Epic-tier showcase frames — same masked-ring technique as
+     .frame-prism-ring above, just a different palette/speed/glow per
+     item so the top of the store ladder actually reads as top-of-ladder. */
+  .frame-inferno-ring,
+  .frame-aurora-ring,
+  .frame-diamond-ring,
+  .frame-legendary-ring {
+    position: relative;
+  }
+  .frame-inferno-ring::before,
+  .frame-aurora-ring::before,
+  .frame-diamond-ring::before,
+  .frame-legendary-ring::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    padding: 2px;
+    pointer-events: none;
+    box-sizing: border-box;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .frame-inferno-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #7f1d1d, #f97316, #fbbf24, #f97316, #7f1d1d, #f97316, #7f1d1d);
+    animation: rank-angle-spin 3s linear infinite;
+    filter: drop-shadow(0 0 6px rgb(249 115 22 / 0.7));
+  }
+
+  .frame-aurora-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #0f766e, #22d3ee, #4ade80, #22d3ee, #0f766e, #7c3aed, #0f766e);
+    animation: rank-angle-spin 5s linear infinite, showcase-aurora-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes showcase-aurora-pulse {
+    0%, 100% { filter: drop-shadow(0 0 5px rgb(34 211 238 / 0.55)); }
+    50% { filter: drop-shadow(0 0 11px rgb(74 222 128 / 0.8)); }
+  }
+
+  .frame-diamond-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #6bc4ea, #ffffff, #bff4ff, #7dd3fc, #ffffff, #a5f3fc, #ffffff, #6bc4ea);
+    animation: rank-angle-spin 3.4s linear infinite;
+    filter: drop-shadow(0 0 6px rgb(165 243 252 / 0.85));
+  }
+
+  .frame-legendary-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #451a03, #fbbf24, #ef4444, #a21caf, #451a03, #fbbf24, #451a03);
+    animation: rank-angle-spin 2.2s linear infinite, showcase-legendary-pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes showcase-legendary-pulse {
+    0%, 100% { filter: drop-shadow(0 0 6px rgb(251 191 36 / 0.7)); }
+    50% { filter: drop-shadow(0 0 14px rgb(239 68 68 / 0.9)); }
+  }
+
+  /* Epic-tier name colors — a moving gradient behind bg-clip-text
+     (value stays a plain gradient string so it still degrades to a
+     static look if this class is ever missing). */
+  .text-shimmer-anim {
+    background-size: 250% 100%;
+    animation: text-shimmer-move 3s linear infinite;
+  }
+
+  @keyframes text-shimmer-move {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 250% 50%; }
+  }
+
+  /* Epic-tier profile backgrounds — each pairs with its item's `value`
+     gradient the same way: value supplies the colors, this class
+     supplies the motion. */
+  .bg-velocity-anim {
+    animation: bg-velocity-move 1.1s linear infinite;
+  }
+
+  @keyframes bg-velocity-move {
+    0% { background-position: 0 0; }
+    100% { background-position: -86px 0; }
+  }
+
+  .bg-chrome-flow-anim {
+    background-size: 300% 100%;
+    animation: bg-chrome-flow-move 3.5s linear infinite;
+  }
+
+  @keyframes bg-chrome-flow-move {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+  }
+
+  .bg-inferno-anim {
+    background-size: 180% 180%;
+    animation: bg-inferno-move 4s ease-in-out infinite;
+  }
+
+  @keyframes bg-inferno-move {
+    0%, 100% { background-position: 50% 20%; }
+    50% { background-position: 50% 80%; }
+  }
+
+  .bg-aurora-anim {
+    background-size: 300% 300%;
+    animation: bg-aurora-move 9s ease-in-out infinite;
+  }
+
+  @keyframes bg-aurora-move {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .bg-galaxy-anim {
+    animation: rank-angle-spin 22s linear infinite;
+  }
 }
 
 @layer components {

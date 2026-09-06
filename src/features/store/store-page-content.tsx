@@ -27,7 +27,7 @@ function ItemPreview({ item, username }: { item: StoreItem; username: string }) 
     return (
       <div className="flex h-16 items-center justify-center rounded-xl bg-surface">
         <span
-          className={`text-lg font-bold ${isGradient ? "bg-clip-text text-transparent" : ""}`}
+          className={`text-lg font-bold ${isGradient ? "bg-clip-text text-transparent" : ""} ${item.effectClassName ?? ""}`}
           style={isGradient ? { backgroundImage: item.value } : { color: item.value }}
         >
           @{username}
@@ -37,7 +37,12 @@ function ItemPreview({ item, username }: { item: StoreItem; username: string }) 
   }
 
   if (item.category === "profile_background") {
-    return <div className="h-16 rounded-xl" style={{ background: item.value }} />;
+    return (
+      <div
+        className={`h-16 rounded-xl ${item.effectClassName ?? ""}`}
+        style={{ background: item.value }}
+      />
+    );
   }
 
   return (

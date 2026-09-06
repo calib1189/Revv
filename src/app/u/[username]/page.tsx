@@ -25,6 +25,7 @@ import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
 import { MessageButton } from "@/features/messages/message-button";
 import { getStoreItem } from "@/lib/store/catalog";
+import { getPointsBalance } from "@/lib/db/points";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SettingsIcon, VerifiedBadgeIcon, GemIcon } from "@/components/ui/icons";
@@ -146,6 +147,19 @@ export default async function ProfilePage({
     console.error("Achievements check failed:", err);
   }
 
+  // Best-effort, same reasoning as the achievements try/catch above — a
+  // not-yet-migrated points_ledger shouldn't take down the whole
+  // profile. Only fetched for the owner; a visitor's Shop link doesn't
+  // need to know a stranger's balance.
+  let pointsBalance = 0;
+  if (isOwnProfile) {
+    try {
+      pointsBalance = await getPointsBalance(supabase, profile.id);
+    } catch (err) {
+      console.error("Points balance fetch failed:", err);
+    }
+  }
+
   // Equipped store cosmetics — every one of these is optional and
   // simply renders as "nothing equipped" (the default look) if the
   // profile's equipped_* column is null or names an item no longer in
@@ -178,7 +192,7 @@ export default async function ProfilePage({
       )}
 
       <div
-        className={backgroundItem ? "rounded-3xl p-5" : ""}
+        className={`${backgroundItem ? "rounded-3xl p-5" : ""} ${backgroundItem?.effectClassName ?? ""}`}
         style={backgroundItem ? { background: backgroundItem.value } : undefined}
       >
       <div className="flex items-center justify-between gap-4">
@@ -186,7 +200,7 @@ export default async function ProfilePage({
           <h1 className="flex min-w-0 items-center gap-1.5 truncate text-2xl font-bold tracking-tight">
             {nameIsGradient ? (
               <span
-                className="truncate bg-clip-text text-transparent"
+                className={`truncate bg-clip-text text-transparent ${nameColorItem?.effectClassName ?? ""}`}
                 style={{ backgroundImage: nameColorItem!.value }}
               >
                 {profile.display_name || `@${profile.username}`}
@@ -274,6 +288,7 @@ export default async function ProfilePage({
               <Button variant="secondary" className="flex items-center gap-1.5 px-4 py-1.5 text-sm">
                 <GemIcon className="h-4 w-4 text-accent" />
                 Shop
+                <span className="tabular-nums text-muted">· {pointsBalance}</span>
               </Button>
             </Link>
           </>
