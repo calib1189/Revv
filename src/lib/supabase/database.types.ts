@@ -31,7 +31,6 @@ export interface Database {
           equipped_profile_background: string | null;
           equipped_showcase_frame: string | null;
           equipped_vehicle_name_color: string | null;
-          equipped_garage_backdrop: string | null;
           created_at: string;
         };
         Insert: {
@@ -51,7 +50,6 @@ export interface Database {
           equipped_profile_background?: string | null;
           equipped_showcase_frame?: string | null;
           equipped_vehicle_name_color?: string | null;
-          equipped_garage_backdrop?: string | null;
           created_at?: string;
         };
         Update: {
@@ -71,7 +69,6 @@ export interface Database {
           equipped_profile_background?: string | null;
           equipped_showcase_frame?: string | null;
           equipped_vehicle_name_color?: string | null;
-          equipped_garage_backdrop?: string | null;
           created_at?: string;
         };
         Relationships: never[];
@@ -154,6 +151,7 @@ export interface Database {
           category: string;
           ownership_verification_status: "none" | "pending" | "approved" | "rejected";
           ownership_verification_media_id: string | null;
+          equipped_backdrop: string | null;
           created_at: string;
         };
         Insert: {
@@ -173,6 +171,7 @@ export interface Database {
           category?: string;
           ownership_verification_status?: "none" | "pending" | "approved" | "rejected";
           ownership_verification_media_id?: string | null;
+          equipped_backdrop?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["vehicles"]["Insert"]>;

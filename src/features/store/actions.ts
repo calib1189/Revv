@@ -11,16 +11,17 @@ const EQUIP_CATEGORIES = new Set<StoreCategory>([
   "profile_background",
   "showcase_frame",
   "vehicle_name_color",
-  "garage_backdrop",
 ]);
 
 /** Narrows the store's full category union down to the ones this
- * (profile + garage) equip action actually owns — crew categories go
- * through equipCrewItemAction instead, since they write to a different
- * table under a different authorization rule. Typed as a guard (not a
- * plain comparison) so equipItemAction's signature can stay the wide
- * StoreCategory that features/store/store-page-content.tsx's generic
- * equipAction prop expects, matching equipCrewItemAction's bound shape. */
+ * (profile + garage nameplate) equip action actually owns — crew
+ * categories go through equipCrewItemAction, and garage_backdrop goes
+ * through equipVehicleBackdropAction, since both write to a different
+ * table under a different authorization rule (a specific crew or a
+ * specific vehicle, not the calling user's own profiles row). Typed as
+ * a guard (not a plain comparison) so equipItemAction's signature can
+ * stay the wide StoreCategory that store-page-content.tsx's generic
+ * equipAction prop expects, matching those other actions' bound shape. */
 function isEquipCategory(category: StoreCategory): category is EquipCategory {
   return EQUIP_CATEGORIES.has(category);
 }

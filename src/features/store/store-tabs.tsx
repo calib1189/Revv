@@ -13,7 +13,10 @@ type Tab = "profile" | "garage" | "crew";
 type Equipped = Partial<Record<StoreCategory, string | null>>;
 
 const PROFILE_CATEGORIES: StoreCategory[] = ["name_color", "profile_background", "showcase_frame"];
-const GARAGE_CATEGORIES: StoreCategory[] = ["vehicle_name_color", "garage_backdrop"];
+// Garage Backdrop isn't sold here — it's per-vehicle, not account-wide,
+// so buying and equipping it both live in the dedicated Garage Editor
+// (/garage/customize) instead. Nameplate Color stays account-wide.
+const GARAGE_CATEGORIES: StoreCategory[] = ["vehicle_name_color"];
 const CREW_CATEGORIES: StoreCategory[] = ["crew_name_color", "crew_banner", "crew_frame"];
 
 const CREW_ONLY_CATEGORIES = new Set<StoreCategory>(CREW_CATEGORIES);
@@ -173,9 +176,22 @@ export function StoreTabs({
       </div>
 
       <div className={tab === "garage" ? "" : "hidden"}>
+        <div className="glass mb-6 flex items-center justify-between gap-3 rounded-2xl p-4">
+          <div>
+            <p className="text-sm font-medium">Want a backdrop for one of your cars?</p>
+            <p className="text-xs text-muted">
+              Backdrops are per-vehicle now — pick a car and its scene in the Garage Editor.
+            </p>
+          </div>
+          <Link href="/garage/customize" className="flex-shrink-0">
+            <Button variant="secondary" className="px-3 py-1.5 text-sm">
+              Open Editor
+            </Button>
+          </Link>
+        </div>
         <StorePageContent
           title="Garage Shop"
-          subtitle="Spend your points on how your cars and garage look."
+          subtitle="Spend your points on how your cars look."
           categories={GARAGE_CATEGORIES}
           balance={balance}
           owned={owned}

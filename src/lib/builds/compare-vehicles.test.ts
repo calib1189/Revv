@@ -20,6 +20,7 @@ function makeVehicle(overrides: Partial<Vehicle>): Vehicle {
     category: "cars",
     ownership_verification_status: "none",
     ownership_verification_media_id: null,
+    equipped_backdrop: null,
     created_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };

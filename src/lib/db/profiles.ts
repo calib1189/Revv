@@ -227,14 +227,15 @@ export type EquipCategory =
   | "name_color"
   | "profile_background"
   | "showcase_frame"
-  | "vehicle_name_color"
-  | "garage_backdrop";
+  | "vehicle_name_color";
 
 /** `itemId: null` unequips — back to the default look for that slot.
  * Ownership is checked by the caller (features/store/actions.ts), not
  * here; this is just the write. Explicit per-category update objects
  * rather than a computed column key — Supabase's generated Update type
- * rejects an arbitrary string index. */
+ * rejects an arbitrary string index. Garage Backdrop isn't here — it's
+ * per-vehicle (vehicles.equipped_backdrop), not an account-wide slot;
+ * see equipVehicleBackdropAction in features/garage/actions.ts. */
 export async function updateEquippedCosmetic(
   supabase: SupabaseClient<Database>,
   userId: string,
@@ -248,9 +249,7 @@ export async function updateEquippedCosmetic(
         ? { equipped_profile_background: itemId }
         : category === "showcase_frame"
           ? { equipped_showcase_frame: itemId }
-          : category === "vehicle_name_color"
-            ? { equipped_vehicle_name_color: itemId }
-            : { equipped_garage_backdrop: itemId };
+          : { equipped_vehicle_name_color: itemId };
 
   const { data, error } = await supabase
     .from("profiles")

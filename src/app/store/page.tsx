@@ -65,7 +65,6 @@ export default async function StorePage() {
         garagePreviewLabel={garagePreviewLabel}
         garageEquipped={{
           vehicle_name_color: profile?.equipped_vehicle_name_color ?? null,
-          garage_backdrop: profile?.equipped_garage_backdrop ?? null,
         }}
         crews={crews}
       />

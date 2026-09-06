@@ -10,6 +10,8 @@ import { getVisionProvider } from "@/lib/providers/get-vision-provider";
 import { trackEvent } from "@/lib/analytics/track";
 import { isVehicleCategory } from "@/lib/vehicles/category";
 import { isUnderIdentifyRateLimit, recordIdentifyAttempt } from "@/lib/vehicles/identify-rate-limit";
+import { getStoreItem } from "@/lib/store/catalog";
+import { listOwnedItemIds } from "@/lib/db/points";
 import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleInsert } from "@/lib/db/vehicles";
 
@@ -146,4 +148,45 @@ export async function deleteVehicleAction(vehicleId: string): Promise<void> {
   await deleteVehicle(supabase, vehicleId);
   revalidatePath("/garage");
   redirect("/garage");
+}
+
+export interface VehicleBackdropActionState {
+  error: string | null;
+}
+
+/** Garage Backdrop is per-vehicle (vehicles.equipped_backdrop), not an
+ * account-wide slot — buying an item still just makes it available in
+ * store_items_owned same as any other cosmetic, but equipping it
+ * always names which specific vehicle it applies to. Ownership of the
+ * vehicle itself is enforced by RLS ("owners manage their own
+ * vehicles", 0001_init.sql) on the update below, same convention
+ * updateVehicleAction already relies on. */
+export async function equipVehicleBackdropAction(
+  vehicleId: string,
+  itemId: string | null,
+): Promise<VehicleBackdropActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in." };
+
+  if (itemId) {
+    const item = getStoreItem(itemId);
+    if (!item || item.category !== "garage_backdrop") return { error: "Invalid item." };
+
+    const owned = await listOwnedItemIds(supabase, user.id);
+    if (!owned.has(itemId)) return { error: "You don't own this item." };
+  }
+
+  try {
+    await updateVehicle(supabase, vehicleId, { equipped_backdrop: itemId });
+    revalidatePath("/garage");
+    revalidatePath("/garage/customize");
+  } catch (err) {
+    console.error("equipVehicleBackdropAction failed:", err);
+    return { error: "Couldn't update that vehicle's backdrop. Try again." };
+  }
+
+  return { error: null };
 }
