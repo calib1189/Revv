@@ -26,6 +26,7 @@ export interface Database {
           is_banned: boolean;
           banned_at: string | null;
           onboarded_at: string | null;
+          showcased_achievement_ids: string[];
           created_at: string;
         };
         Insert: {
@@ -40,6 +41,7 @@ export interface Database {
           is_banned?: boolean;
           banned_at?: string | null;
           onboarded_at?: string | null;
+          showcased_achievement_ids?: string[];
           created_at?: string;
         };
         Update: {
@@ -54,6 +56,7 @@ export interface Database {
           is_banned?: boolean;
           banned_at?: string | null;
           onboarded_at?: string | null;
+          showcased_achievement_ids?: string[];
           created_at?: string;
         };
         Relationships: never[];

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type SVGProps } from "react";
 import { PostThumbnailGrid, type PostThumbnail } from "@/features/profile/post-thumbnail-grid";
 import { VehicleCard } from "@/features/garage/vehicle-card";
 import { AchievementsGrid } from "@/features/achievements/achievements-grid";
+import { AchievementShowcaseEditor } from "@/features/achievements/achievement-showcase-editor";
 import { GridIcon, WheelIcon, StarIcon, BookmarkIcon, HeartIcon } from "@/components/ui/icons";
 import type { Vehicle } from "@/lib/db/vehicles";
 
@@ -97,6 +98,7 @@ export function ProfileTabs({
   posts,
   vehicles,
   unlockedAtById,
+  showcasedAchievementIds,
   savedPosts,
   likedPosts,
   isOwnProfile,
@@ -104,6 +106,7 @@ export function ProfileTabs({
   posts: PostThumbnail[];
   vehicles: ProfileVehicleItem[];
   unlockedAtById: Map<string, string>;
+  showcasedAchievementIds: string[];
   savedPosts?: PostThumbnail[];
   likedPosts?: PostThumbnail[];
   isOwnProfile: boolean;
@@ -153,7 +156,17 @@ export function ProfileTabs({
             </div>
           ))}
 
-        {tab === "achievements" && <AchievementsGrid unlockedAtById={unlockedAtById} />}
+        {tab === "achievements" && (
+          <div className="flex flex-col gap-4">
+            {isOwnProfile && (
+              <AchievementShowcaseEditor
+                initialShowcasedIds={showcasedAchievementIds}
+                unlockedAtById={unlockedAtById}
+              />
+            )}
+            <AchievementsGrid unlockedAtById={unlockedAtById} />
+          </div>
+        )}
 
         {tab === "saved" &&
           isOwnProfile &&

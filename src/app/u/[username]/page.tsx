@@ -20,6 +20,7 @@ import { ProfileTabs } from "@/features/profile/profile-tabs";
 import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
 import { listUnlockedAchievements } from "@/lib/db/user-achievements";
 import { AchievementUnlockToast } from "@/features/achievements/achievement-unlock-toast";
+import { ProfileShowcase } from "@/features/achievements/achievement-showcase";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
 import { MessageButton } from "@/features/messages/message-button";
@@ -184,7 +185,7 @@ export default async function ProfilePage({
         </div>
 
         <RankFrame score={bestRatingScore} compact hideBadge className="flex-shrink-0 rounded-full">
-          <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-24 w-24 text-3xl" />
+          <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-24 w-24 text-3xl" priority />
         </RankFrame>
       </div>
 
@@ -203,6 +204,8 @@ export default async function ProfilePage({
           <span className="text-muted"> · Best build {bestRatingScore.toFixed(2)}</span>
         </p>
       )}
+
+      <ProfileShowcase achievementIds={profile.showcased_achievement_ids ?? []} />
 
       {profile.bio && (
         <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">
@@ -248,6 +251,7 @@ export default async function ProfilePage({
       <ProfileTabs
         isOwnProfile={isOwnProfile}
         unlockedAtById={unlockedAtById}
+        showcasedAchievementIds={profile.showcased_achievement_ids ?? []}
         posts={postThumbnails}
         savedPosts={isOwnProfile ? savedThumbnails : undefined}
         likedPosts={isOwnProfile ? likedThumbnails : undefined}

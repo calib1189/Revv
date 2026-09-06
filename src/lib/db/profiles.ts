@@ -203,6 +203,26 @@ export async function setUserBanned(
   if (error) throw error;
 }
 
+/** Up to 3 achievement ids (validated by the caller — see
+ * updateShowcaseAction) to pin on the profile header, in display
+ * order. The DB's own check constraint (0075_achievement_showcase.sql)
+ * is the hard backstop on the count; this is just the write. */
+export async function updateShowcasedAchievements(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  achievementIds: string[],
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ showcased_achievement_ids: achievementIds })
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function updateProfileAvatar(
   supabase: SupabaseClient<Database>,
   userId: string,
