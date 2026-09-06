@@ -24,7 +24,6 @@ import { ProfileShowcase } from "@/features/achievements/achievement-showcase";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
 import { MessageButton } from "@/features/messages/message-button";
-import { getPointsBalance } from "@/lib/db/points";
 import { getStoreItem } from "@/lib/store/catalog";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -134,19 +133,6 @@ export default async function ProfilePage({
     unlockedAtById = new Map(unlockedAchievements.map((a) => [a.achievement_id, a.unlocked_at]));
   } catch (err) {
     console.error("Achievements check failed:", err);
-  }
-
-  // Best-effort, same reasoning as the achievements try/catch above — a
-  // not-yet-migrated points_ledger shouldn't take down the whole
-  // profile. Only fetched for the owner; a visitor's Store link doesn't
-  // need to know a stranger's balance.
-  let pointsBalance = 0;
-  if (isOwnProfile) {
-    try {
-      pointsBalance = await getPointsBalance(supabase, profile.id);
-    } catch (err) {
-      console.error("Points balance fetch failed:", err);
-    }
   }
 
   // Equipped store cosmetics — every one of these is optional and
@@ -273,15 +259,10 @@ export default async function ProfilePage({
                 Edit profile
               </Button>
             </Link>
-            <Link href="/garage">
-              <Button variant="secondary" className="px-4 py-1.5 text-sm">
-                Garage
-              </Button>
-            </Link>
             <Link href="/store">
               <Button variant="secondary" className="flex items-center gap-1.5 px-4 py-1.5 text-sm">
                 <GemIcon className="h-4 w-4 text-accent" />
-                {pointsBalance}
+                Shop
               </Button>
             </Link>
           </>
