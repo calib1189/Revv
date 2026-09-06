@@ -9,7 +9,6 @@ import { getUnreadMessageCount } from "@/lib/db/messages";
 import { TopTabBar } from "@/components/shell/top-tab-bar";
 import { BottomTabBar } from "@/components/shell/bottom-tab-bar";
 import { Button } from "@/components/ui/button";
-import logo from "@/app/icon.png";
 
 export async function Header() {
   const user = await getCurrentUser();
@@ -19,7 +18,7 @@ export async function Header() {
       <header className="glass-raised sticky top-0 z-10 rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link href="/" aria-label="SORZA">
-            <Image src={logo} alt="" width={32} height={32} className="rounded-md" priority />
+            <Image src="/logo.png" alt="" width={32} height={32} priority />
           </Link>
           <div className="flex items-center gap-2">
             <Link href="/login">
