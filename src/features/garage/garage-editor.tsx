@@ -20,20 +20,21 @@ const BACKDROP_ITEMS = listStoreItemsByCategory("garage_backdrop");
 /** A small stand-in for the real VehicleCard — the live preview only
  * ever needs a photo and a name (no rating badge, no link), and
  * VehicleCard itself expects a full Vehicle row this page never
- * fetches. Deliberately the smaller element floating inside the big
- * backdrop preview, mirroring how a vehicle actually renders on
- * /garage once a backdrop is equipped. */
+ * fetches. Same "car sits on the backdrop as a smaller plate,
+ * bottom-center" language VehicleCard itself uses once a backdrop is
+ * equipped, just scaled up a bit since this is the dedicated preview
+ * moment rather than one tile in a grid. */
 function PreviewCard({ vehicle }: { vehicle: EditorVehicle }) {
   return (
-    <div className="mx-auto w-full max-w-[240px] overflow-hidden rounded-2xl bg-surface shadow-2xl ring-1 ring-white/10">
+    <div className="mx-auto w-[46%] max-w-[220px] overflow-hidden rounded-xl bg-surface shadow-2xl ring-1 ring-white/15">
       <div className="relative aspect-[4/3]">
         {vehicle.heroUrl ? (
-          <Image src={vehicle.heroUrl} alt={vehicle.title} fill sizes="320px" className="object-cover" />
+          <Image src={vehicle.heroUrl} alt={vehicle.title} fill sizes="220px" className="object-cover" />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted">No photo yet</div>
+          <div className="flex h-full items-center justify-center text-xs text-muted">No photo yet</div>
         )}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/0 to-transparent" />
-        <p className="absolute inset-x-0 bottom-0 truncate p-3 text-base font-semibold text-white">
+        <p className="absolute inset-x-0 bottom-0 truncate p-2.5 text-sm font-semibold text-white">
           {vehicle.title}
         </p>
       </div>
@@ -245,12 +246,17 @@ export function GarageEditor({
             standing in front of a backdrop rather than floating in it. */}
         <div
           key={selectedId}
-          className={`flex min-h-[280px] flex-col justify-end rounded-3xl p-6 transition-all duration-300 sm:min-h-[380px] ${
+          className={`relative flex min-h-[280px] flex-col justify-end overflow-hidden rounded-3xl p-6 transition-all duration-300 sm:min-h-[380px] ${
             equippedItem?.effectClassName ?? "bg-surface"
           }`}
           style={equippedItem ? { backgroundImage: equippedItem.value } : undefined}
         >
-          <PreviewCard vehicle={selected} />
+          {equippedItem && (
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
+          )}
+          <div className="relative">
+            <PreviewCard vehicle={selected} />
+          </div>
         </div>
         {!equippedItem && (
           <p className="mt-3 text-center text-sm text-muted">

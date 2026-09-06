@@ -66,12 +66,13 @@ export async function GaragePageContent() {
 
   // Nameplate Color is account-wide, bought/equipped from the central
   // Store (/store) — this just displays whatever's currently equipped.
-  // Garage Backdrop, by contrast, is per-vehicle (vehicles.equipped_
-  // backdrop, set from the Garage Editor at /garage/customize), so it's
-  // read directly off each vehicle row below rather than fetched once
-  // here. Best-effort: a not-yet-migrated equipped_* column shouldn't
-  // take down the whole Garage panel (mounted on every route via the
-  // tab pager, see the comment below).
+  // Garage Backdrop, by contrast, lives on each vehicle row
+  // (vehicles.equipped_backdrop, set from the Garage Editor at
+  // /garage/customize) and VehicleCard reads it directly off the
+  // vehicle it's given, so there's nothing to fetch for it here.
+  // Best-effort: a not-yet-migrated equipped_* column shouldn't take
+  // down the whole Garage panel (mounted on every route via the tab
+  // pager, see the comment below).
   let nameColorItem: ReturnType<typeof getStoreItem> = undefined;
   try {
     const profile = await getProfileByUserId(supabase, user.id);
@@ -81,12 +82,6 @@ export async function GaragePageContent() {
   } catch (err) {
     console.error("Garage cosmetics fetch failed:", err);
   }
-
-  // Split so each backdrop-equipped car gets its own full banner (the
-  // whole point of a per-vehicle backdrop is one car in the scene, not
-  // several sharing it) while plain cars still share a normal grid.
-  const vehiclesWithBackdrop = vehicles.filter((v) => v.equipped_backdrop);
-  const vehiclesWithoutBackdrop = vehicles.filter((v) => !v.equipped_backdrop);
 
   // Garage is the loop's own home screen — visited constantly, so it's
   // the natural place to lazily check for newly-earned achievements and
@@ -179,71 +174,27 @@ export async function GaragePageContent() {
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
-          {/* One full banner per backdrop-equipped car — a per-vehicle
-              backdrop only makes sense showing one car in its scene, not
-              several sharing it. A tall min-height keeps the photo
-              reading as a real banner spanning the screen (rather than
-              however tall one small card happens to be), with that one
-              VehicleCard sitting bottom-center like a subject standing
-              in front of the scene, not floating in the middle of it. */}
-          {vehiclesWithBackdrop.map((vehicle, index) => {
-            const backdropItem = vehicle.equipped_backdrop
-              ? getStoreItem(vehicle.equipped_backdrop)
-              : undefined;
-            return (
-              <div
-                key={vehicle.id}
-                className={`flex flex-col justify-end rounded-3xl p-4 sm:p-6 min-h-[280px] sm:min-h-[420px] ${backdropItem?.effectClassName ?? ""}`}
-                style={backdropItem ? { backgroundImage: backdropItem.value } : undefined}
-              >
-                <div className="mx-auto w-full max-w-[240px]">
-                  <VehicleCard
-                    vehicle={vehicle}
-                    heroUrl={
-                      vehicle.hero_media_id
-                        ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
-                        : null
-                    }
-                    ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
-                    priority={index === 0}
-                    nameColorValue={nameColorItem?.value}
-                    nameColorEffectClassName={nameColorItem?.effectClassName}
-                  />
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Every plain car (no backdrop) shares a normal grid — one big
-              stacked column under 4 cars (the common case, no photo to
-              make room for), the compact multi-column grid once there's
-              enough to actually need it. */}
-          {vehiclesWithoutBackdrop.length > 0 && (
-            <div
-              className={`grid gap-4 sm:gap-6 ${
-                vehiclesWithoutBackdrop.length < 4
-                  ? "grid-cols-1"
-                  : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
-              }`}
-            >
-              {vehiclesWithoutBackdrop.map((vehicle, index) => (
-                <VehicleCard
-                  key={vehicle.id}
-                  vehicle={vehicle}
-                  heroUrl={
-                    vehicle.hero_media_id
-                      ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
-                      : null
-                  }
-                  ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
-                  priority={vehiclesWithBackdrop.length === 0 && index === 0}
-                  nameColorValue={nameColorItem?.value}
-                  nameColorEffectClassName={nameColorItem?.effectClassName}
-                />
-              ))}
-            </div>
-          )}
+        // One consistent grid for every vehicle — a backdrop-equipped
+        // car renders its scene inside its own tile (VehicleCard does
+        // this itself, reading vehicle.equipped_backdrop directly), it
+        // never blows a single car up into its own oversized banner
+        // that makes the rest of the garage look like an afterthought.
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {vehicles.map((vehicle, index) => (
+            <VehicleCard
+              key={vehicle.id}
+              vehicle={vehicle}
+              heroUrl={
+                vehicle.hero_media_id
+                  ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
+                  : null
+              }
+              ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
+              priority={index === 0}
+              nameColorValue={nameColorItem?.value}
+              nameColorEffectClassName={nameColorItem?.effectClassName}
+            />
+          ))}
         </div>
       )}
     </div>
