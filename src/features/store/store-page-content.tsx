@@ -1,17 +1,11 @@
-"use client";
-
-import { useState, useTransition } from "react";
 import {
   STORE_CATEGORY_LABELS,
   listStoreItemsByCategory,
   type StoreCategory,
   type StoreItem,
 } from "@/lib/store/catalog";
-import { purchaseItemAction, equipItemAction } from "@/features/store/actions";
 import { GemIcon, CheckIcon, StarIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
-
-type Equipped = Partial<Record<StoreCategory, string | null>>;
 
 /** Which of the three visual treatments a category's items use — every
  * shop's categories fall into one of these, whether it's a profile
@@ -32,9 +26,10 @@ const CATEGORY_KIND: Record<StoreCategory, "text" | "background" | "ring"> = {
 /** The live preview inside each item card — what you're actually
  * buying, shown as itself rather than described in text. `previewLabel`
  * is whatever text this shop should preview the color on (an
- * @username for profile/garage, a crew's actual name for the crew
- * shop) — the preview otherwise renders identically across shops since
- * it's driven by CATEGORY_KIND, not the category name itself. */
+ * @username for the profile shop, a sample car name for garage, a
+ * crew's actual name for crew) — the preview otherwise renders
+ * identically across shops since it's driven by CATEGORY_KIND, not the
+ * category name itself. */
 function ItemPreview({ item, previewLabel }: { item: StoreItem; previewLabel: string }) {
   const kind = CATEGORY_KIND[item.category];
 
@@ -138,84 +133,36 @@ function StoreItemCard({
   );
 }
 
-type EquipAction = (category: StoreCategory, itemId: string | null) => Promise<{ error: string | null }>;
-
-/** The store's real state lives here (balance, ownership, equipped
- * selections) so a buy/equip click can update instantly — the server
- * action runs in the background and only the balance/ownership/equip
- * state actually needs rolling back if it fails, never a full page
- * reload just to reflect one purchase.
- *
- * Shared by all three shops (profile /store, the Garage tab, a crew's
- * Shop tab) — `categories` picks which slots this shop offers,
- * `equipAction` picks where equipping actually writes (profiles vs a
- * specific crew row; purchasing is always the same user-scoped
- * purchaseItemAction regardless of shop, since owning an item is never
- * shop-specific). */
+/** Purely presentational — one category grid of item cards. All real
+ * state (balance, ownership, equipped selections, in-flight actions)
+ * lives one level up in StoreTabs, since the profile/garage/crew shops
+ * share a single balance and owned-items set (buying is never
+ * shop-specific) and need to stay in sync with each other as the
+ * viewer switches tabs, which a self-contained per-shop component
+ * couldn't do. */
 export function StorePageContent({
   title,
   subtitle,
   categories,
-  initialBalance,
-  initialOwnedItemIds,
-  initialEquipped,
+  balance,
+  owned,
+  equipped,
+  pendingId,
   previewLabel,
-  equipAction = equipItemAction,
+  onBuy,
+  onEquip,
 }: {
   title: string;
   subtitle: string;
   categories: StoreCategory[];
-  initialBalance: number;
-  initialOwnedItemIds: string[];
-  initialEquipped: Equipped;
+  balance: number;
+  owned: Set<string>;
+  equipped: Partial<Record<StoreCategory, string | null>>;
+  pendingId: string | null;
   previewLabel: string;
-  equipAction?: EquipAction;
+  onBuy: (item: StoreItem) => void;
+  onEquip: (item: StoreItem) => void;
 }) {
-  const [balance, setBalance] = useState(initialBalance);
-  const [owned, setOwned] = useState(new Set(initialOwnedItemIds));
-  const [equipped, setEquipped] = useState<Equipped>(initialEquipped);
-  const [error, setError] = useState<string | null>(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
-
-  function buy(item: StoreItem) {
-    const previousBalance = balance;
-    setError(null);
-    setPendingId(item.id);
-    setBalance((b) => b - item.price);
-    setOwned((prev) => new Set(prev).add(item.id));
-    startTransition(async () => {
-      const result = await purchaseItemAction(item.id);
-      if (result.error) {
-        setBalance(previousBalance);
-        setOwned((prev) => {
-          const next = new Set(prev);
-          next.delete(item.id);
-          return next;
-        });
-        setError(result.error);
-      }
-      setPendingId(null);
-    });
-  }
-
-  function equip(item: StoreItem) {
-    const isEquipped = equipped[item.category] === item.id;
-    const previous = equipped[item.category] ?? null;
-    const nextId = isEquipped ? null : item.id;
-    setError(null);
-    setPendingId(item.id);
-    setEquipped((prev) => ({ ...prev, [item.category]: nextId }));
-    startTransition(async () => {
-      const result = await equipAction(item.category, nextId);
-      if (result.error) {
-        setEquipped((prev) => ({ ...prev, [item.category]: previous }));
-        setError(result.error);
-      }
-      setPendingId(null);
-    });
-  }
-
   return (
     <div>
       <div className="glass-raised flex items-center justify-between rounded-3xl p-6">
@@ -228,10 +175,6 @@ export function StorePageContent({
           <span className="text-xl font-bold tabular-nums">{balance}</span>
         </div>
       </div>
-
-      {error && (
-        <p className="mt-4 rounded-xl bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>
-      )}
 
       {categories.map((category) => (
         <section key={category} className="mt-8">
@@ -248,8 +191,8 @@ export function StorePageContent({
                 equipped={equipped[item.category] === item.id}
                 canAfford={balance >= item.price}
                 isPending={pendingId === item.id}
-                onBuy={() => buy(item)}
-                onEquip={() => equip(item)}
+                onBuy={() => onBuy(item)}
+                onEquip={() => onEquip(item)}
               />
             ))}
           </div>

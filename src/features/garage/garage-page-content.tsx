@@ -5,7 +5,6 @@ import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { VehicleCard } from "@/features/garage/vehicle-card";
-import { GarageTabs } from "@/features/garage/garage-tabs";
 import { Button } from "@/components/ui/button";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
@@ -14,10 +13,8 @@ import { AchievementUnlockToast } from "@/features/achievements/achievement-unlo
 import { getWeeklyChallengeProgress } from "@/lib/challenges/progress";
 import { WeeklyChallengesCard } from "@/features/challenges/weekly-challenges-card";
 import { ChallengeCompleteToast } from "@/features/challenges/challenge-complete-toast";
-import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getStoreItem } from "@/lib/store/catalog";
-import { StorePageContent } from "@/features/store/store-page-content";
 
 /** Garage is one panel of the swipeable tab pager now (tab-pager-shell.tsx)
  * — every panel is always mounted together, so a hard redirect() here
@@ -67,30 +64,24 @@ export async function GaragePageContent() {
   }, null);
   const bestTier = bestScore != null ? rankForScore(bestScore) : null;
 
-  // Garage Shop cosmetics — same best-effort/graceful-fallback shape as
-  // every other store fetch: a not-yet-migrated points_ledger or
-  // missing equipped_* column shouldn't take down the whole Garage
-  // panel (mounted on every route via the tab pager, see the comment
-  // below), it just opens with nothing owned/equipped.
-  let shopBalance = 0;
-  let ownedItemIds: string[] = [];
-  let equippedVehicleNameColor: string | null = null;
-  let equippedGarageBackdrop: string | null = null;
+  // Garage Shop cosmetics are bought/equipped from the central Store
+  // (/store) now, not from here — this just displays whatever's
+  // currently equipped. Best-effort: a not-yet-migrated equipped_*
+  // column shouldn't take down the whole Garage panel (mounted on
+  // every route via the tab pager, see the comment below).
+  let nameColorItem: ReturnType<typeof getStoreItem> = undefined;
+  let backdropItem: ReturnType<typeof getStoreItem> = undefined;
   try {
-    const [balanceResult, ownedResult, profile] = await Promise.all([
-      getPointsBalance(supabase, user.id),
-      listOwnedItemIds(supabase, user.id),
-      getProfileByUserId(supabase, user.id),
-    ]);
-    shopBalance = balanceResult;
-    ownedItemIds = [...ownedResult];
-    equippedVehicleNameColor = profile?.equipped_vehicle_name_color ?? null;
-    equippedGarageBackdrop = profile?.equipped_garage_backdrop ?? null;
+    const profile = await getProfileByUserId(supabase, user.id);
+    nameColorItem = profile?.equipped_vehicle_name_color
+      ? getStoreItem(profile.equipped_vehicle_name_color)
+      : undefined;
+    backdropItem = profile?.equipped_garage_backdrop
+      ? getStoreItem(profile.equipped_garage_backdrop)
+      : undefined;
   } catch (err) {
-    console.error("Garage shop data fetch failed:", err);
+    console.error("Garage cosmetics fetch failed:", err);
   }
-  const nameColorItem = equippedVehicleNameColor ? getStoreItem(equippedVehicleNameColor) : undefined;
-  const backdropItem = equippedGarageBackdrop ? getStoreItem(equippedGarageBackdrop) : undefined;
 
   // Garage is the loop's own home screen — visited constantly, so it's
   // the natural place to lazily check for newly-earned achievements and
@@ -119,8 +110,52 @@ export async function GaragePageContent() {
     console.error("Achievements/challenges check failed:", err);
   }
 
-  const carsPanel = (
-    <>
+  return (
+    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+      <AchievementUnlockToast achievements={newlyUnlocked} />
+      <ChallengeCompleteToast challenges={newlyCompleted} />
+      <div className="mb-6">
+        <WeeklyChallengesCard progress={challengeProgress} />
+      </div>
+      <div className="mb-2 flex items-center">
+        {/* flex-1 makes this stretch from the left edge to right where the
+            button group starts, so justify-center here centers "Garage"
+            in exactly that span — not across the whole row (which would
+            pull it right, off-center, once "Add vehicle" is factored in). */}
+        <div className="flex min-w-0 flex-1 justify-center px-2">
+          <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">Your Garage</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/garage/new">
+            <Button className="px-3 py-1.5 text-sm">Add vehicle</Button>
+          </Link>
+        </div>
+      </div>
+
+      {vehicles.length > 0 && (
+        <div className="mb-8 mt-4 flex items-center gap-5 text-sm text-muted">
+          <span>
+            <span className="font-semibold text-foreground">{vehicles.length}</span>{" "}
+            vehicle{vehicles.length === 1 ? "" : "s"}
+          </span>
+          {bestTier && bestScore != null && (
+            <Link
+              href="/leaderboard"
+              className="flex items-center gap-1.5 hover:text-foreground"
+            >
+              {(() => {
+                const Icon = RANK_MATERIAL_ICONS[bestTier];
+                return <Icon className="h-4 w-4" />;
+              })()}
+              Best:{" "}
+              <span className="font-semibold" style={{ color: RANK_TEXT_COLORS[bestTier] }}>
+                {RANK_LABELS[bestTier]} · {bestScore.toFixed(2)}
+              </span>
+            </Link>
+          )}
+        </div>
+      )}
+
       {vehicles.length === 0 ? (
         <div className="glass mt-6 flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
           <p className="text-lg font-medium">No vehicles yet</p>
@@ -161,75 +196,6 @@ export async function GaragePageContent() {
           </div>
         </div>
       )}
-    </>
-  );
-
-  const firstVehicleName = vehicles[0]
-    ? vehicles[0].nickname || `${vehicles[0].make} ${vehicles[0].model}`
-    : "My Car";
-
-  const shopPanel = (
-    <StorePageContent
-      title="Garage Shop"
-      subtitle="Spend your points on how your cars and garage look."
-      categories={["vehicle_name_color", "garage_backdrop"]}
-      initialBalance={shopBalance}
-      initialOwnedItemIds={ownedItemIds}
-      initialEquipped={{
-        vehicle_name_color: equippedVehicleNameColor,
-        garage_backdrop: equippedGarageBackdrop,
-      }}
-      previewLabel={firstVehicleName}
-    />
-  );
-
-  return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-      <AchievementUnlockToast achievements={newlyUnlocked} />
-      <ChallengeCompleteToast challenges={newlyCompleted} />
-      <div className="mb-6">
-        <WeeklyChallengesCard progress={challengeProgress} />
-      </div>
-      <div className="mb-2 flex items-center">
-        {/* flex-1 makes this stretch from the left edge to right where the
-            button group starts, so justify-center here centers "Garage"
-            in exactly that span — not across the whole row (which would
-            pull it right, off-center, once "Add vehicle" is factored in). */}
-        <div className="flex min-w-0 flex-1 justify-center px-2">
-          <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">Your Garage</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/garage/new">
-            <Button className="px-3 py-1.5 text-sm">Add vehicle</Button>
-          </Link>
-        </div>
-      </div>
-
-      {vehicles.length > 0 && (
-        <div className="mb-6 mt-4 flex items-center gap-5 text-sm text-muted">
-          <span>
-            <span className="font-semibold text-foreground">{vehicles.length}</span>{" "}
-            vehicle{vehicles.length === 1 ? "" : "s"}
-          </span>
-          {bestTier && bestScore != null && (
-            <Link
-              href="/leaderboard"
-              className="flex items-center gap-1.5 hover:text-foreground"
-            >
-              {(() => {
-                const Icon = RANK_MATERIAL_ICONS[bestTier];
-                return <Icon className="h-4 w-4" />;
-              })()}
-              Best:{" "}
-              <span className="font-semibold" style={{ color: RANK_TEXT_COLORS[bestTier] }}>
-                {RANK_LABELS[bestTier]} · {bestScore.toFixed(2)}
-              </span>
-            </Link>
-          )}
-        </div>
-      )}
-
-      <GarageTabs carsPanel={carsPanel} shopPanel={shopPanel} />
     </div>
   );
 }

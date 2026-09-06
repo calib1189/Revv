@@ -3,7 +3,9 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
-import { StorePageContent } from "@/features/store/store-page-content";
+import { listVehiclesByOwner } from "@/lib/db/vehicles";
+import { listCrewsOwnedBy } from "@/lib/db/crews";
+import { StoreTabs, type OwnedCrewOption } from "@/features/store/store-tabs";
 
 export default async function StorePage() {
   const user = await getCurrentUser();
@@ -28,22 +30,44 @@ export default async function StorePage() {
     console.error("Store data fetch failed:", err);
   }
 
-  const profile = await getProfileByUserId(supabase, user.id);
+  const [profile, vehicles, ownedCrews] = await Promise.all([
+    getProfileByUserId(supabase, user.id),
+    listVehiclesByOwner(supabase, user.id),
+    listCrewsOwnedBy(supabase, user.id),
+  ]);
+
+  const firstVehicle = vehicles[0];
+  const garagePreviewLabel = firstVehicle
+    ? firstVehicle.nickname || `${firstVehicle.make} ${firstVehicle.model}`
+    : "My Car";
+
+  const crews: OwnedCrewOption[] = ownedCrews.map((crew) => ({
+    id: crew.id,
+    name: crew.name,
+    equipped: {
+      crew_name_color: crew.equipped_crew_name_color,
+      crew_banner: crew.equipped_crew_banner,
+      crew_frame: crew.equipped_crew_frame,
+    },
+  }));
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-      <StorePageContent
-        title="Store"
-        subtitle="Earned from achievements and weekly challenges — spend it on how your profile looks."
-        categories={["name_color", "profile_background", "showcase_frame"]}
+      <StoreTabs
         initialBalance={balance}
         initialOwnedItemIds={ownedItemIds}
-        initialEquipped={{
+        profilePreviewLabel={`@${profile?.username ?? user.id}`}
+        profileEquipped={{
           name_color: profile?.equipped_name_color ?? null,
           profile_background: profile?.equipped_profile_background ?? null,
           showcase_frame: profile?.equipped_showcase_frame ?? null,
         }}
-        previewLabel={`@${profile?.username ?? user.id}`}
+        garagePreviewLabel={garagePreviewLabel}
+        garageEquipped={{
+          vehicle_name_color: profile?.equipped_vehicle_name_color ?? null,
+          garage_backdrop: profile?.equipped_garage_backdrop ?? null,
+        }}
+        crews={crews}
       />
     </div>
   );

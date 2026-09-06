@@ -20,7 +20,6 @@ import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { CREW_CATEGORY_LABELS } from "@/lib/crews/category";
 import { maxScore } from "@/lib/crews/best-rank";
 import { getStoreItem } from "@/lib/store/catalog";
-import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
 import { JoinButton } from "@/features/crews/join-button";
 import { CrewTabs, type CrewTabMember } from "@/features/crews/crew-tabs";
 import type { CrewCarItem } from "@/features/crews/crew-cars-grid";
@@ -46,25 +45,6 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
   ]);
 
   const canManageMembers = viewerRole === "leader" || viewerRole === "admin";
-
-  // Crew Shop data — only meaningful for the owner (only they can spend
-  // their points equipping crew cosmetics), so skipped entirely for
-  // everyone else. Same best-effort/graceful-fallback shape as every
-  // other store fetch in this app.
-  let shopBalance = 0;
-  let ownedItemIds: string[] = [];
-  if (isOwner && currentUser) {
-    try {
-      const [balanceResult, ownedResult] = await Promise.all([
-        getPointsBalance(supabase, currentUser.id),
-        listOwnedItemIds(supabase, currentUser.id),
-      ]);
-      shopBalance = balanceResult;
-      ownedItemIds = [...ownedResult];
-    } catch (err) {
-      console.error("Crew shop data fetch failed:", err);
-    }
-  }
 
   const memberUserIds = members.map((m) => m.user_id);
   const [profiles, memberVehicles, postThumbnails] = await Promise.all([
@@ -265,9 +245,6 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
           events={events}
           canManageMembers={canManageMembers}
           viewerRole={viewerRole}
-          isOwner={isOwner}
-          shopBalance={shopBalance}
-          ownedItemIds={ownedItemIds}
         />
       </div>
     </div>

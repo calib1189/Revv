@@ -5,8 +5,6 @@ import Link from "next/link";
 import { PostThumbnailGrid, type PostThumbnail } from "@/features/profile/post-thumbnail-grid";
 import { MemberRow } from "@/features/crews/member-row";
 import { CrewCarsGrid, type CrewCarItem } from "@/features/crews/crew-cars-grid";
-import { StorePageContent } from "@/features/store/store-page-content";
-import { equipCrewItemAction } from "@/features/crews/actions";
 import { formatDateTime } from "@/lib/format/date";
 import {
   WheelIcon,
@@ -16,13 +14,12 @@ import {
   InfoIcon,
   PinIcon,
   ChevronRightIcon,
-  GemIcon,
 } from "@/components/ui/icons";
 import type { Crew } from "@/lib/db/crews";
 import type { CrewMember, CrewMemberRole } from "@/lib/db/crew-members";
 import type { Meetup } from "@/lib/db/meetups";
 
-type Tab = "cars" | "feed" | "members" | "events" | "about" | "shop";
+type Tab = "cars" | "feed" | "members" | "events" | "about";
 
 export interface CrewTabMember {
   member: CrewMember;
@@ -72,7 +69,10 @@ function EmptyPanel({ icon, text }: { icon: React.ReactNode; text: string }) {
 }
 
 /** Mirrors profile-tabs.tsx exactly: local tab state, every tab's data
- * pre-fetched server-side and passed down as props, no per-tab refetch. */
+ * pre-fetched server-side and passed down as props, no per-tab refetch.
+ * Crew cosmetics (name color/banner/badge frame) are bought and equipped
+ * from the central Store (/store)'s Crew tab now, not from here — this
+ * only ever displays whatever's currently equipped, in the page header. */
 export function CrewTabs({
   crewId,
   crew,
@@ -82,9 +82,6 @@ export function CrewTabs({
   events,
   canManageMembers,
   viewerRole,
-  isOwner,
-  shopBalance,
-  ownedItemIds,
 }: {
   crewId: string;
   crew: Crew;
@@ -94,12 +91,6 @@ export function CrewTabs({
   events: Meetup[];
   canManageMembers: boolean;
   viewerRole: CrewMemberRole | null;
-  /** Only the owner can spend their points on crew cosmetics — the Shop
-   * tab itself is hidden for everyone else rather than shown disabled,
-   * same reasoning as "Edit crew" only showing for the owner above. */
-  isOwner: boolean;
-  shopBalance: number;
-  ownedItemIds: string[];
 }) {
   const [tab, setTab] = useState<Tab>("cars");
 
@@ -129,11 +120,6 @@ export function CrewTabs({
         <TabButton active={tab === "about"} onClick={() => setTab("about")} icon={<InfoIcon className="h-4 w-4" />}>
           About
         </TabButton>
-        {isOwner && (
-          <TabButton active={tab === "shop"} onClick={() => setTab("shop")} icon={<GemIcon className="h-4 w-4" />}>
-            Shop
-          </TabButton>
-        )}
       </div>
 
       {tab === "cars" &&
@@ -219,23 +205,6 @@ export function CrewTabs({
             )}
           </div>
         </div>
-      )}
-
-      {tab === "shop" && isOwner && (
-        <StorePageContent
-          title="Crew Shop"
-          subtitle="Spend your points on how this crew's page looks — everyone who visits sees it."
-          categories={["crew_name_color", "crew_banner", "crew_frame"]}
-          initialBalance={shopBalance}
-          initialOwnedItemIds={ownedItemIds}
-          initialEquipped={{
-            crew_name_color: crew.equipped_crew_name_color,
-            crew_banner: crew.equipped_crew_banner,
-            crew_frame: crew.equipped_crew_frame,
-          }}
-          previewLabel={crew.name}
-          equipAction={equipCrewItemAction.bind(null, crewId)}
-        />
       )}
     </div>
   );
