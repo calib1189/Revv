@@ -312,12 +312,12 @@ html.native-app body::-webkit-scrollbar {
   .frame-neon-ring {
     outline: 2px solid #22d3ee;
     outline-offset: 2px;
-    animation: showcase-neon-pulse 2s ease-in-out infinite;
+    animation: showcase-neon-pulse 3.5s ease-in-out infinite;
   }
 
   @keyframes showcase-neon-pulse {
-    0%, 100% { filter: drop-shadow(0 0 5px rgb(34 211 238 / 0.55)); }
-    50% { filter: drop-shadow(0 0 10px rgb(34 211 238 / 0.9)); }
+    0%, 100% { filter: drop-shadow(0 0 4px rgb(34 211 238 / 0.45)); }
+    50% { filter: drop-shadow(0 0 7px rgb(34 211 238 / 0.7)); }
   }
 
   .frame-prism-ring {
@@ -336,7 +336,7 @@ html.native-app body::-webkit-scrollbar {
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     mask-composite: exclude;
     background: conic-gradient(from var(--rank-angle, 0deg), #351768, #7c3aed, #ec4899, #3b5bdb, #351768, #9d5cff, #351768);
-    animation: rank-angle-spin 6s linear infinite;
+    animation: rank-angle-spin 10s linear infinite;
   }
 
   /* Epic-tier showcase frames — same masked-ring technique as
@@ -367,54 +367,59 @@ html.native-app body::-webkit-scrollbar {
 
   .frame-inferno-ring::before {
     background: conic-gradient(from var(--rank-angle, 0deg), #7f1d1d, #f97316, #fbbf24, #f97316, #7f1d1d, #f97316, #7f1d1d);
-    animation: rank-angle-spin 3s linear infinite;
-    filter: drop-shadow(0 0 6px rgb(249 115 22 / 0.7));
+    animation: rank-angle-spin 5.5s linear infinite;
+    filter: drop-shadow(0 0 4px rgb(249 115 22 / 0.55));
   }
 
   .frame-aurora-ring::before {
     background: conic-gradient(from var(--rank-angle, 0deg), #0f766e, #22d3ee, #4ade80, #22d3ee, #0f766e, #7c3aed, #0f766e);
-    animation: rank-angle-spin 5s linear infinite, showcase-aurora-pulse 3s ease-in-out infinite;
+    animation: rank-angle-spin 9s linear infinite, showcase-aurora-pulse 4.5s ease-in-out infinite;
   }
 
   @keyframes showcase-aurora-pulse {
-    0%, 100% { filter: drop-shadow(0 0 5px rgb(34 211 238 / 0.55)); }
-    50% { filter: drop-shadow(0 0 11px rgb(74 222 128 / 0.8)); }
+    0%, 100% { filter: drop-shadow(0 0 4px rgb(34 211 238 / 0.45)); }
+    50% { filter: drop-shadow(0 0 7px rgb(74 222 128 / 0.6)); }
   }
 
   .frame-diamond-ring::before {
     background: conic-gradient(from var(--rank-angle, 0deg), #6bc4ea, #ffffff, #bff4ff, #7dd3fc, #ffffff, #a5f3fc, #ffffff, #6bc4ea);
-    animation: rank-angle-spin 3.4s linear infinite;
-    filter: drop-shadow(0 0 6px rgb(165 243 252 / 0.85));
+    animation: rank-angle-spin 6.5s linear infinite;
+    filter: drop-shadow(0 0 4px rgb(165 243 252 / 0.6));
   }
 
   .frame-legendary-ring::before {
     background: conic-gradient(from var(--rank-angle, 0deg), #451a03, #fbbf24, #ef4444, #a21caf, #451a03, #fbbf24, #451a03);
-    animation: rank-angle-spin 2.2s linear infinite, showcase-legendary-pulse 1.8s ease-in-out infinite;
+    animation: rank-angle-spin 4.5s linear infinite, showcase-legendary-pulse 3.2s ease-in-out infinite;
   }
 
   @keyframes showcase-legendary-pulse {
-    0%, 100% { filter: drop-shadow(0 0 6px rgb(251 191 36 / 0.7)); }
-    50% { filter: drop-shadow(0 0 14px rgb(239 68 68 / 0.9)); }
+    0%, 100% { filter: drop-shadow(0 0 4px rgb(251 191 36 / 0.5)); }
+    50% { filter: drop-shadow(0 0 8px rgb(239 68 68 / 0.65)); }
   }
 
   /* Epic-tier name colors — a moving gradient behind bg-clip-text
      (value stays a plain gradient string so it still degrades to a
-     static look if this class is ever missing). */
+     static look if this class is ever missing). Slow and subtle on
+     purpose — this sits on someone's name, which is on screen
+     constantly, not an occasional flourish; it should read as a quiet
+     premium shimmer, not something competing for attention. */
   .text-shimmer-anim {
-    background-size: 250% 100%;
-    animation: text-shimmer-move 3s linear infinite;
+    background-size: 220% 100%;
+    animation: text-shimmer-move 6s linear infinite;
   }
 
   @keyframes text-shimmer-move {
     0% { background-position: 0% 50%; }
-    100% { background-position: 250% 50%; }
+    100% { background-position: 220% 50%; }
   }
 
   /* Epic-tier profile backgrounds — each pairs with its item's `value`
      gradient the same way: value supplies the colors, this class
-     supplies the motion. */
+     supplies the motion. Slower and a narrower sweep than the first
+     pass — these frame a header someone's name and bio sit inside, so
+     the motion should be ambient, not attention-grabbing. */
   .bg-velocity-anim {
-    animation: bg-velocity-move 1.1s linear infinite;
+    animation: bg-velocity-move 2.5s linear infinite;
   }
 
   @keyframes bg-velocity-move {
@@ -423,28 +428,28 @@ html.native-app body::-webkit-scrollbar {
   }
 
   .bg-chrome-flow-anim {
-    background-size: 300% 100%;
-    animation: bg-chrome-flow-move 3.5s linear infinite;
+    background-size: 200% 100%;
+    animation: bg-chrome-flow-move 6s linear infinite;
   }
 
   @keyframes bg-chrome-flow-move {
     0% { background-position: 0% 50%; }
-    100% { background-position: 300% 50%; }
+    100% { background-position: 200% 50%; }
   }
 
   .bg-inferno-anim {
-    background-size: 180% 180%;
-    animation: bg-inferno-move 4s ease-in-out infinite;
+    background-size: 150% 150%;
+    animation: bg-inferno-move 7s ease-in-out infinite;
   }
 
   @keyframes bg-inferno-move {
-    0%, 100% { background-position: 50% 20%; }
-    50% { background-position: 50% 80%; }
+    0%, 100% { background-position: 50% 30%; }
+    50% { background-position: 50% 70%; }
   }
 
   .bg-aurora-anim {
-    background-size: 300% 300%;
-    animation: bg-aurora-move 9s ease-in-out infinite;
+    background-size: 200% 200%;
+    animation: bg-aurora-move 14s ease-in-out infinite;
   }
 
   @keyframes bg-aurora-move {
@@ -453,7 +458,7 @@ html.native-app body::-webkit-scrollbar {
   }
 
   .bg-galaxy-anim {
-    animation: rank-angle-spin 22s linear infinite;
+    animation: rank-angle-spin 34s linear infinite;
   }
 
   /* Photo-based Garage Backdrops — value is a real image (url(...)),
@@ -516,21 +521,21 @@ html.native-app body::-webkit-scrollbar {
      shift), so these get their own glow-pulse keyframes instead. Uses
      currentColor so the same class works for any neon-toned item. */
   .text-neon-pulse {
-    animation: text-neon-pulse-kf 2s ease-in-out infinite;
+    animation: text-neon-pulse-kf 3.5s ease-in-out infinite;
   }
 
   @keyframes text-neon-pulse-kf {
-    0%, 100% { text-shadow: 0 0 6px currentColor, 0 0 2px currentColor; }
-    50% { text-shadow: 0 0 14px currentColor, 0 0 4px currentColor; }
+    0%, 100% { text-shadow: 0 0 4px currentColor; }
+    50% { text-shadow: 0 0 9px currentColor, 0 0 1px currentColor; }
   }
 
   .bg-neon-pulse {
-    animation: bg-neon-pulse-kf 2s ease-in-out infinite;
+    animation: bg-neon-pulse-kf 3.5s ease-in-out infinite;
   }
 
   @keyframes bg-neon-pulse-kf {
-    0%, 100% { box-shadow: inset 0 0 20px rgb(34 211 238 / 0.25); }
-    50% { box-shadow: inset 0 0 34px rgb(34 211 238 / 0.55); }
+    0%, 100% { box-shadow: inset 0 0 14px rgb(34 211 238 / 0.18); }
+    50% { box-shadow: inset 0 0 22px rgb(34 211 238 / 0.35); }
   }
 
   /* Carbon Fiber ring — same three-layer woven-diagonal technique as
