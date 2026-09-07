@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { listVehiclesByOwner, listVerifiedVehicleIds, listVehicleIdsByCategory } from "@/lib/db/vehicles";
 import { listActiveBuildsByVehicleIds, listAllRatingScores, countBuildsCopiedFrom } from "@/lib/db/builds";
@@ -277,7 +278,15 @@ export async function checkAndUnlockAchievements(
   const newIds = qualifiedIds.filter((id) => !unlockedIds.has(id));
   if (newIds.length === 0) return [];
 
-  await insertAchievementUnlocks(supabase, userId, newIds);
+  // Every stat above was just read straight from the user's own real
+  // data through their own RLS-scoped session — this is the one place
+  // that's actually allowed to decide an achievement is legitimately
+  // new. The insert itself has to go through the service-role client
+  // because user_achievements' insert policy was deliberately dropped
+  // (0081_lock_down_points_economy.sql): a client-writable "insert your
+  // own unlock" policy is indistinguishable, to Postgres, from a user
+  // forging an unlock via a direct API call.
+  await insertAchievementUnlocks(createServiceRoleClient(), userId, newIds);
 
   // Points aren't auto-awarded on unlock — the owner claims them
   // explicitly (claimAchievementPointsAction in features/achievements/

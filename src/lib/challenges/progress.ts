@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { listPostsByAuthor } from "@/lib/db/posts";
@@ -81,7 +82,13 @@ export async function getWeeklyChallengeProgress(
     .map((p) => p.id);
 
   if (newlyCompletedIds.length > 0) {
-    await insertChallengeCompletions(supabase, userId, newlyCompletedIds, key);
+    // Same reasoning as checkAndUnlockAchievements: the completion was
+    // just derived from the user's own real, RLS-scoped activity this
+    // week, so this is the trusted place to record it — but the write
+    // itself needs the service-role client since the insert policy on
+    // user_challenge_completions was dropped (0081_lock_down_points_
+    // economy.sql) to close the direct-API self-completion hole.
+    await insertChallengeCompletions(createServiceRoleClient(), userId, newlyCompletedIds, key);
   }
 
   return {

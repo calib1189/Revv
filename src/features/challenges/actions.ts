@@ -1,6 +1,7 @@
 "use server";
 
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
   getChallengeCompletion,
   markChallengeCompletionClaimed,
@@ -30,7 +31,13 @@ export async function claimChallengePointsAction(challengeId: string): Promise<C
   if (row.claimedAt) return { error: "Already claimed.", amount: null };
 
   try {
-    const { error: ledgerError } = await supabase.from("points_ledger").insert({
+    // Same trust boundary as claimAchievementPointsAction: the checks
+    // above (using the caller's own session client) are what make this
+    // legitimate; the writes go through the service-role client because
+    // points_ledger's and user_challenge_completions' insert/update
+    // policies were dropped in 0081_lock_down_points_economy.sql.
+    const privileged = createServiceRoleClient();
+    const { error: ledgerError } = await privileged.from("points_ledger").insert({
       user_id: user.id,
       amount: CHALLENGE_COMPLETION_POINTS,
       source_type: "challenge",
@@ -40,7 +47,7 @@ export async function claimChallengePointsAction(challengeId: string): Promise<C
     // this exact row — not a real failure.
     if (ledgerError && ledgerError.code !== "23505") throw ledgerError;
 
-    await markChallengeCompletionClaimed(supabase, user.id, challengeId, key);
+    await markChallengeCompletionClaimed(privileged, user.id, challengeId, key);
   } catch (err) {
     console.error("claimChallengePointsAction failed:", err);
     return { error: "Couldn't claim points. Try again.", amount: null };

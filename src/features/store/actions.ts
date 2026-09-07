@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
 import { updateEquippedCosmetic, getProfileByUserId, type EquipCategory } from "@/lib/db/profiles";
 import { getStoreItem, type StoreCategory, type StoreItem } from "@/lib/store/catalog";
@@ -65,12 +66,20 @@ export async function purchaseItemAction(itemId: string): Promise<StoreActionSta
   if (balance < item.price) return { error: "Not enough points." };
 
   try {
-    const { error: ownedError } = await supabase
+    // The price above always comes from the server-side catalog, never
+    // the client — but the write itself still needs the service-role
+    // client, since store_items_owned's and points_ledger's insert
+    // policies were dropped (0081_lock_down_points_economy.sql): a
+    // client-writable "insert your own owned item" policy would let
+    // anyone grant themselves any item directly via the API, bypassing
+    // this action (and its price/ownership/balance checks) entirely.
+    const privileged = createServiceRoleClient();
+    const { error: ownedError } = await privileged
       .from("store_items_owned")
       .insert({ user_id: user.id, item_id: itemId });
     if (ownedError) throw ownedError;
 
-    const { error: ledgerError } = await supabase.from("points_ledger").insert({
+    const { error: ledgerError } = await privileged.from("points_ledger").insert({
       user_id: user.id,
       amount: -item.price,
       source_type: "purchase",

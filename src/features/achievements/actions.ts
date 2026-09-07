@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { updateShowcasedAchievements } from "@/lib/db/profiles";
 import {
   listUnlockedAchievements,
@@ -73,7 +74,15 @@ export async function claimAchievementPointsAction(achievementId: string): Promi
 
   const amount = pointsForAchievement(achievementId);
   try {
-    const { error: ledgerError } = await supabase.from("points_ledger").insert({
+    // requireConfirmedUser() + the getUserAchievement() check above are
+    // what make this claim legitimate; the writes themselves have to use
+    // the service-role client because points_ledger's and
+    // user_achievements' own insert/update policies were deliberately
+    // dropped (0081_lock_down_points_economy.sql) — a client-writable
+    // "insert your own points row" policy can't tell a real claim from a
+    // forged direct API call for an arbitrary amount.
+    const privileged = createServiceRoleClient();
+    const { error: ledgerError } = await privileged.from("points_ledger").insert({
       user_id: user.id,
       amount,
       source_type: "achievement",
@@ -84,7 +93,7 @@ export async function claimAchievementPointsAction(achievementId: string): Promi
     // a race this user lost to their own other tab/device.
     if (ledgerError && ledgerError.code !== "23505") throw ledgerError;
 
-    await markAchievementClaimed(supabase, user.id, achievementId);
+    await markAchievementClaimed(privileged, user.id, achievementId);
   } catch (err) {
     console.error("claimAchievementPointsAction failed:", err);
     return { error: "Couldn't claim points. Try again.", amount: null };
