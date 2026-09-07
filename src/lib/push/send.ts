@@ -9,7 +9,7 @@ function isConfigured(): boolean {
 }
 
 if (isConfigured()) {
-  webpush.setVapidDetails("mailto:calib1189@gmail.com", publicKey!, privateKey!);
+  webpush.setVapidDetails("mailto:contact@sorza.net", publicKey!, privateKey!);
 }
 
 export interface PushPayload {

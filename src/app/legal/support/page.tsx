@@ -15,8 +15,8 @@ export default function SupportPage() {
           <h2 className="mb-2 text-base font-semibold">Contact</h2>
           <p>
             Email{" "}
-            <a href="mailto:calib1189@gmail.com" className="text-accent hover:underline">
-              calib1189@gmail.com
+            <a href="mailto:contact@sorza.net" className="text-accent hover:underline">
+              contact@sorza.net
             </a>{" "}
             for account issues, bug reports, safety concerns, or anything else. We read every
             message and aim to respond within a few days.
