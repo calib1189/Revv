@@ -59,7 +59,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             server-rendered markup. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("revv-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}`,
+            __html: `try{var t=localStorage.getItem("sorza-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}`,
           }}
         />
       </head>

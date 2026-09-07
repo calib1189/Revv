@@ -13,6 +13,9 @@ export function Footer() {
         <Link href="/legal/guidelines" className="hover:text-foreground">
           Community guidelines
         </Link>
+        <Link href="/legal/support" className="hover:text-foreground">
+          Support
+        </Link>
         <span>© {new Date().getFullYear()} SORZA</span>
       </nav>
       {/* Required disclosure, not decoration — SORZA earns a commission on

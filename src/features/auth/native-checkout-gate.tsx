@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import { createWebHandoffAction } from "@/features/auth/actions";
 import { openExternalBrowser } from "@/lib/native/open-external";
+import { SITE_URL } from "@/lib/site-url";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
+
+const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
 
 /**
  * Wraps a purchase-initiating form (ad campaigns, meetup creation) so a
@@ -21,7 +24,7 @@ export function NativeCheckoutGate({
   children,
 }: {
   nextPath: string;
-  /** e.g. "Creating an ad" — used in "X happens on revv.app, not in the app." */
+  /** e.g. "Creating an ad" — used in "X happens on the web." */
   what: string;
   children: React.ReactNode;
 }) {
@@ -64,8 +67,7 @@ export function NativeCheckoutGate({
         <>
           <p className="text-sm font-medium">{what} happens on the web</p>
           <p className="max-w-xs text-xs text-muted">
-            Tap below to continue on revv-eta.vercel.app — you&apos;ll already
-            be signed in.
+            Tap below to continue on {SITE_HOST} — you&apos;ll already be signed in.
           </p>
           <Button
             type="button"

@@ -63,6 +63,13 @@ export default async function SettingsPage() {
           <span className="text-xs text-muted">Push notifications for likes, comments, follows, and messages</span>
         </Link>
         <Link
+          href="/legal/support"
+          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
+        >
+          <span className="text-sm font-medium">Support</span>
+          <span className="text-xs text-muted">Contact us, report a problem, or get help</span>
+        </Link>
+        <Link
           href="/advertise"
           className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
         >

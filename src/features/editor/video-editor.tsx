@@ -631,7 +631,7 @@ export function VideoEditor({
 
     try {
       const { blob, extension } = await exportVideo(video, effectiveSource, state);
-      const file = new File([blob], `revv-clip.${extension}`, { type: blob.type });
+      const file = new File([blob], `sorza-clip.${extension}`, { type: blob.type });
       onExported(file);
     } catch (err) {
       // Surfaces the real underlying reason (a MediaRecorder construction

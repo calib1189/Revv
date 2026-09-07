@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LegalDisclaimer } from "@/features/legal/legal-disclaimer";
 
 export const metadata = { title: "Privacy Policy — SORZA" };
@@ -83,7 +84,11 @@ export default function PrivacyPage() {
             You can edit or delete your content, block another user, and delete your account at
             any time from settings. Deleting your account removes your profile, vehicles, builds,
             and posts; content already shared by others (e.g. a comment quoting your caption) may
-            persist. You can request a copy of your data by contacting us.
+            persist. You can request a copy of your data by{" "}
+            <Link href="/legal/support" className="text-accent hover:underline">
+              contacting us
+            </Link>
+            .
           </p>
         </section>
 
@@ -117,7 +122,13 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="mb-2 text-base font-semibold">11. Contact</h2>
-          <p>Questions about this policy can be sent to the contact address published on the site.</p>
+          <p>
+            Questions about this policy can be sent to{" "}
+            <Link href="/legal/support" className="text-accent hover:underline">
+              our published contact address
+            </Link>
+            .
+          </p>
         </section>
       </div>
     </div>

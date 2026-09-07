@@ -10,6 +10,7 @@ import { getCompletionCountsForPosts } from "@/lib/db/post-view-completions";
 import { getViewerAffinity, EMPTY_AFFINITY } from "@/lib/ranking/viewer-affinity";
 import { computeHotScore, NO_AFFINITY, type ViewerAffinity } from "@/lib/ranking/feed-score";
 import { listFollowingIds } from "@/lib/db/follows";
+import { listBlockedEitherDirection } from "@/lib/db/blocks";
 
 // Bounds the ranking computation to posts from the last month, capped at
 // a fixed count — the "For You" feed re-ranks live on every request
@@ -88,8 +89,18 @@ export async function listRankedFeedPosts(
     .limit(CANDIDATE_MAX);
   if (vehicleIds) query = query.in("vehicle_id", vehicleIds);
 
-  const { data: candidates, error } = await query;
+  const { data: rawCandidates, error } = await query;
   if (error) throw error;
+  if (rawCandidates.length === 0) return { items: [], hasMore: false };
+
+  // Blocking hides a pair's content from each other everywhere, not
+  // just DMs — a blocked/blocking author's posts are filtered out of
+  // the feed entirely, in both directions, before they're ever scored.
+  const blockedIds = viewerId ? new Set(await listBlockedEitherDirection(supabase)) : null;
+  const candidates =
+    blockedIds && blockedIds.size > 0
+      ? rawCandidates.filter((post) => !blockedIds.has(post.author_id))
+      : rawCandidates;
   if (candidates.length === 0) return { items: [], hasMore: false };
 
   const postIds = candidates.map((p) => p.id);

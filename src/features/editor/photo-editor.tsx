@@ -315,7 +315,7 @@ export function PhotoEditor({
         canvas.toBlob(resolve, "image/jpeg", 0.92),
       );
       if (!blob) throw new Error("Export failed.");
-      const file = new File([blob], "revv-photo.jpg", { type: "image/jpeg" });
+      const file = new File([blob], "sorza-photo.jpg", { type: "image/jpeg" });
       onExported(file);
     } catch {
       setError("Couldn't finish editing that photo. Try again.");

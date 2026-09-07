@@ -13,14 +13,14 @@ const OPTIONS: { value: Theme; label: string; icon: typeof SunIcon }[] = [
 
 function applyTheme(theme: Theme) {
   document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("revv-theme", theme);
+  localStorage.setItem("sorza-theme", theme);
 }
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
-    const stored = localStorage.getItem("revv-theme") as Theme | null;
+    const stored = localStorage.getItem("sorza-theme") as Theme | null;
     if (stored) {
       Promise.resolve().then(() => setTheme(stored));
     }

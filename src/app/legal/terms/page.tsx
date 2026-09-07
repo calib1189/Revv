@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LegalDisclaimer } from "@/features/legal/legal-disclaimer";
 
 export const metadata = { title: "Terms of Service — SORZA" };
@@ -99,7 +100,11 @@ export default function TermsPage() {
               Community Guidelines
             </a>
             . Reports are reviewed by moderators; every moderation action is logged in an internal
-            audit trail. Decisions can be appealed by contacting us.
+            audit trail. Decisions can be appealed by{" "}
+            <Link href="/legal/support" className="text-accent hover:underline">
+              contacting us
+            </Link>
+            .
           </p>
         </section>
 
@@ -133,7 +138,13 @@ export default function TermsPage() {
 
         <section>
           <h2 className="mb-2 text-base font-semibold">12. Contact</h2>
-          <p>Questions about these terms can be sent to the contact address published on the site.</p>
+          <p>
+            Questions about these terms can be sent to{" "}
+            <Link href="/legal/support" className="text-accent hover:underline">
+              our published contact address
+            </Link>
+            .
+          </p>
         </section>
       </div>
     </div>

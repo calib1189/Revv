@@ -24,19 +24,28 @@ const VEHICLE_REASONS = [
   { value: "other", label: "Other" },
 ];
 
+const PROFILE_REASONS = [
+  { value: "impersonation", label: "Impersonation" },
+  { value: "harassment", label: "Harassment" },
+  { value: "spam", label: "Spam or fake account" },
+  { value: "inappropriate", label: "Inappropriate profile content" },
+  { value: "other", label: "Other" },
+];
+
 const initialState: ReportFormState = { error: null, success: false };
 
 export function ReportButton({
   targetType,
   targetId,
 }: {
-  targetType: "post" | "comment" | "vehicle";
+  targetType: "post" | "comment" | "vehicle" | "profile";
   targetId: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const action = createReportAction.bind(null, targetType, targetId);
   const [state, formAction, isPending] = useActionState(action, initialState);
-  const reasons = targetType === "vehicle" ? VEHICLE_REASONS : CONTENT_REASONS;
+  const reasons =
+    targetType === "vehicle" ? VEHICLE_REASONS : targetType === "profile" ? PROFILE_REASONS : CONTENT_REASONS;
 
   if (state.success) {
     return <p className="text-sm text-muted">Report submitted. Thank you.</p>;

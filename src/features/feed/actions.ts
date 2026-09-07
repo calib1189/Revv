@@ -291,6 +291,7 @@ const REPORT_REASONS = [
   "harassment",
   "inappropriate",
   "fake_ownership",
+  "impersonation",
   "other",
 ] as const;
 
@@ -300,7 +301,7 @@ export interface ReportFormState {
 }
 
 export async function createReportAction(
-  targetType: "post" | "comment" | "vehicle",
+  targetType: "post" | "comment" | "vehicle" | "profile",
   targetId: string,
   _prevState: ReportFormState,
   formData: FormData,

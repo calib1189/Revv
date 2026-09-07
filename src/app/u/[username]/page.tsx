@@ -23,6 +23,7 @@ import { AchievementUnlockToast } from "@/features/achievements/achievement-unlo
 import { ProfileShowcase } from "@/features/achievements/achievement-showcase";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
+import { ReportButton } from "@/features/feed/report-button";
 import { MessageButton } from "@/features/messages/message-button";
 import { getStoreItem } from "@/lib/store/catalog";
 import { getPointsBalance } from "@/lib/db/points";
@@ -318,6 +319,7 @@ export default async function ProfilePage({
               targetUsername={profile.username}
               initialIsBlocking={amBlocking}
             />
+            <ReportButton targetType="profile" targetId={profile.id} />
           </>
         ) : null}
       </div>
