@@ -250,7 +250,7 @@ export function GarageEditor({
           {equippedItem && (
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/5" />
           )}
-          <div className="absolute inset-3 sm:inset-5">
+          <div className="absolute inset-2 sm:inset-3">
             <PreviewCard vehicle={selected} />
           </div>
         </div>

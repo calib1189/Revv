@@ -296,8 +296,12 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "profile_background",
     name: "Titanium",
     price: 250,
+    // Heat-blued titanium (the anodized tint on a titanium exhaust tip)
+    // instead of plain brushed-metal grays — a lot more premium and a
+    // direct, recognizable car-culture reference, not just a flat gray
+    // sweep.
     value:
-      "linear-gradient(100deg, #26262b, #71717a, #d4d4d8, #71717a, #26262b, #a1a1aa, #26262b)",
+      "linear-gradient(100deg, #14161c, #3c4656, #6b5b95, #93a8c2, #6b5b95, #3c4656, #14161c)",
     effectClassName: "bg-chrome-flow-anim",
   },
   {
@@ -305,7 +309,10 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "profile_background",
     name: "Diamond",
     price: 420,
-    value: "linear-gradient(120deg, #0c1a24, #6bc4ea, #ffffff, #bff4ff, #6bc4ea, #0c1a24)",
+    // Pure #ffffff at the peak used to sweep across as a stark white
+    // flash against the dark UI — replaced with a pale ice-blue so the
+    // highlight still reads as a sparkle without blowing out.
+    value: "linear-gradient(120deg, #0a1520, #2a6f8f, #a8e6f5, #e4faff, #a8e6f5, #2a6f8f, #0a1520)",
     effectClassName: "bg-chrome-flow-anim",
   },
   {
