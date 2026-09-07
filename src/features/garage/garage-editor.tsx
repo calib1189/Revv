@@ -25,7 +25,7 @@ const BACKDROP_ITEMS = listStoreItemsByCategory("garage_backdrop");
  * at the same proportions, so what you see here is what you'll get. */
 function PreviewCard({ vehicle }: { vehicle: EditorVehicle }) {
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/15">
+    <div className="relative h-full w-full overflow-hidden rounded-2xl shadow-lg ring-1 ring-white/10">
       {vehicle.heroUrl ? (
         <Image src={vehicle.heroUrl} alt={vehicle.title} fill sizes="(min-width: 1024px) 640px, 80vw" className="object-cover" />
       ) : (
@@ -248,9 +248,9 @@ export function GarageEditor({
           style={equippedItem ? { backgroundImage: equippedItem.value } : undefined}
         >
           {equippedItem && (
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/5" />
           )}
-          <div className="absolute inset-5 sm:inset-8">
+          <div className="absolute inset-3 sm:inset-5">
             <PreviewCard vehicle={selected} />
           </div>
         </div>

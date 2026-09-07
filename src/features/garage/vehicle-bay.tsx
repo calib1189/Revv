@@ -119,14 +119,14 @@ export function VehicleBay({
             className={`absolute inset-0 ${backdropItem.effectClassName ?? ""}`}
             style={{ backgroundImage: backdropItem.value }}
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/5" />
 
-          <div className="absolute inset-5 sm:inset-8">
+          <div className="absolute inset-3 sm:inset-5">
             <RankFrame
               score={ratingScore}
               compact
               hideBadge
-              className="h-full w-full overflow-hidden rounded-2xl shadow-2xl"
+              className="h-full w-full overflow-hidden rounded-2xl shadow-lg"
             >
               <div className="relative h-full w-full">
                 {heroUrl ? (
