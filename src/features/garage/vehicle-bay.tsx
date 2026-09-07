@@ -102,93 +102,99 @@ export function VehicleBay({
   // detail page) — this is a rounded card, and compact's ring radius
   // already matches rounded-2xl exactly.
   return (
-      <RankFrame score={ratingScore} compact hideBadge>
-      <Link
-        href={`/garage/${vehicle.id}`}
-        className="group relative block aspect-[16/10] overflow-hidden rounded-2xl bg-surface"
-      >
-        {backdropItem ? (
-          <>
-            {/* The scene is the whole stage; the car sits on it as a
-                large framed photo rather than filling the frame itself
-                — the point of a purchased backdrop is the atmosphere
-                around the car, not behind it invisibly. */}
-            <div
-              className={`absolute inset-0 ${backdropItem.effectClassName ?? ""}`}
-              style={{ backgroundImage: backdropItem.value }}
-            />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
+    <Link
+      href={`/garage/${vehicle.id}`}
+      className="group relative block aspect-[16/10] overflow-hidden rounded-2xl bg-surface"
+    >
+      {backdropItem ? (
+        <>
+          {/* The scene is the whole stage; the car sits on it as a
+              framed photo with an even margin of backdrop showing on
+              every side, not just filling the frame — the point of a
+              purchased backdrop is the atmosphere around the car. The
+              rank ring wraps the photo itself here, not the stage, so
+              it still reads as "this car's rank," not "this scene's
+              rank." */}
+          <div
+            className={`absolute inset-0 ${backdropItem.effectClassName ?? ""}`}
+            style={{ backgroundImage: backdropItem.value }}
+          />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
 
-            <div className="absolute inset-0 flex flex-col items-center justify-end p-4 pb-6 sm:p-8 sm:pb-10">
-              <div className="relative w-[80%] max-w-xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/15">
-                <div className="relative aspect-[4/3]">
-                  {heroUrl ? (
-                    <Image
-                      src={heroUrl}
-                      alt={title}
-                      fill
-                      priority={priority}
-                      sizes="(min-width: 1024px) 640px, 80vw"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-sm text-muted">
-                      No photo yet
-                    </div>
-                  )}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/0 to-transparent" />
-                  <RatingBadge score={ratingScore} />
-                  <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                    {vehicle.year && (
-                      <p className="text-xs font-medium tracking-wide text-white/70">{vehicle.year}</p>
-                    )}
-                    <VehicleName
-                      title={title}
-                      size="md"
-                      nameColorValue={nameColorValue}
-                      nameColorEffectClassName={nameColorEffectClassName}
-                    />
-                    {subtitle && <p className="truncate text-sm text-white/70">{subtitle}</p>}
+          <div className="absolute inset-5 sm:inset-8">
+            <RankFrame
+              score={ratingScore}
+              compact
+              hideBadge
+              className="h-full w-full overflow-hidden rounded-2xl shadow-2xl"
+            >
+              <div className="relative h-full w-full">
+                {heroUrl ? (
+                  <Image
+                    src={heroUrl}
+                    alt={title}
+                    fill
+                    priority={priority}
+                    sizes="(min-width: 1024px) 640px, 80vw"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-muted">
+                    No photo yet
                   </div>
+                )}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/0 to-transparent" />
+                <RatingBadge score={ratingScore} />
+                <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
+                  {vehicle.year && (
+                    <p className="text-xs font-medium tracking-wide text-white/70">{vehicle.year}</p>
+                  )}
+                  <VehicleName
+                    title={title}
+                    size="md"
+                    nameColorValue={nameColorValue}
+                    nameColorEffectClassName={nameColorEffectClassName}
+                  />
+                  {subtitle && <p className="truncate text-sm text-white/70">{subtitle}</p>}
                 </div>
               </div>
+            </RankFrame>
+          </div>
+        </>
+      ) : (
+        <RankFrame score={ratingScore} compact hideBadge className="absolute inset-0">
+          {heroUrl ? (
+            <Image
+              src={heroUrl}
+              alt={title}
+              fill
+              priority={priority}
+              sizes="(min-width: 1024px) 900px, 100vw"
+              className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-base text-muted">
+              No photo yet
             </div>
-          </>
-        ) : (
-          <>
-            {heroUrl ? (
-              <Image
-                src={heroUrl}
-                alt={title}
-                fill
-                priority={priority}
-                sizes="(min-width: 1024px) 900px, 100vw"
-                className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-base text-muted">
-                No photo yet
-              </div>
+          )}
+
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-transparent" />
+          <RatingBadge score={ratingScore} />
+
+          <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
+            {vehicle.year && (
+              <p className="text-sm font-medium tracking-wide text-white/70">{vehicle.year}</p>
             )}
-
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-transparent" />
-            <RatingBadge score={ratingScore} />
-
-            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
-              {vehicle.year && (
-                <p className="text-sm font-medium tracking-wide text-white/70">{vehicle.year}</p>
-              )}
-              <VehicleName
-                title={title}
-                size="xl"
-                nameColorValue={nameColorValue}
-                nameColorEffectClassName={nameColorEffectClassName}
-              />
-              {subtitle && <p className="mt-1 truncate text-base text-white/70">{subtitle}</p>}
-            </div>
-          </>
-        )}
-      </Link>
-    </RankFrame>
+            <VehicleName
+              title={title}
+              size="xl"
+              nameColorValue={nameColorValue}
+              nameColorEffectClassName={nameColorEffectClassName}
+            />
+            {subtitle && <p className="mt-1 truncate text-base text-white/70">{subtitle}</p>}
+          </div>
+        </RankFrame>
+      )}
+    </Link>
   );
 }

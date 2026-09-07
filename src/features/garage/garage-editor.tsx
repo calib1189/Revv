@@ -25,18 +25,16 @@ const BACKDROP_ITEMS = listStoreItemsByCategory("garage_backdrop");
  * at the same proportions, so what you see here is what you'll get. */
 function PreviewCard({ vehicle }: { vehicle: EditorVehicle }) {
   return (
-    <div className="relative w-[80%] max-w-xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/15">
-      <div className="relative aspect-[4/3]">
-        {vehicle.heroUrl ? (
-          <Image src={vehicle.heroUrl} alt={vehicle.title} fill sizes="(min-width: 1024px) 640px, 80vw" className="object-cover" />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted">No photo yet</div>
-        )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/0 to-transparent" />
-        <p className="absolute inset-x-0 bottom-0 truncate p-3 text-lg font-semibold text-white sm:p-4">
-          {vehicle.title}
-        </p>
-      </div>
+    <div className="relative h-full w-full overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/15">
+      {vehicle.heroUrl ? (
+        <Image src={vehicle.heroUrl} alt={vehicle.title} fill sizes="(min-width: 1024px) 640px, 80vw" className="object-cover" />
+      ) : (
+        <div className="flex h-full items-center justify-center text-sm text-muted">No photo yet</div>
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/0 to-transparent" />
+      <p className="absolute inset-x-0 bottom-0 truncate p-3 text-lg font-semibold text-white sm:p-4">
+        {vehicle.title}
+      </p>
     </div>
   );
 }
@@ -239,12 +237,12 @@ export function GarageEditor({
         )}
 
         {/* The whole point of this screen: see it before you buy it. Same
-            16:10 stage and bottom-center car placement as VehicleBay on
-            the real /garage page, so this preview is a true match for
-            what you'll actually get, not an approximation. */}
+            16:10 stage and evenly-bordered car placement as VehicleBay
+            on the real /garage page, so this preview is a true match
+            for what you'll actually get, not an approximation. */}
         <div
           key={selectedId}
-          className={`relative flex aspect-[16/10] flex-col items-center justify-end overflow-hidden rounded-3xl p-4 pb-6 transition-all duration-300 sm:p-8 sm:pb-10 ${
+          className={`relative aspect-[16/10] overflow-hidden rounded-3xl transition-all duration-300 ${
             equippedItem?.effectClassName ?? "bg-surface"
           }`}
           style={equippedItem ? { backgroundImage: equippedItem.value } : undefined}
@@ -252,7 +250,9 @@ export function GarageEditor({
           {equippedItem && (
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/10" />
           )}
-          <PreviewCard vehicle={selected} />
+          <div className="absolute inset-5 sm:inset-8">
+            <PreviewCard vehicle={selected} />
+          </div>
         </div>
         {!equippedItem && (
           <p className="mt-3 text-center text-sm text-muted">
