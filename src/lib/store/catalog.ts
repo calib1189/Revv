@@ -232,7 +232,12 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "profile_background",
     name: "Chrome Flow",
     price: 260,
-    value: "linear-gradient(100deg, #18181b, #71717a, #f4f4f5, #71717a, #18181b, #a1a1aa, #18181b)",
+    // Exactly 90deg (perfectly horizontal), not an angle — bg-chrome-flow-anim
+    // seamlessly tiles by panning background-position on the X axis alone;
+    // any angled gradient varies by Y too, so wrapping the pan produces a
+    // visible diagonal seam where the loop restarts. Horizontal is the only
+    // angle this specific animation technique can loop with no seam at all.
+    value: "linear-gradient(90deg, #18181b, #71717a, #f4f4f5, #71717a, #18181b, #a1a1aa, #18181b)",
     effectClassName: "bg-chrome-flow-anim",
   },
   {
@@ -300,8 +305,9 @@ const PROFILE_ITEMS: StoreItem[] = [
     // instead of plain brushed-metal grays — a lot more premium and a
     // direct, recognizable car-culture reference, not just a flat gray
     // sweep.
+    // 90deg exactly (see bg_chrome_flow's comment) so the pan loop has no seam.
     value:
-      "linear-gradient(100deg, #14161c, #3c4656, #6b5b95, #93a8c2, #6b5b95, #3c4656, #14161c)",
+      "linear-gradient(90deg, #14161c, #3c4656, #6b5b95, #93a8c2, #6b5b95, #3c4656, #14161c)",
     effectClassName: "bg-chrome-flow-anim",
   },
   {
@@ -312,7 +318,8 @@ const PROFILE_ITEMS: StoreItem[] = [
     // Pure #ffffff at the peak used to sweep across as a stark white
     // flash against the dark UI — replaced with a pale ice-blue so the
     // highlight still reads as a sparkle without blowing out.
-    value: "linear-gradient(120deg, #0a1520, #2a6f8f, #a8e6f5, #e4faff, #a8e6f5, #2a6f8f, #0a1520)",
+    // 90deg exactly (see bg_chrome_flow's comment) so the pan loop has no seam.
+    value: "linear-gradient(90deg, #0a1520, #2a6f8f, #a8e6f5, #e4faff, #a8e6f5, #2a6f8f, #0a1520)",
     effectClassName: "bg-chrome-flow-anim",
   },
   {
@@ -328,7 +335,8 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "profile_background",
     name: "Founder",
     price: 0,
-    value: "linear-gradient(135deg, #050505, #1a0000, #450a0a, #1a0000, #050505)",
+    // 90deg exactly (see bg_chrome_flow's comment) so the pan loop has no seam.
+    value: "linear-gradient(90deg, #050505, #1a0000, #450a0a, #1a0000, #050505)",
     effectClassName: "bg-chrome-flow-anim",
     founderOnly: true,
   },

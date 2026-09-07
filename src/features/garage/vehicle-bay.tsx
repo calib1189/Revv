@@ -122,13 +122,13 @@ export function VehicleBay({
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/5" />
 
           <div className="absolute inset-2 sm:inset-3">
-            <RankFrame
-              score={ratingScore}
-              compact
-              hideBadge
-              className="h-full w-full overflow-hidden rounded-2xl shadow-lg"
-            >
-              <div className="relative h-full w-full">
+            <RankFrame score={ratingScore} compact hideBadge className="h-full w-full">
+              {/* Rounding/clipping live here, not on RankFrame's own
+                  wrapper — RankFrame renders no wrapper at all when
+                  score is null (just returns its children directly),
+                  which was silently dropping rounded-2xl/overflow-hidden
+                  for any unrated car and leaving it square-cornered. */}
+              <div className="relative h-full w-full overflow-hidden rounded-2xl shadow-lg">
                 {heroUrl ? (
                   <Image
                     src={heroUrl}
