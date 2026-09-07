@@ -461,61 +461,6 @@ html.native-app body::-webkit-scrollbar {
     animation: rank-angle-spin 34s linear infinite;
   }
 
-  /* Photo-based Garage Backdrops — value is a real image (url(...)),
-     not a gradient, so it needs cover/center sizing instead of the
-     "auto" default that works fine for a procedural gradient but would
-     render a photo at its native pixel size. No animation; the photo
-     itself is the whole effect. */
-  .bg-cover {
-    background-size: cover;
-    background-position: center;
-  }
-
-  /* Slow cinematic pan for the uploaded Garage Backdrop photos — a
-     little oversized (115%, not a dramatic zoom) so the slow position
-     drift has room to move without ever revealing an empty edge, same
-     "oversize + shift background-position" technique as the gradient
-     sweeps above, just applied to a real photo instead. Still reads as
-     "the photo, normal size" rather than a cropped-in zoom. Replaces
-     .bg-cover rather than combining with it: both set background-size/
-     position, and two plain classes fighting over the same properties
-     just means whichever is later in the stylesheet wins outright. */
-  .bg-photo-pan {
-    background-size: 115% 115%;
-    animation: bg-photo-pan-move 22s ease-in-out infinite alternate;
-  }
-
-  @keyframes bg-photo-pan-move {
-    0% { background-position: 20% 20%; }
-    100% { background-position: 80% 80%; }
-  }
-
-  /* Neon-glow variants for the four neon-lit uploaded photos — a
-     pulsing outer glow in that photo's own signature color, box-shadow
-     so it sits outside the frame rather than fighting the photo's own
-     pixels the way a filter would. The color lives in --glow-color per
-     class; the animation itself (just the blur/spread reach) is
-     shared. Always paired with .bg-photo-pan in the catalog, so this
-     restates that same pan animation alongside its own glow pulse in
-     one `animation` list — two classes each independently declaring
-     `animation` don't combine, the later one in the stylesheet just
-     replaces the earlier one's value outright. */
-  .bg-neon-photo-glow {
-    animation:
-      bg-photo-pan-move 22s ease-in-out infinite alternate,
-      bg-neon-photo-glow-pulse 2.6s ease-in-out infinite;
-  }
-
-  @keyframes bg-neon-photo-glow-pulse {
-    0%, 100% { box-shadow: 0 0 18px 1px var(--glow-color); }
-    50% { box-shadow: 0 0 38px 6px var(--glow-color); }
-  }
-
-  .glow-neon-tunnel { --glow-color: rgb(244 63 177 / 0.55); }
-  .glow-crimson-corridor { --glow-color: rgb(239 68 68 / 0.55); }
-  .glow-synthwave-portal { --glow-color: rgb(217 70 239 / 0.5); }
-  .glow-voltage-hall { --glow-color: rgb(96 165 250 / 0.5); }
-
   /* Neon name/background — text-shadow and inset box-shadow can't be
      driven by a background-position sweep (there's no gradient to
      shift), so these get their own glow-pulse keyframes instead. Uses
