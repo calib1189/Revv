@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { requestPasswordReset, type AuthActionState } from "@/features/auth/actions";
+import { Hcaptcha } from "@/features/auth/hcaptcha";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ export function ForgotPasswordForm() {
     requestPasswordReset,
     initialState,
   );
+  const [captchaVerified, setCaptchaVerified] = useState(false);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -31,7 +33,9 @@ export function ForgotPasswordForm() {
         />
       </div>
 
-      <Button type="submit" disabled={isPending} className="mt-2 w-full">
+      <Hcaptcha name="captchaToken" onVerifiedChange={setCaptchaVerified} />
+
+      <Button type="submit" disabled={isPending || !captchaVerified} className="mt-2 w-full">
         {isPending ? "Sending…" : "Send reset link"}
       </Button>
 

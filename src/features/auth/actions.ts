@@ -42,6 +42,7 @@ export async function signUp(
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const username = String(formData.get("username") ?? "").trim();
+  const captchaToken = String(formData.get("captchaToken") ?? "");
 
   const usernameError = validateUsername(username);
   if (usernameError) return { error: usernameError };
@@ -65,6 +66,7 @@ export async function signUp(
     options: {
       data: { username },
       emailRedirectTo: `${origin}/auth/callback`,
+      captchaToken,
     },
   });
 
@@ -84,6 +86,7 @@ export async function signIn(
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/feed");
+  const captchaToken = String(formData.get("captchaToken") ?? "");
 
   if (!email || !password) {
     return { error: "Email and password are required." };
@@ -93,6 +96,7 @@ export async function signIn(
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
+    options: { captchaToken },
   });
 
   if (error) return { error: friendlyError(error.message) };
@@ -116,6 +120,7 @@ export async function requestPasswordReset(
   formData: FormData,
 ): Promise<AuthActionState> {
   const email = String(formData.get("email") ?? "").trim();
+  const captchaToken = String(formData.get("captchaToken") ?? "");
   if (!email) return { error: "Email is required." };
 
   const origin = (await headers()).get("origin");
@@ -125,6 +130,7 @@ export async function requestPasswordReset(
   // avoids leaking which emails have accounts.
   await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?next=/reset-password`,
+    captchaToken,
   });
 
   redirect("/forgot-password/check-email");
