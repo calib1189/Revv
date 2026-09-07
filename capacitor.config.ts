@@ -20,7 +20,7 @@ const config: CapacitorConfig = {
   // which is exactly what makes a native app feel like a browser instead.
   backgroundColor: "#0a0a0b",
   server: {
-    url: "https://revv-eta.vercel.app",
+    url: "https://sorza.net",
     // Lets links that leave the app domain (e.g. an OAuth provider's own
     // login page) still open inside the app instead of erroring — the
     // WebView otherwise refuses to navigate off the configured origin.
