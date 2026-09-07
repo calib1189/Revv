@@ -8,8 +8,11 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // it to exist), so it's a placeholder that's never actually served.
 const config: CapacitorConfig = {
   // "com.revv.app" was already taken — bundle IDs are globally unique
-  // across every Apple developer account, not just this one.
-  appId: "com.calib1189.revv",
+  // across every Apple developer account, not just this one. Verify
+  // this one is actually available the same way, when registering the
+  // App ID in Apple Developer / App Store Connect — if it's taken,
+  // swap this string for another candidate before that step.
+  appId: "com.sorza.app",
   appName: "SORZA",
   webDir: "public",
   // Without this, the WKWebView's own background defaults to white — every
