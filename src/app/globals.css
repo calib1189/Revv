@@ -596,6 +596,31 @@ html.native-app body::-webkit-scrollbar {
     outline-offset: 2px;
     filter: drop-shadow(0 0 7px rgb(124 58 237 / 0.6));
   }
+
+  /* Founder Ring — reserved for profiles.is_founder, never sold. Black/
+     red/gold, the app's own accent colors, so it reads as "the house
+     color" rather than another purchasable material. Same moderate
+     pace as every other ring after the toning-down pass — exclusive
+     doesn't need to mean loud. */
+  .frame-founder-ring {
+    position: relative;
+  }
+  .frame-founder-ring::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    padding: 2px;
+    pointer-events: none;
+    box-sizing: border-box;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    background: conic-gradient(from var(--rank-angle, 0deg), #000000, #ff4433, #fbbf24, #ff4433, #000000, #ff4433, #000000);
+    animation: rank-angle-spin 7s linear infinite;
+    filter: drop-shadow(0 0 4px rgb(255 68 51 / 0.45));
+  }
 }
 
 @layer components {

@@ -20,6 +20,7 @@ import {
 import { trackEvent } from "@/lib/analytics/track";
 import { getStoreItem, type StoreCategory } from "@/lib/store/catalog";
 import { listOwnedItemIds } from "@/lib/db/points";
+import { getProfileByUserId } from "@/lib/db/profiles";
 import type { CrewInsert } from "@/lib/db/crews";
 
 export interface CrewFormState {
@@ -202,6 +203,11 @@ export async function equipCrewItemAction(
   if (itemId) {
     const item = getStoreItem(itemId);
     if (!item || item.category !== category) return { error: "Invalid item." };
+
+    if (item.founderOnly) {
+      const profile = await getProfileByUserId(supabase, user.id);
+      if (!profile?.is_founder) return { error: "That item isn't available." };
+    }
 
     const owned = await listOwnedItemIds(supabase, user.id);
     if (!owned.has(itemId)) return { error: "You don't own this item." };

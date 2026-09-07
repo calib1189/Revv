@@ -12,6 +12,7 @@ import { isVehicleCategory } from "@/lib/vehicles/category";
 import { isUnderIdentifyRateLimit, recordIdentifyAttempt } from "@/lib/vehicles/identify-rate-limit";
 import { getStoreItem } from "@/lib/store/catalog";
 import { listOwnedItemIds } from "@/lib/db/points";
+import { getProfileByUserId } from "@/lib/db/profiles";
 import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleInsert } from "@/lib/db/vehicles";
 
@@ -174,6 +175,11 @@ export async function equipVehicleBackdropAction(
   if (itemId) {
     const item = getStoreItem(itemId);
     if (!item || item.category !== "garage_backdrop") return { error: "Invalid item." };
+
+    if (item.founderOnly) {
+      const profile = await getProfileByUserId(supabase, user.id);
+      if (!profile?.is_founder) return { error: "That item isn't available." };
+    }
 
     const owned = await listOwnedItemIds(supabase, user.id);
     if (!owned.has(itemId)) return { error: "You don't own this item." };

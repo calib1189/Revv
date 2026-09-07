@@ -3,8 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
 import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
-import { updateEquippedCosmetic, type EquipCategory } from "@/lib/db/profiles";
-import { getStoreItem, type StoreCategory } from "@/lib/store/catalog";
+import { updateEquippedCosmetic, getProfileByUserId, type EquipCategory } from "@/lib/db/profiles";
+import { getStoreItem, type StoreCategory, type StoreItem } from "@/lib/store/catalog";
+
+/** Shared by purchaseItemAction and equipItemAction (and mirrored in
+ * equipCrewItemAction / equipVehicleBackdropAction) — the UI already
+ * hides a founderOnly item from anyone whose own profile isn't the
+ * founder's, but a request naming the id directly still has to be
+ * rejected the same way an under-priced purchase would be. */
+async function assertFounderAccess(
+  supabase: Awaited<ReturnType<typeof requireConfirmedUser>>["supabase"],
+  userId: string,
+  item: StoreItem,
+): Promise<string | null> {
+  if (!item.founderOnly) return null;
+  const profile = await getProfileByUserId(supabase, userId);
+  if (!profile?.is_founder) return "That item isn't available.";
+  return null;
+}
 
 const EQUIP_CATEGORIES = new Set<StoreCategory>([
   "name_color",
@@ -38,6 +54,9 @@ export async function purchaseItemAction(itemId: string): Promise<StoreActionSta
   if (!item) return { error: "That item doesn't exist." };
 
   const { supabase, user } = await requireConfirmedUser();
+
+  const founderError = await assertFounderAccess(supabase, user.id, item);
+  if (founderError) return { error: founderError };
 
   const owned = await listOwnedItemIds(supabase, user.id);
   if (owned.has(itemId)) return { error: "You already own this." };
@@ -81,6 +100,9 @@ export async function equipItemAction(
   if (itemId) {
     const item = getStoreItem(itemId);
     if (!item || item.category !== category) return { error: "Invalid item." };
+
+    const founderError = await assertFounderAccess(supabase, user.id, item);
+    if (founderError) return { error: founderError };
 
     const owned = await listOwnedItemIds(supabase, user.id);
     if (!owned.has(itemId)) return { error: "You don't own this item." };

@@ -151,6 +151,7 @@ export function StorePageContent({
   previewLabel,
   onBuy,
   onEquip,
+  isFounder = false,
 }: {
   title: string;
   subtitle: string;
@@ -162,6 +163,11 @@ export function StorePageContent({
   previewLabel: string;
   onBuy: (item: StoreItem) => void;
   onEquip: (item: StoreItem) => void;
+  /** The viewer's own profiles.is_founder — the only thing that lets a
+   * founderOnly item show up in this list at all. Never trust this
+   * alone for the actual write, though: purchaseItemAction and every
+   * equip action re-check it server-side. */
+  isFounder?: boolean;
 }) {
   return (
     <div>
@@ -182,7 +188,7 @@ export function StorePageContent({
             {STORE_CATEGORY_LABELS[category]}
           </h2>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {listStoreItemsByCategory(category).map((item) => (
+            {listStoreItemsByCategory(category, { includeFounderOnly: isFounder }).map((item) => (
               <StoreItemCard
                 key={item.id}
                 item={item}

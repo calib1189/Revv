@@ -67,6 +67,7 @@ export default async function StorePage() {
           vehicle_name_color: profile?.equipped_vehicle_name_color ?? null,
         }}
         crews={crews}
+        isFounder={profile?.is_founder ?? false}
       />
     </div>
   );

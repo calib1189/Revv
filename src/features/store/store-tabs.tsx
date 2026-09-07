@@ -70,6 +70,7 @@ export function StoreTabs({
   garagePreviewLabel,
   garageEquipped,
   crews,
+  isFounder = false,
 }: {
   initialBalance: number;
   initialOwnedItemIds: string[];
@@ -78,6 +79,9 @@ export function StoreTabs({
   garagePreviewLabel: string;
   garageEquipped: Equipped;
   crews: OwnedCrewOption[];
+  /** The viewer's own profiles.is_founder — the only thing that surfaces
+   * a founderOnly item in any of these three shops at all. */
+  isFounder?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("profile");
   const [balance, setBalance] = useState(initialBalance);
@@ -172,6 +176,7 @@ export function StoreTabs({
           previewLabel={profilePreviewLabel}
           onBuy={buy}
           onEquip={equip}
+          isFounder={isFounder}
         />
       </div>
 
@@ -200,6 +205,7 @@ export function StoreTabs({
           previewLabel={garagePreviewLabel}
           onBuy={buy}
           onEquip={equip}
+          isFounder={isFounder}
         />
       </div>
 
@@ -247,6 +253,7 @@ export function StoreTabs({
                 previewLabel={selectedCrew.name}
                 onBuy={buy}
                 onEquip={equip}
+                isFounder={isFounder}
               />
             )}
           </>

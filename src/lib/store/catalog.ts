@@ -37,6 +37,13 @@ export interface StoreItem {
    *  has to work as a plain static color/gradient — this field is the
    *  opt-in for the shimmer. */
   effectClassName?: string;
+  /** Reserved for profiles.is_founder — never sold, never shown, never
+   *  equippable by anyone else. Checked server-side in
+   *  purchaseItemAction and every equip action, not just hidden from
+   *  the UI: listStoreItemsByCategory's own filtering is the normal
+   *  path, but a request naming the id directly still has to be
+   *  rejected the same way an under-priced purchase would be. */
+  founderOnly?: boolean;
 }
 
 /** A fixed, code-defined catalog — same relationship to
@@ -158,6 +165,15 @@ const PROFILE_ITEMS: StoreItem[] = [
     effectClassName: "text-shimmer-anim",
   },
   { id: "name_ruby", category: "name_color", name: "Ruby", price: 110, value: "#e0115f" },
+  {
+    id: "name_founder",
+    category: "name_color",
+    name: "Founder",
+    price: 0,
+    value: "linear-gradient(90deg, #000000, #ff4433, #fbbf24, #ff4433, #000000)",
+    effectClassName: "text-shimmer-anim",
+    founderOnly: true,
+  },
 
   // ---- Profile backgrounds ----
   {
@@ -300,6 +316,15 @@ const PROFILE_ITEMS: StoreItem[] = [
     value: "linear-gradient(150deg, #1c0a00, #451a03, #fbbf24, #ef4444, #a21caf, #1c0a00)",
     effectClassName: "bg-inferno-anim",
   },
+  {
+    id: "bg_founder",
+    category: "profile_background",
+    name: "Founder",
+    price: 0,
+    value: "linear-gradient(135deg, #050505, #1a0000, #450a0a, #1a0000, #050505)",
+    effectClassName: "bg-chrome-flow-anim",
+    founderOnly: true,
+  },
 
   // ---- Showcase frames ----
   { id: "frame_bronze", category: "showcase_frame", name: "Bronze Ring", price: 40, value: "frame-bronze-ring" },
@@ -326,16 +351,25 @@ const PROFILE_ITEMS: StoreItem[] = [
     value: "frame-titanium-ring",
   },
   { id: "frame_cosmic", category: "showcase_frame", name: "Cosmic Ring", price: 180, value: "frame-cosmic-ring" },
+  {
+    id: "frame_founder",
+    category: "showcase_frame",
+    name: "Founder Ring",
+    price: 0,
+    value: "frame-founder-ring",
+    founderOnly: true,
+  },
 ];
 
 const PROFILE_ITEM_BY_ID = new Map(PROFILE_ITEMS.map((item) => [item.id, item]));
 
 /** Re-packages an existing profile-scope item's visual (value +
- * effectClassName) under a new id/category for the garage and crew
- * shops — same look, different slot. Keeps the CSS/gradients defined
- * exactly once above instead of re-typing every color string per shop;
- * throws at module load (not silently) if a theme id is ever wrong,
- * since that's a real bug in this file, not user input. */
+ * effectClassName + founderOnly) under a new id/category for the
+ * garage and crew shops — same look, same exclusivity, different slot.
+ * Keeps the CSS/gradients defined exactly once above instead of
+ * re-typing every color string per shop; throws at module load (not
+ * silently) if a theme id is ever wrong, since that's a real bug in
+ * this file, not user input. */
 function deriveItem(sourceId: string, newId: string, category: StoreCategory): StoreItem {
   const source = PROFILE_ITEM_BY_ID.get(sourceId);
   if (!source) throw new Error(`lib/store/catalog: unknown source item "${sourceId}"`);
@@ -346,6 +380,7 @@ function deriveItem(sourceId: string, newId: string, category: StoreCategory): S
     price: source.price,
     value: source.value,
     effectClassName: source.effectClassName,
+    founderOnly: source.founderOnly,
   };
 }
 
@@ -368,6 +403,7 @@ const MATERIAL_THEMES = [
   "diamond",
   "legendary",
   "inferno",
+  "founder",
 ] as const;
 
 // Garage Backdrop deliberately has no CSS-gradient items — every one
@@ -475,6 +511,18 @@ export function getStoreItem(id: string): StoreItem | undefined {
   return STORE_ITEM_BY_ID.get(id);
 }
 
-export function listStoreItemsByCategory(category: StoreCategory): StoreItem[] {
-  return STORE_ITEMS.filter((item) => item.category === category);
+/** `includeFounderOnly` defaults to false so every existing call site
+ * (the vast majority of them) automatically excludes founder-exclusive
+ * items without having to know that concept exists — a caller has to
+ * deliberately opt in (after checking the viewer's own
+ * profiles.is_founder) to ever see one listed. This is the display
+ * side of the exclusivity; purchaseItemAction and the equip actions
+ * separately enforce it server-side regardless of what the UI shows. */
+export function listStoreItemsByCategory(
+  category: StoreCategory,
+  { includeFounderOnly = false }: { includeFounderOnly?: boolean } = {},
+): StoreItem[] {
+  return STORE_ITEMS.filter(
+    (item) => item.category === category && (includeFounderOnly || !item.founderOnly),
+  );
 }
