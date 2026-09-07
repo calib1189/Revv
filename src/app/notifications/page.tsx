@@ -86,7 +86,7 @@ export default async function NotificationsPage() {
                   <span className="min-w-0 flex-1 text-sm">
                     <span className="font-medium">@{username}</span> {verb}
                   </span>
-                  <span className="flex-shrink-0 text-xs text-muted">
+                  <span className="flex-shrink-0 text-xs text-muted" suppressHydrationWarning>
                     {relativeTime(n.created_at)}
                   </span>
                   {!n.read_at && (

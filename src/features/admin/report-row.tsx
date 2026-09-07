@@ -39,7 +39,7 @@ export function ReportRow({
         <p className="text-sm font-medium capitalize">
           {report.target_type} reported for {report.reason}
         </p>
-        <p className="text-xs text-muted">
+        <p className="text-xs text-muted" suppressHydrationWarning>
           Reported by @{reporterUsername} · {relativeTime(report.created_at)}
         </p>
         {href && (

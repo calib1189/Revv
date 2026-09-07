@@ -135,7 +135,7 @@ function CommentRow({
           {comment.body}
         </p>
         <div className="mt-0.5 flex items-center gap-3">
-          <span className="text-xs text-muted">
+          <span className="text-xs text-muted" suppressHydrationWarning>
             {relativeTime(comment.created_at)}
           </span>
           {onReply && (

@@ -31,7 +31,7 @@ export default async function AuditLogPage() {
               {log.target_type && (
                 <span className="text-muted"> · {log.target_type}</span>
               )}
-              <span className="ml-2 text-xs text-muted">
+              <span className="ml-2 text-xs text-muted" suppressHydrationWarning>
                 {relativeTime(log.created_at)}
               </span>
             </li>

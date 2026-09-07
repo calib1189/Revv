@@ -70,7 +70,7 @@ export default async function MessagesInboxPage() {
                   </div>
                   <div className="flex flex-shrink-0 flex-col items-end gap-1">
                     {lastMessage && (
-                      <span className="text-xs text-muted">
+                      <span className="text-xs text-muted" suppressHydrationWarning>
                         {relativeTime(lastMessage.created_at)}
                       </span>
                     )}

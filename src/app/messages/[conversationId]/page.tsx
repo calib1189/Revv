@@ -80,6 +80,7 @@ export default async function ConversationPage({
                   <p className="whitespace-pre-wrap">{message.body}</p>
                   <p
                     className={`mt-0.5 text-[10px] ${isMine ? "text-accent-foreground/70" : "text-muted"}`}
+                    suppressHydrationWarning
                   >
                     {relativeTime(message.created_at)}
                   </p>

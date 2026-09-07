@@ -85,7 +85,7 @@ export function PostCard({ data }: { data: PostCardData }) {
             </Link>
           )}
         </div>
-        <span className="flex-shrink-0 text-xs text-muted">
+        <span className="flex-shrink-0 text-xs text-muted" suppressHydrationWarning>
           {relativeTime(post.created_at)}
         </span>
       </div>
