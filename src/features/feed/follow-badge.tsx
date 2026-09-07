@@ -41,7 +41,12 @@ export function FollowBadge({
       type="button"
       onClick={handleClick}
       aria-label={`Follow @${authorUsername}`}
-      className="absolute -bottom-1 left-1/2 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-[0_0_0_2px_rgb(0_0_0_/_0.85),0_0_10px_1px_rgb(255_68_51_/_0.6)]"
+      // z-10: RankFrame's ring is drawn via ::before/::after pseudo-elements
+      // pinned to z-index 5/6 (globals.css), and .rank-frame never sets its
+      // own z-index so it doesn't contain that inside a local stacking
+      // context — those values leak out and beat this badge's implicit
+      // z-index:auto, painting the ring in front of it. Needs to clear 6.
+      className="absolute -bottom-1 left-1/2 z-10 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-[0_0_0_2px_rgb(0_0_0_/_0.85),0_0_10px_1px_rgb(255_68_51_/_0.6)]"
     >
       <PlusIcon className="h-3.5 w-3.5" strokeWidth={3} />
     </button>
