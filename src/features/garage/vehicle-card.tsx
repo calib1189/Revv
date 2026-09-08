@@ -82,42 +82,41 @@ export function VehicleCard({
       >
         {backdropItem ? (
           <>
-            {/* The backdrop is the whole card's stage — the car's own
-                photo sits on it as a smaller plate, bottom-center, like
-                a car parked in front of a scene rather than filling the
-                frame itself. */}
+            {/* Same even-margin-on-every-side treatment as VehicleBay's
+                showroom stage (see that file's own notes) — this card
+                used to bottom-anchor a small plate with a plain white
+                ring and a heavy shadow, which is exactly the "uneven,
+                cheap-looking border" this fixes. */}
             <div
               className={`absolute inset-0 ${backdropItem.effectClassName ?? ""}`}
               style={{ backgroundImage: backdropItem.value }}
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/5" />
 
-            <div className="absolute inset-x-0 bottom-0 flex justify-center px-3 pb-3">
-              <div className="w-[62%] max-w-[168px] overflow-hidden rounded-lg bg-surface shadow-2xl ring-1 ring-white/15">
-                <div className="relative aspect-[4/3]">
-                  {heroUrl ? (
-                    <Image
-                      src={heroUrl}
-                      alt={title}
-                      fill
-                      priority={priority}
-                      sizes="200px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-[10px] text-muted">
-                      No photo yet
-                    </div>
-                  )}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/0 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-2">
-                    <VehicleName
-                      title={title}
-                      size="sm"
-                      nameColorValue={nameColorValue}
-                      nameColorEffectClassName={nameColorEffectClassName}
-                    />
+            <div className="absolute inset-3">
+              <div className="relative h-full w-full overflow-hidden rounded-xl shadow-lg">
+                {heroUrl ? (
+                  <Image
+                    src={heroUrl}
+                    alt={title}
+                    fill
+                    priority={priority}
+                    sizes="200px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[10px] text-muted">
+                    No photo yet
                   </div>
+                )}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/0 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-2">
+                  <VehicleName
+                    title={title}
+                    size="sm"
+                    nameColorValue={nameColorValue}
+                    nameColorEffectClassName={nameColorEffectClassName}
+                  />
                 </div>
               </div>
             </div>
