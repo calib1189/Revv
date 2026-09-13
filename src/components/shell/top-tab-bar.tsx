@@ -36,7 +36,7 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
 
   return (
     <header
-      className={`sticky top-0 z-10 rounded-none pt-[env(safe-area-inset-top)] ${
+      className={`sticky top-0 z-10 isolate rounded-none pt-[env(safe-area-inset-top)] will-change-transform ${
         isImmersive ? "border-none bg-transparent" : "glass-raised border-x-0 border-t-0"
       }`}
     >
