@@ -10,6 +10,7 @@ import { listFollowingIds } from "@/lib/db/follows";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { listVehiclesByOwnerIds } from "@/lib/db/vehicles";
+import { getSoundsByIds, publicSoundUrl } from "@/lib/db/sounds";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Profile } from "@/lib/db/profiles";
 import type { PostCardData, PostMediaItem } from "@/features/feed/post-card";
@@ -28,6 +29,9 @@ export async function composePostCards(
       posts.map((p) => p.vehicle_id).filter((id): id is string => Boolean(id)),
     ),
   ];
+  const soundIds = [
+    ...new Set(posts.map((p) => p.sound_id).filter((id): id is string => Boolean(id))),
+  ];
 
   const [
     postMedia,
@@ -41,6 +45,7 @@ export async function composePostCards(
     authors,
     vehicles,
     authorVehicles,
+    sounds,
   ] = await Promise.all([
     listPostMediaForPosts(supabase, postIds),
     getLikeCountsForPosts(supabase, postIds),
@@ -66,6 +71,7 @@ export async function composePostCards(
     // aren't tagged to a vehicle at all, which would otherwise mean the
     // ring almost never showed up in the feed.
     listVehiclesByOwnerIds(supabase, authorIds),
+    getSoundsByIds(supabase, soundIds),
   ]);
   const followingIdSet = new Set(followingIds);
 
@@ -75,6 +81,7 @@ export async function composePostCards(
   const vehicleById = new Map(
     (vehicles.data ?? []).map((v: Vehicle) => [v.id, v]),
   );
+  const soundById = new Map(sounds.map((s) => [s.id, s]));
 
   const authorActiveBuildByVehicle = await listActiveBuildsByVehicleIds(
     supabase,
@@ -112,6 +119,7 @@ export async function composePostCards(
   return posts.map((post) => {
     const vehicle = post.vehicle_id ? vehicleById.get(post.vehicle_id) : null;
     const author = authorById.get(post.author_id);
+    const sound = post.sound_id ? soundById.get(post.sound_id) : null;
     return {
       post,
       authorId: post.author_id,
@@ -123,6 +131,9 @@ export async function composePostCards(
       vehicleTitle: vehicle
         ? vehicle.nickname || `${vehicle.make} ${vehicle.model}`
         : null,
+      soundId: post.sound_id,
+      soundTitle: sound?.title ?? null,
+      soundUrl: sound ? publicSoundUrl(supabase, sound.storage_path) : null,
       authorBestRatingScore: bestScoreByAuthor.get(post.author_id) ?? null,
       media: mediaByPost.get(post.id) ?? [],
       likeCount: likeCounts.get(post.id) ?? 0,

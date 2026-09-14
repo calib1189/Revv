@@ -107,3 +107,43 @@ export async function uploadVideo(
 
   return { storagePath, ...metadata };
 }
+
+function readAudioDurationMs(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const audio = new Audio();
+    audio.preload = "metadata";
+    audio.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(Math.round(audio.duration * 1000));
+    };
+    audio.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read audio metadata."));
+    };
+    audio.src = url;
+  });
+}
+
+export interface UploadedAudio {
+  storagePath: string;
+  durationMs: number;
+}
+
+export async function uploadAudio(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  file: File,
+): Promise<UploadedAudio> {
+  const durationMs = await readAudioDurationMs(file);
+  const extension = file.name.split(".").pop() || "mp3";
+  const storagePath = `${userId}/${crypto.randomUUID()}.${extension}`;
+
+  const { error } = await supabase.storage
+    .from("media")
+    .upload(storagePath, file, { contentType: file.type, cacheControl: IMMUTABLE_CACHE_CONTROL });
+
+  if (error) throw error;
+
+  return { storagePath, durationMs };
+}

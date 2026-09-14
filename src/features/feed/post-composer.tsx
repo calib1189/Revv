@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { BackIcon, HashtagIcon, CloseIcon, VolumeIcon } from "@/components/ui/icons";
+import { BackIcon, HashtagIcon, CloseIcon, VolumeIcon, MusicIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
+import { SoundPickerSheet } from "@/features/sounds/sound-picker-sheet";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Crew } from "@/lib/db/crews";
+import type { Sound } from "@/lib/db/sounds";
 
 interface SelectedPhoto {
   file: File;
@@ -44,6 +46,8 @@ export function PostComposer({
   onVehicleIdChange,
   crewId,
   onCrewIdChange,
+  sound,
+  onSoundChange,
   onBack,
   onRemovePhoto,
   onSubmit,
@@ -63,12 +67,15 @@ export function PostComposer({
   onVehicleIdChange: (value: string) => void;
   crewId: string;
   onCrewIdChange: (value: string) => void;
+  sound: Sound | null;
+  onSoundChange: (sound: Sound | null) => void;
   onBack: () => void;
   onRemovePhoto: (index: number) => void;
   onSubmit: (e: React.FormEvent) => void;
   isSubmitting: boolean;
   error: string | null;
 }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const hashtagChips = parseHashtags(hashtags);
   // Starts muted so the background preview can autoplay the instant this
   // screen mounts — unmuted autoplay without a fresh tap gets blocked on
@@ -229,10 +236,53 @@ export function PostComposer({
           </div>
         )}
 
+        <div>
+          <Label htmlFor="sound-picker-launcher">Sound</Label>
+          {sound ? (
+            <div className="glass-inset flex items-center gap-3 rounded-xl px-3.5 py-2.5">
+              <MusicIcon className="h-4 w-4 flex-shrink-0 text-muted" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{sound.title}</p>
+                {sound.artist_name && (
+                  <p className="truncate text-xs text-muted">{sound.artist_name}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => onSoundChange(null)}
+                aria-label="Remove sound"
+                className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-muted hover:text-foreground"
+              >
+                <CloseIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              id="sound-picker-launcher"
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="glass-inset flex w-full items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm text-muted hover:text-foreground"
+            >
+              <MusicIcon className="h-4 w-4 flex-shrink-0" />
+              Add a sound
+            </button>
+          )}
+        </div>
+
         <Button type="submit" disabled={isSubmitting} className="mt-1 w-full py-3 text-base">
           {isSubmitting ? "Publishing…" : "Publish"}
         </Button>
       </form>
+
+      {pickerOpen && (
+        <SoundPickerSheet
+          onSelect={(selected) => {
+            onSoundChange(selected);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </div>
   );
 }

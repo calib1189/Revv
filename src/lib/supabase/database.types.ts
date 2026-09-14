@@ -382,6 +382,7 @@ export interface Database {
           vehicle_id: string | null;
           build_id: string | null;
           crew_id: string | null;
+          sound_id: string | null;
           post_type: "photo" | "video";
           caption: string | null;
           created_at: string;
@@ -392,11 +393,40 @@ export interface Database {
           vehicle_id?: string | null;
           build_id?: string | null;
           crew_id?: string | null;
+          sound_id?: string | null;
           post_type?: "photo" | "video";
           caption?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["posts"]["Insert"]>;
+        Relationships: never[];
+      };
+      sounds: {
+        Row: {
+          id: string;
+          owner_id: string | null;
+          title: string;
+          artist_name: string | null;
+          storage_path: string;
+          duration_ms: number;
+          source: "original" | "licensed" | "user_upload";
+          license_label: string | null;
+          license_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id?: string | null;
+          title: string;
+          artist_name?: string | null;
+          storage_path: string;
+          duration_ms: number;
+          source?: "original" | "licensed" | "user_upload";
+          license_label?: string | null;
+          license_url?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["sounds"]["Insert"]>;
         Relationships: never[];
       };
       post_media: {

@@ -26,6 +26,7 @@ import { ClipCombiner } from "@/features/editor/clip-combiner";
 import { PostComposer, parseHashtags } from "@/features/feed/post-composer";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Crew } from "@/lib/db/crews";
+import type { Sound } from "@/lib/db/sounds";
 
 interface SelectedPhoto {
   file: File;
@@ -137,10 +138,14 @@ export function ComposePostForm({
   userId,
   vehicles,
   crews,
+  initialSound = null,
 }: {
   userId: string;
   vehicles: Vehicle[];
   crews: Crew[];
+  /** Pre-attached when arriving via a sound's own "Use this sound" button
+   * (/feed/new?soundId=X) — skips the picker, shows the chip immediately. */
+  initialSound?: Sound | null;
 }) {
   const [step, setStep] = useState<Step>("camera");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
@@ -152,6 +157,7 @@ export function ComposePostForm({
   const [hashtags, setHashtags] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [crewId, setCrewId] = useState("");
+  const [sound, setSound] = useState<Sound | null>(initialSound);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -336,6 +342,7 @@ export function ComposePostForm({
         author_id: userId,
         vehicle_id: vehicleId || null,
         crew_id: crewId || null,
+        sound_id: sound?.id || null,
         post_type: mode!,
         caption: finalCaption || null,
       });
@@ -423,6 +430,8 @@ export function ComposePostForm({
           onVehicleIdChange={setVehicleId}
           crewId={crewId}
           onCrewIdChange={setCrewId}
+          sound={sound}
+          onSoundChange={setSound}
           onBack={() => setStep("camera")}
           onRemovePhoto={removePhoto}
           onSubmit={handleSubmit}

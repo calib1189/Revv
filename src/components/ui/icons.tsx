@@ -40,6 +40,15 @@ export function PlayIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function PauseIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <rect x="6" y="4.5" width="4" height="15" rx="1" />
+      <rect x="14" y="4.5" width="4" height="15" rx="1" />
+    </svg>
+  );
+}
+
 export function CommentIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

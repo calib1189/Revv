@@ -24,6 +24,11 @@ export interface PostCardData {
   authorAvatarUrl: string | null;
   authorIsVerified: boolean;
   vehicleTitle: string | null;
+  soundId: string | null;
+  soundTitle: string | null;
+  /** Only meaningful for a photo post — a video's own native audio plays
+   * as normal instead; see swipe-slide.tsx's PhotoMedia/VideoMedia split. */
+  soundUrl: string | null;
   /** The author's single best build score across all their vehicles —
    * same source as the rank ring on their profile page, not just
    * whichever vehicle (if any) is tagged on this specific post. */

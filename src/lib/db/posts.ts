@@ -69,6 +69,28 @@ export async function listCrewFeedPosts(
   return data;
 }
 
+/** Every post that used a given sound — this is the sound's own "reel"
+ * page. Same shape as listCrewFeedPosts; a sound is an additive tag too,
+ * so these posts still show up in the main feed as well. */
+export async function listPostsBySound(
+  supabase: SupabaseClient<Database>,
+  soundId: string,
+  { before, limit = 12 }: { before?: string; limit?: number } = {},
+): Promise<Post[]> {
+  let query = supabase
+    .from("posts")
+    .select("*")
+    .eq("sound_id", soundId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (before) query = query.lt("created_at", before);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data;
+}
+
 export async function listVideoPosts(
   supabase: SupabaseClient<Database>,
   { before, limit = 6 }: { before?: string; limit?: number } = {},

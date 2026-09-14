@@ -1,21 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { SwipeSlide } from "@/features/feed/swipe-slide";
 import { BackIcon } from "@/components/ui/icons";
 import type { PostCardData } from "@/features/feed/post-card";
 
 /** Fullscreen swipeable playback for one profile's posts — reuses the same
  * SwipeSlide as the main feed (autoplay-on-visible for video, carousel for
- * photos) scoped to a single author, opened by tapping their profile grid. */
+ * photos) scoped to a single author, opened by tapping their profile grid.
+ * Also reused as-is for a sound's own reel page (every post that used it),
+ * via the optional headerContent slot next to the back button — the sound
+ * page's title/artist/"Use this sound" bar, with nothing rendered here by
+ * default so the plain profile-reel caller is unchanged. */
 export function ProfileReelFeed({
   posts,
   isAuthenticated,
   backHref,
+  headerContent,
 }: {
   posts: PostCardData[];
   isAuthenticated: boolean;
   backHref: string;
+  headerContent?: ReactNode;
 }) {
   // The top bar's real height isn't just its 56px of content — it also
   // has pt-[env(safe-area-inset-top)] for the notch/Dynamic Island
@@ -41,11 +48,15 @@ export function ProfileReelFeed({
 
       <Link
         href={backHref}
-        aria-label="Back to profile"
+        aria-label="Back"
         className="absolute left-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
       >
         <BackIcon className="h-5 w-5" />
       </Link>
+
+      {headerContent && (
+        <div className="absolute inset-x-16 top-4 z-10">{headerContent}</div>
+      )}
     </div>
   );
 }

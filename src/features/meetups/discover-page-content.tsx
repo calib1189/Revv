@@ -6,14 +6,16 @@ import { publicMediaUrl } from "@/lib/db/media";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getCrewsByIds } from "@/lib/db/crews";
 import { listCrewIdsForUser } from "@/lib/db/crew-members";
+import { listTrendingSounds } from "@/lib/db/sounds";
 import { DiscoverTabs } from "@/features/discover/discover-tabs";
 import type { MeetupListItem } from "@/features/meetups/meetups-list";
 
 export async function DiscoverPageContent() {
   const supabase = await createClient();
-  const [user, meetups] = await Promise.all([
+  const [user, meetups, sounds] = await Promise.all([
     getCurrentUser(),
     listUpcomingMeetups(supabase),
+    listTrendingSounds(supabase),
   ]);
 
   const [hostProfiles, meetupMedia] = await Promise.all([
@@ -49,5 +51,12 @@ export async function DiscoverPageContent() {
   const yourCrews = currentUserId
     ? await getCrewsByIds(supabase, await listCrewIdsForUser(supabase, currentUserId))
     : [];
-  return <DiscoverTabs meetupItems={items} currentUserId={currentUserId} crews={yourCrews} />;
+  return (
+    <DiscoverTabs
+      meetupItems={items}
+      currentUserId={currentUserId}
+      crews={yourCrews}
+      sounds={sounds}
+    />
+  );
 }

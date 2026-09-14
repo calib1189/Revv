@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { MeetupsList, type MeetupListItem } from "@/features/meetups/meetups-list";
 import { ShopsBrowser } from "@/features/shops/shops-browser";
+import { SoundBrowser } from "@/features/sounds/sound-browser";
 import type { Crew } from "@/lib/db/crews";
+import type { Sound } from "@/lib/db/sounds";
 
-type DiscoverTab = "meets" | "shops";
+type DiscoverTab = "meets" | "shops" | "sounds";
 
 /** The Discover tab hosts two unrelated things — car meets and a local
  * shop directory — so this just toggles which one is mounted, rather
@@ -29,10 +31,12 @@ export function DiscoverTabs({
   meetupItems,
   currentUserId,
   crews,
+  sounds,
 }: {
   meetupItems: MeetupListItem[];
   currentUserId: string | null;
   crews: Crew[];
+  sounds: Sound[];
 }) {
   const [tab, setTab] = useState<DiscoverTab>("meets");
 
@@ -58,13 +62,26 @@ export function DiscoverTabs({
           >
             Shops
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("sounds")}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              tab === "sounds" ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"
+            }`}
+          >
+            Sounds
+          </button>
         </div>
       </div>
 
-      {tab === "meets" ? (
+      {tab === "meets" && (
         <MeetupsList items={meetupItems} currentUserId={currentUserId} crews={crews} />
-      ) : (
-        <ShopsBrowser />
+      )}
+      {tab === "shops" && <ShopsBrowser />}
+      {tab === "sounds" && (
+        <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6">
+          <SoundBrowser initialSounds={sounds} />
+        </div>
       )}
     </div>
   );

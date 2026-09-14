@@ -12,7 +12,7 @@ import { CaptionText } from "@/features/feed/caption-text";
 import { recordViewAction, recordViewCompletionAction, recordShareAction } from "@/features/feed/actions";
 import { usePostLike } from "@/features/feed/use-post-like";
 import { useDoubleTap } from "@/features/feed/use-double-tap";
-import { CommentIcon, EyeIcon, HeartIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon } from "@/components/ui/icons";
+import { CommentIcon, EyeIcon, HeartIcon, MusicIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { SITE_URL } from "@/lib/site-url";
 import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
@@ -183,9 +183,24 @@ function VideoMedia({
   );
 }
 
-function PhotoMedia({ urls, shouldLoad }: { urls: string[]; shouldLoad: boolean }) {
+/** A photo post has no native audio track of its own, unlike a video — so
+ * an attached sound actually plays here (looped, synced to on-screen
+ * visibility via the same 60%-visible threshold VideoMedia uses for
+ * autoplay). A video post's attached sound is attribution/discovery only
+ * (the chip in SwipeSlide below) — its own native audio keeps playing
+ * unchanged, rather than layering a second audio source on top of it. */
+function PhotoMedia({
+  urls,
+  shouldLoad,
+  soundUrl,
+}: {
+  urls: string[];
+  shouldLoad: boolean;
+  soundUrl: string | null;
+}) {
   const [index, setIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   function handleScroll() {
     const el = containerRef.current;
@@ -193,8 +208,29 @@ function PhotoMedia({ urls, shouldLoad }: { urls: string[]; shouldLoad: boolean 
     setIndex(Math.round(el.scrollLeft / el.clientWidth));
   }
 
+  useEffect(() => {
+    if (!soundUrl || !shouldLoad) return;
+    const audio = audioRef.current;
+    const container = containerRef.current;
+    if (!audio || !container) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+          audio.play().catch(() => {});
+        } else {
+          audio.pause();
+        }
+      },
+      { threshold: [0, 0.6, 1] },
+    );
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [soundUrl, shouldLoad]);
+
   return (
     <div className="absolute inset-0">
+      {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} loop />}
       <div
         ref={containerRef}
         onScroll={handleScroll}
@@ -312,7 +348,11 @@ export function SwipeSlide({
             onDoubleTapLike={like}
           />
         ) : (
-          <PhotoMedia urls={data.media.map((m) => m.url)} shouldLoad={shouldLoadMedia} />
+          <PhotoMedia
+            urls={data.media.map((m) => m.url)}
+            shouldLoad={shouldLoadMedia}
+            soundUrl={data.soundUrl}
+          />
         ))}
 
       {data.isOwnPost && (
@@ -345,6 +385,15 @@ export function SwipeSlide({
               className="block text-xs text-white/70 hover:text-white"
             >
               • {data.vehicleTitle}
+            </Link>
+          )}
+          {data.soundTitle && data.soundId && (
+            <Link
+              href={`/sounds/${data.soundId}`}
+              className="mt-1 flex items-center gap-1 text-xs text-white/80 hover:text-white"
+            >
+              <MusicIcon className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{data.soundTitle}</span>
             </Link>
           )}
           {displayedCaption && (

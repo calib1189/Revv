@@ -47,3 +47,27 @@ export function validateVideoDuration(durationSeconds: number): string | null {
   }
   return null;
 }
+
+export const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
+const MAX_AUDIO_DURATION_SECONDS = 300;
+const ALLOWED_AUDIO_TYPES = ["audio/mpeg", "audio/mp4", "audio/aac", "audio/wav", "audio/x-wav"];
+
+export function validateAudioFile(file: {
+  type: string;
+  size: number;
+}): string | null {
+  if (!ALLOWED_AUDIO_TYPES.includes(file.type)) {
+    return "Please upload an MP3, M4A, AAC, or WAV audio file.";
+  }
+  if (file.size > MAX_AUDIO_BYTES) {
+    return "Audio must be smaller than 20MB.";
+  }
+  return null;
+}
+
+export function validateAudioDuration(durationSeconds: number): string | null {
+  if (durationSeconds > MAX_AUDIO_DURATION_SECONDS) {
+    return "Sound must be 5 minutes or shorter.";
+  }
+  return null;
+}

@@ -5,11 +5,18 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { getCrewsByIds } from "@/lib/db/crews";
 import { listCrewIdsForUser } from "@/lib/db/crew-members";
+import { getSoundById } from "@/lib/db/sounds";
 import { ComposePostForm } from "@/features/feed/compose-post-form";
 
-export default async function NewPostPage() {
+export default async function NewPostPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ soundId?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/feed/new");
+
+  const { soundId } = await searchParams;
 
   const supabase = await createClient();
 
@@ -30,11 +37,19 @@ export default async function NewPostPage() {
     );
   }
 
-  const [vehicles, crewIds] = await Promise.all([
+  const [vehicles, crewIds, initialSound] = await Promise.all([
     listVehiclesByOwner(supabase, user.id),
     listCrewIdsForUser(supabase, user.id),
+    soundId ? getSoundById(supabase, soundId) : Promise.resolve(null),
   ]);
   const crews = await getCrewsByIds(supabase, crewIds);
 
-  return <ComposePostForm userId={user.id} vehicles={vehicles} crews={crews} />;
+  return (
+    <ComposePostForm
+      userId={user.id}
+      vehicles={vehicles}
+      crews={crews}
+      initialSound={initialSound}
+    />
+  );
 }
