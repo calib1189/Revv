@@ -12,11 +12,21 @@ import type { MeetupListItem } from "@/features/meetups/meetups-list";
 
 export async function DiscoverPageContent() {
   const supabase = await createClient();
-  const [user, meetups, sounds] = await Promise.all([
+  const [user, meetups] = await Promise.all([
     getCurrentUser(),
     listUpcomingMeetups(supabase),
-    listTrendingSounds(supabase),
   ]);
+
+  // Degrade gracefully if the sounds migration hasn't been applied yet —
+  // same reasoning as header.tsx's messaging fetch: a missing table here
+  // shouldn't take down the whole Discover page, just leave its Sounds
+  // tab looking empty until the migration runs.
+  let sounds: Awaited<ReturnType<typeof listTrendingSounds>> = [];
+  try {
+    sounds = await listTrendingSounds(supabase);
+  } catch {
+    sounds = [];
+  }
 
   const [hostProfiles, meetupMedia] = await Promise.all([
     Promise.all(
