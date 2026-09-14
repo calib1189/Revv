@@ -18,6 +18,14 @@
   --glass-border: rgb(var(--glass-tint) / 0.08);
   --glass-border-raised: rgb(var(--glass-tint) / 0.1);
   --glass-highlight: rgb(var(--glass-tint) / 0.1);
+  /* A near-opaque fallback base for anything that floats over arbitrary
+     page content (modals, sheets, popovers — see .glass-raised below) —
+     legible entirely on its own, with backdrop-filter blur layered on
+     top only as an enhancement where it renders. Needed because some
+     WebKit contexts (older Safari, and the app's own iOS WKWebView
+     wrapper) don't reliably apply backdrop-filter even with the
+     -webkit- prefix, and the ~4% tint alone is invisible without it. */
+  --glass-solid-raised: rgb(26 26 29 / 0.96);
 
   --bg-glow-1: rgb(255 255 255 / 0.05);
   --bg-glow-2: rgb(255 68 51 / 0.04);
@@ -51,6 +59,7 @@
   --glass-border: rgb(var(--glass-tint) / 0.1);
   --glass-border-raised: rgb(var(--glass-tint) / 0.13);
   --glass-highlight: rgb(255 255 255 / 0.7);
+  --glass-solid-raised: rgb(255 255 255 / 0.96);
 
   --bg-glow-1: rgb(0 0 0 / 0.025);
   --bg-glow-2: rgb(255 68 51 / 0.05);
@@ -76,6 +85,7 @@
     --glass-border: rgb(var(--glass-tint) / 0.1);
     --glass-border-raised: rgb(var(--glass-tint) / 0.13);
     --glass-highlight: rgb(255 255 255 / 0.7);
+    --glass-solid-raised: rgb(255 255 255 / 0.96);
 
     --bg-glow-1: rgb(0 0 0 / 0.025);
     --bg-glow-2: rgb(255 68 51 / 0.05);
@@ -584,7 +594,13 @@ html.native-app body::-webkit-scrollbar {
   }
 
   .glass-raised {
-    background: linear-gradient(180deg, var(--glass-bg-raised), rgb(var(--glass-tint) / 0.018));
+    /* A near-opaque solid base (--glass-solid-raised), not the ~4% tint
+       .glass uses — this is the class every modal/sheet/popover uses to
+       float over arbitrary page content, so it has to stay legible even
+       where backdrop-filter doesn't render at all (see that variable's
+       definition for why). The blur below still adds real depth on top
+       wherever it does apply. */
+    background: linear-gradient(180deg, var(--glass-solid-raised), var(--glass-solid-raised));
     border: 1px solid var(--glass-border-raised);
     -webkit-backdrop-filter: blur(14px) saturate(135%);
     backdrop-filter: blur(14px) saturate(135%);
