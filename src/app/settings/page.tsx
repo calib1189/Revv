@@ -76,6 +76,13 @@ export default async function SettingsPage() {
           <span className="text-sm font-medium">Advertise on SORZA</span>
           <span className="text-xs text-muted">Put your shop or brand in front of real builders</span>
         </Link>
+        <Link
+          href="/settings/business"
+          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
+        >
+          <span className="text-sm font-medium">Business Profile</span>
+          <span className="text-xs text-muted">Claim your shop and add photos to its Discover listing</span>
+        </Link>
         {profile?.is_admin && (
           <Link
             href="/admin/reports"

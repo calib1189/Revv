@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { listOpenReports } from "@/lib/db/reports";
 import { listPendingVerifications } from "@/lib/db/vehicles";
+import { listPendingBusinessVerifications } from "@/lib/db/business-profiles";
 import { listPendingReviewCampaigns } from "@/lib/db/ad-campaigns";
 import { listPendingReviewMeetups } from "@/lib/db/meetups";
 import { AdminNav } from "@/features/admin/admin-nav";
@@ -28,12 +29,24 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     listPendingReviewMeetups(supabase),
   ]);
 
+  // Degrade gracefully if the business_profiles migration hasn't been
+  // applied yet — same reasoning as header.tsx's messaging fetch. This is
+  // the whole admin section's shared layout, so a missing table here
+  // would otherwise take down every /admin/* page, not just the new one.
+  let businessVerifications: Awaited<ReturnType<typeof listPendingBusinessVerifications>> = [];
+  try {
+    businessVerifications = await listPendingBusinessVerifications(supabase);
+  } catch {
+    businessVerifications = [];
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <AdminNav
         counts={{
           reports: reports.length,
           verifications: verifications.length,
+          businessVerifications: businessVerifications.length,
           ads: ads.length,
           meetups: meetups.length,
         }}

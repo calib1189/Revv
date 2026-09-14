@@ -1,13 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { getShopDetailsAction, recordShopProfileVisitAction } from "@/features/shops/actions";
 import { getShopCategory, isShopCategoryId } from "@/lib/shops/categories";
 import { SHOP_PROMOTION_TIERS, type ShopPromotionTier } from "@/lib/db/shop-promotions";
+import { getBusinessProfileByPlaceId } from "@/lib/db/business-profiles";
+import { listBusinessProfileMedia } from "@/lib/db/business-profile-media";
+import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { DirectionsButton, GetAQuoteButton, WebsiteLink } from "@/features/shops/shop-detail-actions";
 import { PromoteThisShop } from "@/features/shops/promote-this-shop";
 import { ShopAnalyticsSection } from "@/features/shops/shop-analytics-section";
-import { BackIcon, StarIcon, PinIcon, GemIcon, WrenchIcon } from "@/components/ui/icons";
+import { PhotoCarousel } from "@/features/feed/photo-carousel";
+import { BackIcon, StarIcon, PinIcon, GemIcon, WrenchIcon, VerifiedBadgeIcon } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
 const TIER_METAL_COLORS: Record<ShopPromotionTier, string> = {
@@ -54,6 +59,34 @@ export default async function ShopDetailPage({
     // best-effort only
   }
 
+  // A claimed, verified business overlays SORZA-native content on top of
+  // this Google listing — RLS only ever returns an approved row to a
+  // viewer who isn't its owner, so no explicit status check is needed
+  // here to keep an unapproved claim from leaking onto the public page.
+  // Wrapped in a try/catch, same reasoning as header.tsx's messaging
+  // fetch: a not-yet-applied migration for this table shouldn't take
+  // down every existing shop page, just leave it showing plain Google
+  // data until the migration runs.
+  const supabase = await createClient();
+  let businessProfile: Awaited<ReturnType<typeof getBusinessProfileByPlaceId>> = null;
+  let businessGallery: Awaited<ReturnType<typeof listBusinessProfileMedia>> = [];
+  let logoUrl: string | null = null;
+  try {
+    businessProfile = await getBusinessProfileByPlaceId(supabase, shop.placeId);
+    if (businessProfile?.verification_status === "approved") {
+      businessGallery = await listBusinessProfileMedia(supabase, businessProfile.id);
+      const logoMedia = businessProfile.logo_media_id
+        ? await getMediaById(supabase, businessProfile.logo_media_id)
+        : null;
+      logoUrl = logoMedia ? publicMediaUrl(supabase, logoMedia.storage_path) : null;
+    }
+  } catch {
+    businessProfile = null;
+    businessGallery = [];
+    logoUrl = null;
+  }
+  const isVerifiedBusiness = businessProfile?.verification_status === "approved";
+
   const categoryId = categoryParam && isShopCategoryId(categoryParam) ? categoryParam : null;
   const category = categoryId ? getShopCategory(categoryId) : null;
   const CategoryIcon = category?.icon ?? WrenchIcon;
@@ -69,12 +102,22 @@ export default async function ShopDetailPage({
       <div className="glass overflow-hidden rounded-2xl">
         <div className="p-5">
           <div className="flex items-start gap-3.5">
-            <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-surface-raised text-accent">
-              <CategoryIcon className="h-6 w-6" />
+            <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-surface-raised text-accent">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- small fixed-size logo, next/image overhead isn't worth it here
+                <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <CategoryIcon className="h-6 w-6" />
+              )}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl font-bold tracking-tight">{shop.name}</h1>
+                {isVerifiedBusiness && (
+                  <span className="flex flex-shrink-0 items-center gap-1 text-accent" title="Verified business">
+                    <VerifiedBadgeIcon className="h-4.5 w-4.5" />
+                  </span>
+                )}
                 {shop.promotionTier && (
                   <span
                     className="flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide"
@@ -124,11 +167,19 @@ export default async function ShopDetailPage({
             </div>
           )}
 
+          {isVerifiedBusiness && businessProfile?.description && (
+            <p className="mt-4 text-sm leading-relaxed text-foreground">{businessProfile.description}</p>
+          )}
+
           <div className="mt-5 flex gap-2.5">
             <DirectionsButton placeId={shop.placeId} name={shop.name} lat={shop.lat} lng={shop.lng} />
             <GetAQuoteButton placeId={shop.placeId} />
           </div>
         </div>
+
+        {businessGallery.length > 0 && (
+          <PhotoCarousel photos={businessGallery.map((item) => ({ url: publicMediaUrl(supabase, item.media.storage_path) }))} />
+        )}
       </div>
 
       <div className="mt-6">

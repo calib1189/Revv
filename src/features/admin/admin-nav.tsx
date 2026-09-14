@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 export interface AdminNavCounts {
   reports: number;
   verifications: number;
+  businessVerifications: number;
   ads: number;
   meetups: number;
 }
@@ -14,6 +15,7 @@ const LINKS: { href: string; label: string; countKey?: keyof AdminNavCounts }[] 
   { href: "/admin", label: "Overview" },
   { href: "/admin/reports", label: "Reports", countKey: "reports" },
   { href: "/admin/verifications", label: "Verifications", countKey: "verifications" },
+  { href: "/admin/business-verifications", label: "Business", countKey: "businessVerifications" },
   { href: "/admin/ads", label: "Ads", countKey: "ads" },
   { href: "/admin/meetups", label: "Meetups", countKey: "meetups" },
   { href: "/admin/active", label: "Active" },

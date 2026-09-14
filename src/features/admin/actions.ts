@@ -7,6 +7,7 @@ import { deletePost } from "@/lib/db/posts";
 import { deleteComment } from "@/lib/db/comments";
 import { deleteVehicle, updateVehicle } from "@/lib/db/vehicles";
 import { setUserBanned, setUserVerified, setUserFounder } from "@/lib/db/profiles";
+import { updateBusinessProfile } from "@/lib/db/business-profiles";
 import { createAuditLog } from "@/lib/db/audit-logs";
 
 export async function dismissReportAction(reportId: string): Promise<void> {
@@ -124,4 +125,20 @@ export async function setOwnershipVerificationStatusAction(
   });
   revalidatePath("/admin/verifications");
   revalidatePath("/leaderboard");
+}
+
+export async function setBusinessVerificationStatusAction(
+  businessProfileId: string,
+  status: "approved" | "rejected",
+): Promise<void> {
+  const { supabase, userId } = await requireAdmin();
+  await updateBusinessProfile(supabase, businessProfileId, { verification_status: status });
+  await createAuditLog(supabase, {
+    actorId: userId,
+    action: status === "approved" ? "business_profile.verification_approved" : "business_profile.verification_rejected",
+    targetType: "business_profile",
+    targetId: businessProfileId,
+  });
+  revalidatePath("/admin/business-verifications");
+  revalidatePath("/discover");
 }

@@ -899,6 +899,50 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["shop_promotions"]["Insert"]>;
         Relationships: never[];
       };
+      business_profiles: {
+        Row: {
+          id: string;
+          owner_id: string;
+          place_id: string;
+          place_name: string;
+          place_address: string | null;
+          description: string | null;
+          logo_media_id: string | null;
+          verification_status: "none" | "pending" | "approved" | "rejected";
+          verification_media_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          place_id: string;
+          place_name: string;
+          place_address?: string | null;
+          description?: string | null;
+          logo_media_id?: string | null;
+          verification_status?: "none" | "pending" | "approved" | "rejected";
+          verification_media_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["business_profiles"]["Insert"]>;
+        Relationships: never[];
+      };
+      business_profile_media: {
+        Row: {
+          id: string;
+          business_profile_id: string;
+          media_id: string;
+          position: number;
+        };
+        Insert: {
+          id?: string;
+          business_profile_id: string;
+          media_id: string;
+          position?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["business_profile_media"]["Insert"]>;
+        Relationships: never[];
+      };
       shop_promotion_events: {
         Row: {
           id: string;
