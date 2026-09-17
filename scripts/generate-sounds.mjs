@@ -192,20 +192,35 @@ function chordAt(rootMidi, scale, degreeIndex, octaveShift = 0) {
 }
 
 // i - VI - III - VII style minor progressions, expressed as scale-degree
-// indices — a handful of different orderings for variety across tracks.
+// indices — a wider set of orderings than a small catalog needs, so
+// scaling up the number of tracks doesn't mean repeating the same
+// handful of progressions over and over.
 const PROGRESSIONS = [
   [0, 5, 2, 4],
   [0, 3, 4, 0],
   [0, 4, 5, 3],
   [5, 3, 0, 4],
+  [1, 4, 0, 5],
+  [2, 5, 3, 0],
+  [0, 2, 5, 3],
 ];
 
+// halfTime: kick/hat only on beats 1 and 3, for a sparser, slower feel
+// instead of the standard 4-on-the-floor pattern below. arpPattern
+// controls the shape of the arpeggiated line when withArp is on ("up" —
+// the original ascending-then-back shape — or "updown" — a fuller
+// up-and-down sweep across the chord).
 const MOODS = [
-  { name: "Late Night Cruise", bpm: 84, withDrums: false, withArp: true },
+  { name: "Late Night Cruise", bpm: 84, withDrums: false, withArp: true, arpPattern: "up" },
   { name: "Open Road", bpm: 100, withDrums: true, withArp: false },
-  { name: "Garage Session", bpm: 112, withDrums: true, withArp: true },
-  { name: "Track Day", bpm: 132, withDrums: true, withArp: true },
-  { name: "Sunset Drive", bpm: 90, withDrums: false, withArp: true },
+  { name: "Garage Session", bpm: 112, withDrums: true, withArp: true, arpPattern: "up" },
+  { name: "Track Day", bpm: 132, withDrums: true, withArp: true, arpPattern: "updown" },
+  { name: "Sunset Drive", bpm: 90, withDrums: false, withArp: true, arpPattern: "updown" },
+  { name: "Midnight Meet", bpm: 96, withDrums: true, withArp: false, halfTime: true },
+  { name: "Backroad Drift", bpm: 120, withDrums: true, withArp: true, arpPattern: "updown" },
+  { name: "Showroom Shine", bpm: 78, withDrums: false, withArp: true, arpPattern: "up" },
+  { name: "Pit Lane", bpm: 140, withDrums: true, withArp: true, arpPattern: "up" },
+  { name: "Chrome & Neon", bpm: 104, withDrums: true, withArp: false, halfTime: true },
 ];
 
 function buildTrack({ rootName, rootMidi, mood, progression, bars = 8 }) {
@@ -223,49 +238,69 @@ function buildTrack({ rootName, rootMidi, mood, progression, bars = 8 }) {
     addBass(buffer, barStart, barSec * 0.95, chord[0] - 12, 0.55);
 
     if (mood.withArp) {
-      const arpNotes = [chord[0] + 12, chord[1] + 12, chord[2] + 12, chord[1] + 12];
-      for (let step = 0; step < 4; step++) {
-        addPluck(buffer, barStart + step * beatSec, beatSec * 0.9, arpNotes[step], 0.22);
+      const arpNotes =
+        mood.arpPattern === "updown"
+          ? [chord[0] + 12, chord[1] + 12, chord[2] + 12, chord[2] + 24, chord[1] + 12, chord[0] + 12]
+          : [chord[0] + 12, chord[1] + 12, chord[2] + 12, chord[1] + 12];
+      const stepSec = (beatSec * 4) / arpNotes.length;
+      for (let step = 0; step < arpNotes.length; step++) {
+        addPluck(buffer, barStart + step * stepSec, stepSec * 0.9, arpNotes[step], 0.22);
       }
     }
 
     if (mood.withDrums) {
-      addKick(buffer, barStart, 0.7);
-      addKick(buffer, barStart + beatSec * 2, 0.6);
-      addHat(buffer, barStart + beatSec * 0.5, 0.15);
-      addHat(buffer, barStart + beatSec * 1.5, 0.15);
-      addHat(buffer, barStart + beatSec * 2.5, 0.15);
-      addHat(buffer, barStart + beatSec * 3.5, 0.15);
+      if (mood.halfTime) {
+        addKick(buffer, barStart, 0.7);
+        addKick(buffer, barStart + beatSec * 2, 0.55);
+        addHat(buffer, barStart + beatSec * 2, 0.13);
+      } else {
+        addKick(buffer, barStart, 0.7);
+        addKick(buffer, barStart + beatSec * 2, 0.6);
+        addHat(buffer, barStart + beatSec * 0.5, 0.15);
+        addHat(buffer, barStart + beatSec * 1.5, 0.15);
+        addHat(buffer, barStart + beatSec * 2.5, 0.15);
+        addHat(buffer, barStart + beatSec * 3.5, 0.15);
+      }
     }
   }
 
   return { buffer, durationSec: totalSec };
 }
 
-// ---- Build the catalog: 5 moods x 4 keys/progressions = 20 tracks ----
+// ---- Build the catalog: 10 moods x 6 variants = 60 tracks ----
+//
+// Each mood cycles through a different offset into KEYS/PROGRESSIONS
+// (moodIndex * 3 and moodIndex * 2 respectively) rather than always
+// starting from index 0 — with 7 keys and 7 progressions on offer, that
+// spreads real harmonic variety across the whole catalog instead of every
+// mood's "variant 0" landing on the same key and progression.
 
 const KEYS = Object.entries(ROOT_NOTES);
+const VARIANTS_PER_MOOD = 6;
+const ROMAN = ["I", "II", "III", "IV", "V", "VI"];
 
 function buildCatalog() {
   const tracks = [];
-  for (const mood of MOODS) {
-    for (let variant = 0; variant < 4; variant++) {
-      const [rootName, rootMidi] = KEYS[variant % KEYS.length];
-      const progression = PROGRESSIONS[variant % PROGRESSIONS.length];
+  MOODS.forEach((mood, moodIndex) => {
+    for (let variant = 0; variant < VARIANTS_PER_MOOD; variant++) {
+      const keyIndex = (moodIndex * 3 + variant) % KEYS.length;
+      const progIndex = (moodIndex * 2 + variant) % PROGRESSIONS.length;
+      const [rootName, rootMidi] = KEYS[keyIndex];
+      const progression = PROGRESSIONS[progIndex];
       const { buffer, durationSec } = buildTrack({
         rootName,
         rootMidi,
         mood,
         progression,
-        bars: variant % 2 === 0 ? 8 : 6,
+        bars: variant % 3 === 0 ? 8 : variant % 3 === 1 ? 6 : 4,
       });
       tracks.push({
-        title: variant === 0 ? mood.name : `${mood.name} (${rootName} ${["I", "II", "III", "IV"][variant]})`,
+        title: variant === 0 ? mood.name : `${mood.name} (${rootName} ${ROMAN[variant]})`,
         wav: encodeWav(buffer),
         durationMs: Math.round(durationSec * 1000),
       });
     }
-  }
+  });
   return tracks;
 }
 
