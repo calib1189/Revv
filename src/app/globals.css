@@ -195,6 +195,18 @@ body {
       0 4px 10px -4px rgb(0 0 0 / 0.4);
   }
 
+  /* Horizontal scrollers in this app hide their scrollbar
+     (.no-scrollbar), which leaves nothing to say "there's more this
+     way" — the profile's own Achievements tab and the leaderboard's
+     later categories both sat clipped flat against the edge. Fading the
+     last 20px reads as "continues" the way a cut-off glyph doesn't.
+     Self-correcting: when the row doesn't overflow, those 20px are
+     empty track, so the fade lands on nothing and is invisible. */
+  .fade-edge-r {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent 100%);
+  }
+
   /* A photo that carries text on top of it. The scrim is part of the
      component, not something every caller re-invents with its own
      slightly different gradient stops. */

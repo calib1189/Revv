@@ -295,22 +295,27 @@ export default async function VehiclePage({
                     topPercent={topPercent}
                     history={ratingHistory}
                   >
-                    <div className="flex items-center gap-3">
+                    {/* This page exists to answer "what did this build
+                        score" — so the score is the largest thing on it,
+                        rather than being set smaller than the paragraph
+                        that explains it. */}
+                    <div className="flex items-center gap-4">
                       <span
-                        className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl"
+                        className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl"
                         style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26` }}
                       >
-                        <Icon className="h-9 w-9" />
+                        <Icon className="h-10 w-10" />
                       </span>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                          Build rating
+                      <div className="min-w-0 flex-1">
+                        <p className="micro-label text-muted">Build rating</p>
+                        <p className="numeral mt-1 text-4xl leading-none">
+                          {activeBuild.ai_rating_score!.toFixed(2)}
                         </p>
                         <p
-                          className="truncate text-xl font-bold tracking-tight"
+                          className="micro-label mt-1.5"
                           style={{ color: RANK_TEXT_COLORS[tier] }}
                         >
-                          {RANK_LABELS[tier]} · {activeBuild.ai_rating_score!.toFixed(2)}
+                          {RANK_LABELS[tier]}
                         </p>
                       </div>
                     </div>
@@ -320,17 +325,15 @@ export default async function VehiclePage({
                       {activeBuild.ai_rating_strengths ? (
                         <>
                           <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                              Why this score
-                            </p>
-                            <p className="mt-1 text-sm text-muted">{activeBuild.ai_rating_strengths}</p>
+                            <p className="micro-label text-muted">Why this score</p>
+                            <p className="mt-1.5 text-sm text-muted">{activeBuild.ai_rating_strengths}</p>
                           </div>
                           {activeBuild.ai_rating_limiting_factors && (
                             <div>
-                              <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                              <p className="micro-label text-muted">
                                 What&apos;s holding it back
                               </p>
-                              <p className="mt-1 text-sm text-muted">
+                              <p className="mt-1.5 text-sm text-muted">
                                 {activeBuild.ai_rating_limiting_factors}
                               </p>
                             </div>

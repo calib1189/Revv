@@ -123,7 +123,7 @@ export async function LeaderboardPageContent({
         </div>
       )}
 
-      <div className="no-scrollbar mb-6 flex gap-2 overflow-x-auto pb-1">
+      <div className="no-scrollbar fade-edge-r mb-6 flex gap-2 overflow-x-auto pb-1">
         <Link
           href={categoryHref(null, scope)}
           className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${

@@ -207,7 +207,12 @@ export default async function ProfilePage({
       )}
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="flex min-w-0 items-center gap-1.5 truncate text-3xl font-bold tracking-tight">
+          {/* text-2xl until there's room for more: at 375px a 30px bold
+              name alongside the avatar left ~215px for the name itself,
+              which truncated "Calib Lawson" to "Calib La…" — on the one
+              element of this page that's most personal to the person
+              whose page it is. */}
+          <h1 className="flex min-w-0 items-center gap-1.5 truncate text-2xl font-bold tracking-tight sm:text-3xl">
             {nameIsGradient ? (
               <span
                 className={`truncate bg-clip-text text-transparent ${nameColorItem?.effectClassName ?? ""}`}
@@ -238,24 +243,29 @@ export default async function ProfilePage({
 
           <div className="mt-4 flex gap-6">
             <div>
-              <p className="text-xl font-bold leading-none">{followingCount}</p>
-              <p className="mt-1.5 text-xs text-muted">Following</p>
+              <p className="numeral text-xl leading-none">{followingCount}</p>
+              <p className="micro-label mt-2 text-muted">Following</p>
             </div>
             <div>
-              <p className="text-xl font-bold leading-none">{followerCount}</p>
-              <p className="mt-1.5 text-xs text-muted">Followers</p>
+              <p className="numeral text-xl leading-none">{followerCount}</p>
+              <p className="micro-label mt-2 text-muted">Followers</p>
             </div>
             <div>
-              <p className="text-xl font-bold leading-none">
+              <p className="numeral text-xl leading-none">
                 {formatCompactNumber(totalLikes)}
               </p>
-              <p className="mt-1.5 text-xs text-muted">Likes</p>
+              <p className="micro-label mt-2 text-muted">Likes</p>
             </div>
           </div>
         </div>
 
         <RankFrame score={bestRatingScore} compact hideBadge className="flex-shrink-0 rounded-full">
-          <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-28 w-28 text-4xl" priority />
+          <Avatar
+            username={profile.username}
+            avatarUrl={avatarUrl}
+            className="h-20 w-20 text-3xl sm:h-28 sm:w-28 sm:text-4xl"
+            priority
+          />
         </RankFrame>
       </div>
 
@@ -264,15 +274,16 @@ export default async function ProfilePage({
         // to the 96px avatar — four stats plus that avatar don't fit at
         // mobile width (found by visual check: the tier name rendered
         // clipped behind the avatar circle).
-        <p className="mt-4 text-sm">
+        <div className="mt-4 flex items-center gap-2.5">
           <span
-            className="font-bold"
+            className="micro-label"
             style={{ color: RANK_TEXT_COLORS[rankForScore(bestRatingScore)] }}
           >
             {RANK_LABELS[rankForScore(bestRatingScore)]}
           </span>
-          <span className="text-muted"> · Best build {bestRatingScore.toFixed(2)}</span>
-        </p>
+          <span className="numeral text-sm">{bestRatingScore.toFixed(2)}</span>
+          <span className="micro-label text-muted">Best build</span>
+        </div>
       )}
 
       <ProfileShowcase

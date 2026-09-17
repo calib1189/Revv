@@ -35,7 +35,8 @@ export function RankFrame({
           }}
         >
           <Icon className={compact ? "h-3 w-3" : "h-5 w-5"} />
-          {RANK_LABELS[tier]} · {score.toFixed(2)}
+          <span className="micro-label">{RANK_LABELS[tier]}</span>
+          <span className="numeral text-white">{score.toFixed(2)}</span>
         </div>
       )}
     </div>

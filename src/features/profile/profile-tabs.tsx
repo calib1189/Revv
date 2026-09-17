@@ -60,7 +60,7 @@ function TabStrip({
 
   return (
     <div className="glass rounded-2xl p-1.5">
-      <div ref={containerRef} className="no-scrollbar relative flex gap-1 overflow-x-auto">
+      <div ref={containerRef} className="no-scrollbar fade-edge-r relative flex gap-1 overflow-x-auto">
         {highlight && (
           <div
             className="absolute bottom-1 top-1 rounded-xl bg-accent/15 ring-1 ring-inset ring-accent/40 transition-[left,width] duration-300 ease-[var(--ease-ios)]"
