@@ -13,6 +13,7 @@ import { listFollowingIds } from "@/lib/db/follows";
 import { listCrewIdsForUser, listApprovedMembersForCrews } from "@/lib/db/crew-members";
 import { composeLeaderboard } from "@/lib/leaderboard/compose-leaderboard";
 import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
+import { LeaderboardHeroCard } from "@/features/leaderboard/leaderboard-hero-card";
 import { RatingExplainer } from "@/features/leaderboard/rating-explainer";
 import { TierLadder } from "@/features/leaderboard/tier-ladder";
 import { VEHICLE_CATEGORIES, VEHICLE_CATEGORY_LABELS, type VehicleCategory } from "@/lib/vehicles/category";
@@ -167,10 +168,11 @@ export async function LeaderboardPageContent({
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {entries.map((entry, i) => (
+          <LeaderboardHeroCard entry={entries[0]} />
+          {entries.slice(1).map((entry, i) => (
             <LeaderboardRow
               key={entry.buildId}
-              rank={i + 1}
+              rank={i + 2}
               entry={entry}
               showCategory={!initialCategory}
             />

@@ -142,6 +142,80 @@ body {
   display: none;
 }
 
+@layer components {
+  /* ---- Instrument type system -------------------------------------
+     A build's score is this product's core artifact — the thing the
+     whole app exists to produce — so numbers get the treatment an
+     instrument cluster gives them rather than being set in the same
+     body face as a caption. Geist Mono is already loaded for the app
+     (layout.tsx), so this costs no extra font weight. */
+
+  /* Any figure the eye is meant to land on: a score, a rank, a stat.
+     Tabular so digits don't jitter between rows in a list, tightened
+     because mono at display size is otherwise too airy to read as one
+     unit. */
+  .numeral {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    /* Mono gives every glyph the same advance width, including the
+       decimal point — at display size that reads as "8 8 . 2 5", five
+       separate characters instead of one number. This pulls it back
+       into a single unit while keeping the tabular alignment that stops
+       digits jittering between rows. */
+    letter-spacing: -0.055em;
+  }
+
+  /* The small uppercase label that sits with a numeral — tier names,
+     column headers, stat captions. Wide tracking is what makes it read
+     as instrumentation rather than just small text. */
+  .micro-label {
+    font-size: 0.625rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  /* ---- Elevation ladder --------------------------------------------
+     .glass / .glass-raised describe *material*, not height. These
+     describe height: how far off the page something sits. Applied
+     alongside a glass class, not instead of it. */
+  .elev-1 {
+    box-shadow: 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  }
+  .elev-2 {
+    box-shadow:
+      0 4px 12px -4px rgb(0 0 0 / 0.5),
+      0 1px 2px -1px rgb(0 0 0 / 0.3);
+  }
+  .elev-3 {
+    box-shadow:
+      0 16px 40px -12px rgb(0 0 0 / 0.65),
+      0 4px 10px -4px rgb(0 0 0 / 0.4);
+  }
+
+  /* A photo that carries text on top of it. The scrim is part of the
+     component, not something every caller re-invents with its own
+     slightly different gradient stops. */
+  .photo-scrim::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    /* Weighted for the worst case, not the average one: a bright
+       daylight shot (grass, chrome, white paint) still has to carry
+       white type at the bottom of the card. */
+    background: linear-gradient(
+      to top,
+      rgb(0 0 0 / 0.92) 0%,
+      rgb(0 0 0 / 0.72) 22%,
+      rgb(0 0 0 / 0.3) 50%,
+      transparent 85%
+    );
+    pointer-events: none;
+  }
+}
+
 /* Hides the page's own scrollbar inside the native app shell — a bare
    iOS scrollbar reads as "browser," not "app," and the equivalent native
    scrollview setting (MainViewController.swift, iOS side) isn't enough

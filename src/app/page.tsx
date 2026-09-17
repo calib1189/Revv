@@ -7,6 +7,7 @@ import { listTopRatedBuilds } from "@/lib/db/builds";
 import { listVerifiedVehicleIds } from "@/lib/db/vehicles";
 import { composeLeaderboard, type LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
 import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
+import { LeaderboardHeroCard } from "@/features/leaderboard/leaderboard-hero-card";
 import { Button } from "@/components/ui/button";
 import { SupabaseNotConfigured } from "@/components/ui/supabase-not-configured";
 
@@ -41,7 +42,10 @@ export default async function LandingPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <section className="relative flex min-h-[92vh] items-center justify-center overflow-hidden">
+      {/* svh, not vh: on iOS the URL bar makes vh taller than what's
+          actually on screen, so a vh-sized hero pushes its own content
+          under the fold on the exact devices this app is built for. */}
+      <section className="relative flex min-h-[88svh] flex-col justify-end overflow-hidden">
         <video
           className="absolute inset-0 h-full w-full object-cover"
           src="/video/auth-bg.mp4"
@@ -50,25 +54,30 @@ export default async function LandingPage() {
           loop
           playsInline
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/55 to-background" />
-        <div className="absolute inset-0 bg-background/20" />
+        {/* One bottom-weighted scrim instead of three stacked flat
+            overlays. The old stack sat at ~75-90% opacity over the whole
+            frame, which turned real footage into grey mud — and ended on
+            a hard horizontal seam where the hero met the section below.
+            Landing on solid --background at the bottom makes that seam
+            disappear, while the top stays clear enough to actually read
+            as video. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-background/20" />
 
-        <div className="relative mx-auto flex w-full max-w-3xl flex-col items-center px-6 text-center">
-          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
+        <div className="relative mx-auto w-full max-w-3xl px-6 pb-16 sm:pb-24">
+          <h1 className="max-w-2xl text-balance text-[2.75rem] font-semibold leading-[1.05] tracking-[-0.03em] sm:text-7xl">
             Don&apos;t just post your build. Prove it.
           </h1>
-          <p className="mt-5 max-w-lg text-balance text-lg text-muted">
-            SORZA is the social platform built for your garage — log every mod as
-            real build data, get an AI-rated score, and find the meets and shops
-            happening near you.
+          <p className="mt-5 max-w-md text-balance text-lg leading-relaxed text-white/75">
+            Log every mod as real build data, get an AI-rated score, and climb the
+            board against every other build on SORZA.
           </p>
 
-          <div className="mt-8 flex gap-3">
+          <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/signup">
-              <Button className="px-6 py-2.5 text-base">Get started</Button>
+              <Button className="px-7 py-3 text-base">Get started</Button>
             </Link>
             <Link href="/login">
-              <Button variant="secondary" className="px-6 py-2.5 text-base">
+              <Button variant="secondary" className="px-7 py-3 text-base">
                 Log in
               </Button>
             </Link>
@@ -77,26 +86,28 @@ export default async function LandingPage() {
       </section>
 
       {topEntries.length > 0 && (
-        <section className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6 sm:py-20">
-          <div className="text-center">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Compete for the top spot
-            </h2>
-            <p className="mt-2 text-muted">
-              Every build gets scored 0–100 by AI. Climb the ranks against
-              everyone else on SORZA.
-            </p>
-          </div>
+        <section className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6 sm:py-24">
+          <p className="micro-label mb-3 text-accent">Live board</p>
+          <h2 className="text-3xl font-semibold leading-tight tracking-[-0.02em] sm:text-4xl">
+            Compete for the top spot
+          </h2>
+          <p className="mt-3 max-w-md text-muted">
+            Every build gets scored 0–100 by AI. Climb the ranks against everyone
+            else on SORZA.
+          </p>
 
-          <div className="mt-8 flex flex-col gap-2.5">
-            {topEntries.map((entry, i) => (
-              <LeaderboardRow key={entry.buildId} rank={i + 1} entry={entry} showCategory />
+          <div className="mt-8 flex flex-col gap-2">
+            <LeaderboardHeroCard entry={topEntries[0]} />
+            {topEntries.slice(1).map((entry, i) => (
+              <LeaderboardRow key={entry.buildId} rank={i + 2} entry={entry} showCategory />
             ))}
           </div>
 
-          <div className="mt-6 flex justify-center">
+          <div className="mt-8">
             <Link href="/leaderboard">
-              <Button variant="secondary">See the full leaderboard</Button>
+              <Button variant="secondary" className="px-5 py-2.5">
+                See the full leaderboard
+              </Button>
             </Link>
           </div>
         </section>
