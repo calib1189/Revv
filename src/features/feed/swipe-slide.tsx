@@ -402,9 +402,10 @@ export function SwipeSlide({
               className="mt-1.5 line-clamp-2 text-sm text-white/90"
             />
           )}
-          <p className="mt-1.5 flex items-center gap-1 text-xs text-white/60">
+          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-white/60">
             <EyeIcon className="h-3.5 w-3.5" />
-            {formatCompactNumber(data.viewCount)} view{data.viewCount === 1 ? "" : "s"}
+            <span className="numeral">{formatCompactNumber(data.viewCount)}</span>
+            view{data.viewCount === 1 ? "" : "s"}
           </p>
         </div>
       </div>
@@ -457,14 +458,14 @@ export function SwipeSlide({
           >
             <HeartIcon className="h-9 w-9" filled={liked} />
             {likeCount > 0 && (
-              <span className="text-sm font-semibold">{formatCompactNumber(likeCount)}</span>
+              <span className="numeral text-sm">{formatCompactNumber(likeCount)}</span>
             )}
           </button>
         ) : (
           <Link href="/login" className="flex flex-col items-center gap-1.5 text-white">
             <HeartIcon className="h-9 w-9" />
             {likeCount > 0 && (
-              <span className="text-sm font-semibold">{formatCompactNumber(likeCount)}</span>
+              <span className="numeral text-sm">{formatCompactNumber(likeCount)}</span>
             )}
           </Link>
         )}
@@ -476,7 +477,7 @@ export function SwipeSlide({
         >
           <CommentIcon className="h-9 w-9" />
           {data.commentCount > 0 && (
-            <span className="text-sm font-semibold">{formatCompactNumber(data.commentCount)}</span>
+            <span className="numeral text-sm">{formatCompactNumber(data.commentCount)}</span>
           )}
         </button>
 
@@ -487,7 +488,7 @@ export function SwipeSlide({
           isAuthenticated={data.isAuthenticated}
           iconClassName="h-9 w-9"
           className="flex flex-col items-center gap-1.5"
-          countClassName="text-sm font-semibold"
+          countClassName="numeral text-sm"
         />
 
         <ShareButton postId={data.post.id} />

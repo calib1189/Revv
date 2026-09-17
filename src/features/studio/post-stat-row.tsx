@@ -9,9 +9,9 @@ import type { Post } from "@/lib/db/posts";
 
 function Stat({ icon: Icon, value }: { icon: typeof EyeIcon; value: number }) {
   return (
-    <span className="flex items-center gap-1">
+    <span className="flex items-center gap-1.5">
       <Icon className="h-3.5 w-3.5" />
-      {formatCompactNumber(value)}
+      <span className="numeral">{formatCompactNumber(value)}</span>
     </span>
   );
 }

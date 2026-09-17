@@ -54,15 +54,19 @@ function RatingBadge({ score }: { score: number | null }) {
   const Icon = RANK_MATERIAL_ICONS[tier];
   return (
     <div
-      className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold backdrop-blur-md sm:text-sm"
+      className="absolute right-3 top-3 z-10 flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-md"
       style={{
         background: "rgba(10, 10, 11, 0.72)",
         border: `1px solid ${RANK_TEXT_COLORS[tier]}66`,
         color: RANK_TEXT_COLORS[tier],
       }}
     >
-      <Icon className="h-4 w-4" />
-      {RANK_LABELS[tier]} · {score.toFixed(2)}
+      <Icon className="h-3.5 w-3.5" />
+      <span className="micro-label">{RANK_LABELS[tier]}</span>
+      {/* Same figure the leaderboard shows, so it gets the same
+          treatment — a score styled as body text in one place and as a
+          readout in another reads as two different numbers. */}
+      <span className="numeral text-sm leading-none text-white">{score.toFixed(2)}</span>
     </div>
   );
 }
@@ -95,6 +99,10 @@ export function VehicleBay({
   const subtitle = vehicle.nickname
     ? `${vehicle.year ?? ""} ${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim()
     : vehicle.trim;
+  // A nicknamed car's subtitle already opens with the year ("2019
+  // Chevrolet Camaro"), so the standalone year line above the name was
+  // printing it twice on exactly the cars most likely to have one.
+  const showYearLine = Boolean(vehicle.year) && !vehicle.nickname;
   const backdropItem = vehicle.equipped_backdrop ? getStoreItem(vehicle.equipped_backdrop) : undefined;
 
   // compact rather than the default: the default ring is tuned for a
@@ -143,11 +151,11 @@ export function VehicleBay({
                     No photo yet
                   </div>
                 )}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/0 to-transparent" />
+                <div className="photo-scrim pointer-events-none absolute inset-0" />
                 <RatingBadge score={ratingScore} />
                 <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                  {vehicle.year && (
-                    <p className="text-xs font-medium tracking-wide text-white/70">{vehicle.year}</p>
+                  {showYearLine && (
+                    <p className="numeral text-xs text-white/70">{vehicle.year}</p>
                   )}
                   <VehicleName
                     title={title}
@@ -178,12 +186,12 @@ export function VehicleBay({
             </div>
           )}
 
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-transparent" />
+          <div className="photo-scrim pointer-events-none absolute inset-0" />
           <RatingBadge score={ratingScore} />
 
           <div className="absolute inset-x-0 bottom-0 p-5 sm:p-8">
-            {vehicle.year && (
-              <p className="text-sm font-medium tracking-wide text-white/70">{vehicle.year}</p>
+            {showYearLine && (
+              <p className="numeral text-sm text-white/70">{vehicle.year}</p>
             )}
             <VehicleName
               title={title}

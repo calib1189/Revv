@@ -115,11 +115,11 @@ export function PostCard({ data }: { data: PostCardData }) {
           className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
         >
           <CommentIcon className="h-5 w-5" />
-          {commentCount > 0 && <span>{commentCount}</span>}
+          {commentCount > 0 && <span className="numeral">{commentCount}</span>}
         </Link>
         <span className="flex items-center gap-1.5 text-sm text-muted">
           <EyeIcon className="h-5 w-5" />
-          {formatCompactNumber(viewCount)}
+          <span className="numeral">{formatCompactNumber(viewCount)}</span>
         </span>
         <div className="flex-1" />
         <SaveButton
