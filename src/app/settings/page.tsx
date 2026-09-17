@@ -1,11 +1,22 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { ThemeToggle } from "@/features/settings/theme-toggle";
+import { SettingsGroup, SettingsRow } from "@/features/settings/settings-row";
 import { SignOutButton } from "@/features/auth/sign-out-button";
 import { DeleteAccountButton } from "@/features/auth/delete-account-button";
+import {
+  BookmarkIcon,
+  HeartIcon,
+  EyeIcon,
+  PersonIcon,
+  BellIcon,
+  GemIcon,
+  ShoppingBagIcon,
+  InfoIcon,
+  LockIcon,
+} from "@/components/ui/icons";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
@@ -18,81 +29,79 @@ export default async function SettingsPage() {
     <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
       <h1 className="mb-8 text-2xl font-semibold tracking-tight">Settings</h1>
 
-      <div className="mb-8 flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border">
-        <Link
+      <SettingsGroup label="Your content">
+        <SettingsRow
           href="/saved"
-          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
-        >
-          <span className="text-sm font-medium">Saved</span>
-          <span className="text-xs text-muted">Posts you&apos;ve bookmarked</span>
-        </Link>
-        <Link
+          icon={BookmarkIcon}
+          label="Saved"
+          description="Posts you've bookmarked"
+        />
+        <SettingsRow
           href="/notifications"
-          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
-        >
-          <span className="text-sm font-medium">Activity</span>
-          <span className="text-xs text-muted">Likes, comments, follows, and messages</span>
-        </Link>
-        <Link
+          icon={HeartIcon}
+          label="Activity"
+          description="Likes, comments, follows, and messages"
+        />
+        <SettingsRow
           href="/studio"
-          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
-        >
-          <span className="text-sm font-medium">Creator Studio</span>
-          <span className="text-xs text-muted">Views, engagement, and how each post is doing</span>
-        </Link>
-      </div>
+          icon={EyeIcon}
+          label="Creator Studio"
+          description="Views, engagement, and how each post is doing"
+        />
+      </SettingsGroup>
 
-      <div className="mb-8">
-        <p className="mb-2 text-sm font-medium">Appearance</p>
+      <section className="mb-7">
+        <h2 className="micro-label mb-2.5 px-1 text-muted">Appearance</h2>
         <ThemeToggle />
-      </div>
+      </section>
 
-      <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border">
-        <Link
+      <SettingsGroup label="Account">
+        <SettingsRow
           href="/settings/profile"
-          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
-        >
-          <span className="text-sm font-medium">Edit profile</span>
-          <span className="text-xs text-muted">Name, photo, bio</span>
-        </Link>
-        <Link
+          icon={PersonIcon}
+          label="Edit profile"
+          description="Name, photo, bio"
+        />
+        <SettingsRow
           href="/settings/notifications"
-          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
-        >
-          <span className="text-sm font-medium">Notifications</span>
-          <span className="text-xs text-muted">Push notifications for likes, comments, follows, and messages</span>
-        </Link>
-        <Link
-          href="/legal/support"
-          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
-        >
-          <span className="text-sm font-medium">Support</span>
-          <span className="text-xs text-muted">Contact us, report a problem, or get help</span>
-        </Link>
-        <Link
+          icon={BellIcon}
+          label="Notifications"
+          description="Push notifications for likes, comments, and follows"
+        />
+      </SettingsGroup>
+
+      <SettingsGroup label="Business">
+        <SettingsRow
           href="/advertise"
-          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
-        >
-          <span className="text-sm font-medium">Advertise on SORZA</span>
-          <span className="text-xs text-muted">Put your shop or brand in front of real builders</span>
-        </Link>
-        <Link
+          icon={GemIcon}
+          label="Advertise on SORZA"
+          description="Put your shop or brand in front of real builders"
+        />
+        <SettingsRow
           href="/settings/business"
-          className="flex flex-col gap-0.5 px-4 py-3.5 transition-opacity hover:opacity-80"
-        >
-          <span className="text-sm font-medium">Business Profile</span>
-          <span className="text-xs text-muted">Claim your shop and add photos to its Discover listing</span>
-        </Link>
+          icon={ShoppingBagIcon}
+          label="Business Profile"
+          description="Claim your shop and add photos to its Discover listing"
+        />
+      </SettingsGroup>
+
+      <SettingsGroup label="Help">
+        <SettingsRow
+          href="/legal/support"
+          icon={InfoIcon}
+          label="Support"
+          description="Contact us, report a problem, or get help"
+        />
         {profile?.is_admin && (
-          <Link
+          <SettingsRow
             href="/admin/reports"
-            className="flex flex-col gap-0.5 px-4 py-3.5 text-accent transition-opacity hover:opacity-80"
-          >
-            <span className="text-sm font-medium">Admin</span>
-            <span className="text-xs text-accent/70">Reports, verifications, ads, audit log, parts moderation</span>
-          </Link>
+            icon={LockIcon}
+            label="Admin"
+            description="Reports, verifications, ads, audit log, moderation"
+            tone="accent"
+          />
         )}
-      </div>
+      </SettingsGroup>
 
       <div className="mt-8 border-t border-border pt-6">
         <SignOutButton />

@@ -45,9 +45,9 @@ export function CrewCard({
           </div>
         )}
 
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+        <div className="photo-scrim pointer-events-none absolute inset-0" />
 
-        <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur-sm">
+        <span className="micro-label absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-white/90 backdrop-blur-sm">
           {crew.visibility === "private" ? (
             <LockIcon className="h-3 w-3" />
           ) : (
@@ -72,7 +72,8 @@ export function CrewCard({
               {CREW_CATEGORY_LABELS[crew.category]}
               {crew.location_text ? ` · ${crew.location_text}` : ""}
               {" · "}
-              {memberCount} member{memberCount === 1 ? "" : "s"}
+              <span className="numeral">{memberCount}</span> member
+              {memberCount === 1 ? "" : "s"}
             </p>
           </div>
         </div>
