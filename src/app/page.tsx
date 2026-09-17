@@ -8,8 +8,24 @@ import { listVerifiedVehicleIds } from "@/lib/db/vehicles";
 import { composeLeaderboard, type LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
 import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
 import { LeaderboardHeroCard } from "@/features/leaderboard/leaderboard-hero-card";
+import { TierLadder } from "@/features/leaderboard/tier-ladder";
 import { Button } from "@/components/ui/button";
 import { SupabaseNotConfigured } from "@/components/ui/supabase-not-configured";
+
+const STEPS = [
+  {
+    title: "Build your garage",
+    body: "Add your car and log every mod as real data — parts, prices, install dates — not just a caption.",
+  },
+  {
+    title: "Get rated by AI",
+    body: "A vision model reads your photos and your parts list, then scores the whole build 0–100.",
+  },
+  {
+    title: "Climb the board",
+    body: "Verify you own it, and your build competes against every other ranked build on SORZA.",
+  },
+];
 
 /** The real top 5 — never placeholder rows (CLAUDE.md: never present
  * mock output as real). Gated by the same ownership-verification check
@@ -112,6 +128,59 @@ export default async function LandingPage() {
           </div>
         </section>
       )}
+
+      <section className="border-t border-white/[0.06] px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto w-full max-w-2xl">
+          <p className="micro-label mb-3 text-accent">How it works</p>
+          <h2 className="text-3xl font-semibold leading-tight tracking-[-0.02em] sm:text-4xl">
+            Three steps from stock to ranked
+          </h2>
+
+          <ol className="mt-10 flex flex-col gap-8">
+            {STEPS.map((step, i) => (
+              <li key={step.title} className="flex gap-5">
+                <span className="numeral flex-shrink-0 text-lg text-accent">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
+                  <p className="mt-1.5 text-muted">{step.body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="border-t border-white/[0.06] px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto w-full max-w-2xl">
+          <p className="micro-label mb-3 text-accent">Progression</p>
+          <h2 className="text-3xl font-semibold leading-tight tracking-[-0.02em] sm:text-4xl">
+            Ten tiers. Bronze to Cosmic.
+          </h2>
+          <p className="mt-3 max-w-md text-muted">
+            Your tier follows your build everywhere on SORZA — the ring around your
+            photos, your profile, your spot on the board.
+          </p>
+
+          <div className="mt-10">
+            <TierLadder />
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-white/[0.06] px-4 py-20 sm:px-6 sm:py-28">
+        <div className="mx-auto w-full max-w-2xl">
+          <h2 className="max-w-lg text-balance text-3xl font-semibold leading-tight tracking-[-0.02em] sm:text-5xl">
+            Your build deserves a real score.
+          </h2>
+          <div className="mt-8">
+            <Link href="/signup">
+              <Button className="px-7 py-3 text-base">Get started</Button>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {!configured && (
         <div className="mx-auto w-full max-w-sm px-6 pb-16">

@@ -17,7 +17,7 @@ export function TierLadder() {
               <p className={`font-semibold ${i === 0 ? "text-base" : "text-sm"}`}>
                 {RANK_LABELS[tier]}
               </p>
-              <p className="text-xs text-muted">{rankRangeLabel(tier)}</p>
+              <p className="numeral text-xs text-muted">{rankRangeLabel(tier)}</p>
             </div>
           </div>
         ))}

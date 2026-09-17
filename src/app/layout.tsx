@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/shell/header";
-import { Footer } from "@/components/shell/footer";
+import { LayoutFooter } from "@/components/shell/layout-footer";
 import { NativeAppBridge } from "@/components/shell/native-app-bridge";
 import { TabPagerProvider } from "@/components/shell/tab-pager-context";
 import { getCurrentUser } from "@/lib/auth/get-user";
@@ -71,7 +71,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             className={`flex flex-1 flex-col ${user ? "pb-[calc(4rem_+_env(safe-area-inset-bottom))]" : ""}`}
           >
             <main className="flex flex-1 flex-col">{children}</main>
-            <Footer />
+            <LayoutFooter />
           </div>
         </TabPagerProvider>
       </body>
