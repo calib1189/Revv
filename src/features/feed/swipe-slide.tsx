@@ -12,7 +12,7 @@ import { CaptionText } from "@/features/feed/caption-text";
 import { recordViewAction, recordViewCompletionAction, recordShareAction } from "@/features/feed/actions";
 import { usePostLike } from "@/features/feed/use-post-like";
 import { useDoubleTap } from "@/features/feed/use-double-tap";
-import { CommentIcon, EyeIcon, HeartIcon, MusicIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon } from "@/components/ui/icons";
+import { CommentIcon, EyeIcon, HeartIcon, MusicIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon, VolumeIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { SITE_URL } from "@/lib/site-url";
 import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
@@ -188,7 +188,17 @@ function VideoMedia({
  * visibility via the same 60%-visible threshold VideoMedia uses for
  * autoplay). A video post's attached sound is attribution/discovery only
  * (the chip in SwipeSlide below) — its own native audio keeps playing
- * unchanged, rather than layering a second audio source on top of it. */
+ * unchanged, rather than layering a second audio source on top of it.
+ *
+ * Every major browser refuses to autoplay *audible* media from a non-
+ * gesture context (this IntersectionObserver callback doesn't count) —
+ * only muted autoplay is universally allowed. The old code just tried
+ * `audio.play()` and swallowed the rejection, which on a first visit (no
+ * prior site media engagement) meant the attached sound never made a
+ * sound at all, with nothing on screen suggesting why. This now falls
+ * back to muted playback the instant that happens, and surfaces a real
+ * tap-to-unmute button — a genuine user gesture, which browsers do
+ * honor — so there's always a way to actually hear it. */
 function PhotoMedia({
   urls,
   shouldLoad,
@@ -201,6 +211,8 @@ function PhotoMedia({
   const [index, setIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   function handleScroll() {
     const el = containerRef.current;
@@ -217,7 +229,14 @@ function PhotoMedia({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
-          audio.play().catch(() => {});
+          audio.play().catch(() => {
+            // Audible autoplay was refused — muted autoplay never is, so
+            // fall back to that rather than staying silent with no
+            // recovery path.
+            setIsMuted(true);
+            setAutoplayBlocked(true);
+            audio.play().catch(() => {});
+          });
         } else {
           audio.pause();
         }
@@ -228,9 +247,23 @@ function PhotoMedia({
     return () => observer.disconnect();
   }, [soundUrl, shouldLoad]);
 
+  function toggleMute(e: React.MouseEvent) {
+    e.stopPropagation();
+    const audio = audioRef.current;
+    const next = !isMuted;
+    setIsMuted(next);
+    setAutoplayBlocked(false);
+    if (!audio) return;
+    audio.muted = next;
+    // This runs inside a real click handler, so — unlike the observer
+    // above — starting audible playback here is allowed even if the
+    // earlier automatic attempt was refused.
+    if (!next) audio.play().catch(() => {});
+  }
+
   return (
     <div className="absolute inset-0">
-      {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} loop />}
+      {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} loop muted={isMuted} />}
       <div
         ref={containerRef}
         onScroll={handleScroll}
@@ -251,6 +284,18 @@ function PhotoMedia({
         <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
           {index + 1}/{urls.length}
         </div>
+      )}
+      {soundUrl && shouldLoad && (
+        <button
+          type="button"
+          onClick={toggleMute}
+          aria-label={isMuted ? "Unmute sound" : "Mute sound"}
+          className={`pointer-events-auto absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white ${
+            autoplayBlocked && isMuted ? "animate-pulse" : ""
+          }`}
+        >
+          <VolumeIcon muted={isMuted} className="h-4 w-4" />
+        </button>
       )}
     </div>
   );
