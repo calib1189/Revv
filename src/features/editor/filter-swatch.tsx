@@ -44,7 +44,7 @@ export function FilterSwatch({
     <button type="button" onClick={onClick} className="flex flex-shrink-0 flex-col items-center gap-1.5">
       <span
         className={`block h-16 w-12 overflow-hidden rounded-xl bg-white/10 ${
-          selected ? "ring-2 ring-accent ring-offset-2 ring-offset-black" : ""
+          selected ? "ring-2 ring-white ring-offset-2 ring-offset-black" : ""
         }`}
       >
         {previewSource && <canvas ref={canvasRef} className="h-full w-full object-cover" />}

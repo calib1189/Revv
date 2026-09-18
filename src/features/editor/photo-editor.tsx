@@ -15,8 +15,6 @@ import {
   type DrawStroke,
 } from "@/features/editor/types";
 import {
-  BackIcon,
-  CheckIcon,
   CropIcon,
   TextToolIcon,
   FilterIcon,
@@ -331,29 +329,24 @@ export function PhotoEditor({
       {/* eslint-disable-next-line @next/next/no-img-element -- source decode element, not a display asset */}
       <img ref={imgRef} src={sourceUrl} alt="" className="sr-only" />
 
-      <div className="flex items-center justify-between px-4 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+      {/* Photos-app editing bar: Cancel left, title centre, yellow Done
+          right — all text, no chrome. */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 pb-2 pt-[calc(0.75rem+env(safe-area-inset-top))] text-white">
         <button
           type="button"
           onClick={onCancel}
-          aria-label="Cancel"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white"
+          className="justify-self-start py-1.5 text-[1.0625rem] text-white/90"
         >
-          <BackIcon className="h-5 w-5" />
+          Cancel
         </button>
+        <p className="micro-label text-white/60">Edit</p>
         <button
           type="button"
           onClick={handleDone}
           disabled={!ready || isExporting}
-          className="flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-60"
+          className="justify-self-end py-1.5 text-[1.0625rem] font-semibold text-[#ffd60a] disabled:opacity-50"
         >
-          {isExporting ? (
-            "Saving…"
-          ) : (
-            <>
-              <CheckIcon className="h-4 w-4" />
-              Done
-            </>
-          )}
+          {isExporting ? "Saving…" : "Done"}
         </button>
       </div>
 
@@ -367,7 +360,7 @@ export function PhotoEditor({
         <div
           ref={previewRef}
           onPointerDown={handlePreviewPointerDown}
-          className="relative max-h-full max-w-full touch-none overflow-hidden rounded-2xl bg-black shadow-[0_0_0_1px_rgb(255_255_255_/_0.08)]"
+          className="relative max-h-full max-w-full touch-none overflow-hidden rounded-[6px] bg-black"
           style={{ aspectRatio: `${canvasSize.width} / ${canvasSize.height}` }}
         >
           <canvas ref={canvasRef} className="h-full w-full" />
@@ -388,7 +381,7 @@ export function PhotoEditor({
                     setSelectedTextId(layer.id);
                   }}
                   className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${
-                    selectedTextId === layer.id ? "border-accent" : "border-transparent"
+                    selectedTextId === layer.id ? "border-[#ffd60a]" : "border-transparent"
                   }`}
                   style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%` }}
                   aria-label={`Select "${layer.text}"`}
@@ -397,7 +390,7 @@ export function PhotoEditor({
         </div>
       </div>
 
-      <div className="flex-shrink-0 border-t border-white/10 bg-[#0a0a0b] pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+      <div className="flex-shrink-0 bg-black pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         {tool === "crop" && (
           <div className="flex items-center justify-center gap-2 py-4">
             {ASPECTS.map((a) => (
@@ -405,9 +398,9 @@ export function PhotoEditor({
                 key={a.id}
                 type="button"
                 onClick={() => updateState({ aspect: a.id, panOffset: 0.5 })}
-                className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${
+                className={`rounded-full px-3.5 py-1.5 text-[0.8125rem] font-medium ${
                   state.aspect === a.id
-                    ? "bg-accent text-accent-foreground"
+                    ? "bg-white font-semibold text-black"
                     : "bg-white/10 text-white/80"
                 }`}
               >
@@ -434,7 +427,7 @@ export function PhotoEditor({
                   type="button"
                   onClick={() => setFilterCategory(c.id)}
                   className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
-                    filterCategory === c.id ? "bg-accent text-accent-foreground" : "bg-white/10 text-white/70"
+                    filterCategory === c.id ? "bg-white font-semibold text-black" : "bg-white/10 text-white/70"
                   }`}
                 >
                   {c.label}
@@ -482,12 +475,12 @@ export function PhotoEditor({
                 onChange={(e) => setNewTextDraft(e.target.value)}
                 placeholder="Add text…"
                 maxLength={80}
-                className="glass-inset min-w-0 flex-1 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/40"
+                className="h-11 min-w-0 flex-1 rounded-[14px] bg-white/10 px-4 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
               />
               <button
                 type="button"
                 onClick={addTextLayer}
-                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground"
+                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#ffd60a] text-black"
                 aria-label="Add text layer"
               >
                 <PlusIcon className="h-5 w-5" />
@@ -504,7 +497,7 @@ export function PhotoEditor({
                         type="button"
                         onClick={() => updateTextLayer(selectedLayer.id, { color: c })}
                         className={`h-6 w-6 rounded-full border-2 ${
-                          selectedLayer.color === c ? "border-accent" : "border-white/20"
+                          selectedLayer.color === c ? "border-white ring-2 ring-white/40" : "border-white/20"
                         }`}
                         style={{ backgroundColor: c }}
                         aria-label={`Text color ${c}`}
@@ -544,7 +537,7 @@ export function PhotoEditor({
                       onClick={() => updateTextLayer(selectedLayer.id, { fontId: f.id })}
                       className={`flex-shrink-0 rounded-lg border px-3 py-1.5 text-sm ${
                         selectedLayer.fontId === f.id
-                          ? "border-accent bg-accent/15 text-white"
+                          ? "border-white bg-white text-black"
                           : "border-white/15 text-white/70"
                       }`}
                       style={{ fontFamily: f.stack }}
@@ -556,7 +549,7 @@ export function PhotoEditor({
               </div>
             )}
             {!selectedLayer && state.textLayers.filter((l) => !l.isSticker).length > 0 && (
-              <p className="text-center text-xs text-muted">
+              <p className="text-center text-[0.8125rem] text-white/50">
                 Tap a dot on the preview to drag or restyle it.
               </p>
             )}
@@ -609,7 +602,7 @@ export function PhotoEditor({
               </div>
             )}
             {!selectedLayer && state.textLayers.filter((l) => l.isSticker).length > 0 && (
-              <p className="text-center text-xs text-muted">
+              <p className="text-center text-[0.8125rem] text-white/50">
                 Tap a sticker on the preview to drag or resize it.
               </p>
             )}
@@ -626,7 +619,7 @@ export function PhotoEditor({
                     type="button"
                     onClick={() => setDrawColor(c)}
                     className={`h-6 w-6 rounded-full border-2 ${
-                      drawColor === c ? "border-accent" : "border-white/20"
+                      drawColor === c ? "border-white ring-2 ring-white/40" : "border-white/20"
                     }`}
                     style={{ backgroundColor: c }}
                     aria-label={`Draw color ${c}`}
@@ -661,7 +654,7 @@ export function PhotoEditor({
                   onClick={() => setDrawWidth(w)}
                   aria-label={`Brush size ${w}`}
                   className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                    drawWidth === w ? "bg-accent" : "bg-white/10"
+                    drawWidth === w ? "bg-white" : "bg-white/10"
                   }`}
                 >
                   <span
@@ -669,7 +662,7 @@ export function PhotoEditor({
                     style={{
                       width: Math.round(w / 2),
                       height: Math.round(w / 2),
-                      backgroundColor: drawWidth === w ? "var(--color-accent-foreground)" : "white",
+                      backgroundColor: drawWidth === w ? "black" : "white",
                     }}
                   />
                 </button>
@@ -685,12 +678,12 @@ export function PhotoEditor({
               key={id}
               type="button"
               onClick={() => setTool((t) => (t === id ? null : id))}
-              className={`flex flex-col items-center gap-1 rounded-xl px-3 py-1.5 ${
-                tool === id ? "text-accent" : "text-white/70"
+              className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 transition-colors ${
+                tool === id ? "text-[#ffd60a]" : "text-white/70"
               }`}
             >
               <Icon className="h-5 w-5" />
-              <span className="text-[0.65rem] font-medium">{label}</span>
+              <span className="text-[0.6875rem] font-semibold">{label}</span>
             </button>
           ))}
         </div>

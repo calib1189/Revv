@@ -53,25 +53,25 @@ export function TrimScrubber({
     <div className="px-1 py-3">
       <div ref={trackRef} className="relative h-12 rounded-lg bg-white/10">
         <div
-          className="absolute inset-y-0 rounded-lg bg-accent/30"
+          className="absolute inset-y-0 rounded-lg border-y-[3px] border-[#ffd60a] bg-[#ffd60a]/15"
           style={{ left: `${startPct}%`, right: `${100 - endPct}%` }}
         />
         <div
           onPointerDown={(e) => startDrag("start", e)}
-          className="absolute top-0 bottom-0 flex w-5 -translate-x-1/2 cursor-ew-resize items-center justify-center rounded-md bg-accent"
+          className="absolute top-0 bottom-0 flex w-5 -translate-x-1/2 cursor-ew-resize items-center justify-center rounded-md bg-[#ffd60a] text-black"
           style={{ left: `${startPct}%` }}
         >
           <span className="h-5 w-0.5 rounded-full bg-white/80" />
         </div>
         <div
           onPointerDown={(e) => startDrag("end", e)}
-          className="absolute top-0 bottom-0 flex w-5 -translate-x-1/2 cursor-ew-resize items-center justify-center rounded-md bg-accent"
+          className="absolute top-0 bottom-0 flex w-5 -translate-x-1/2 cursor-ew-resize items-center justify-center rounded-md bg-[#ffd60a] text-black"
           style={{ left: `${endPct}%` }}
         >
           <span className="h-5 w-0.5 rounded-full bg-white/80" />
         </div>
       </div>
-      <p className="mt-2 text-center text-xs text-muted">
+      <p className="numeral mt-2 text-center text-[0.8125rem] text-white/60">
         {(trimEnd - trimStart).toFixed(1)}s selected
       </p>
     </div>

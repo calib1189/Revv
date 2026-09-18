@@ -9,7 +9,6 @@ import {
   GalleryIcon,
   CheckIcon,
   BoltIcon,
-  TimerIcon,
   GridIcon,
   SettingsIcon,
 } from "@/components/ui/icons";
@@ -688,7 +687,14 @@ export function CameraRecorder({
   }
 
   const recordProgress = Math.min(1, seconds / maxSeconds);
-  const ringCircumference = 2 * Math.PI * 36;
+  const ringCircumference = 2 * Math.PI * 38;
+
+  // The camera is always a dark surface regardless of app theme, so its
+  // chrome uses fixed dark-glass values rather than the theme tokens —
+  // the settings sheet previously used .glass-raised (theme-following)
+  // with white text, which went white-on-white in light mode.
+  const chromeButton =
+    "pressable flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl disabled:opacity-40";
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col overflow-hidden bg-black">
@@ -697,11 +703,8 @@ export function CameraRecorder({
           `display:none` <video> entirely. This element is the actual
           source the canvas below draws from every frame; if it stalls,
           the canvas just keeps redrawing the same first frame forever.
-          That fits exactly what was reported: a photo (one snapshot of
-          whatever's currently on the canvas) still comes out fine even
-          off a frozen frame, but a recording — the canvas captured over
-          time — is static the whole way through. Positioning off-screen
-          with a real, unclipped size keeps decoding genuinely live. */}
+          Positioning off-screen with a real, unclipped size keeps
+          decoding genuinely live. */}
       <video
         ref={videoRef}
         autoPlay
@@ -718,6 +721,11 @@ export function CameraRecorder({
         className="absolute inset-0 h-full w-full touch-none object-cover"
       />
 
+      {/* Soft scrims top and bottom so white controls stay legible over
+          any scene, without boxing the viewfinder in. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[3] h-36 bg-gradient-to-b from-black/55 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-64 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+
       <div
         aria-hidden
         className={`pointer-events-none absolute inset-0 z-[6] bg-white transition-opacity duration-150 ${
@@ -725,28 +733,12 @@ export function CameraRecorder({
         }`}
       />
 
-      {/* Targeting-frame corners — purely decorative, reads as a precision
-          instrument rather than a plain video feed. Kept clear of the
-          header/shutter regions so it never competes with real controls. */}
-      <div
-        className="pointer-events-none absolute inset-x-5 z-[5]"
-        style={{
-          top: "calc(4.75rem + env(safe-area-inset-top))",
-          bottom: "calc(7.5rem + env(safe-area-inset-bottom))",
-        }}
-      >
-        <span className="absolute left-0 top-0 h-5 w-5 border-l-2 border-t-2 border-white/25" />
-        <span className="absolute right-0 top-0 h-5 w-5 border-r-2 border-t-2 border-white/25" />
-        <span className="absolute bottom-0 left-0 h-5 w-5 border-b-2 border-l-2 border-white/25" />
-        <span className="absolute bottom-0 right-0 h-5 w-5 border-b-2 border-r-2 border-white/25" />
-      </div>
-
       {gridEnabled && (
         <div className="pointer-events-none absolute inset-0 z-[4]">
-          <span className="absolute left-1/3 top-0 h-full w-px bg-white/25" />
-          <span className="absolute left-2/3 top-0 h-full w-px bg-white/25" />
-          <span className="absolute top-1/3 left-0 h-px w-full bg-white/25" />
-          <span className="absolute top-2/3 left-0 h-px w-full bg-white/25" />
+          <span className="absolute left-1/3 top-0 h-full w-px bg-white/30" />
+          <span className="absolute left-2/3 top-0 h-full w-px bg-white/30" />
+          <span className="absolute left-0 top-1/3 h-px w-full bg-white/30" />
+          <span className="absolute left-0 top-2/3 h-px w-full bg-white/30" />
         </div>
       )}
 
@@ -755,30 +747,29 @@ export function CameraRecorder({
           type="button"
           onClick={cancelCountdown}
           aria-label="Cancel countdown"
-          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/40"
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-black/35"
         >
-          <span
-            key={countdown}
-            className="animate-countdown-pulse font-mono text-7xl font-bold text-white"
-          >
+          <span key={countdown} className="animate-countdown-pulse numeral text-[7rem] leading-none text-white drop-shadow-lg">
             {countdown}
           </span>
-          <span className="glass rounded-full px-3 py-1 text-xs text-white/70">Tap to cancel</span>
+          <span className="rounded-full bg-black/45 px-3.5 py-1.5 text-[0.8125rem] font-medium text-white/80 backdrop-blur-xl">
+            Tap to cancel
+          </span>
         </button>
       )}
 
       {zoomHintVisible && (
         <div className="pointer-events-none absolute right-4 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-2.5">
-          <div className="glass relative h-36 w-[3px] rounded-full">
+          <div className="relative h-36 w-[3px] rounded-full bg-white/25">
             <span
-              className="absolute left-1/2 h-3 w-3 rounded-full bg-accent"
+              className="absolute left-1/2 h-3.5 w-3.5 rounded-full bg-[#ffd60a] shadow"
               style={{
                 bottom: `${((zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100}%`,
                 transform: "translate(-50%, 50%)",
               }}
             />
           </div>
-          <span className="glass rounded-full px-2.5 py-1 font-mono text-xs tabular-nums text-white">
+          <span className="numeral rounded-full bg-black/50 px-2.5 py-1 text-[0.8125rem] text-[#ffd60a] backdrop-blur-xl">
             {zoom.toFixed(1)}×
           </span>
         </div>
@@ -787,163 +778,130 @@ export function CameraRecorder({
       {focusPoint && (
         <span
           key={focusPoint.id}
-          className="animate-focus-ring text-accent pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2"
+          className="animate-focus-ring pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2 text-[#ffd60a]"
           style={{ left: focusPoint.x, top: focusPoint.y }}
         >
-          <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-            <path
-              d="M4 15V6a2 2 0 0 1 2-2h9M56 15V6a2 2 0 0 0-2-2h-9M4 45v9a2 2 0 0 0 2 2h9M56 45v9a2 2 0 0 1-2 2h-9"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
+          {/* The Camera app's square focus box, in its yellow. */}
+          <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+            <rect x="2" y="2" width="68" height="68" rx="2" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M36 2v6M36 64v6M2 36h6M64 36h6" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </span>
       )}
 
-      <div className="relative z-10 flex items-center justify-between px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))]">
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close camera"
-          className="glass flex h-9 w-9 items-center justify-center rounded-full text-white"
-        >
+      {/* Top bar: close, status, and the two quick toggles. */}
+      <div className="relative z-10 grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 pb-3 pt-[calc(0.875rem+env(safe-area-inset-top))]">
+        <button type="button" onClick={onClose} aria-label="Close camera" className={chromeButton}>
           <CloseIcon className="h-[18px] w-[18px]" />
         </button>
-        {isRecording ? (
-          <span className="glass flex items-center gap-2 rounded-full px-3.5 py-1.5 font-mono text-xs tracking-wider text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-            REC {formatTime(seconds)}
-            {isLocked && <LockIcon className="h-3.5 w-3.5 text-white/60" />}
-          </span>
-        ) : hasSession ? (
-          <span className="glass rounded-full px-3.5 py-1.5 font-mono text-xs tracking-wider text-white/70">
-            Paused {formatTime(seconds)} · tap to resume
-          </span>
-        ) : (
-          !error && (
-            <span className="glass rounded-full px-3.5 py-1.5 font-mono text-[0.65rem] uppercase tracking-[0.15em] text-white/60">
-              Tap · Hold · Pinch
-            </span>
-          )
-        )}
-        <button
-          type="button"
-          onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
-          disabled={hasSession}
-          aria-label="Flip camera"
-          className="glass flex h-9 w-9 items-center justify-center rounded-full text-white disabled:opacity-40"
-        >
-          <CameraFlipIcon className="h-[18px] w-[18px]" />
-        </button>
-      </div>
 
-      {!hasSession && !error && (
-        <div className="relative z-10 flex items-center justify-center gap-2 px-4 pb-2">
-          {torchSupported && (
+        <div className="flex justify-center">
+          {isRecording ? (
+            <span className="numeral flex items-center gap-1.5 rounded-[8px] bg-[#ff3b30] px-2.5 py-1 text-[0.9375rem] text-white">
+              {formatTime(seconds)}
+              {isLocked && <LockIcon className="h-3.5 w-3.5 text-white/85" />}
+            </span>
+          ) : hasSession ? (
+            <span className="rounded-full bg-black/45 px-3 py-1 text-[0.8125rem] font-medium text-white/85 backdrop-blur-xl">
+              Paused · <span className="numeral">{formatTime(seconds)}</span>
+            </span>
+          ) : null}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {!hasSession && !error && torchSupported && (
             <button
               type="button"
               onClick={toggleTorch}
               aria-label={torchOn ? "Turn off flash" : "Turn on flash"}
-              className={`glass flex h-8 w-8 items-center justify-center rounded-full ${
-                torchOn ? "bg-accent text-accent-foreground" : "text-white"
+              aria-pressed={torchOn}
+              className={`pressable flex h-10 w-10 items-center justify-center rounded-full backdrop-blur-xl ${
+                torchOn ? "bg-[#ffd60a] text-black" : "bg-black/40 text-white"
               }`}
             >
-              <BoltIcon className="h-4 w-4" />
+              <BoltIcon className="h-[18px] w-[18px]" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            aria-label="Camera settings"
-            className="glass flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white"
-          >
-            <SettingsIcon className="h-4 w-4" />
-            Settings
-          </button>
+          {!hasSession && !error && (
+            <button
+              type="button"
+              onClick={() => setIsSettingsOpen(true)}
+              aria-label="Camera settings"
+              className={chromeButton}
+            >
+              <SettingsIcon className="h-[18px] w-[18px]" />
+            </button>
+          )}
         </div>
-      )}
+      </div>
 
       {isSettingsOpen && !hasSession && !error && (
         <div
-          className="absolute inset-0 z-30 flex flex-col justify-end bg-black/60"
+          className="animate-fade-in absolute inset-0 z-30 flex flex-col justify-end bg-black/55"
           onClick={() => setIsSettingsOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="glass-raised max-h-[75vh] overflow-y-auto rounded-t-[2rem] p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
+            className="animate-sheet-up max-h-[78vh] overflow-y-auto rounded-t-[28px] bg-[#1c1c1e]/95 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-2.5 text-white backdrop-blur-2xl"
           >
-            <div className="mx-auto -mt-1 mb-4 h-1 w-10 rounded-full bg-white/15" />
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-white">Camera settings</h2>
+            <div className="mx-auto mb-3 h-[5px] w-9 rounded-full bg-white/25" />
+            <div className="mb-5 flex items-center justify-between px-1">
+              <h2 className="text-[1.25rem] font-bold tracking-[-0.02em]">Camera</h2>
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                aria-label="Close settings"
-                className="flex h-7 w-7 items-center justify-center rounded-full text-white/60"
+                className="text-[0.9375rem] font-semibold text-[#ffd60a]"
               >
-                <CloseIcon className="h-4 w-4" />
+                Done
               </button>
             </div>
 
-            <div className="flex flex-col gap-5">
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">Quality</p>
-                <div className="flex gap-2">
-                  {(Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[]).map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setResolution(key)}
-                      className={`flex-1 rounded-xl py-2 text-sm font-medium ${
-                        resolution === key ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
-                      }`}
-                    >
-                      {RESOLUTION_PRESETS[key].label}
-                    </button>
-                  ))}
-                </div>
-                {resolution === "4k" && (
-                  <p className="mt-1.5 text-xs text-white/50">
-                    4K asks for real recording quality most phones can&apos;t encode in real time
-                    without dropping frames — 720p or 1080p will feel smoother.
-                  </p>
-                )}
-              </div>
+            <div className="flex flex-col gap-6">
+              <CameraSetting label="Quality" note={resolution === "4k" ? "Most phones can't encode 4K in real time without dropping frames. 720p or 1080p will feel smoother." : undefined}>
+                <DarkSegments
+                  options={(Object.keys(RESOLUTION_PRESETS) as ResolutionPreset[]).map((key) => ({
+                    key,
+                    label: RESOLUTION_PRESETS[key].label,
+                  }))}
+                  value={resolution}
+                  onChange={setResolution}
+                />
+              </CameraSetting>
 
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">Frame rate</p>
-                <div className="flex gap-2">
-                  {FPS_PRESETS.map((f) => (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setFps(f)}
-                      className={`flex-1 rounded-xl py-2 text-sm font-medium ${
-                        fps === f ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
-                      }`}
-                    >
-                      {f} fps
-                    </button>
-                  ))}
-                </div>
-                {fps === 120 && (
-                  <p className="mt-1.5 text-xs text-white/50">
-                    Most phones cap real capture around 30-60fps through the web camera even when
-                    120 is requested — SORZA will use whatever your device actually delivers.
-                  </p>
-                )}
-              </div>
+              <CameraSetting label="Frame rate" note={fps === 120 ? "Most phones cap web camera capture around 30–60fps even when 120 is requested. SORZA uses whatever your device delivers." : undefined}>
+                <DarkSegments
+                  options={FPS_PRESETS.map((f) => ({ key: f, label: `${f} fps` }))}
+                  value={fps}
+                  onChange={setFps}
+                />
+              </CameraSetting>
+
+              <CameraSetting label="Self-timer">
+                <DarkSegments
+                  options={COUNTDOWN_OPTIONS.map((s) => ({ key: s, label: s === 0 ? "Off" : `${s}s` }))}
+                  value={countdownSeconds}
+                  onChange={setCountdownSeconds}
+                />
+              </CameraSetting>
+
+              <CameraSetting label="Max clip length">
+                <DarkSegments
+                  options={DURATION_OPTIONS.map((d) => ({ key: d.seconds, label: d.label }))}
+                  value={maxSeconds}
+                  onChange={setMaxSeconds}
+                />
+              </CameraSetting>
 
               {exposureRange && (
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Exposure</p>
-                    <span className="font-mono text-xs text-white/70">
+                <CameraSetting
+                  label="Exposure"
+                  trailing={
+                    <span className="numeral text-[0.875rem] text-white/80">
                       {exposureCompensation > 0 ? "+" : ""}
                       {exposureCompensation.toFixed(1)}
                     </span>
-                  </div>
+                  }
+                >
                   <input
                     type="range"
                     min={exposureRange.min}
@@ -951,17 +909,16 @@ export function CameraRecorder({
                     step={exposureRange.step || 0.1}
                     value={exposureCompensation}
                     onChange={(e) => applyExposureCompensation(Number(e.target.value))}
-                    className="w-full"
+                    aria-label="Exposure"
+                    className="w-full accent-[#ffd60a]"
                   />
-                </div>
+                </CameraSetting>
               )}
 
               {colorTempRange && (
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
-                      White balance
-                    </p>
+                <CameraSetting
+                  label="White balance"
+                  trailing={
                     <button
                       type="button"
                       onClick={() =>
@@ -971,11 +928,12 @@ export function CameraRecorder({
                               colorTemperature ?? Math.round((colorTempRange.min + colorTempRange.max) / 2),
                             )
                       }
-                      className="text-xs text-accent"
+                      className="text-[0.875rem] font-semibold text-[#ffd60a]"
                     >
-                      {whiteBalanceMode === "manual" ? "Switch to auto" : "Set manually"}
+                      {whiteBalanceMode === "manual" ? "Auto" : "Manual"}
                     </button>
-                  </div>
+                  }
+                >
                   {whiteBalanceMode === "manual" && (
                     <>
                       <input
@@ -985,88 +943,33 @@ export function CameraRecorder({
                         step={colorTempRange.step || 100}
                         value={colorTemperature ?? colorTempRange.min}
                         onChange={(e) => setWhiteBalanceManualTemp(Number(e.target.value))}
-                        className="w-full"
+                        aria-label="Color temperature"
+                        className="w-full accent-[#ffd60a]"
                       />
-                      <p className="mt-1 text-center font-mono text-xs text-white/70">{colorTemperature}K</p>
+                      <p className="numeral mt-1 text-center text-[0.8125rem] text-white/70">{colorTemperature}K</p>
                     </>
                   )}
-                </div>
+                </CameraSetting>
               )}
 
-              {aeAfLockSupported && (
-                <button
-                  type="button"
-                  onClick={toggleAeAfLock}
-                  className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium ${
-                    aeAfLocked ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
-                  }`}
-                >
-                  <span>Lock focus &amp; exposure</span>
-                  {aeAfLocked && <LockIcon className="h-4 w-4" />}
-                </button>
-              )}
-
-              <div>
-                <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white/50">
-                  <TimerIcon className="h-3.5 w-3.5" />
-                  Self-timer
-                </p>
-                <div className="flex gap-2">
-                  {COUNTDOWN_OPTIONS.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setCountdownSeconds(s)}
-                      className={`flex-1 rounded-xl py-2 text-sm font-medium ${
-                        countdownSeconds === s ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
-                      }`}
-                    >
-                      {s === 0 ? "Off" : `${s}s`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setGridEnabled((g) => !g)}
-                className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 text-sm font-medium text-white"
-              >
-                <span className="flex items-center gap-2">
-                  <GridIcon className="h-4 w-4" />
-                  Grid
-                </span>
-                <span
-                  className={`block h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
-                    gridEnabled ? "bg-accent" : "bg-white/20"
-                  }`}
-                >
-                  <span
-                    className={`block h-5 w-5 translate-y-0.5 rounded-full bg-white transition-transform ${
-                      gridEnabled ? "translate-x-5" : "translate-x-0.5"
-                    }`}
-                  />
-                </span>
-              </button>
-
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/50">
-                  Max clip length
-                </p>
-                <div className="flex gap-2">
-                  {DURATION_OPTIONS.map((d) => (
-                    <button
-                      key={d.seconds}
-                      type="button"
-                      onClick={() => setMaxSeconds(d.seconds)}
-                      className={`flex-1 rounded-xl py-2 text-sm font-medium ${
-                        maxSeconds === d.seconds ? "bg-accent text-accent-foreground" : "bg-white/10 text-white"
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
+              <div className="overflow-hidden rounded-[16px] bg-white/[0.08]">
+                <SwitchRow
+                  icon={<GridIcon className="h-[18px] w-[18px]" />}
+                  label="Grid"
+                  checked={gridEnabled}
+                  onToggle={() => setGridEnabled((g) => !g)}
+                />
+                {aeAfLockSupported && (
+                  <div className="relative">
+                    <span className="absolute left-[3.25rem] right-0 top-0 h-px bg-white/10" />
+                    <SwitchRow
+                      icon={<LockIcon className="h-[18px] w-[18px]" />}
+                      label="Lock focus & exposure"
+                      checked={aeAfLocked}
+                      onToggle={toggleAeAfLock}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1075,95 +978,223 @@ export function CameraRecorder({
 
       {error && (
         <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
-          <span className="glass flex h-14 w-14 items-center justify-center rounded-full text-white/60">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 text-white/70">
             <CameraIcon className="h-7 w-7" />
           </span>
           <Callout tone="danger">{error}</Callout>
         </div>
       )}
 
-      <div className="relative z-10 mt-auto flex items-center justify-center pb-[calc(2rem+env(safe-area-inset-bottom))]">
-        {hasSession ? (
-          <button
-            type="button"
-            onClick={finishRecording}
-            aria-label="Finish recording"
-            className="absolute right-6 flex h-11 w-11 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg"
-          >
-            <CheckIcon className="h-5 w-5" />
-          </button>
-        ) : (
-          onImportRequested &&
-          !isRecording && (
-            <button
-              type="button"
-              onClick={onImportRequested}
-              aria-label="Choose from your library"
-              className="glass absolute right-6 flex h-11 w-11 items-center justify-center rounded-xl text-white"
-            >
-              <GalleryIcon className="h-5 w-5" />
-            </button>
-          )
-        )}
+      {/* Bottom bar: library · shutter · flip (or finish while a
+          recording session is open), with the gesture hint beneath. */}
+      <div className="relative z-10 mt-auto pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
         {isRecording && !isLocked && isFirstSegment && (
-          <div className="glass pointer-events-none absolute bottom-full left-1/2 mb-5 flex h-11 w-[140px] -translate-x-1/2 items-center rounded-full">
-            <LockIcon className="absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45" />
+          <div className="pointer-events-none mx-auto mb-5 flex h-11 w-[150px] items-center rounded-full bg-black/45 backdrop-blur-xl">
+            <span className="absolute left-1/2 -translate-x-1/2 text-[0.6875rem] font-semibold uppercase tracking-wide text-white/45">
+              Slide to lock
+            </span>
+            <LockIcon className="absolute right-3.5 h-4 w-4 text-white/60" />
             <span
-              className="absolute flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg"
-              style={{ transform: `translate(${8 + dragOffset}px, 0)` }}
+              className="absolute flex h-9 w-9 items-center justify-center rounded-full bg-[#ff3b30] text-white shadow-lg"
+              style={{ transform: `translate(${4 + dragOffset}px, 0)` }}
             >
               <CameraIcon className="h-4 w-4" />
             </span>
           </div>
         )}
-        <div className="relative flex h-20 w-20 items-center justify-center">
-          <svg viewBox="0 0 80 80" className="pointer-events-none absolute inset-0 h-full w-full -rotate-90">
-            <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
-            {isRecording && (
-              <circle
-                cx="40"
-                cy="40"
-                r="36"
-                fill="none"
-                stroke="var(--color-accent)"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeDasharray={ringCircumference}
-                strokeDashoffset={ringCircumference * (1 - recordProgress)}
-                style={{ transition: "stroke-dashoffset 1s linear" }}
-              />
+
+        <div className="grid grid-cols-3 items-center px-8">
+          <div className="flex justify-start">
+            {onImportRequested && !hasSession && !isRecording && (
+              <button
+                type="button"
+                onClick={onImportRequested}
+                aria-label="Choose from your library"
+                className="pressable flex h-12 w-12 items-center justify-center rounded-[12px] bg-white/15 text-white ring-2 ring-white/70 backdrop-blur-xl"
+              >
+                <GalleryIcon className="h-5 w-5" />
+              </button>
             )}
-          </svg>
-          <button
-            type="button"
-            onPointerDown={handleShutterDown}
-            onPointerMove={handleShutterMove}
-            onPointerUp={handleShutterUp}
-            onPointerCancel={() => {
-              if (holdTimerRef.current) {
-                clearTimeout(holdTimerRef.current);
-                holdTimerRef.current = null;
-              }
-              dragStartXRef.current = null;
-              if (isRecording && !isLocked) pauseSegment();
-            }}
-            disabled={!!error}
-            aria-label={isLocked ? "Pause recording" : "Tap for photo, hold for video"}
-            className="relative z-10 flex h-[68px] w-[68px] select-none items-center justify-center rounded-full border-2 border-white/70 disabled:opacity-40"
-            style={{
-              touchAction: "none",
-              WebkitUserSelect: "none",
-              WebkitTouchCallout: "none",
-            }}
-          >
-            <span
-              className={`bg-accent transition-all ${
-                isRecording ? "h-6 w-6 rounded-md" : "h-[52px] w-[52px] rounded-full"
-              }`}
-            />
-          </button>
+          </div>
+
+          <div className="flex justify-center">
+            <div className="relative flex h-[84px] w-[84px] items-center justify-center">
+              <svg viewBox="0 0 84 84" className="pointer-events-none absolute inset-0 h-full w-full -rotate-90">
+                <circle cx="42" cy="42" r="38" fill="none" stroke="white" strokeWidth="4.5" />
+                {isRecording && (
+                  <circle
+                    cx="42"
+                    cy="42"
+                    r="38"
+                    fill="none"
+                    stroke="#ff3b30"
+                    strokeWidth="4.5"
+                    strokeLinecap="round"
+                    strokeDasharray={ringCircumference}
+                    strokeDashoffset={ringCircumference * (1 - recordProgress)}
+                    style={{ transition: "stroke-dashoffset 1s linear" }}
+                  />
+                )}
+              </svg>
+              <button
+                type="button"
+                onPointerDown={handleShutterDown}
+                onPointerMove={handleShutterMove}
+                onPointerUp={handleShutterUp}
+                onPointerCancel={() => {
+                  if (holdTimerRef.current) {
+                    clearTimeout(holdTimerRef.current);
+                    holdTimerRef.current = null;
+                  }
+                  dragStartXRef.current = null;
+                  if (isRecording && !isLocked) pauseSegment();
+                }}
+                disabled={!!error}
+                aria-label={isLocked ? "Pause recording" : "Tap for photo, hold for video"}
+                className="relative z-10 flex h-[68px] w-[68px] select-none items-center justify-center rounded-full disabled:opacity-40"
+                style={{
+                  touchAction: "none",
+                  WebkitUserSelect: "none",
+                  WebkitTouchCallout: "none",
+                }}
+              >
+                <span
+                  className={`transition-all duration-300 ease-[var(--ease-ios)] ${
+                    isRecording
+                      ? "h-7 w-7 rounded-[7px] bg-[#ff3b30]"
+                      : hasSession
+                        ? "h-[66px] w-[66px] rounded-full bg-[#ff3b30]"
+                        : "h-[66px] w-[66px] rounded-full bg-white active:scale-90"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            {hasSession ? (
+              <button
+                type="button"
+                onClick={finishRecording}
+                aria-label="Finish recording"
+                className="pressable flex h-12 w-12 items-center justify-center rounded-full bg-[#ffd60a] text-black shadow-lg"
+              >
+                <CheckIcon className="h-5 w-5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
+                aria-label="Flip camera"
+                className="pressable flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-xl"
+              >
+                <CameraFlipIcon className="h-[22px] w-[22px]" />
+              </button>
+            )}
+          </div>
         </div>
+
+        {!error && (
+          <p className="mt-4 text-center text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#ffd60a]">
+            {isRecording ? "Recording" : hasSession ? "Tap to resume" : "Tap photo · Hold video"}
+          </p>
+        )}
       </div>
     </div>
+  );
+}
+
+/** One labelled block in the dark camera settings sheet. */
+function CameraSetting({
+  label,
+  trailing,
+  note,
+  children,
+}: {
+  label: string;
+  trailing?: React.ReactNode;
+  note?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <p className="text-[0.8125rem] font-medium uppercase tracking-wide text-white/55">{label}</p>
+        {trailing}
+      </div>
+      {children}
+      {note && <p className="mt-2 px-1 text-[0.8125rem] leading-snug text-white/50">{note}</p>}
+    </div>
+  );
+}
+
+/** A segmented control for the always-dark camera surface (the shared
+ * SegmentedControl follows the app theme, which would break here). */
+function DarkSegments<T extends string | number>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { key: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="flex rounded-[12px] bg-white/[0.12] p-[3px]" role="radiogroup">
+      {options.map((o) => {
+        const active = o.key === value;
+        return (
+          <button
+            key={String(o.key)}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(o.key)}
+            className={`min-w-0 flex-1 rounded-[9px] py-[7px] text-[0.8125rem] transition-colors duration-200 ${
+              active ? "bg-white/30 font-semibold text-white shadow" : "font-medium text-white/70"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** An iOS switch row for the dark camera settings sheet. */
+function SwitchRow({
+  icon,
+  label,
+  checked,
+  onToggle,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onToggle}
+      className="flex min-h-[50px] w-full items-center gap-3 px-4 text-left"
+    >
+      <span className="flex h-6 w-6 items-center justify-center text-white/80">{icon}</span>
+      <span className="min-w-0 flex-1 text-[0.9375rem]">{label}</span>
+      <span
+        className={`relative h-[31px] w-[51px] flex-shrink-0 rounded-full transition-colors duration-300 ${
+          checked ? "bg-[#30d158]" : "bg-white/20"
+        }`}
+      >
+        <span
+          className={`absolute left-[2px] top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow transition-transform duration-300 ease-[var(--ease-ios)] ${
+            checked ? "translate-x-[20px]" : "translate-x-0"
+          }`}
+        />
+      </span>
+    </button>
   );
 }
