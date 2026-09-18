@@ -10,7 +10,7 @@ import { updateProfileAvatar } from "@/lib/db/profiles";
 import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { Avatar } from "@/features/feed/avatar";
-import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 export function EditAvatarForm({
   userId,
@@ -59,9 +59,22 @@ export function EditAvatarForm({
   }
 
   return (
-    <div className="flex items-center gap-4">
-      <Avatar username={username} avatarUrl={previewUrl} className="h-16 w-16 flex-shrink-0 text-xl" />
-      <div>
+    <div className="flex flex-col items-center">
+      <button
+        type="button"
+        disabled={isUploading}
+        onClick={() => inputRef.current?.click()}
+        aria-label="Change profile picture"
+        className="pressable relative rounded-full"
+      >
+        <Avatar username={username} avatarUrl={previewUrl} className="h-28 w-28 text-4xl" />
+        {isUploading && (
+          <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45">
+            <Spinner className="h-6 w-6 text-white" />
+          </span>
+        )}
+      </button>
+      <div className="mt-3 text-center">
         <input
           ref={inputRef}
           type="file"
@@ -73,16 +86,15 @@ export function EditAvatarForm({
             e.target.value = "";
           }}
         />
-        <Button
+        <button
           type="button"
-          variant="secondary"
-          className="px-3 py-1.5 text-sm"
+          className="text-[0.9375rem] font-semibold text-accent disabled:opacity-60"
           disabled={isUploading}
           onClick={() => inputRef.current?.click()}
         >
-          {isUploading ? "Uploading…" : "Change profile picture"}
-        </Button>
-        {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+          {isUploading ? "Uploading…" : "Edit Photo"}
+        </button>
+        {error && <p className="mt-2 text-[0.8125rem] text-danger">{error}</p>}
       </div>
     </div>
   );

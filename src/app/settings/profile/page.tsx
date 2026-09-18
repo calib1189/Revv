@@ -6,7 +6,7 @@ import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { EditAvatarForm } from "@/features/profile/edit-avatar-form";
 import { EditDisplayNameForm } from "@/features/profile/edit-display-name-form";
 import { EditBioForm } from "@/features/profile/edit-bio-form";
-import Link from "next/link";
+import { PageHeader, PageShell } from "@/components/ui/page-header";
 
 export default async function EditProfilePage() {
   const user = await getCurrentUser();
@@ -21,13 +21,8 @@ export default async function EditProfilePage() {
   const avatarUrl = avatarMedia ? publicMediaUrl(supabase, avatarMedia.storage_path) : null;
 
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
-      <Link href="/settings" className="mb-4 inline-block text-sm text-muted hover:text-foreground">
-        ← Settings
-      </Link>
-      <h1 className="mb-8 text-2xl font-semibold tracking-tight">
-        Edit profile
-      </h1>
+    <PageShell>
+      <PageHeader title="Edit Profile" back={{ href: "/settings", label: "Settings" }} />
 
       {profile && (
         <div className="mb-8">
@@ -36,13 +31,15 @@ export default async function EditProfilePage() {
             username={profile.username}
             initialAvatarUrl={avatarUrl}
           />
+          <p className="mt-1 text-center text-[0.875rem] text-muted">@{profile.username}</p>
         </div>
       )}
 
-      <div className="flex flex-col gap-8">
+      <div className="glass-raised elev-1 flex flex-col gap-6 rounded-[22px] p-5">
         <EditDisplayNameForm initialDisplayName={profile?.display_name ?? null} />
+        <div className="h-px bg-border" />
         <EditBioForm initialBio={profile?.bio ?? null} />
       </div>
-    </div>
+    </PageShell>
   );
 }

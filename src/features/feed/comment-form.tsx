@@ -5,9 +5,8 @@ import {
   createCommentAction,
   type CommentFormState,
 } from "@/features/feed/actions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Callout } from "@/components/ui/callout";
+import { ArrowUpIcon } from "@/components/ui/icons";
 
 const initialState: CommentFormState = { error: null };
 
@@ -43,20 +42,24 @@ export function CommentForm({
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-2">
       {state.error && <Callout tone="danger">{state.error}</Callout>}
-      <div className="flex gap-2">
-        <Input
+      <div className="flex items-center gap-1 rounded-full border border-border bg-background/60 py-1 pl-4 pr-1 transition-[box-shadow,border-color] focus-within:border-accent/60 focus-within:ring-4 focus-within:ring-accent/15">
+        <input
           name="body"
-          placeholder={parentId ? "Write a reply…" : "Add a comment…"}
+          placeholder={parentId ? "Write a reply" : "Add a comment"}
           maxLength={2000}
           autoFocus={autoFocus}
+          autoComplete="off"
+          aria-label={parentId ? "Reply" : "Comment"}
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-foreground placeholder:text-muted focus:outline-none"
         />
-        <Button
+        <button
           type="submit"
           disabled={isPending}
-          className="px-3 py-1.5 text-sm"
+          aria-label={parentId ? "Post reply" : "Post comment"}
+          className="pressable flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground disabled:opacity-50"
         >
-          {isPending ? "Posting…" : parentId ? "Reply" : "Post"}
-        </Button>
+          <ArrowUpIcon className="h-4 w-4" />
+        </button>
       </div>
     </form>
   );

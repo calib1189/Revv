@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { subscribeToPushAction, unsubscribeFromPushAction } from "@/features/push/push-actions";
-import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
+import { Spinner } from "@/components/ui/spinner";
 import { Callout } from "@/components/ui/callout";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -104,43 +105,33 @@ export function PushOptIn() {
     }
   }
 
-  if (status === "loading" || status === "unsupported") return null;
+  const footer =
+    status === "ios-needs-install"
+      ? "On iPhone, add SORZA to your Home Screen first: tap Share, then Add to Home Screen. Open it from there to turn this on."
+      : status === "denied"
+        ? "Notifications are blocked for this site. Allow them in your browser settings to turn this on."
+        : status === "unsupported"
+          ? "This browser doesn't support push notifications."
+          : "Likes, comments, new followers, and messages.";
 
   return (
     <div>
-      {status === "ios-needs-install" ? (
-        <p className="text-sm text-muted">
-          To get push notifications on iPhone, add SORZA to your Home Screen
-          first: tap Share, then &quot;Add to Home Screen.&quot; Open it from
-          there to turn notifications on.
-        </p>
-      ) : status === "denied" ? (
-        <p className="text-sm text-muted">
-          Notifications are blocked for this site — enable them in your browser
-          settings to turn this on.
-        </p>
-      ) : status === "on" ? (
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={isPending}
-          onClick={handleDisable}
-          className="px-3 py-1.5 text-sm"
-        >
-          {isPending ? "Turning off…" : "Turn off push notifications"}
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          disabled={isPending}
-          onClick={handleEnable}
-          className="px-3 py-1.5 text-sm"
-        >
-          {isPending ? "Enabling…" : "Enable push notifications"}
-        </Button>
-      )}
+      <div className="glass-raised elev-1 flex min-h-[52px] items-center gap-3 rounded-[22px] px-4 py-2.5">
+        <span className="min-w-0 flex-1 text-[0.9375rem]">Push Notifications</span>
+        {status === "loading" ? (
+          <Spinner className="h-5 w-5 text-muted" />
+        ) : (
+          <Toggle
+            label="Push notifications"
+            checked={status === "on"}
+            disabled={isPending || status === "unsupported" || status === "denied" || status === "ios-needs-install"}
+            onChange={(next) => (next ? handleEnable() : handleDisable())}
+          />
+        )}
+      </div>
+      <p className="mt-2 px-4 text-[0.8125rem] leading-snug text-muted">{footer}</p>
       {error && (
-        <div className="mt-2">
+        <div className="mt-3">
           <Callout tone="danger">{error}</Callout>
         </div>
       )}

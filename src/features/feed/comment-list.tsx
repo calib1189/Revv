@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/features/feed/avatar";
-import { RankFrame } from "@/features/garage/rank-frame";
+import { ProgressRing } from "@/components/ui/progress-ring";
+import { rankForScore, tierColorVar } from "@/lib/rating/rank";
 import { DeleteCommentButton } from "@/features/feed/delete-comment-button";
 import { CommentForm } from "@/features/feed/comment-form";
 import { ReportButton } from "@/features/feed/report-button";
@@ -40,7 +41,7 @@ export function CommentList({
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
 
   if (comments.length === 0) {
-    return <p className="text-sm text-muted">No comments yet.</p>;
+    return <p className="py-6 text-center text-[0.9375rem] text-muted">No comments yet. Start the conversation.</p>;
   }
 
   const topLevel = comments.filter((c) => !c.parent_id);
@@ -53,7 +54,7 @@ export function CommentList({
   }
 
   return (
-    <ul className="flex flex-col gap-4">
+    <ul className="flex flex-col gap-5">
       {topLevel.map((comment) => {
         const replies = repliesByParent.get(comment.id) ?? [];
         const isReplying = replyingTo === comment.id;
@@ -73,7 +74,7 @@ export function CommentList({
             />
 
             {replies.length > 0 && (
-              <ul className="ml-11 flex flex-col gap-3 border-l border-border pl-3">
+              <ul className="ml-[3.25rem] flex flex-col gap-4">
                 {replies.map((reply) => (
                   <CommentRow
                     key={reply.id}
@@ -87,7 +88,7 @@ export function CommentList({
             )}
 
             {isReplying && (
-              <div className="ml-11">
+              <div className="ml-[3.25rem]">
                 <CommentForm
                   postId={postId}
                   parentId={comment.id}
@@ -121,28 +122,38 @@ function CommentRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <RankFrame score={comment.authorRatingScore} compact hideBadge className="flex-shrink-0 rounded-full">
-        <Avatar username={comment.authorUsername} avatarUrl={comment.authorAvatarUrl} />
-      </RankFrame>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm">
-          <Link
-            href={`/u/${comment.authorUsername}`}
-            className="font-medium hover:underline"
+      <Link href={`/u/${comment.authorUsername}`} className="flex-shrink-0">
+        {comment.authorRatingScore != null ? (
+          <ProgressRing
+            value={comment.authorRatingScore / 100}
+            size={40}
+            stroke={2.5}
+            color={tierColorVar(rankForScore(comment.authorRatingScore))}
           >
-            {comment.authorDisplayName || `@${comment.authorUsername}`}
+            <Avatar username={comment.authorUsername} avatarUrl={comment.authorAvatarUrl} className="h-[33px] w-[33px] text-xs" />
+          </ProgressRing>
+        ) : (
+          <span className="flex h-10 w-10 items-center justify-center">
+            <Avatar username={comment.authorUsername} avatarUrl={comment.authorAvatarUrl} className="h-[34px] w-[34px] text-xs" />
+          </span>
+        )}
+      </Link>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <p className="text-[0.9375rem] leading-snug">
+          <Link href={`/u/${comment.authorUsername}`} className="font-semibold">
+            {comment.authorDisplayName || comment.authorUsername}
           </Link>{" "}
-          {comment.body}
+          <span className="break-words">{comment.body}</span>
         </p>
-        <div className="mt-0.5 flex items-center gap-3">
-          <span className="text-xs text-muted" suppressHydrationWarning>
+        <div className="mt-1 flex items-center gap-3.5">
+          <span className="text-[0.75rem] text-muted" suppressHydrationWarning>
             {relativeTime(comment.created_at)}
           </span>
           {onReply && (
             <button
               type="button"
               onClick={onReply}
-              className="text-xs font-medium text-muted hover:text-foreground"
+              className="text-[0.75rem] font-semibold text-muted hover:text-foreground"
             >
               Reply
             </button>

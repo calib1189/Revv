@@ -9,8 +9,8 @@ export function ClaimBusinessButton() {
 
   return (
     <>
-      <Button type="button" variant="secondary" className="w-full py-2.5 text-sm" onClick={() => setIsOpen(true)}>
-        Claim a business
+      <Button type="button" className="h-12 w-full text-[1rem] font-semibold" onClick={() => setIsOpen(true)}>
+        Claim a Business
       </Button>
       {isOpen && <ClaimBusinessPanel onClose={() => setIsOpen(false)} />}
     </>

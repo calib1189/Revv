@@ -29,6 +29,7 @@ import { CommentForm } from "@/features/feed/comment-form";
 import { DeletePostButton } from "@/features/feed/delete-post-button";
 import { ReportButton } from "@/features/feed/report-button";
 import { relativeTime } from "@/lib/format/relative-time";
+import { SectionTitle } from "@/components/ui/grouped-list";
 
 export default async function PostPage({
   params,
@@ -134,28 +135,41 @@ export default async function PostPage({
       .filter((h): h is NonNullable<typeof h> => h !== null),
   }));
 
+  const authorAvatarMedia = author?.avatar_media_id
+    ? await getMediaByIds(supabase, [author.avatar_media_id]).catch(() => [])
+    : [];
+  const authorAvatarUrl = authorAvatarMedia[0]
+    ? publicMediaUrl(supabase, authorAvatarMedia[0].storage_path)
+    : null;
+
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-4 py-8 sm:px-6">
-      <div className="glass overflow-hidden rounded-2xl">
+    <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
+      <div className="glass-raised elev-2 overflow-hidden rounded-[28px]">
         <div className="flex items-center gap-3 px-4 py-3">
-          <Avatar username={author?.username ?? "unknown"} />
+          <Link href={`/u/${author?.username ?? "unknown"}`} className="flex-shrink-0">
+            <Avatar
+              username={author?.username ?? "unknown"}
+              avatarUrl={authorAvatarUrl}
+              className="h-10 w-10 text-sm"
+            />
+          </Link>
           <div className="min-w-0 flex-1">
             <Link
               href={`/u/${author?.username ?? "unknown"}`}
-              className="truncate text-sm font-medium hover:underline"
+              className="block truncate text-[0.9375rem] font-semibold"
             >
-              @{author?.username ?? "unknown"}
+              {author?.display_name || author?.username || "unknown"}
             </Link>
             {vehicleTitle && (
               <Link
                 href={`/garage/${vehicle!.id}`}
-                className="truncate text-xs text-muted hover:text-foreground"
+                className="block truncate text-[0.8125rem] text-muted hover:text-foreground"
               >
                 {vehicleTitle}
               </Link>
             )}
           </div>
-          <span className="flex-shrink-0 text-xs text-muted" suppressHydrationWarning>
+          <span className="flex-shrink-0 text-[0.8125rem] text-muted" suppressHydrationWarning>
             {relativeTime(post.created_at)}
           </span>
         </div>
@@ -176,16 +190,16 @@ export default async function PostPage({
           />
         )}
 
-        <div className="flex items-center gap-4 px-4 pt-3">
+        <div className="flex items-center gap-4 px-4 pt-3.5">
           <LikeButton
             postId={post.id}
             initialLiked={likedIds.has(post.id)}
             initialCount={likeCount}
             isAuthenticated={Boolean(user)}
           />
-          <span className="flex items-center gap-1 text-sm text-muted">
+          <span className="flex items-center gap-1 text-[0.875rem] text-muted">
             <EyeIcon className="h-4 w-4" />
-            {formatCompactNumber(viewCount)}
+            <span className="numeral">{formatCompactNumber(viewCount)}</span>
           </span>
           <div className="flex-1" />
           <SaveButton
@@ -196,44 +210,48 @@ export default async function PostPage({
         </div>
 
         {post.caption && (
-          <div className="px-4 pb-4 pt-2 text-sm leading-relaxed">
-            <span className="font-medium">@{author?.username}</span>{" "}
+          <div className="px-4 pb-4 pt-2 text-[0.9375rem] leading-relaxed">
+            <span className="font-semibold">{author?.username}</span>{" "}
             <CaptionText text={post.caption} className="inline" />
           </div>
         )}
         {!post.caption && <div className="pb-4" />}
 
-        <div className="flex items-center justify-between border-t border-border px-4 py-3">
-          {isOwner ? (
-            <DeletePostButton postId={post.id} />
-          ) : user ? (
-            <ReportButton targetType="post" targetId={post.id} />
-          ) : (
-            <span />
-          )}
-        </div>
-      </div>
-
-      <div className="mt-6">
-        <h2 className="mb-4 text-lg font-semibold">Comments</h2>
-        <CommentList
-          comments={commentsWithAuthor}
-          postId={post.id}
-          currentUserId={user?.id ?? null}
-        />
-        {user ? (
-          <div className="mt-4">
-            <CommentForm postId={post.id} />
+        {(isOwner || user) && (
+          <div className="flex items-center border-t border-border px-4 py-3">
+            {isOwner ? (
+              <DeletePostButton postId={post.id} />
+            ) : (
+              <ReportButton targetType="post" targetId={post.id} />
+            )}
           </div>
-        ) : (
-          <p className="mt-4 text-sm text-muted">
-            <Link href="/login" className="underline">
-              Log in
-            </Link>{" "}
-            to comment.
-          </p>
         )}
       </div>
+
+      <section className="mt-8">
+        <SectionTitle action={comments.length > 0 ? <span className="numeral">{comments.length}</span> : undefined}>
+          Comments
+        </SectionTitle>
+        <div className="glass-raised elev-1 rounded-[22px] p-4">
+          <CommentList
+            comments={commentsWithAuthor}
+            postId={post.id}
+            currentUserId={user?.id ?? null}
+          />
+          <div className="mt-4 border-t border-border pt-4">
+            {user ? (
+              <CommentForm postId={post.id} />
+            ) : (
+              <p className="text-center text-[0.9375rem] text-muted">
+                <Link href={`/login?next=/p/${post.id}`} className="font-semibold text-accent">
+                  Log in
+                </Link>{" "}
+                to comment.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

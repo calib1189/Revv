@@ -13,6 +13,7 @@ import { validateBusinessDescription } from "@/lib/validation/business-profile";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { CheckIcon, CloseIcon } from "@/components/ui/icons";
 
 type VerificationStatus = "none" | "pending" | "approved" | "rejected";
@@ -189,60 +190,69 @@ export function BusinessProfileEditor({
     }
   }
 
+  const card = "glass-raised elev-1 rounded-[22px] p-5";
+  const smallButton = "h-9 px-4 py-0 text-[0.875rem] font-semibold";
+
   return (
-    <div className="flex flex-col gap-8">
-      <section>
-        <Label htmlFor="business-logo">Logo</Label>
-        <div className="mt-2 flex items-center gap-4">
-          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-surface-raised">
+    <div className="flex flex-col gap-6">
+      <section className={card}>
+        <div className="flex items-center gap-4">
+          <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-foreground/[0.06]">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- small avatar-sized preview, next/image overhead isn't worth it here
               <img src={logoUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              <span className="text-xs text-muted">No logo</span>
+              <span className="text-[0.75rem] text-muted">No logo</span>
             )}
           </div>
-          <input
-            ref={logoInputRef}
-            id="business-logo"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleLogoFile(file);
-              e.target.value = "";
-            }}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={logoUploading}
-            onClick={() => logoInputRef.current?.click()}
-            className="px-3 py-1.5 text-sm"
-          >
-            {logoUploading ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}
-          </Button>
+          <div className="min-w-0 flex-1">
+            <p className="text-[1.0625rem] font-semibold">Logo</p>
+            <p className="mt-0.5 text-[0.8125rem] text-muted">Square images look best.</p>
+            <input
+              ref={logoInputRef}
+              id="business-logo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleLogoFile(file);
+                e.target.value = "";
+              }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={logoUploading}
+              onClick={() => logoInputRef.current?.click()}
+              className={`mt-2.5 ${smallButton}`}
+            >
+              {logoUploading ? "Uploading…" : logoUrl ? "Change Logo" : "Upload Logo"}
+            </Button>
+          </div>
         </div>
-        {logoError && <p className="mt-2 text-sm text-danger">{logoError}</p>}
+        {logoError && <p className="mt-3 text-[0.8125rem] text-danger">{logoError}</p>}
       </section>
 
-      <section>
-        <Label>Photos</Label>
-        <p className="mb-2 text-xs text-muted">
-          Shown as a scrollable gallery on your Discover listing.
-        </p>
+      <section className={card}>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <p className="text-[1.0625rem] font-semibold">Photos</p>
+          <span className="numeral text-[0.8125rem] text-muted">
+            {gallery.length}/{MAX_GALLERY_PHOTOS}
+          </span>
+        </div>
+        <p className="mb-3 text-[0.8125rem] text-muted">Shown as a gallery on your Discover listing.</p>
         {gallery.length > 0 && (
-          <div className="mb-3 grid grid-cols-3 gap-2">
+          <div className="mb-4 grid grid-cols-3 gap-2">
             {gallery.map((photo) => (
-              <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-lg bg-surface">
+              <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-[12px] bg-surface">
                 {/* eslint-disable-next-line @next/next/no-img-element -- storage-hosted gallery thumbnail, fixed small grid size */}
                 <img src={photo.url} alt="" className="h-full w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => handleRemoveGalleryPhoto(photo.id)}
                   aria-label="Remove photo"
-                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white"
+                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md"
                 >
                   <CloseIcon className="h-3 w-3" />
                 </button>
@@ -267,17 +277,19 @@ export function BusinessProfileEditor({
             variant="secondary"
             disabled={galleryUploading}
             onClick={() => galleryInputRef.current?.click()}
-            className="px-3 py-1.5 text-sm"
+            className="h-10 w-full text-[0.9375rem] font-semibold"
           >
-            {galleryUploading ? "Uploading…" : gallery.length > 0 ? "Add more photos" : "Add photos"}
+            {galleryUploading ? "Uploading…" : gallery.length > 0 ? "Add More Photos" : "Add Photos"}
           </Button>
         )}
-        {galleryError && <p className="mt-2 text-sm text-danger">{galleryError}</p>}
+        {galleryError && <p className="mt-2 text-[0.8125rem] text-danger">{galleryError}</p>}
       </section>
 
-      <section>
-        <Label htmlFor="business-description">Description</Label>
-        <textarea
+      <section className={card}>
+        <Label htmlFor="business-description" className="px-0 text-[1.0625rem] font-semibold text-foreground">
+          Description
+        </Label>
+        <Textarea
           id="business-description"
           rows={4}
           maxLength={500}
@@ -287,43 +299,45 @@ export function BusinessProfileEditor({
             setDescSaved(false);
           }}
           placeholder="What makes your shop worth a visit"
-          className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted transition-colors focus:border-accent/60 focus:outline-none"
         />
-        {descError && <p className="mt-1.5 text-sm text-danger">{descError}</p>}
-        <div className="mt-2 flex items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={descSaving}
-            onClick={handleSaveDescription}
-            className="px-3 py-1.5 text-sm"
-          >
-            {descSaving ? "Saving…" : "Save description"}
+        {descError && <p className="mt-1.5 text-[0.8125rem] text-danger">{descError}</p>}
+        <div className="mt-3 flex items-center gap-3">
+          <Button type="button" disabled={descSaving} onClick={handleSaveDescription} className={smallButton}>
+            {descSaving ? "Saving…" : "Save"}
           </Button>
-          {descSaved && <span className="text-xs text-success">Saved</span>}
+          {descSaved && (
+            <span className="flex items-center gap-1 text-[0.8125rem] font-medium text-success">
+              <CheckIcon className="h-3.5 w-3.5" />
+              Saved
+            </span>
+          )}
         </div>
       </section>
 
-      <section className="glass rounded-2xl p-4">
-        <p className="text-sm font-medium">Verification</p>
+      <section className={card}>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[1.0625rem] font-semibold">Verification</p>
+          {verificationStatus === "pending" && (
+            <span className="flex-shrink-0 rounded-full bg-foreground/10 px-2.5 py-0.5 text-[0.75rem] font-semibold text-muted">
+              In review
+            </span>
+          )}
+        </div>
         {verificationStatus === "approved" ? (
-          <div className="mt-2 flex items-center gap-2 text-sm text-success">
-            <CheckIcon className="h-4 w-4" />
-            Verified — your logo, photos, and description are live on Discover.
+          <div className="mt-2 flex items-center gap-2 text-[0.875rem] text-success">
+            <CheckIcon className="h-4 w-4 flex-shrink-0" />
+            Verified. Your logo, photos, and description are live on Discover.
           </div>
         ) : (
           <>
-            <p className="mt-1 text-xs text-muted">
+            <p className="mt-1.5 text-[0.875rem] leading-relaxed text-muted">
               Upload a photo of your business license, a utility bill showing your business name
               and address, or a storefront photo with your username written on paper in frame. An
               admin reviews it before your logo, photos, and description go live.
             </p>
-            {verificationStatus === "pending" && (
-              <p className="mt-2 text-xs text-muted">Submitted — waiting on review.</p>
-            )}
             {verificationStatus === "rejected" && (
-              <p className="mt-2 text-xs text-danger">
-                Not approved — make sure the document or photo clearly shows your business name,
+              <p className="mt-2 text-[0.8125rem] text-danger">
+                Not approved. Make sure the document or photo clearly shows your business name,
                 then try again.
               </p>
             )}
@@ -343,17 +357,17 @@ export function BusinessProfileEditor({
               variant="secondary"
               disabled={verifyUploading || verificationStatus === "pending"}
               onClick={() => verifyInputRef.current?.click()}
-              className="mt-3 px-3 py-1.5 text-sm"
+              className="mt-4 h-10 w-full text-[0.9375rem] font-semibold"
             >
               {verifyUploading
                 ? "Uploading…"
                 : verificationStatus === "pending"
                   ? "Submitted"
                   : verificationStatus === "rejected"
-                    ? "Resubmit proof"
-                    : "Submit for verification"}
+                    ? "Resubmit Proof"
+                    : "Submit for Verification"}
             </Button>
-            {verifyError && <p className="mt-2 text-sm text-danger">{verifyError}</p>}
+            {verifyError && <p className="mt-2 text-[0.8125rem] text-danger">{verifyError}</p>}
           </>
         )}
       </section>

@@ -16,21 +16,23 @@ export function EditDisplayNameForm({ initialDisplayName }: { initialDisplayName
   );
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} className="flex flex-col gap-3">
       {state.error && <Callout tone="danger">{state.error}</Callout>}
       <div>
         <Label htmlFor="displayName">Name</Label>
-        <Input
-          id="displayName"
-          name="displayName"
-          maxLength={50}
-          defaultValue={initialDisplayName ?? ""}
-          placeholder="Shown above your @username"
-        />
+        <div className="flex gap-2">
+          <Input
+            id="displayName"
+            name="displayName"
+            maxLength={50}
+            defaultValue={initialDisplayName ?? ""}
+            placeholder="Shown above your @username"
+          />
+          <Button type="submit" disabled={isPending} className="h-12 flex-shrink-0 px-5 font-semibold">
+            {isPending ? "Saving…" : "Save"}
+          </Button>
+        </div>
       </div>
-      <Button type="submit" disabled={isPending} className="self-start">
-        {isPending ? "Saving…" : "Save"}
-      </Button>
     </form>
   );
 }

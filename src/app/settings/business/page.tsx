@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { listBusinessProfilesByOwner } from "@/lib/db/business-profiles";
-import { BackIcon } from "@/components/ui/icons";
+import { ShoppingBagIcon } from "@/components/ui/icons";
+import { PageHeader, PageShell } from "@/components/ui/page-header";
+import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/grouped-list";
 import { ClaimBusinessButton } from "@/features/business/claim-business-button";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -26,46 +27,48 @@ export default async function BusinessSettingsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
-      <Link href="/settings" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground">
-        <BackIcon className="h-4 w-4" />
-        Settings
-      </Link>
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Business Profile</h1>
-      <p className="mb-6 text-sm text-muted">
-        Claim your shop to add a logo, photos, and a description to its Discover listing — once
-        we verify it&apos;s really yours.
-      </p>
+    <PageShell>
+      <PageHeader
+        title="Business Profile"
+        back={{ href: "/settings", label: "Settings" }}
+        description="Claim your shop to add a logo, photos, and a description to its Discover listing, once we verify it's really yours."
+      />
 
       {profiles.length > 0 && (
-        <div className="mb-6 flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border">
-          {profiles.map((profile) => (
-            <Link
-              key={profile.id}
-              href={`/settings/business/${profile.id}`}
-              className="flex items-center justify-between gap-3 px-4 py-3.5 transition-opacity hover:opacity-80"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{profile.place_name}</p>
-                <p className="truncate text-xs text-muted">{profile.place_address}</p>
-              </div>
-              <span
-                className={`flex-shrink-0 text-xs font-medium ${
-                  profile.verification_status === "approved"
-                    ? "text-success"
-                    : profile.verification_status === "rejected"
-                      ? "text-danger"
-                      : "text-muted"
-                }`}
-              >
-                {STATUS_LABEL[profile.verification_status]}
-              </span>
-            </Link>
-          ))}
-        </div>
+        <section className="mb-6">
+          <SectionTitle>Your businesses</SectionTitle>
+          <GroupedList>
+            {profiles.map((profile) => (
+              <GroupedRow
+                key={profile.id}
+                href={`/settings/business/${profile.id}`}
+                label={profile.place_name}
+                detail={profile.place_address}
+                icon={
+                  <RowIcon color="#34c759">
+                    <ShoppingBagIcon />
+                  </RowIcon>
+                }
+                value={
+                  <span
+                    className={
+                      profile.verification_status === "approved"
+                        ? "text-success"
+                        : profile.verification_status === "rejected"
+                          ? "text-danger"
+                          : ""
+                    }
+                  >
+                    {STATUS_LABEL[profile.verification_status]}
+                  </span>
+                }
+              />
+            ))}
+          </GroupedList>
+        </section>
       )}
 
       <ClaimBusinessButton />
-    </div>
+    </PageShell>
   );
 }
