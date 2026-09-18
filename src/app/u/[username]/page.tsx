@@ -14,7 +14,9 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { Avatar } from "@/features/feed/avatar";
-import { RankFrame } from "@/features/garage/rank-frame";
+import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
+import { ProgressRing } from "@/components/ui/progress-ring";
+import { ProfileMoreMenu } from "@/features/profile/profile-more-menu";
 import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
 import { ProfileTabs } from "@/features/profile/profile-tabs";
 import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
@@ -179,163 +181,204 @@ export default async function ProfilePage({
     ? getStoreItem(profile.equipped_vehicle_name_color)
     : undefined;
   const nameIsGradient = nameColorItem?.value.includes("gradient") ?? false;
+  const displayName = profile.display_name || `@${profile.username}`;
+  const bestTier = bestRatingScore != null ? rankForScore(bestRatingScore) : null;
+  const BestTierIcon = bestTier ? RANK_MATERIAL_ICONS[bestTier] : null;
+
+  const actionButtonClass = "h-10 w-full px-3 py-0 text-[0.9375rem] font-semibold";
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-4 sm:px-6 sm:pt-8">
       <AchievementUnlockToast achievements={newlyUnlocked} />
 
-      <div
-        className={backgroundItem ? `rounded-3xl p-1 ${backgroundItem.effectClassName ?? ""}` : ""}
-        style={backgroundItem ? { backgroundImage: backgroundItem.value } : undefined}
-      >
-      {/* The equipped background cosmetic only shows in this outer
-          padding ring — the actual name/bio/stats sit on a plain
-          bg-surface panel one level in, so a busy pattern or moving
-          gradient never sits directly behind text a visitor has to
-          read. */}
-      <div className={backgroundItem ? "rounded-2xl bg-surface p-6" : ""}>
       {isOwnProfile && (
-        <div className="mb-2 flex justify-end">
+        <div className="relative z-10 mb-2 flex justify-end">
           <Link
             href="/settings"
             aria-label="Settings"
-            className="text-muted hover:text-foreground"
+            className="pressable glass-raised elev-1 flex h-10 w-10 items-center justify-center rounded-full text-foreground"
           >
-            <SettingsIcon className="h-6 w-6" />
+            <SettingsIcon className="h-5 w-5" />
           </Link>
         </div>
       )}
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          {/* text-2xl until there's room for more: at 375px a 30px bold
-              name alongside the avatar left ~215px for the name itself,
-              which truncated "Calib Lawson" to "Calib La…" — on the one
-              element of this page that's most personal to the person
-              whose page it is. */}
-          <h1 className="flex min-w-0 items-center gap-1.5 truncate text-2xl font-bold tracking-tight sm:text-3xl">
-            {nameIsGradient ? (
-              <span
-                className={`truncate bg-clip-text text-transparent ${nameColorItem?.effectClassName ?? ""}`}
-                style={{ backgroundImage: nameColorItem!.value }}
-              >
-                {profile.display_name || `@${profile.username}`}
-              </span>
-            ) : (
-              <span
-                className={`truncate ${nameColorItem?.effectClassName ?? ""}`}
-                style={nameColorItem ? { color: nameColorItem.value } : undefined}
-              >
-                {profile.display_name || `@${profile.username}`}
-              </span>
-            )}
-            {profile.is_verified && (
-              <VerifiedBadgeIcon className="h-5 w-5 flex-shrink-0 text-accent" />
-            )}
-          </h1>
-          {profile.display_name && (
-            <p className="truncate text-sm text-muted">@{profile.username}</p>
+
+      {/* Equipped profile background becomes a banner the avatar sits
+          on, rather than a ring around the whole header — the pattern
+          gets real presence, and no text ever sits on top of it. */}
+      {backgroundItem && (
+        <div
+          aria-hidden
+          className={`h-32 rounded-[28px] elev-2 sm:h-40 ${backgroundItem.effectClassName ?? ""}`}
+          style={{ backgroundImage: backgroundItem.value }}
+        />
+      )}
+
+      <header
+        className={`animate-section-rise flex flex-col items-center text-center ${
+          backgroundItem ? "-mt-16 sm:-mt-[4.5rem]" : "mt-2"
+        }`}
+      >
+        {/* The avatar sits inside its owner's best build score, drawn as
+            a ring in that tier's colour. Unrated profiles get a plain
+            hairline instead of an empty ring. */}
+        <div className="rounded-full bg-background p-1">
+          {bestTier && bestRatingScore != null ? (
+            <ProgressRing
+              value={bestRatingScore / 100}
+              size={128}
+              stroke={5}
+              color={tierColorVar(bestTier)}
+              label={`Best build ${bestRatingScore.toFixed(2)} out of 100`}
+            >
+              <Avatar
+                username={profile.username}
+                avatarUrl={avatarUrl}
+                className="h-[106px] w-[106px] text-4xl"
+                priority
+              />
+            </ProgressRing>
+          ) : (
+            <div className="rounded-full p-[3px] ring-1 ring-border">
+              <Avatar
+                username={profile.username}
+                avatarUrl={avatarUrl}
+                className="h-[112px] w-[112px] text-4xl"
+                priority
+              />
+            </div>
           )}
-          {profile.is_founder && (
-            <span className="mt-1.5 inline-flex w-fit flex-shrink-0 items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
-              Founder &amp; Owner
+        </div>
+
+        <h1 className="mt-4 flex max-w-full items-center justify-center gap-1.5 text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">
+          {nameIsGradient ? (
+            <span
+              className={`truncate bg-clip-text text-transparent ${nameColorItem?.effectClassName ?? ""}`}
+              style={{ backgroundImage: nameColorItem!.value }}
+            >
+              {displayName}
+            </span>
+          ) : (
+            <span
+              className={`truncate ${nameColorItem?.effectClassName ?? ""}`}
+              style={nameColorItem ? { color: nameColorItem.value } : undefined}
+            >
+              {displayName}
             </span>
           )}
+          {profile.is_verified && (
+            <VerifiedBadgeIcon className="h-[22px] w-[22px] flex-shrink-0 text-accent" />
+          )}
+        </h1>
+        {profile.display_name && (
+          <p className="mt-0.5 max-w-full truncate text-[0.9375rem] text-muted">@{profile.username}</p>
+        )}
 
-          <div className="mt-4 flex gap-6">
-            <div>
-              <p className="numeral text-xl leading-none">{followingCount}</p>
-              <p className="micro-label mt-2 text-muted">Following</p>
-            </div>
-            <div>
-              <p className="numeral text-xl leading-none">{followerCount}</p>
-              <p className="micro-label mt-2 text-muted">Followers</p>
-            </div>
-            <div>
-              <p className="numeral text-xl leading-none">
-                {formatCompactNumber(totalLikes)}
-              </p>
-              <p className="micro-label mt-2 text-muted">Likes</p>
-            </div>
-          </div>
-        </div>
-
-        <RankFrame score={bestRatingScore} compact hideBadge className="flex-shrink-0 rounded-full">
-          <Avatar
-            username={profile.username}
-            avatarUrl={avatarUrl}
-            className="h-20 w-20 text-3xl sm:h-28 sm:w-28 sm:text-4xl"
-            priority
-          />
-        </RankFrame>
-      </div>
-
-      {bestRatingScore != null && (
-        // Its own row below the header, not crammed into the stats row next
-        // to the 96px avatar — four stats plus that avatar don't fit at
-        // mobile width (found by visual check: the tier name rendered
-        // clipped behind the avatar circle).
-        <div className="mt-4 flex items-center gap-2.5">
-          <span
-            className="micro-label"
-            style={{ color: tierColorVar(rankForScore(bestRatingScore)) }}
-          >
-            {RANK_LABELS[rankForScore(bestRatingScore)]}
-          </span>
-          <span className="numeral text-sm">{bestRatingScore.toFixed(2)}</span>
-          <span className="micro-label text-muted">Best build</span>
-        </div>
-      )}
-
-      <ProfileShowcase
-        achievementIds={profile.showcased_achievement_ids ?? []}
-        frameClassName={frameItem?.value}
-      />
-
-      {profile.bio && (
-        <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">
-          {profile.bio}
-        </p>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {isOwnProfile ? (
-          <>
-            <Link href="/settings/profile">
-              <Button variant="secondary" className="px-4 py-1.5 text-sm">
-                Edit profile
-              </Button>
-            </Link>
-            <Link href="/store">
-              <Button variant="secondary" className="flex items-center gap-1.5 px-4 py-1.5 text-sm">
-                <GemIcon className="h-4 w-4 text-accent" />
-                Shop
-                <span className="tabular-nums text-muted">· {pointsBalance}</span>
-              </Button>
-            </Link>
-          </>
-        ) : currentUser ? (
-          <>
-            {!amBlocking && (
-              <>
-                <FollowButton
-                  followeeId={profile.id}
-                  followeeUsername={profile.username}
-                  initialIsFollowing={following}
-                />
-                <MessageButton userId={profile.id} />
-              </>
+        {(profile.is_founder || bestTier) && (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            {bestTier && BestTierIcon && bestRatingScore != null && (
+              <span className="glass inline-flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-3">
+                <BestTierIcon className="h-5 w-5" />
+                <span className="micro-label" style={{ color: tierColorVar(bestTier) }}>
+                  {RANK_LABELS[bestTier]}
+                </span>
+                <span className="numeral text-[0.8125rem] leading-none">
+                  {bestRatingScore.toFixed(2)}
+                </span>
+              </span>
             )}
-            <BlockButton
-              targetUserId={profile.id}
-              targetUsername={profile.username}
-              initialIsBlocking={amBlocking}
+            {profile.is_founder && (
+              <span className="inline-flex items-center rounded-full bg-accent/12 px-3 py-1 text-[0.75rem] font-semibold text-accent">
+                Founder &amp; Owner
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-6 flex w-full max-w-sm items-stretch">
+          {[
+            { label: "Followers", value: formatCompactNumber(followerCount) },
+            { label: "Following", value: formatCompactNumber(followingCount) },
+            { label: "Likes", value: formatCompactNumber(totalLikes) },
+          ].map((stat, i) => (
+            <div key={stat.label} className="flex min-w-0 flex-1 items-stretch">
+              {i > 0 && <div className="my-1 w-px flex-shrink-0 bg-border" />}
+              <div className="min-w-0 flex-1">
+                <p className="numeral text-[1.375rem] leading-none">{stat.value}</p>
+                <p className="mt-1.5 text-[0.75rem] font-medium text-muted">{stat.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {profile.bio && (
+          <p className="mt-5 max-w-md whitespace-pre-wrap text-[0.9375rem] leading-relaxed">
+            {profile.bio}
+          </p>
+        )}
+
+        <ProfileShowcase
+          achievementIds={profile.showcased_achievement_ids ?? []}
+          frameClassName={frameItem?.value}
+          className="mt-5 flex flex-wrap justify-center gap-2"
+        />
+
+        {isOwnProfile ? (
+          <div className="mt-6 flex w-full max-w-md gap-2.5">
+            <Link href="/settings/profile" className="min-w-0 flex-1">
+              <Button variant="secondary" className={actionButtonClass}>
+                Edit Profile
+              </Button>
+            </Link>
+            <Link href="/store" className="min-w-0 flex-1">
+              <Button variant="secondary" className={`${actionButtonClass} gap-1.5`}>
+                <GemIcon className="h-4 w-4 flex-shrink-0 text-accent" />
+                Shop
+                <span className="numeral text-[0.875rem] text-muted">{pointsBalance}</span>
+              </Button>
+            </Link>
+          </div>
+        ) : currentUser ? (
+          <div className="mt-6 w-full max-w-md">
+            <ProfileMoreMenu
+              actions={
+                amBlocking ? (
+                  <p className="flex h-10 min-w-0 flex-1 items-center justify-center text-[0.875rem] text-muted">
+                    You blocked this account
+                  </p>
+                ) : (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <FollowButton
+                        followeeId={profile.id}
+                        followeeUsername={profile.username}
+                        initialIsFollowing={following}
+                        className={actionButtonClass}
+                      />
+                    </div>
+                    <MessageButton
+                      userId={profile.id}
+                      wrapperClassName="min-w-0 flex-1"
+                      className={actionButtonClass}
+                    />
+                  </>
+                )
+              }
+              menu={
+                <>
+                  <BlockButton
+                    targetUserId={profile.id}
+                    targetUsername={profile.username}
+                    initialIsBlocking={amBlocking}
+                  />
+                  <div className="h-px w-full bg-border" />
+                  <ReportButton targetType="profile" targetId={profile.id} />
+                </>
+              }
             />
-            <ReportButton targetType="profile" targetId={profile.id} />
-          </>
+          </div>
         ) : null}
-      </div>
-      </div>
-      </div>
+      </header>
 
       <ProfileTabs
         isOwnProfile={isOwnProfile}

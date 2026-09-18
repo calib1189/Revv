@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type SVGProps } from "react";
+import { useState } from "react";
 import { PostThumbnailGrid, type PostThumbnail } from "@/features/profile/post-thumbnail-grid";
 import { VehicleBay } from "@/features/garage/vehicle-bay";
 import { AchievementsGrid } from "@/features/achievements/achievements-grid";
 import { AchievementShowcaseEditor } from "@/features/achievements/achievement-showcase-editor";
-import { GridIcon, WheelIcon, StarIcon, BookmarkIcon, HeartIcon } from "@/components/ui/icons";
 import type { Vehicle } from "@/lib/db/vehicles";
 
 export interface ProfileVehicleItem {
@@ -19,18 +18,13 @@ type Tab = "posts" | "garage" | "achievements" | "saved" | "liked";
 interface TabDef {
   key: Tab;
   label: string;
-  count: number;
-  icon: (props: SVGProps<SVGSVGElement>) => React.JSX.Element;
 }
 
-/** A sliding highlight (measured off the active button's own rect, not a
- * fixed-width guess) replaces what used to be a flex-wrap pill row —
- * five tabs wrapping to a second, shorter line read as broken, not
- * premium. Horizontal scroll is the fallback for a viewport too narrow
- * to fit all five at once, same as every other tab strip in the app,
- * but the animated highlight is what actually makes this one feel
- * considered rather than another static pill toggle. */
-function TabStrip({
+/** An iOS segmented control: equal-width segments on a tinted track,
+ * with a lifted thumb that slides to the active one. Equal widths mean
+ * the thumb's position is pure arithmetic (index × segment width) — no
+ * measuring, no layout effect, no flash before first measure. */
+function SegmentedControl({
   tabs,
   active,
   onChange,
@@ -39,57 +33,53 @@ function TabStrip({
   active: Tab;
   onChange: (tab: Tab) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const buttonRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
-  const [highlight, setHighlight] = useState<{ left: number; width: number } | null>(null);
-
-  useEffect(() => {
-    const measure = () => {
-      const button = buttonRefs.current[active];
-      const container = containerRef.current;
-      if (!button || !container) return;
-      setHighlight({ left: button.offsetLeft, width: button.offsetWidth });
-    };
-    measure();
-    // Tab labels don't reflow with the window, but the container's own
-    // scroll width can still change once real counts stream in after
-    // mount — cheap enough to just remeasure on resize too.
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [active, tabs]);
+  const activeIndex = Math.max(
+    0,
+    tabs.findIndex((t) => t.key === active),
+  );
 
   return (
-    <div className="glass rounded-2xl p-1.5">
-      <div ref={containerRef} className="no-scrollbar fade-edge-r relative flex gap-1 overflow-x-auto">
-        {highlight && (
-          <div
-            className="absolute bottom-1 top-1 rounded-xl bg-accent/15 ring-1 ring-inset ring-accent/40 transition-[left,width] duration-300 ease-[var(--ease-ios)]"
-            style={{ left: highlight.left, width: highlight.width }}
-          />
-        )}
-        {tabs.map((t) => {
-          const isActive = active === t.key;
-          return (
-            <button
-              key={t.key}
-              ref={(el) => {
-                buttonRefs.current[t.key] = el;
-              }}
-              type="button"
-              onClick={() => onChange(t.key)}
-              className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors duration-200 ${
-                isActive ? "text-foreground" : "text-muted hover:text-foreground/80"
-              }`}
-            >
-              <t.icon className={`h-4 w-4 flex-shrink-0 transition-colors duration-200 ${isActive ? "text-accent" : ""}`} />
-              {t.label}
-              <span className={`tabular-nums ${isActive ? "text-accent" : "text-muted/70"}`}>
-                {t.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+    <div
+      role="tablist"
+      className="relative flex rounded-[12px] p-[3px]"
+      style={{ background: "var(--segment-track)" }}
+    >
+      <div
+        aria-hidden
+        className="absolute bottom-[3px] top-[3px] rounded-[9px] shadow-[0_3px_8px_rgb(0_0_0/0.12),0_3px_1px_rgb(0_0_0/0.04)] transition-transform duration-300 ease-[var(--ease-ios)]"
+        style={{
+          left: 3,
+          width: `calc((100% - 6px) / ${tabs.length})`,
+          transform: `translateX(${activeIndex * 100}%)`,
+          background: "var(--segment-thumb)",
+        }}
+      />
+      {tabs.map((t) => {
+        const isActive = active === t.key;
+        return (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(t.key)}
+            className={`relative z-10 min-w-0 flex-1 truncate px-1 py-[7px] text-[0.8125rem] transition-[color,font-weight] duration-200 ${
+              isActive ? "font-semibold text-foreground" : "font-medium text-foreground/70"
+            }`}
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function EmptyTab({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="flex flex-col items-center px-6 py-16 text-center">
+      <p className="text-[1.0625rem] font-semibold">{title}</p>
+      <p className="mt-1 max-w-xs text-[0.875rem] leading-relaxed text-muted">{body}</p>
     </div>
   );
 }
@@ -124,20 +114,20 @@ export function ProfileTabs({
   const [tab, setTab] = useState<Tab>("posts");
 
   const tabs: TabDef[] = [
-    { key: "posts", label: "Posts", count: posts.length, icon: GridIcon },
-    { key: "garage", label: "Garage", count: vehicles.length, icon: WheelIcon },
-    { key: "achievements", label: "Achievements", count: unlockedAtById.size, icon: StarIcon },
+    { key: "posts", label: "Posts" },
+    { key: "garage", label: "Garage" },
+    { key: "achievements", label: "Awards" },
     ...(isOwnProfile
       ? ([
-          { key: "saved", label: "Saved", count: savedPosts?.length ?? 0, icon: BookmarkIcon },
-          { key: "liked", label: "Liked", count: likedPosts?.length ?? 0, icon: HeartIcon },
+          { key: "saved", label: "Saved" },
+          { key: "liked", label: "Liked" },
         ] as TabDef[])
       : []),
   ];
 
   return (
     <div className="mt-8">
-      <TabStrip tabs={tabs} active={tab} onChange={setTab} />
+      <SegmentedControl tabs={tabs} active={tab} onChange={setTab} />
 
       {/* Remounted per tab (key={tab}) purely for the fade-in — a tab
           switch should feel like new content settling in, not an
@@ -145,14 +135,20 @@ export function ProfileTabs({
       <div key={tab} className="mt-5 animate-tab-content-in">
         {tab === "posts" &&
           (posts.length === 0 ? (
-            <p className="text-sm text-muted">No posts yet.</p>
+            <EmptyTab
+              title="No posts yet"
+              body={isOwnProfile ? "Share a photo of your car to start your feed." : "Nothing shared here yet."}
+            />
           ) : (
             <PostThumbnailGrid posts={posts} />
           ))}
 
         {tab === "garage" &&
           (vehicles.length === 0 ? (
-            <p className="text-sm text-muted">No vehicles yet.</p>
+            <EmptyTab
+              title="No vehicles yet"
+              body={isOwnProfile ? "Add a car to your garage and it shows up here." : "No cars in this garage yet."}
+            />
           ) : (
             <div className="flex flex-col gap-6">
               {vehicles.map(({ vehicle, heroUrl, ratingScore }) => (
@@ -183,7 +179,7 @@ export function ProfileTabs({
         {tab === "saved" &&
           isOwnProfile &&
           ((savedPosts?.length ?? 0) === 0 ? (
-            <p className="text-sm text-muted">Posts you save will show up here.</p>
+            <EmptyTab title="Nothing saved" body="Posts you save will show up here." />
           ) : (
             <PostThumbnailGrid posts={savedPosts!} />
           ))}
@@ -191,7 +187,7 @@ export function ProfileTabs({
         {tab === "liked" &&
           isOwnProfile &&
           ((likedPosts?.length ?? 0) === 0 ? (
-            <p className="text-sm text-muted">Posts you like will show up here.</p>
+            <EmptyTab title="No likes yet" body="Posts you like will show up here." />
           ) : (
             <PostThumbnailGrid posts={likedPosts!} />
           ))}

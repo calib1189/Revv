@@ -8,10 +8,12 @@ export function FollowButton({
   followeeId,
   followeeUsername,
   initialIsFollowing,
+  className = "px-4 py-1.5 text-sm",
 }: {
   followeeId: string;
   followeeUsername: string;
   initialIsFollowing: boolean;
+  className?: string;
 }) {
   const [following, setFollowing] = useState(initialIsFollowing);
   const [, startTransition] = useTransition();
@@ -32,7 +34,7 @@ export function FollowButton({
     <Button
       type="button"
       variant={following ? "secondary" : "primary"}
-      className="px-4 py-1.5 text-sm"
+      className={className}
       onClick={handleClick}
     >
       {following ? "Following" : "Follow"}

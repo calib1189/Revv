@@ -8,6 +8,7 @@ import { listBuildPartsForBuilds } from "@/lib/db/build-parts";
 import { VehicleBay } from "@/features/garage/vehicle-bay";
 import { GarageStatPanel } from "@/features/garage/garage-stat-panel";
 import { Button } from "@/components/ui/button";
+import { BrushIcon, PlusIcon } from "@/components/ui/icons";
 import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
 import { AchievementUnlockToast } from "@/features/achievements/achievement-unlock-toast";
 import { getWeeklyChallengeProgress } from "@/lib/challenges/progress";
@@ -29,9 +30,11 @@ export async function GaragePageContent() {
   const user = await getCurrentUser();
   if (!user) {
     return (
-      <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-        <h1 className="mb-2 text-2xl font-bold tracking-tight sm:text-3xl">Your Garage</h1>
-        <div className="glass mt-6 flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
+      <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+        <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">
+          Garage
+        </h1>
+        <div className="glass-raised elev-2 mt-6 flex flex-col items-center justify-center gap-4 rounded-[28px] px-6 py-20 text-center">
           <p className="text-lg font-medium">Log in to see your garage</p>
           <p className="max-w-xs text-sm text-muted">
             Track every mod, photo, and build on your own vehicles.
@@ -130,75 +133,103 @@ export async function GaragePageContent() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
       <AchievementUnlockToast achievements={newlyUnlocked} />
       <ChallengeCompleteToast challenges={newlyCompleted} />
-      <div className="mb-8">
-        <WeeklyChallengesCard progress={challengeProgress} />
-      </div>
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Your Garage</h1>
-        <div className="flex flex-shrink-0 items-center gap-2">
+      {/* Large-title header: the page name set big and left, with
+          round icon buttons for the two actions instead of a row of
+          text buttons competing with it. */}
+      <header className="animate-section-rise mb-6 flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[0.8125rem] font-medium text-muted">
+            {vehicles.length === 0
+              ? "Nothing parked yet"
+              : `${vehicles.length} ${vehicles.length === 1 ? "vehicle" : "vehicles"}`}
+          </p>
+          <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">
+            Garage
+          </h1>
+        </div>
+        <div className="mb-1 flex flex-shrink-0 items-center gap-2.5">
           {vehicles.length > 0 && (
-            <Link href="/garage/customize">
-              <Button variant="secondary" className="px-3 py-1.5 text-sm">
-                Customize
-              </Button>
+            <Link
+              href="/garage/customize"
+              aria-label="Customize garage"
+              title="Customize"
+              className="pressable glass-raised elev-1 flex h-10 w-10 items-center justify-center rounded-full"
+            >
+              <BrushIcon className="h-[18px] w-[18px]" />
             </Link>
           )}
-          <Link href="/garage/new">
-            <Button className="px-3 py-1.5 text-sm">Add vehicle</Button>
+          <Link
+            href="/garage/new"
+            aria-label="Add vehicle"
+            title="Add vehicle"
+            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground elev-2"
+          >
+            <PlusIcon className="h-5 w-5" />
           </Link>
         </div>
-      </div>
-
-      {vehicles.length > 0 && (
-        <div className="mb-8">
-          <GarageStatPanel
-            stats={{
-              vehicleCount: vehicles.length,
-              modCount,
-              investedCents,
-              bestScore,
-            }}
-          />
-        </div>
-      )}
+      </header>
 
       {vehicles.length === 0 ? (
-        <div className="glass flex aspect-[16/10] flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-white/10 text-center">
-          <p className="text-lg font-medium">No vehicles yet</p>
-          <p className="max-w-xs text-sm text-muted">
-            Add your first car to start tracking mods, photos, and builds.
+        <div className="animate-section-rise glass-raised elev-2 flex flex-col items-center gap-3 rounded-[28px] px-6 py-16 text-center">
+          <span className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-accent/12 text-accent">
+            <PlusIcon className="h-7 w-7" />
+          </span>
+          <p className="text-[1.375rem] font-bold tracking-[-0.02em]">Park your first car</p>
+          <p className="max-w-xs text-[0.9375rem] leading-relaxed text-muted">
+            Add a vehicle to track its mods, photos, and build score.
           </p>
-          <Link href="/garage/new">
-            <Button>Add your first vehicle</Button>
+          <Link href="/garage/new" className="mt-3">
+            <Button className="px-6 py-2.5">Add vehicle</Button>
           </Link>
         </div>
       ) : (
-        // One big showroom bay per car instead of a grid of small
-        // tiles — a garage of one or two builds should look like a
-        // feature, not a thumbnail directory. VehicleBay handles its
-        // own equipped backdrop (vehicles.equipped_backdrop), so
-        // there's no page-level branching between "decorated" and
-        // "plain" cars here.
-        <div className="flex flex-col gap-8">
-          {vehicles.map((vehicle, index) => (
-            <VehicleBay
-              key={vehicle.id}
-              vehicle={vehicle}
-              heroUrl={
-                vehicle.hero_media_id
-                  ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
-                  : null
-              }
-              ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
-              priority={index === 0}
-              nameColorValue={nameColorItem?.value}
-              nameColorEffectClassName={nameColorItem?.effectClassName}
+        <>
+          <div className="animate-section-rise mb-10" style={{ animationDelay: "60ms" }}>
+            <GarageStatPanel
+              stats={{
+                vehicleCount: vehicles.length,
+                modCount,
+                investedCents,
+                bestScore,
+              }}
             />
-          ))}
+          </div>
+
+          {/* One large feature card per car. VehicleBay handles its own
+              equipped backdrop (vehicles.equipped_backdrop), so there's
+              no page-level branching between decorated and plain cars. */}
+          <section className="animate-section-rise mb-10" style={{ animationDelay: "120ms" }}>
+            <h2 className="mb-2.5 px-1 text-[1.375rem] font-bold tracking-[-0.02em]">
+              {vehicles.length === 1 ? "Your Car" : "Your Cars"}
+            </h2>
+            <div className="flex flex-col gap-6">
+              {vehicles.map((vehicle, index) => (
+                <VehicleBay
+                  key={vehicle.id}
+                  vehicle={vehicle}
+                  heroUrl={
+                    vehicle.hero_media_id
+                      ? (heroUrlById.get(vehicle.hero_media_id) ?? null)
+                      : null
+                  }
+                  ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
+                  priority={index === 0}
+                  nameColorValue={nameColorItem?.value}
+                  nameColorEffectClassName={nameColorItem?.effectClassName}
+                />
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
+      {challengeProgress.length > 0 && (
+        <div className="animate-section-rise" style={{ animationDelay: "180ms" }}>
+          <WeeklyChallengesCard progress={challengeProgress} />
         </div>
       )}
     </div>

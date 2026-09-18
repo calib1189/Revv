@@ -4,16 +4,24 @@ import { useState, useTransition } from "react";
 import { startConversationAction } from "@/features/messages/actions";
 import { Button } from "@/components/ui/button";
 
-export function MessageButton({ userId }: { userId: string }) {
+export function MessageButton({
+  userId,
+  className = "px-4 py-1.5 text-sm",
+  wrapperClassName = "",
+}: {
+  userId: string;
+  className?: string;
+  wrapperClassName?: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div>
+    <div className={wrapperClassName}>
       <Button
         type="button"
         variant="secondary"
-        className="px-4 py-1.5 text-sm"
+        className={className}
         disabled={isPending}
         onClick={() =>
           startTransition(async () => {

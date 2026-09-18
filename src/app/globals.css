@@ -45,6 +45,10 @@
   --tier-ruby: #f27a93;
   --tier-cosmic: #c9b6ff;
 
+  /* iOS segmented control — a tinted track with a lifted thumb. */
+  --segment-track: rgb(118 118 128 / 0.22);
+  --segment-thumb: rgb(99 99 102 / 0.85);
+
   --bg-glow-1: rgb(255 255 255 / 0.05);
   --bg-glow-2: rgb(255 68 51 / 0.04);
 
@@ -91,6 +95,9 @@
   --tier-ruby: #b8324f;
   --tier-cosmic: #6b4bc4;
 
+  --segment-track: rgb(118 118 128 / 0.12);
+  --segment-thumb: #ffffff;
+
   --bg-glow-1: rgb(0 0 0 / 0.025);
   --bg-glow-2: rgb(255 68 51 / 0.05);
 }
@@ -127,6 +134,9 @@
     --tier-diamond: #1a7f9c;
     --tier-ruby: #b8324f;
     --tier-cosmic: #6b4bc4;
+
+    --segment-track: rgb(118 118 128 / 0.12);
+    --segment-thumb: #ffffff;
 
     --bg-glow-1: rgb(0 0 0 / 0.025);
     --bg-glow-2: rgb(255 68 51 / 0.05);
@@ -332,6 +342,56 @@ html.native-app body::-webkit-scrollbar {
 
 .animate-tab-content-in {
   animation: tab-content-in 280ms ease-out;
+}
+
+/* Progress ring draw-in (components/ui/progress-ring.tsx) — the stroke
+   starts fully offset (empty) and settles at its real value, the way an
+   activity ring closes. --ring-from is the ring's own circumference, set
+   inline, so one keyframe serves every ring size. */
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: var(--ring-from);
+  }
+}
+
+.animate-ring-draw {
+  animation: ring-draw 1100ms var(--ease-ios) both;
+}
+
+/* Tap feedback for anything that navigates or acts — a small, fast
+   press-in on the iOS curve rather than a colour flash. */
+.pressable {
+  transition: transform 220ms var(--ease-ios), opacity 220ms var(--ease-ios);
+}
+.pressable:active {
+  transform: scale(0.975);
+}
+
+/* Staggered rise for page sections — each child section settles in a
+   beat after the one above it, once, on mount. */
+@keyframes section-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-section-rise {
+  animation: section-rise 560ms var(--ease-ios) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ring-draw,
+  .animate-section-rise {
+    animation: none;
+  }
+  .pressable:active {
+    transform: none;
+  }
 }
 
 /* Achievement-unlock toast — slides down into place, holds so it's

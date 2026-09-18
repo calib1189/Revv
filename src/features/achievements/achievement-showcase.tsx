@@ -41,16 +41,18 @@ function ShowcaseBadge({ id, frameClassName }: { id: string; frameClassName?: st
 export function ProfileShowcase({
   achievementIds,
   frameClassName,
+  className = "mt-4 flex flex-wrap gap-2",
 }: {
   achievementIds: string[];
   /** The owner's equipped showcase-frame cosmetic, if any (store item,
    * see lib/store/catalog.ts) — applied to every pinned badge. */
   frameClassName?: string;
+  className?: string;
 }) {
   if (achievementIds.length === 0) return null;
 
   return (
-    <div className="mt-4 flex flex-wrap gap-2">
+    <div className={className}>
       {achievementIds.map((id) => (
         <ShowcaseBadge key={id} id={id} frameClassName={frameClassName} />
       ))}

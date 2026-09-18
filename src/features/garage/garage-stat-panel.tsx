@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ProgressRing } from "@/components/ui/progress-ring";
+import { ChevronRightIcon } from "@/components/ui/icons";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
 import { formatCents } from "@/lib/format/money";
@@ -18,61 +20,80 @@ export interface GarageStats {
 
 function Readout({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 flex-1 px-1 text-center">
-      <p className="numeral truncate text-lg leading-none sm:text-xl">{value}</p>
-      <p className="micro-label mt-2 text-muted">{label}</p>
+    <div className="min-w-0 flex-1 text-center">
+      <p className="numeral truncate text-[1.375rem] leading-none">{value}</p>
+      <p className="mt-1.5 text-[0.6875rem] font-medium text-muted">{label}</p>
     </div>
   );
 }
 
-/** The garage's instrument panel.
- *
- * The garage was a heading, two buttons, and a stack of cards — it
- * showed none of what the person had actually built. Every figure here
- * already existed in the database and went unread on this page: the
- * mods logged against each build, what they cost, the best score across
- * the whole garage. Reading them back as a cluster is what makes this
- * screen feel like somewhere you've made progress rather than a list of
- * photos. */
+/** The garage's summary card — the best build's score drawn as a ring
+ * (score out of 100, in its tier colour), with the garage's totals
+ * underneath. Every figure is read back from build_parts at request
+ * time; nothing here is stored. */
 export function GarageStatPanel({ stats }: { stats: GarageStats }) {
   const tier = stats.bestScore != null ? rankForScore(stats.bestScore) : null;
   const TierIcon = tier ? RANK_MATERIAL_ICONS[tier] : null;
+  const ringColor = tier ? tierColorVar(tier) : "var(--muted)";
 
   return (
-    <div className="glass-raised elev-2 overflow-hidden rounded-3xl">
-      <div className="flex items-center gap-4 p-5">
+    <div className="glass-raised elev-2 overflow-hidden rounded-[28px]">
+      <div className="flex items-center gap-5 p-5 sm:p-6">
+        <ProgressRing
+          value={stats.bestScore != null ? stats.bestScore / 100 : 0}
+          size={116}
+          stroke={11}
+          color={ringColor}
+          label={
+            stats.bestScore != null
+              ? `Best build ${stats.bestScore.toFixed(2)} out of 100`
+              : "No build rated yet"
+          }
+        >
+          <div className="text-center">
+            <p className="numeral text-[1.5rem] leading-none">
+              {stats.bestScore != null ? stats.bestScore.toFixed(2) : "--"}
+            </p>
+            <p className="mt-1 text-[0.625rem] font-medium text-muted">of 100</p>
+          </div>
+        </ProgressRing>
+
         <div className="min-w-0 flex-1">
-          <p className="micro-label text-muted">Best build</p>
-          {stats.bestScore != null && tier ? (
+          <p className="text-[0.8125rem] font-medium text-muted">Best build</p>
+          {tier && TierIcon ? (
             <>
-              <p className="numeral mt-1.5 text-5xl leading-none">
-                {stats.bestScore.toFixed(2)}
-              </p>
+              <div className="mt-1 flex items-center gap-2">
+                <TierIcon className="h-6 w-6 flex-shrink-0" />
+                <p
+                  className="truncate text-[1.375rem] font-bold tracking-[-0.02em]"
+                  style={{ color: tierColorVar(tier) }}
+                >
+                  {RANK_LABELS[tier]}
+                </p>
+              </div>
               <Link
                 href="/leaderboard"
-                className="micro-label mt-2 inline-block transition-opacity hover:opacity-80"
-                style={{ color: tierColorVar(tier) }}
+                className="mt-2 inline-flex items-center gap-0.5 text-[0.8125rem] font-medium text-accent transition-opacity hover:opacity-80"
               >
-                {RANK_LABELS[tier]}
+                Leaderboard
+                <ChevronRightIcon className="h-3.5 w-3.5" />
               </Link>
             </>
           ) : (
             <>
-              <p className="numeral mt-1.5 text-5xl leading-none text-muted/40">--.--</p>
-              <p className="mt-2 text-xs text-muted">Rate a build to get scored</p>
+              <p className="mt-1 text-[1.375rem] font-bold tracking-[-0.02em]">Not rated</p>
+              <p className="mt-1 text-[0.8125rem] leading-snug text-muted">
+                Open a car and rate its build to see where it ranks.
+              </p>
             </>
           )}
         </div>
-
-        {TierIcon && (
-          <TierIcon className="h-16 w-16 flex-shrink-0 sm:h-20 sm:w-20" />
-        )}
       </div>
 
-      {/* border-border, not a white alpha: this panel renders on a
-          near-white surface in light theme, where a 6%-white hairline
-          is invisible. */}
-      <div className="flex items-stretch border-t border-border py-4">
+      {/* border-border, not a white alpha: this card renders on a
+          near-white surface in light theme, where a white hairline is
+          invisible. */}
+      <div className="mx-5 flex items-stretch border-t border-border py-4 sm:mx-6">
         <Readout label="Vehicles" value={String(stats.vehicleCount)} />
         <div className="w-px flex-shrink-0 bg-border" />
         <Readout label="Mods" value={formatCompactNumber(stats.modCount)} />
