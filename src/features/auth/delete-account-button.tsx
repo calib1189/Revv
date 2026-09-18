@@ -10,44 +10,39 @@ export function DeleteAccountButton({ username }: { username: string }) {
 
   if (!isConfirming) {
     return (
-      <button
-        type="button"
-        onClick={() => setIsConfirming(true)}
-        className="text-sm text-danger hover:underline"
-      >
-        Delete account
-      </button>
+      <div className="glass-raised elev-1 overflow-hidden rounded-[22px]">
+        <button
+          type="button"
+          onClick={() => setIsConfirming(true)}
+          className="min-h-[48px] w-full px-4 py-3 text-center text-[0.9375rem] font-medium text-danger transition-colors active:bg-foreground/[0.06]"
+        >
+          Delete Account
+        </button>
+      </div>
     );
   }
 
   const canConfirm = typed === username && !isPending;
 
   return (
-    <div className="rounded-lg border border-danger/30 bg-danger/10 p-4">
-      <p className="text-sm font-medium text-danger">
+    <div className="glass-raised elev-1 rounded-[22px] p-5">
+      <p className="text-[1.0625rem] font-semibold text-danger">Delete your account?</p>
+      <p className="mt-1.5 text-[0.875rem] leading-relaxed text-muted">
         This permanently deletes your account, vehicles, builds, posts, and
         everything attached to them. This can&apos;t be undone.
       </p>
-      <p className="mt-3 text-sm text-muted">
-        Type <span className="font-medium text-foreground">{username}</span> to
-        confirm.
+      <p className="mt-4 text-[0.875rem] text-muted">
+        Type <span className="font-semibold text-foreground">{username}</span> to confirm.
       </p>
       <input
         type="text"
         value={typed}
         onChange={(e) => setTyped(e.target.value)}
         autoComplete="off"
-        className="mt-2 w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-danger"
+        aria-label="Type your username to confirm"
+        className="glass-inset mt-2 h-11 w-full rounded-[14px] px-3 focus:outline-none focus:ring-1 focus:ring-danger"
       />
-      <div className="mt-3 flex items-center gap-3">
-        <button
-          type="button"
-          disabled={!canConfirm}
-          onClick={() => startTransition(() => deleteAccount())}
-          className="rounded-lg bg-danger px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
-        >
-          {isPending ? "Deleting…" : "Permanently delete"}
-        </button>
+      <div className="mt-4 flex gap-2.5">
         <button
           type="button"
           disabled={isPending}
@@ -55,9 +50,17 @@ export function DeleteAccountButton({ username }: { username: string }) {
             setIsConfirming(false);
             setTyped("");
           }}
-          className="text-sm text-muted hover:text-foreground"
+          className="glass h-11 flex-1 rounded-full text-[0.9375rem] font-semibold"
         >
           Cancel
+        </button>
+        <button
+          type="button"
+          disabled={!canConfirm}
+          onClick={() => startTransition(() => deleteAccount())}
+          className="h-11 flex-1 rounded-full bg-danger text-[0.9375rem] font-semibold text-white disabled:opacity-40"
+        >
+          {isPending ? "Deleting…" : "Delete"}
         </button>
       </div>
     </div>

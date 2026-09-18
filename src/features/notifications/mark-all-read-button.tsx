@@ -11,7 +11,7 @@ export function MarkAllReadButton() {
       type="button"
       disabled={isPending}
       onClick={() => startTransition(() => markAllNotificationsReadAction())}
-      className="text-sm text-muted hover:text-foreground disabled:opacity-60"
+      className="text-[0.9375rem] font-medium text-accent disabled:opacity-60"
     >
       {isPending ? "Marking…" : "Mark all read"}
     </button>

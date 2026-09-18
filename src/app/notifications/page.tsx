@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { listNotifications } from "@/lib/db/notifications";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { Avatar } from "@/features/feed/avatar";
 import { MarkAllReadButton } from "@/features/notifications/mark-all-read-button";
 import { InboxTabs } from "@/features/shell/inbox-tabs";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SectionTitle } from "@/components/ui/grouped-list";
+import { BellIcon, CommentIcon, HeartIcon, PersonIcon, UsersIcon } from "@/components/ui/icons";
 import { relativeTime } from "@/lib/format/relative-time";
 
 const KIND_VERB: Record<string, string> = {
@@ -17,6 +22,19 @@ const KIND_VERB: Record<string, string> = {
   crew_join_approved: "approved your request to join",
   crew_post: "posted in a crew you're in",
 };
+
+/** The small badge on each avatar that says what kind of activity it
+ * was, the way iOS marks a notification's source. */
+const KIND_BADGE: Record<string, { icon: ReactNode; color: string }> = {
+  like: { icon: <HeartIcon className="h-2.5 w-2.5" />, color: "#ff375f" },
+  comment: { icon: <CommentIcon className="h-2.5 w-2.5" />, color: "#0a84ff" },
+  follow: { icon: <PersonIcon className="h-2.5 w-2.5" />, color: "#30d158" },
+  crew_join_request: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
+  crew_join_approved: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
+  crew_post: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default async function NotificationsPage() {
   const user = await getCurrentUser();
@@ -32,71 +50,122 @@ export default async function NotificationsPage() {
         .filter((id): id is string => Boolean(id)),
     ),
   ];
-  const actors = await Promise.all(
-    actorIds.map((id) => getProfileByUserId(supabase, id)),
+  const actors = (await Promise.all(actorIds.map((id) => getProfileByUserId(supabase, id)))).filter(
+    (a): a is NonNullable<typeof a> => Boolean(a),
   );
-  const usernameByActorId = new Map(
-    actors.filter(Boolean).map((a) => [a!.id, a!.username]),
+  const usernameByActorId = new Map(actors.map((a) => [a.id, a.username]));
+  // Best-effort: a missing avatar just falls back to the initial.
+  const avatarMedia = await getMediaByIds(
+    supabase,
+    actors.map((a) => a.avatar_media_id).filter((id): id is string => Boolean(id)),
+  ).catch(() => []);
+  const avatarUrlByMediaId = new Map(
+    avatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
+  );
+  const avatarUrlByActorId = new Map(
+    actors.map((a) => [a.id, a.avatar_media_id ? (avatarUrlByMediaId.get(a.avatar_media_id) ?? null) : null]),
   );
 
   const hasUnread = notifications.some((n) => !n.read_at);
 
+  // Mail-style sections by age. Computed at request time on the server.
+  // eslint-disable-next-line react-hooks/purity -- server component, rendered per request
+  const now = Date.now();
+  const groups: { title: string; items: typeof notifications }[] = [
+    { title: "Today", items: [] },
+    { title: "This Week", items: [] },
+    { title: "Earlier", items: [] },
+  ];
+  for (const n of notifications) {
+    const age = now - new Date(n.created_at).getTime();
+    groups[age < DAY_MS ? 0 : age < 7 * DAY_MS ? 1 : 2].items.push(n);
+  }
+
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-4 py-8 sm:px-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Notifications
-        </h1>
-        {hasUnread && <MarkAllReadButton />}
-      </div>
+    <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <header className="mb-5 flex items-end justify-between gap-4">
+        <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em]">Inbox</h1>
+        {hasUnread && (
+          <div className="mb-1.5">
+            <MarkAllReadButton />
+          </div>
+        )}
+      </header>
       <InboxTabs current="activity" />
 
       {notifications.length === 0 ? (
-        <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-24 text-center">
-          <p className="text-lg font-medium">No notifications yet</p>
-          <p className="max-w-xs text-sm text-muted">
-            Likes and comments on your posts will show up here.
-          </p>
-        </div>
+        <EmptyState
+          card
+          icon={<BellIcon />}
+          title="No activity yet"
+          body="Likes, comments, and new followers show up here."
+        />
       ) : (
-        <ul className="flex flex-col divide-y divide-border rounded-2xl border border-border">
-          {notifications.map((n) => {
-            const username = n.actor_id
-              ? (usernameByActorId.get(n.actor_id) ?? "unknown")
-              : "SORZA";
-            const verb = KIND_VERB[n.kind] ?? n.kind;
-            const href =
-              n.kind === "follow"
-                ? `/u/${username}`
-                : n.target_type === "crew" && n.target_id
-                  ? n.kind === "crew_join_request"
-                    ? `/crews/${n.target_id}/requests`
-                    : `/crews/${n.target_id}`
-                  : n.target_type === "post" && n.target_id
-                    ? `/p/${n.target_id}`
-                    : "#";
+        <div className="flex flex-col gap-7">
+          {groups
+            .filter((g) => g.items.length > 0)
+            .map((group) => (
+              <section key={group.title}>
+                <SectionTitle>{group.title}</SectionTitle>
+                <ul className="glass-raised elev-1 overflow-hidden rounded-[22px]">
+                  {group.items.map((n, i) => {
+                    const username = n.actor_id
+                      ? (usernameByActorId.get(n.actor_id) ?? "unknown")
+                      : "SORZA";
+                    const verb = KIND_VERB[n.kind] ?? n.kind;
+                    const badge = KIND_BADGE[n.kind];
+                    const href =
+                      n.kind === "follow"
+                        ? `/u/${username}`
+                        : n.target_type === "crew" && n.target_id
+                          ? n.kind === "crew_join_request"
+                            ? `/crews/${n.target_id}/requests`
+                            : `/crews/${n.target_id}`
+                          : n.target_type === "post" && n.target_id
+                            ? `/p/${n.target_id}`
+                            : "#";
 
-            return (
-              <li key={n.id} className="px-4 py-3">
-                <Link
-                  href={href}
-                  className={`flex items-center gap-3 ${!n.read_at ? "font-medium" : ""}`}
-                >
-                  <Avatar username={username} />
-                  <span className="min-w-0 flex-1 text-sm">
-                    <span className="font-medium">@{username}</span> {verb}
-                  </span>
-                  <span className="flex-shrink-0 text-xs text-muted" suppressHydrationWarning>
-                    {relativeTime(n.created_at)}
-                  </span>
-                  {!n.read_at && (
-                    <span className="h-2 w-2 flex-shrink-0 rounded-full bg-accent" />
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                    return (
+                      <li key={n.id} className="relative">
+                        {i > 0 && <span className="absolute left-[4.75rem] right-0 top-0 h-px bg-border" />}
+                        <Link
+                          href={href}
+                          className="flex items-center gap-3 py-3 pl-2 pr-4 transition-colors active:bg-foreground/[0.06]"
+                        >
+                          <span
+                            aria-label={n.read_at ? undefined : "Unread"}
+                            className={`h-2 w-2 flex-shrink-0 rounded-full ${n.read_at ? "" : "bg-accent"}`}
+                          />
+                          <span className="relative flex-shrink-0">
+                            <Avatar
+                              username={username}
+                              avatarUrl={n.actor_id ? (avatarUrlByActorId.get(n.actor_id) ?? null) : null}
+                              className="h-11 w-11 text-base"
+                            />
+                            {badge && (
+                              <span
+                                className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-white ring-2 ring-[var(--glass-solid-raised)]"
+                                style={{ background: badge.color }}
+                              >
+                                {badge.icon}
+                              </span>
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1 text-[0.9375rem] leading-snug">
+                            <span className="font-semibold">{username}</span>{" "}
+                            <span className={n.read_at ? "text-muted" : ""}>{verb}</span>
+                          </span>
+                          <span className="flex-shrink-0 self-start pt-0.5 text-[0.8125rem] text-muted" suppressHydrationWarning>
+                            {relativeTime(n.created_at)}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+        </div>
       )}
     </div>
   );
