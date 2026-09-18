@@ -205,8 +205,12 @@ export default async function ProfilePage({
     <div className="relative mx-auto w-full max-w-2xl px-4 pb-16 pt-4 sm:px-6 sm:pt-8">
       <AchievementUnlockToast achievements={newlyUnlocked} />
 
+      {/* No z-index on the settings row: it only needs to sit above the
+          ambient wash (an earlier sibling, so normal paint order already
+          handles it). A z-10 tied the sticky top bar's own z-10 and,
+          being later in the DOM, painted over the bar on scroll. */}
       {isOwnProfile && (
-        <div className="relative z-10 mb-2 flex justify-end">
+        <div className="relative mb-2 flex justify-end">
           <Link
             href="/settings"
             aria-label="Settings"
@@ -295,18 +299,40 @@ export default async function ProfilePage({
 
         <div className="mt-6 flex w-full max-w-sm items-stretch">
           {[
-            { label: "Followers", value: formatCompactNumber(followerCount) },
-            { label: "Following", value: formatCompactNumber(followingCount) },
-            { label: "Likes", value: formatCompactNumber(totalLikes) },
-          ].map((stat, i) => (
-            <div key={stat.label} className="flex min-w-0 flex-1 items-stretch">
-              {i > 0 && <div className="my-1 w-px flex-shrink-0 bg-border" />}
-              <div className="min-w-0 flex-1">
+            {
+              label: "Followers",
+              value: formatCompactNumber(followerCount),
+              href: `/u/${profile.username}/connections?tab=followers`,
+            },
+            {
+              label: "Following",
+              value: formatCompactNumber(followingCount),
+              href: `/u/${profile.username}/connections?tab=following`,
+            },
+            { label: "Likes", value: formatCompactNumber(totalLikes), href: null },
+          ].map((stat, i) => {
+            const body = (
+              <>
                 <p className="numeral text-[1.375rem] leading-none">{stat.value}</p>
                 <p className="mt-1.5 text-[0.75rem] font-medium text-muted">{stat.label}</p>
+              </>
+            );
+            return (
+              <div key={stat.label} className="flex min-w-0 flex-1 items-stretch">
+                {i > 0 && <div className="my-1 w-px flex-shrink-0 bg-border" />}
+                {stat.href ? (
+                  <Link
+                    href={stat.href}
+                    className="pressable min-w-0 flex-1 rounded-[12px] py-1 transition-colors active:bg-foreground/[0.06]"
+                  >
+                    {body}
+                  </Link>
+                ) : (
+                  <div className="min-w-0 flex-1 py-1">{body}</div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {profile.bio && (

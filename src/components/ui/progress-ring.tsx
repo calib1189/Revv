@@ -118,7 +118,10 @@ export function ProgressRing({
         )}
         {glint && (clamped > 0 ? <g mask={`url(#${maskId})`}>{glintCircle}</g> : glintCircle)}
       </svg>
-      {children && <div className="relative z-10 flex items-center justify-center">{children}</div>}
+      {/* No z-index: the SVG is an earlier absolute sibling, so paint
+          order already puts this on top — and a z-10 here could draw
+          over the sticky top bar when scrolled beneath it. */}
+      {children && <div className="relative flex items-center justify-center">{children}</div>}
     </div>
   );
 }
