@@ -7,6 +7,8 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
 import { GarageEditor, type EditorVehicle } from "@/features/garage/garage-editor";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { BrushIcon } from "@/components/ui/icons";
 
 export default async function GarageCustomizePage() {
   const user = await getCurrentUser();
@@ -17,17 +19,19 @@ export default async function GarageCustomizePage() {
 
   if (vehicles.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
-        <h1 className="mb-2 text-2xl font-bold tracking-tight">Garage Editor</h1>
-        <div className="glass mt-6 flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
-          <p className="text-lg font-medium">No vehicles to customize yet</p>
-          <p className="max-w-xs text-sm text-muted">
-            Add a car to your garage, then come back here to give it its own backdrop.
-          </p>
-          <Link href="/garage/new">
-            <Button>Add your first vehicle</Button>
-          </Link>
-        </div>
+      <div className="mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+        <h1 className="mb-6 text-[2.125rem] font-bold leading-tight tracking-[-0.03em]">Customize</h1>
+        <EmptyState
+          card
+          icon={<BrushIcon />}
+          title="No cars to customize yet"
+          body="Add a car to your garage, then come back to give it its own backdrop."
+          action={
+            <Link href="/garage/new">
+              <Button className="px-5">Add vehicle</Button>
+            </Link>
+          }
+        />
       </div>
     );
   }
@@ -60,7 +64,7 @@ export default async function GarageCustomizePage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
       <GarageEditor
         vehicles={editorVehicles}
         initialBalance={balance}

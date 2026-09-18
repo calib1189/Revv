@@ -41,7 +41,7 @@ export function SignInForm({ next }: { next?: string }) {
           <Label htmlFor="password" className="mb-0">
             Password
           </Label>
-          <Link href="/forgot-password" className="text-xs text-muted hover:text-foreground">
+          <Link href="/forgot-password" className="px-1 text-[0.8125rem] font-medium text-accent">
             Forgot password?
           </Link>
         </div>
@@ -56,13 +56,13 @@ export function SignInForm({ next }: { next?: string }) {
 
       <Hcaptcha name="captchaToken" onVerifiedChange={setCaptchaVerified} />
 
-      <Button type="submit" disabled={isPending || !captchaVerified} className="mt-2 w-full">
+      <Button type="submit" disabled={isPending || !captchaVerified} className="mt-2 h-12 w-full text-[1rem] font-semibold">
         {isPending ? "Logging in…" : "Log in"}
       </Button>
 
-      <p className="text-center text-sm text-muted">
+      <p className="text-center text-[0.875rem] text-muted">
         New to SORZA?{" "}
-        <Link href="/signup" className="text-foreground underline">
+        <Link href="/signup" className="font-semibold text-accent">
           Create an account
         </Link>
       </p>

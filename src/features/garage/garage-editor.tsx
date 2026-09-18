@@ -6,7 +6,6 @@ import { listStoreItemsByCategory, type StoreItem } from "@/lib/store/catalog";
 import { purchaseItemAction } from "@/features/store/actions";
 import { equipVehicleBackdropAction } from "@/features/garage/actions";
 import { GemIcon, CheckIcon, WheelIcon } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
 
 export interface EditorVehicle {
   id: string;
@@ -23,18 +22,54 @@ const BACKDROP_ITEMS = listStoreItemsByCategory("garage_backdrop");
  * fetches. Same "car sits on the backdrop as a large framed photo,
  * bottom-center" language VehicleBay uses once a backdrop is equipped,
  * at the same proportions, so what you see here is what you'll get. */
-function PreviewCard({ vehicle }: { vehicle: EditorVehicle }) {
+function PreviewCard({ vehicle, backdrop }: { vehicle: EditorVehicle; backdrop: StoreItem | undefined }) {
+  const photo = vehicle.heroUrl ? (
+    <Image src={vehicle.heroUrl} alt={vehicle.title} fill sizes="(min-width: 1024px) 640px, 90vw" className="object-cover" />
+  ) : (
+    <div className="flex h-full items-center justify-center bg-neutral-900 text-sm text-white/50">No photo yet</div>
+  );
+  const title = (
+    <p className="line-clamp-2 text-[1.75rem] font-bold leading-[1.08] tracking-[-0.025em] text-white sm:text-[2.5rem]">
+      {vehicle.title}
+    </p>
+  );
+  const bar = (
+    <div
+      className="flex items-center gap-3 border-t border-white/10 bg-black/35 px-4 py-3 sm:px-6 sm:py-4"
+      style={{ WebkitBackdropFilter: "blur(40px) saturate(180%)", backdropFilter: "blur(40px) saturate(180%)" }}
+    >
+      <span className="h-9 w-9 flex-shrink-0 rounded-full bg-white/15" />
+      <div className="min-w-0 flex-1">
+        <span className="block h-2 w-14 rounded-full bg-white/30" />
+        <span className="mt-1.5 block h-2 w-20 rounded-full bg-white/15" />
+      </div>
+      <span className="numeral text-[1.625rem] leading-none text-white/40">--.--</span>
+    </div>
+  );
+
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-2xl shadow-lg ring-1 ring-white/10">
-      {vehicle.heroUrl ? (
-        <Image src={vehicle.heroUrl} alt={vehicle.title} fill sizes="(min-width: 1024px) 640px, 80vw" className="object-cover" />
+    <div className="relative flex aspect-[4/5] flex-col overflow-hidden rounded-[28px] bg-neutral-950 elev-3 sm:aspect-[16/10]">
+      {backdrop ? (
+        <>
+          <div
+            className={`absolute inset-0 ${backdrop.effectClassName ?? ""}`}
+            style={{ backgroundImage: backdrop.value }}
+          />
+          <div className="relative mx-3 mt-3 min-h-0 flex-1 overflow-hidden rounded-[20px] shadow-[0_12px_32px_-12px_rgb(0_0_0/0.7)] sm:mx-4 sm:mt-4">
+            {photo}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-gradient-to-b from-black/65 via-black/20 to-transparent" />
+            <div className="absolute inset-x-0 top-0 p-4 sm:p-6">{title}</div>
+          </div>
+          <div className="relative mt-3 sm:mt-4">{bar}</div>
+        </>
       ) : (
-        <div className="flex h-full items-center justify-center text-sm text-muted">No photo yet</div>
+        <>
+          <div className="absolute inset-0">{photo}</div>
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/65 via-black/20 to-transparent" />
+          <div className="relative p-5 sm:p-7">{title}</div>
+          <div className="relative mt-auto">{bar}</div>
+        </>
       )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/0 to-transparent" />
-      <p className="absolute inset-x-0 bottom-0 truncate p-3 text-lg font-semibold text-white sm:p-4">
-        {vehicle.title}
-      </p>
     </div>
   );
 }
@@ -49,7 +84,7 @@ function VehicleSwitcher({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="no-scrollbar mb-6 flex gap-2 overflow-x-auto pb-1">
+    <div className="no-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
       {vehicles.map((vehicle) => {
         const active = vehicle.id === selectedId;
         return (
@@ -57,9 +92,10 @@ function VehicleSwitcher({
             key={vehicle.id}
             type="button"
             onClick={() => onSelect(vehicle.id)}
-            className={`flex flex-shrink-0 items-center gap-2 rounded-full py-1.5 pl-1.5 pr-4 text-sm font-medium transition-colors ${
-              active ? "bg-accent text-accent-foreground" : "glass text-muted hover:text-foreground"
+            className={`pressable flex flex-shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-4 text-[0.8125rem] font-semibold transition-colors ${
+              active ? "bg-foreground text-background" : "text-foreground/80"
             }`}
+            style={active ? undefined : { background: "var(--segment-track)" }}
           >
             <span className="relative flex h-7 w-7 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-raised">
               {vehicle.heroUrl ? (
@@ -93,53 +129,54 @@ function BackdropCard({
   onBuy: () => void;
   onEquip: () => void;
 }) {
+  const capsule =
+    "pressable flex h-[30px] min-w-[76px] items-center justify-center gap-1 rounded-full px-3.5 text-[0.8125rem] font-bold disabled:opacity-50";
+
   return (
-    <div
-      className={`glass flex flex-col gap-3 rounded-2xl p-3 transition-all duration-200 ${
-        equipped ? "ring-1 ring-inset ring-accent/60" : ""
-      }`}
-    >
-      <div
-        className={`h-20 rounded-xl ${item.effectClassName ?? ""}`}
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={owned ? onEquip : undefined}
+        disabled={!owned || isPending}
+        aria-label={owned ? `${equipped ? "Remove" : "Use"} ${item.name}` : undefined}
+        className={`aspect-[4/3] rounded-[16px] transition-shadow disabled:cursor-default ${item.effectClassName ?? ""} ${
+          equipped ? "ring-2 ring-accent ring-offset-2 ring-offset-background" : ""
+        }`}
         style={{ backgroundImage: item.value }}
       />
-      <div>
-        <p className="truncate text-sm font-semibold">{item.name}</p>
-        {!owned && (
-          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
-            <GemIcon className="h-3.5 w-3.5 text-accent" />
-            {item.price}
-          </p>
+      <p className="mt-2.5 truncate text-[0.875rem] font-semibold">{item.name}</p>
+      <div className="mt-2">
+        {owned ? (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={onEquip}
+            className={`${capsule} ${equipped ? "bg-accent text-accent-foreground" : "text-accent"}`}
+            style={equipped ? undefined : { background: "var(--segment-track)" }}
+          >
+            {equipped ? (
+              <>
+                <CheckIcon className="h-3.5 w-3.5" />
+                On
+              </>
+            ) : (
+              "Use"
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={isPending || !canAfford}
+            onClick={onBuy}
+            aria-label={`Buy ${item.name} for ${item.price} points`}
+            className={`${capsule} text-accent`}
+            style={{ background: "var(--segment-track)" }}
+          >
+            <GemIcon className="h-3.5 w-3.5" />
+            <span className="numeral">{item.price}</span>
+          </button>
         )}
       </div>
-      {owned ? (
-        <Button
-          type="button"
-          variant={equipped ? "primary" : "secondary"}
-          disabled={isPending}
-          onClick={onEquip}
-          className="w-full justify-center py-1.5 text-xs"
-        >
-          {equipped ? (
-            <span className="flex items-center gap-1">
-              <CheckIcon className="h-3.5 w-3.5" />
-              Equipped
-            </span>
-          ) : (
-            "Equip"
-          )}
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={isPending || !canAfford}
-          onClick={onBuy}
-          className="w-full justify-center py-1.5 text-xs"
-        >
-          {canAfford ? "Buy" : "Not enough"}
-        </Button>
-      )}
     </div>
   );
 }
@@ -214,56 +251,41 @@ export function GarageEditor({
 
   return (
     <div>
-      <div className="glass-raised flex items-center justify-between rounded-3xl p-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Garage Editor</h1>
-          <p className="mt-1 text-sm text-muted">
-            Give each car its own backdrop, or use the same one everywhere.
-          </p>
+      <header className="mb-5 flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[0.8125rem] font-medium text-muted">A backdrop for each car</p>
+          <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">Customize</h1>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2 rounded-full bg-surface-raised px-4 py-2">
-          <GemIcon className="h-5 w-5 text-accent" />
-          <span className="text-xl font-bold tabular-nums">{balance}</span>
+        <div
+          className="mb-1 flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5"
+          style={{ background: "var(--segment-track)" }}
+          aria-label={`${balance} points`}
+        >
+          <GemIcon className="h-4 w-4 text-accent" />
+          <span className="numeral text-[1.0625rem] leading-none">{balance}</span>
         </div>
-      </div>
+      </header>
 
       {error && (
-        <p className="mt-4 rounded-xl bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>
+        <p className="mb-4 rounded-[14px] bg-danger/10 px-4 py-2.5 text-[0.875rem] text-danger">{error}</p>
       )}
 
-      <div className="mt-8">
-        {vehicles.length > 1 && (
-          <VehicleSwitcher vehicles={vehicles} selectedId={selectedId} onSelect={setSelectedId} />
-        )}
+      {vehicles.length > 1 && (
+        <VehicleSwitcher vehicles={vehicles} selectedId={selectedId} onSelect={setSelectedId} />
+      )}
 
-        {/* The whole point of this screen: see it before you buy it. Same
-            16:10 stage and evenly-bordered car placement as VehicleBay
-            on the real /garage page, so this preview is a true match
-            for what you'll actually get, not an approximation. */}
-        <div
-          key={selectedId}
-          className={`relative aspect-[16/10] overflow-hidden rounded-3xl transition-all duration-300 ${
-            equippedItem?.effectClassName ?? "bg-surface"
-          }`}
-          style={equippedItem ? { backgroundImage: equippedItem.value } : undefined}
-        >
-          {equippedItem && (
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/5" />
-          )}
-          <div className="absolute inset-2 sm:inset-3">
-            <PreviewCard vehicle={selected} />
-          </div>
-        </div>
-        {!equippedItem && (
-          <p className="mt-3 text-center text-sm text-muted">
-            No backdrop equipped for {selected.title} — pick one below.
-          </p>
-        )}
+      {/* See it before you buy it: the same card the garage shows,
+          rendered with whichever backdrop is on this car right now. */}
+      <div key={selectedId} className="animate-tab-content-in">
+        <PreviewCard vehicle={selected} backdrop={equippedItem} />
       </div>
+      <p className="mt-3 text-center text-[0.8125rem] text-muted">
+        {equippedItem ? `${equippedItem.name} on ${selected.title}` : `No backdrop on ${selected.title} yet`}
+      </p>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold tracking-tight">Backdrops</h2>
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <h2 className="mb-3 px-1 text-[1.375rem] font-bold tracking-[-0.02em]">Backdrops</h2>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
           {BACKDROP_ITEMS.map((item) => (
             <BackdropCard
               key={item.id}

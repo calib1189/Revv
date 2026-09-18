@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { identifyVehicleAction } from "@/features/garage/actions";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
+import { Spinner } from "@/components/ui/spinner";
+import { CameraIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { MAX_IDENTIFY_IMAGE_BYTES } from "@/lib/validation/media";
@@ -79,7 +81,7 @@ export function AiIdentifyPanel({
     : "";
 
   return (
-    <div className="glass mb-6 rounded-2xl p-4">
+    <div className="glass-raised elev-1 mb-7 overflow-hidden rounded-[22px]">
       <input
         ref={inputRef}
         type="file"
@@ -92,64 +94,63 @@ export function AiIdentifyPanel({
         }}
       />
 
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium">Identify with a photo</p>
-          <p className="text-xs text-muted">
-            Upload a photo and SORZA will guess year, make, model, trim, and category.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          className="flex-shrink-0 px-3 py-1.5 text-sm"
-          disabled={isIdentifying}
-          onClick={() => inputRef.current?.click()}
-        >
-          {isIdentifying ? "Identifying…" : "Choose photo"}
-        </Button>
-      </div>
+      <button
+        type="button"
+        disabled={isIdentifying}
+        onClick={() => inputRef.current?.click()}
+        className="flex w-full items-center gap-3.5 p-4 text-left transition-colors active:bg-foreground/[0.06] disabled:opacity-70"
+      >
+        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-accent/12 text-accent">
+          <CameraIcon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-semibold">
+            {isIdentifying ? "Identifying…" : "Identify from a photo"}
+          </span>
+          <span className="block text-[0.8125rem] leading-snug text-muted">
+            Fills in year, make, model, trim, and category for you to check.
+          </span>
+        </span>
+        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
+      </button>
+      <div className="px-4 pb-4 empty:hidden">
 
-      {error && (
-        <div className="mt-3">
-          <Callout tone="danger">{error}</Callout>
-        </div>
-      )}
+      {error && <Callout tone="danger">{error}</Callout>}
 
       {(previewUrl || suggestion) && !error && (
-        <div className="mt-4 flex items-center gap-3">
+        <div className="flex items-start gap-3.5 border-t border-border pt-4">
           {previewUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- local blob: preview
             <img
               src={previewUrl}
               alt=""
-              className="h-16 w-16 flex-shrink-0 rounded-lg object-cover"
+              className="h-[72px] w-[72px] flex-shrink-0 rounded-[14px] object-cover"
             />
           )}
           <div className="min-w-0 flex-1">
             {isIdentifying ? (
-              <p className="text-sm text-muted">Analyzing photo…</p>
+              <div className="flex items-center gap-2 pt-1 text-[0.875rem] text-muted">
+                <Spinner className="h-4 w-4" />
+                Analyzing photo…
+              </div>
             ) : suggestion ? (
               <>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-accent">
+                  <span className="rounded-full bg-accent/12 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-accent">
                     {suggestion.isMock ? "Mock AI suggestion" : "AI suggestion"}
                   </span>
-                  <span className="text-xs text-muted">
-                    {confidencePercent}% confidence
+                  <span className="text-[0.75rem] text-muted">
+                    <span className="numeral">{confidencePercent}%</span> confidence
                   </span>
                 </div>
-                <p className="mt-1 truncate text-sm font-medium">
-                  {suggestionTitle}
-                </p>
+                <p className="mt-1.5 text-[1rem] font-semibold leading-snug">{suggestionTitle}</p>
                 {suggestion.category && (
-                  <span className="glass mt-1.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium text-muted">
-                    {VEHICLE_CATEGORY_LABELS[suggestion.category]}
-                  </span>
+                  <p className="mt-0.5 text-[0.8125rem] text-muted">{VEHICLE_CATEGORY_LABELS[suggestion.category]}</p>
                 )}
-                <div className="mt-2 flex gap-3">
-                  <button
+                <div className="mt-3 flex gap-2">
+                  <Button
                     type="button"
+                    className="h-9 px-4 py-0 text-[0.875rem] font-semibold"
                     onClick={() =>
                       onUseSuggestion({
                         year: suggestion.year,
@@ -159,26 +160,27 @@ export function AiIdentifyPanel({
                         category: suggestion.category,
                       })
                     }
-                    className="text-sm font-medium text-accent hover:underline"
                   >
-                    Use these details
-                  </button>
-                  <button
+                    Use details
+                  </Button>
+                  <Button
                     type="button"
+                    variant="secondary"
+                    className="h-9 px-4 py-0 text-[0.875rem] font-semibold"
                     onClick={() => {
                       setSuggestion(null);
                       setPreviewUrl(null);
                     }}
-                    className="text-sm text-muted hover:text-foreground"
                   >
                     Dismiss
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : null}
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

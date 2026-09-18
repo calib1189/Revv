@@ -47,24 +47,24 @@ export function OAuthButtons() {
         type="button"
         disabled={pending !== null}
         onClick={() => handleOAuth("google")}
-        className="flex items-center justify-center gap-2.5 rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium text-[#1f1f1f] transition-opacity hover:opacity-90 disabled:opacity-60"
+        className="pressable flex h-12 items-center justify-center gap-2.5 rounded-full border border-black/10 bg-white px-4 text-[0.9375rem] font-semibold text-[#1f1f1f] hover:opacity-90 disabled:opacity-60"
       >
-        <GoogleIcon className="h-4 w-4" />
+        <GoogleIcon className="h-[18px] w-[18px]" />
         {pending === "google" ? "Redirecting…" : "Continue with Google"}
       </button>
       <button
         type="button"
         disabled={pending !== null}
         onClick={() => handleOAuth("apple")}
-        className="flex items-center justify-center gap-2.5 rounded-full bg-black px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        className="pressable flex h-12 items-center justify-center gap-2.5 rounded-full bg-black px-4 text-[0.9375rem] font-semibold text-white ring-1 ring-inset ring-white/15 hover:opacity-90 disabled:opacity-60"
       >
-        <AppleIcon className="h-4 w-4" />
+        <AppleIcon className="h-[18px] w-[18px]" />
         {pending === "apple" ? "Redirecting…" : "Continue with Apple"}
       </button>
 
-      <div className="my-1 flex items-center gap-3">
+      <div className="my-2 flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted">or</span>
+        <span className="text-[0.8125rem] text-muted">or use email</span>
         <div className="h-px flex-1 bg-border" />
       </div>
     </div>

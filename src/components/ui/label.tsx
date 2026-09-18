@@ -6,7 +6,7 @@ export function Label({
 }: LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={`mb-1.5 block text-sm font-medium text-foreground ${className}`}
+      className={`mb-1.5 block px-1 text-[0.8125rem] font-medium text-muted ${className}`}
       {...props}
     />
   );

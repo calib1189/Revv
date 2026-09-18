@@ -71,13 +71,13 @@ export function SignUpForm() {
 
       <Hcaptcha name="captchaToken" onVerifiedChange={setCaptchaVerified} />
 
-      <Button type="submit" disabled={isPending || !captchaVerified} className="mt-2 w-full">
+      <Button type="submit" disabled={isPending || !captchaVerified} className="mt-2 h-12 w-full text-[1rem] font-semibold">
         {isPending ? "Creating account…" : "Create account"}
       </Button>
 
-      <p className="text-center text-sm text-muted">
+      <p className="text-center text-[0.875rem] text-muted">
         Already have an account?{" "}
-        <Link href="/login" className="text-foreground underline">
+        <Link href="/login" className="font-semibold text-accent">
           Log in
         </Link>
       </p>

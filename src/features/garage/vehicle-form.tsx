@@ -2,9 +2,8 @@
 
 import { useActionState, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
+import { FormGroup, FormField, FormSelect, FormTextarea } from "@/components/ui/form-group";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { VehicleFormState } from "@/features/garage/actions";
 import {
@@ -86,110 +85,59 @@ export function VehicleForm({
     <form
       key={JSON.stringify(initialValues ?? {})}
       action={formAction}
-      className="flex flex-col gap-6"
+      className="flex flex-col gap-7"
     >
       {state.error && <Callout tone="danger">{state.error}</Callout>}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="year">Year</Label>
-          <Input
-            id="year"
-            name="year"
-            inputMode="numeric"
-            defaultValue={values?.year ?? ""}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="make">Make</Label>
-          <Input id="make" name="make" value={make} onChange={handleMakeChange} required />
-        </div>
-        <div>
-          <Label htmlFor="model">Model</Label>
-          <Input
-            id="model"
-            name="model"
-            value={model}
-            onChange={handleModelChange}
-            required
-          />
-        </div>
-        <div>
-          <Label htmlFor="trim">Trim</Label>
-          <Input id="trim" name="trim" defaultValue={values?.trim ?? ""} />
-        </div>
-        <div>
-          <Label htmlFor="category">Category</Label>
-          <select
-            id="category"
-            name="category"
-            value={category}
-            onChange={handleCategoryChange}
-            className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
-          >
-            {VEHICLE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {VEHICLE_CATEGORY_LABELS[c]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="engine">Engine</Label>
-          <Input
-            id="engine"
-            name="engine"
-            placeholder="2JZ-GTE"
-            defaultValue={vehicle?.engine ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="drivetrain">Drivetrain</Label>
-          <Input
-            id="drivetrain"
-            name="drivetrain"
-            placeholder="RWD"
-            defaultValue={vehicle?.drivetrain ?? ""}
-          />
-        </div>
-        <div>
-          <Label htmlFor="color">Color</Label>
-          <Input id="color" name="color" defaultValue={vehicle?.color ?? ""} />
-        </div>
-        <div>
-          <Label htmlFor="mileage">Mileage</Label>
-          <Input
-            id="mileage"
-            name="mileage"
-            inputMode="numeric"
-            defaultValue={vehicle?.mileage ?? ""}
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="nickname">Nickname</Label>
-        <Input
-          id="nickname"
-          name="nickname"
-          placeholder="Optional"
-          defaultValue={vehicle?.nickname ?? ""}
+      <FormGroup title="Vehicle">
+        <FormField
+          label="Year"
+          id="year"
+          name="year"
+          inputMode="numeric"
+          placeholder="Required"
+          defaultValue={values?.year ?? ""}
+          required
         />
-      </div>
+        <FormField label="Make" id="make" name="make" placeholder="Required" value={make} onChange={handleMakeChange} required />
+        <FormField label="Model" id="model" name="model" placeholder="Required" value={model} onChange={handleModelChange} required />
+        <FormField label="Trim" id="trim" name="trim" placeholder="Optional" defaultValue={values?.trim ?? ""} />
+        <FormSelect label="Category" id="category" name="category" value={category} onChange={handleCategoryChange}>
+          {VEHICLE_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {VEHICLE_CATEGORY_LABELS[c]}
+            </option>
+          ))}
+        </FormSelect>
+      </FormGroup>
 
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <textarea
+      <FormGroup title="Specs">
+        <FormField label="Engine" id="engine" name="engine" placeholder="2JZ-GTE" defaultValue={vehicle?.engine ?? ""} />
+        <FormField label="Drivetrain" id="drivetrain" name="drivetrain" placeholder="RWD" defaultValue={vehicle?.drivetrain ?? ""} />
+        <FormField label="Color" id="color" name="color" placeholder="Optional" defaultValue={vehicle?.color ?? ""} />
+        <FormField
+          label="Mileage"
+          id="mileage"
+          name="mileage"
+          inputMode="numeric"
+          placeholder="Optional"
+          defaultValue={vehicle?.mileage ?? ""}
+        />
+      </FormGroup>
+
+      <FormGroup title="About" footer="A nickname replaces make and model as the car's name everywhere on SORZA.">
+        <FormField label="Nickname" id="nickname" name="nickname" placeholder="Optional" defaultValue={vehicle?.nickname ?? ""} />
+        <FormTextarea
           id="description"
           name="description"
           rows={4}
+          aria-label="Description"
+          placeholder="The story of the build"
           defaultValue={vehicle?.description ?? ""}
-          className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted transition-colors focus:border-accent/60 focus:outline-none"
         />
-      </div>
+      </FormGroup>
 
-      <Button type="submit" disabled={isPending} className="self-start">
+      <Button type="submit" disabled={isPending} className="h-12 w-full text-[1rem] font-semibold">
         {isPending ? "Saving…" : submitLabel}
       </Button>
     </form>

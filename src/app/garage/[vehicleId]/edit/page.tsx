@@ -20,10 +20,8 @@ export default async function EditVehiclePage({
   if (vehicle.owner_id !== user.id) redirect(`/garage/${vehicleId}`);
 
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
-      <h1 className="mb-8 text-2xl font-semibold tracking-tight">
-        Edit vehicle
-      </h1>
+    <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <h1 className="mb-6 text-[2.125rem] font-bold leading-tight tracking-[-0.03em]">Edit Vehicle</h1>
       <VehicleForm
         action={updateVehicleAction.bind(null, vehicleId)}
         vehicle={vehicle}

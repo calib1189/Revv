@@ -7,10 +7,8 @@ export default async function NewVehiclePage() {
   if (!user) redirect("/login?next=/garage/new");
 
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
-      <h1 className="mb-8 text-2xl font-semibold tracking-tight">
-        Add a vehicle
-      </h1>
+    <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <h1 className="mb-6 text-[2.125rem] font-bold leading-tight tracking-[-0.03em]">New Vehicle</h1>
       <NewVehicleClient />
     </div>
   );
