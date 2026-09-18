@@ -20,7 +20,13 @@ import { buildRatingSummary } from "@/lib/rating/build-summary";
 import { getRatingProvider } from "@/lib/providers/get-rating-provider";
 import type { RatingPhoto, BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 
-const RATE_LIMIT_HOURS = 24;
+// Temporarily disabled at the owner's request (2026-09-18) so re-rating
+// isn't gated while testing — revert to 24 when told to turn it back on.
+// Each real call still costs a real AI provider request; nothing else
+// about the confirm flow changes (0088's protect_ai_rating_columns
+// trigger and the pending-column flow are untouched, so a result still
+// has to come from a genuine rateBuild() call either way).
+const RATE_LIMIT_HOURS = 0;
 const MAX_PHOTOS = 4;
 
 async function requireOwner(vehicleId: string) {
