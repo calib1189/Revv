@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { RankFrame } from "@/features/garage/rank-frame";
@@ -17,6 +18,10 @@ export interface GarageStats {
    * Computed here at read time, never stored (CLAUDE.md invariant 3). */
   investedCents: number;
   bestScore: number | null;
+  /** The best-rated car's cover photo and name, shown inside the rank
+   * ring. Optional — the widget falls back to the tier emblem. */
+  bestHeroUrl?: string | null;
+  bestName?: string | null;
 }
 
 /** A small square widget — tinted glyph top-left, figure and label at
@@ -53,10 +58,10 @@ function SmallWidget({
   );
 }
 
-/** The garage's widget stack: one large Best Build widget — the score as
- * a ring with a light travelling around it, the tier, and how far it is
- * to the next tier — over a row of three small widgets for mods, spend
- * and cars. Every figure is read back from build_parts at request time;
+/** The garage's widget stack: one large Best Build widget — the best
+ * car's photo in its animated rank ring, the score, the tier, and how far
+ * it is to the next tier — over a row of three small widgets for mods,
+ * spend and cars. Every figure is read back from build_parts at request time;
  * nothing here is stored. */
 export function GarageStatPanel({ stats }: { stats: GarageStats }) {
   const progress = stats.bestScore != null ? tierProgress(stats.bestScore) : null;
@@ -69,51 +74,53 @@ export function GarageStatPanel({ stats }: { stats: GarageStats }) {
         className="animate-section-rise pressable glass-raised elev-2 block overflow-hidden rounded-[28px] p-5 sm:p-6"
       >
         <div className="flex items-center gap-5">
-          {/* The same animated tier ring the profile photo and car photos
-              wear (RankFrame), around the score itself. Unrated gets a
-              plain hairline circle. */}
-          {(() => {
-            const score = (
-              <div
-                className="flex h-full w-full flex-col items-center justify-center rounded-full bg-surface text-center"
-                role="img"
-                aria-label={
-                  stats.bestScore != null
-                    ? `Best build ${stats.bestScore.toFixed(2)} out of 100`
-                    : "No build rated yet"
-                }
-              >
-                <p className="numeral text-[1.5rem] leading-none">
-                  {stats.bestScore != null ? stats.bestScore.toFixed(2) : "--"}
-                </p>
-                <p className="mt-1 text-[0.625rem] font-medium text-muted">of 100</p>
-              </div>
-            );
-            return stats.bestScore != null ? (
-              <RankFrame score={stats.bestScore} hideBadge className="h-[120px] w-[120px] flex-shrink-0 rounded-full">
-                {score}
-              </RankFrame>
-            ) : (
-              <div className="h-[120px] w-[120px] flex-shrink-0 rounded-full p-[3px] ring-1 ring-border">{score}</div>
-            );
-          })()}
+          {/* The rank ring frames a photo, exactly as it does on the
+              profile avatar and car photos — here the garage's best car.
+              (Around an empty disc it read as a broken outline.) Falls
+              back to the tier emblem when that car has no photo, and to
+              a plain hairline when nothing is rated. */}
+          {stats.bestScore != null && progress && TierIcon ? (
+            <RankFrame score={stats.bestScore} hideBadge className="h-[104px] w-[104px] flex-shrink-0 rounded-full">
+              {stats.bestHeroUrl ? (
+                <Image
+                  src={stats.bestHeroUrl}
+                  alt={stats.bestName ?? "Best build"}
+                  fill
+                  sizes="104px"
+                  className="rounded-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-neutral-900 p-5">
+                  <TierIcon className="h-full w-full" />
+                </div>
+              )}
+            </RankFrame>
+          ) : (
+            <div className="flex h-[104px] w-[104px] flex-shrink-0 items-center justify-center rounded-full bg-foreground/[0.05] ring-1 ring-border">
+              <span className="numeral text-[1.5rem] leading-none text-muted">--</span>
+            </div>
+          )}
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[0.8125rem] font-medium text-muted">Best build</p>
+              <p className="truncate text-[0.8125rem] font-medium text-muted">
+                {stats.bestName ? `Best build · ${stats.bestName}` : "Best build"}
+              </p>
               <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
             </div>
-            {progress && TierIcon ? (
+            {progress && TierIcon && stats.bestScore != null ? (
               <>
-                <div className="mt-1 flex items-center gap-2">
-                  <TierIcon className="h-7 w-7 flex-shrink-0" />
-                  <p
-                    className="truncate text-[1.5rem] font-bold tracking-[-0.02em]"
-                    style={{ color: tierColorVar(progress.tier) }}
-                  >
-                    {RANK_LABELS[progress.tier]}
-                  </p>
-                </div>
+                <p className="mt-1 flex items-baseline gap-2">
+                  <span className="numeral text-[2rem] leading-none" aria-label={`${stats.bestScore.toFixed(2)} out of 100`}>
+                    {stats.bestScore.toFixed(2)}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <TierIcon className="h-5 w-5 flex-shrink-0 self-center" />
+                    <span className="micro-label" style={{ color: tierColorVar(progress.tier) }}>
+                      {RANK_LABELS[progress.tier]}
+                    </span>
+                  </span>
+                </p>
                 {/* Progress through the current tier's band, toward the
                     next one — the reason to open a car and keep building. */}
                 <div className="mt-3 h-[5px] overflow-hidden rounded-full bg-foreground/10">

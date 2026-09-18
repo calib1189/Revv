@@ -68,6 +68,14 @@ export async function GaragePageContent() {
     if (score == null) return best;
     return best == null || score > best ? score : best;
   }, null);
+  // The car that holds that best score — its photo goes inside the
+  // Best Build widget's rank ring.
+  const bestVehicle =
+    bestScore == null
+      ? null
+      : (vehicles.find((v) => activeBuildByVehicle.get(v.id)?.ai_rating_score === bestScore) ?? null);
+  const bestHeroUrl = bestVehicle?.hero_media_id ? (heroUrlById.get(bestVehicle.hero_media_id) ?? null) : null;
+  const bestName = bestVehicle ? bestVehicle.nickname || `${bestVehicle.make} ${bestVehicle.model}` : null;
 
   // What this garage actually contains, read back from the parts
   // themselves rather than stored anywhere (CLAUDE.md invariant 3).
@@ -214,6 +222,8 @@ export async function GaragePageContent() {
                 modCount,
                 investedCents,
                 bestScore,
+                bestHeroUrl,
+                bestName,
               }}
             />
           </section>
