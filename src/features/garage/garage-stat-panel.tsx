@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ProgressRing } from "@/components/ui/progress-ring";
+import { RankFrame } from "@/features/garage/rank-frame";
 import { ChevronRightIcon, WrenchIcon, WheelIcon, GemIcon } from "@/components/ui/icons";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { RANK_LABELS, tierColorVar, tierProgress } from "@/lib/rating/rank";
@@ -61,7 +61,6 @@ function SmallWidget({
 export function GarageStatPanel({ stats }: { stats: GarageStats }) {
   const progress = stats.bestScore != null ? tierProgress(stats.bestScore) : null;
   const TierIcon = progress ? RANK_MATERIAL_ICONS[progress.tier] : null;
-  const ringColor = progress ? tierColorVar(progress.tier) : "var(--muted)";
 
   return (
     <div className="flex flex-col gap-3">
@@ -70,25 +69,34 @@ export function GarageStatPanel({ stats }: { stats: GarageStats }) {
         className="animate-section-rise pressable glass-raised elev-2 block overflow-hidden rounded-[28px] p-5 sm:p-6"
       >
         <div className="flex items-center gap-5">
-          <ProgressRing
-            value={stats.bestScore != null ? stats.bestScore / 100 : 0}
-            size={120}
-            stroke={11}
-            color={ringColor}
-            glint
-            label={
-              stats.bestScore != null
-                ? `Best build ${stats.bestScore.toFixed(2)} out of 100`
-                : "No build rated yet"
-            }
-          >
-            <div className="text-center">
-              <p className="numeral text-[1.5rem] leading-none">
-                {stats.bestScore != null ? stats.bestScore.toFixed(2) : "--"}
-              </p>
-              <p className="mt-1 text-[0.625rem] font-medium text-muted">of 100</p>
-            </div>
-          </ProgressRing>
+          {/* The same animated tier ring the profile photo and car photos
+              wear (RankFrame), around the score itself. Unrated gets a
+              plain hairline circle. */}
+          {(() => {
+            const score = (
+              <div
+                className="flex h-full w-full flex-col items-center justify-center rounded-full bg-surface text-center"
+                role="img"
+                aria-label={
+                  stats.bestScore != null
+                    ? `Best build ${stats.bestScore.toFixed(2)} out of 100`
+                    : "No build rated yet"
+                }
+              >
+                <p className="numeral text-[1.5rem] leading-none">
+                  {stats.bestScore != null ? stats.bestScore.toFixed(2) : "--"}
+                </p>
+                <p className="mt-1 text-[0.625rem] font-medium text-muted">of 100</p>
+              </div>
+            );
+            return stats.bestScore != null ? (
+              <RankFrame score={stats.bestScore} hideBadge className="h-[120px] w-[120px] flex-shrink-0 rounded-full">
+                {score}
+              </RankFrame>
+            ) : (
+              <div className="h-[120px] w-[120px] flex-shrink-0 rounded-full p-[3px] ring-1 ring-border">{score}</div>
+            );
+          })()}
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">

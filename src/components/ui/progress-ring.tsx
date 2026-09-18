@@ -5,10 +5,8 @@ import type { CSSProperties, ReactNode } from "react";
  * itself in on mount (`animate-ring-draw`, globals.css). Pure SVG + CSS,
  * so it works in a Server Component with no client JS.
  *
- * `glint` adds a soft highlight that travels continuously around the
- * filled arc — masked to the arc itself, so it animates the ring without
- * ever suggesting a different value. With `value` 0 it orbits the empty
- * track instead, faintly. Disabled under prefers-reduced-motion.
+ * For a build's rank (profile photo, garage Best Build), use RankFrame's
+ * animated tier ring instead — this is for plain progress.
  *
  * `color` accepts any CSS color, including var(--tier-*) — the gradient
  * stops are set through `style`, which is where custom properties
@@ -21,7 +19,6 @@ export function ProgressRing({
   children,
   className = "",
   label,
-  glint = false,
 }: {
   /** 0–1. Clamped. */
   value: number;
@@ -30,35 +27,16 @@ export function ProgressRing({
   color: string;
   children?: ReactNode;
   className?: string;
-  /** Accessible description, e.g. "Best build 86.50 out of 100". */
+  /** Accessible description, e.g. "12 of 20". */
   label?: string;
-  glint?: boolean;
 }) {
   const clamped = Math.min(1, Math.max(0, value));
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - clamped);
-  // Unique per ring so two rings on one page never share a gradient/mask.
-  const baseId = `ring-${Math.round(clamped * 1e4)}-${size}-${stroke}-${color.replace(/[^a-z0-9]/gi, "")}`;
-  const gradientId = `${baseId}-g`;
-  const maskId = `${baseId}-m`;
+  // Unique per ring so two rings on one page never share a gradient.
+  const gradientId = `ring-${Math.round(clamped * 1e4)}-${size}-${stroke}-${color.replace(/[^a-z0-9]/gi, "")}`;
   const center = size / 2;
-
-  const glintCircle = (
-    <g className="animate-ring-glint" style={{ transformOrigin: "50% 50%", transformBox: "view-box" }}>
-      <circle
-        cx={center}
-        cy={center}
-        r={radius}
-        fill="none"
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        stroke="white"
-        strokeOpacity={clamped > 0 ? 0.75 : 0.35}
-        strokeDasharray={`${circumference * 0.12} ${circumference}`}
-      />
-    </g>
-  );
 
   return (
     <div
@@ -73,21 +51,6 @@ export function ProgressRing({
             <stop offset="0%" style={{ stopColor: `color-mix(in srgb, ${color} 72%, white)` }} />
             <stop offset="100%" style={{ stopColor: color }} />
           </linearGradient>
-          {glint && clamped > 0 && (
-            <mask id={maskId}>
-              <circle
-                cx={center}
-                cy={center}
-                r={radius}
-                fill="none"
-                strokeWidth={stroke}
-                strokeLinecap="round"
-                stroke="white"
-                strokeDasharray={circumference}
-                strokeDashoffset={offset}
-              />
-            </mask>
-          )}
         </defs>
         <circle
           cx={center}
@@ -116,7 +79,6 @@ export function ProgressRing({
             }
           />
         )}
-        {glint && (clamped > 0 ? <g mask={`url(#${maskId})`}>{glintCircle}</g> : glintCircle)}
       </svg>
       {/* No z-index: the SVG is an earlier absolute sibling, so paint
           order already puts this on top — and a z-10 here could draw

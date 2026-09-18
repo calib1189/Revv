@@ -358,22 +358,6 @@ html.native-app body::-webkit-scrollbar {
   animation: ring-draw 1100ms var(--ease-ios) both;
 }
 
-/* A highlight that travels around a progress ring (ProgressRing's
-   `glint`). Starts after the draw-in finishes, eases through each lap so
-   it reads as light catching the ring rather than a loading spinner. */
-@keyframes ring-glint {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-ring-glint {
-  animation: ring-glint 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) 1.1s infinite;
-}
-
 /* Rank line — the tier's material as a thin animated rule, used as the
    divider between a car's photo and its score bar (vehicle-bay.tsx).
    The ring version (.rank-frame) spins a conic gradient around a centre,
@@ -522,7 +506,6 @@ html.native-app body::-webkit-scrollbar {
 @media (prefers-reduced-motion: reduce) {
   .animate-sheet-up,
   .animate-fade-in,
-  .animate-ring-glint,
   .animate-ring-draw,
   .animate-section-rise {
     animation: none;
