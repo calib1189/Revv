@@ -1,13 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
-import { Button } from "@/components/ui/button";
+import { GroupedButtonRow, RowIcon } from "@/components/ui/grouped-list";
+import { CameraIcon, ChevronRightIcon } from "@/components/ui/icons";
 
 export function CoverPhotoUploader({
   vehicleId,
@@ -57,8 +58,10 @@ export function CoverPhotoUploader({
     }
   }
 
+  // Rendered as a row of the vehicle page's owner GroupedList — one
+  // wrapper element so the list's hairline logic sees a single row.
   return (
-    <div>
+    <div className="relative" style={{ "--row-inset": "3.625rem" } as CSSProperties}>
       <input
         ref={inputRef}
         type="file"
@@ -70,20 +73,18 @@ export function CoverPhotoUploader({
           e.target.value = "";
         }}
       />
-      <Button
-        type="button"
-        variant={hasPhoto ? "secondary" : "primary"}
+      <GroupedButtonRow
+        icon={
+          <RowIcon color="#0a84ff">
+            <CameraIcon />
+          </RowIcon>
+        }
+        label={isUploading ? "Uploading…" : hasPhoto ? "Change cover photo" : "Add cover photo"}
         disabled={isUploading}
         onClick={() => inputRef.current?.click()}
-        className={hasPhoto ? "px-3 py-1.5 text-sm" : ""}
-      >
-        {isUploading
-          ? "Uploading…"
-          : hasPhoto
-            ? "Change cover photo"
-            : "Add cover photo"}
-      </Button>
-      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+        trailing={<ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />}
+      />
+      {error && <p className="px-4 pb-3 text-[0.8125rem] text-danger">{error}</p>}
     </div>
   );
 }

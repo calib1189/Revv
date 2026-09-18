@@ -28,16 +28,15 @@ import { ReportButton } from "@/features/feed/report-button";
 import { OwnershipVerification } from "@/features/garage/ownership-verification";
 import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
 import { VehicleTabs } from "@/features/garage/vehicle-tabs";
-import { RankFrame } from "@/features/garage/rank-frame";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, tierColorVar } from "@/lib/rating/rank";
-import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
+import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
+import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/grouped-list";
+import { EditIcon, WheelIcon } from "@/components/ui/icons";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
 import { listMaintenanceForVehicle } from "@/lib/db/maintenance";
 import { recordVehicleView } from "@/lib/db/vehicle-views";
 import { getPartClickCountsForBuildParts } from "@/lib/db/part-clicks";
-import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
 export async function generateMetadata({
@@ -196,207 +195,163 @@ export default async function VehiclePage({
     : undefined;
   const nameIsGradient = nameColorItem?.value.includes("gradient") ?? false;
 
+  const eyebrow = (
+    vehicle.nickname ? [vehicle.year, vehicle.make, vehicle.model] : [vehicle.year, vehicle.trim]
+  )
+    .filter(Boolean)
+    .join(" · ");
+  const score = activeBuild?.ai_rating_score ?? null;
+
   return (
     <div className="flex-1 pb-16">
-      <RankFrame score={activeBuild?.ai_rating_score ?? null}>
-        <div className="relative aspect-[16/10] w-full bg-surface sm:aspect-[21/9]">
-          {heroUrl ? (
-            <Image
-              src={heroUrl}
-              alt={title}
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-sm text-muted">
-              No cover photo yet
-            </div>
-          )}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-
-          <div className="absolute right-4 top-4 sm:right-6">
-            <VehicleShareButton vehicleId={vehicle.id} />
-          </div>
-
-          <div className="absolute inset-x-0 bottom-0 mx-auto flex w-full max-w-5xl items-end justify-between gap-4 px-4 py-6 sm:px-6">
-            <div>
-              {vehicle.year && (
-                <p className="text-sm font-medium text-white/70">
-                  {vehicle.year}
-                </p>
-              )}
-              {nameIsGradient ? (
-                <h1
-                  className={`bg-clip-text text-3xl font-semibold tracking-tight text-transparent sm:text-4xl ${nameColorItem?.effectClassName ?? ""}`}
-                  style={{ backgroundImage: nameColorItem!.value }}
-                >
-                  {title}
-                </h1>
-              ) : (
-                <h1
-                  className={`text-3xl font-semibold tracking-tight sm:text-4xl ${nameColorItem ? "" : "text-white"} ${nameColorItem?.effectClassName ?? ""}`}
-                  style={nameColorItem ? { color: nameColorItem.value } : undefined}
-                >
-                  {title}
-                </h1>
-              )}
-              {owner && (
-                <Link
-                  href={`/u/${owner.username}`}
-                  className="mt-1 inline-block text-sm text-white/70 hover:text-white"
-                >
-                  @{owner.username}
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </RankFrame>
-
-      <div className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-6">
-        {!isOwner && user && (
-          <div className="mb-4 flex justify-end">
-            <ReportButton targetType="vehicle" targetId={vehicle.id} />
+      {/* Full-bleed hero: tall on phones so the car is the screen, a
+          cinematic strip on wide screens. The name sits on the photo's
+          lower edge over a scrim, the way a feature story opens. */}
+      <div className="relative h-[min(78svh,560px)] w-full overflow-hidden bg-neutral-950 sm:h-[min(70vh,620px)]">
+        {heroUrl ? (
+          <Image src={heroUrl} alt={title} fill priority sizes="100vw" className="object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-[0.9375rem] text-white/50">
+            {isOwner ? "Add a cover photo below" : "No cover photo yet"}
           </div>
         )}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/50 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+
+        <div className="absolute right-4 top-4 sm:right-6">
+          <VehicleShareButton vehicleId={vehicle.id} />
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0">
+          <div className="animate-section-rise mx-auto w-full max-w-3xl px-5 pb-7 sm:px-6 sm:pb-10">
+            {eyebrow && <p className="micro-label text-white/75">{eyebrow}</p>}
+            {nameIsGradient ? (
+              <h1
+                className={`mt-2 bg-clip-text text-[2.5rem] font-bold leading-[1.02] tracking-[-0.035em] text-transparent sm:text-[3.5rem] ${nameColorItem?.effectClassName ?? ""}`}
+                style={{ backgroundImage: nameColorItem!.value }}
+              >
+                {title}
+              </h1>
+            ) : (
+              <h1
+                className={`mt-2 text-[2.5rem] font-bold leading-[1.02] tracking-[-0.035em] sm:text-[3.5rem] ${nameColorItem ? "" : "text-white"} ${nameColorItem?.effectClassName ?? ""}`}
+                style={nameColorItem ? { color: nameColorItem.value } : undefined}
+              >
+                {title}
+              </h1>
+            )}
+            {owner && (
+              <Link
+                href={`/u/${owner.username}`}
+                className="mt-3 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[0.8125rem] font-medium text-white backdrop-blur-md transition-colors hover:bg-white/25"
+              >
+                @{owner.username}
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 pt-6 sm:px-6 sm:pt-8">
+        {isOwner ? (
+          <RateBuildPanel
+            vehicleId={vehicle.id}
+            currentScore={score}
+            currentStrengths={activeBuild?.ai_rating_strengths ?? null}
+            currentLimitingFactors={activeBuild?.ai_rating_limiting_factors ?? null}
+            currentSubscores={currentSubscores}
+            topPercent={topPercent}
+            ratingHistory={ratingHistory}
+            rankPosition={rankPosition}
+          />
+        ) : (
+          score != null && (
+            <div className="glass-raised elev-2 rounded-[28px] p-5 sm:p-6">
+              <RatingBreakdownTrigger
+                score={score}
+                subscores={currentSubscores}
+                topPercent={topPercent}
+                history={ratingHistory}
+                className="block w-full text-left"
+              >
+                <ScoreHero score={score} />
+              </RatingBreakdownTrigger>
+              <ScoreReasons
+                strengths={activeBuild?.ai_rating_strengths ?? null}
+                limitingFactors={activeBuild?.ai_rating_limiting_factors ?? null}
+                fallback={activeBuild?.ai_rating_summary ?? null}
+              />
+            </div>
+          )
+        )}
+
+        <PeerRatingCard
+          vehicleId={vehicle.id}
+          summary={peerRatingSummary}
+          myInitialRating={myPeerRating}
+          canRate={Boolean(user) && !isOwner}
+        />
 
         {isOwner && (
-          <div className="mb-6 flex flex-col gap-4">
-            <OwnershipVerification
-              vehicleId={vehicle.id}
-              userId={vehicle.owner_id}
-              status={vehicle.ownership_verification_status}
-            />
-            <RateBuildPanel
-              vehicleId={vehicle.id}
-              currentScore={activeBuild?.ai_rating_score ?? null}
-              currentStrengths={activeBuild?.ai_rating_strengths ?? null}
-              currentLimitingFactors={activeBuild?.ai_rating_limiting_factors ?? null}
-              currentSubscores={currentSubscores}
-              topPercent={topPercent}
-              ratingHistory={ratingHistory}
-              rankPosition={rankPosition}
-            />
-          </div>
-        )}
-
-        {!isOwner && activeBuild?.ai_rating_score != null && (
-          <div className="mb-6 glass-raised rounded-3xl p-6">
-            {(() => {
-              const tier = rankForScore(activeBuild.ai_rating_score!);
-              const Icon = RANK_MATERIAL_ICONS[tier];
-              return (
-                <>
-                  <RatingBreakdownTrigger
-                    score={activeBuild.ai_rating_score!}
-                    subscores={currentSubscores}
-                    topPercent={topPercent}
-                    history={ratingHistory}
-                  >
-                    {/* This page exists to answer "what did this build
-                        score" — so the score is the largest thing on it,
-                        rather than being set smaller than the paragraph
-                        that explains it. */}
-                    <div className="flex items-center gap-4">
-                      <span
-                        className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl"
-                        style={{ backgroundColor: `${RANK_TEXT_COLORS[tier]}26` }}
-                      >
-                        <Icon className="h-10 w-10" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="micro-label text-muted">Build rating</p>
-                        <p className="numeral mt-1 text-4xl leading-none">
-                          {activeBuild.ai_rating_score!.toFixed(2)}
-                        </p>
-                        <p
-                          className="micro-label mt-1.5"
-                          style={{ color: tierColorVar(tier) }}
-                        >
-                          {RANK_LABELS[tier]}
-                        </p>
-                      </div>
-                    </div>
-                  </RatingBreakdownTrigger>
-                  {(activeBuild.ai_rating_strengths || activeBuild.ai_rating_summary) && (
-                    <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
-                      {activeBuild.ai_rating_strengths ? (
-                        <>
-                          <div>
-                            <p className="micro-label text-muted">Why this score</p>
-                            <p className="mt-1.5 text-sm text-muted">{activeBuild.ai_rating_strengths}</p>
-                          </div>
-                          {activeBuild.ai_rating_limiting_factors && (
-                            <div>
-                              <p className="micro-label text-muted">
-                                What&apos;s holding it back
-                              </p>
-                              <p className="mt-1.5 text-sm text-muted">
-                                {activeBuild.ai_rating_limiting_factors}
-                              </p>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <p className="text-sm text-muted">{activeBuild.ai_rating_summary}</p>
-                      )}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        )}
-
-        <div className="mb-6">
-          <PeerRatingCard
+          <OwnershipVerification
             vehicleId={vehicle.id}
-            summary={peerRatingSummary}
-            myInitialRating={myPeerRating}
-            canRate={Boolean(user) && !isOwner}
+            userId={vehicle.owner_id}
+            status={vehicle.ownership_verification_status}
           />
-        </div>
+        )}
 
         {!isOwner && user && buildParts.length > 0 && (
-          <div className="mb-6">
-            <CopyBuildButton
-              sourceVehicleId={vehicle.id}
-              myVehicles={await listVehiclesByOwner(supabase, user.id)}
-            />
-          </div>
+          <CopyBuildButton
+            sourceVehicleId={vehicle.id}
+            myVehicles={await listVehiclesByOwner(supabase, user.id)}
+          />
+        )}
+
+        {vehicle.description && (
+          <section>
+            <SectionTitle>About</SectionTitle>
+            <p className="whitespace-pre-wrap px-1 text-[0.9375rem] leading-relaxed text-foreground/90">
+              {vehicle.description}
+            </p>
+          </section>
         )}
 
         <VehicleSpecs vehicle={vehicle} />
 
-        {vehicle.description && (
-          <p className="mt-6 max-w-2xl whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-            {vehicle.description}
-          </p>
-        )}
-
         {isOwner && (
-          <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-border pt-6">
-            <CoverPhotoUploader
-              vehicleId={vehicle.id}
-              userId={user!.id}
-              hasPhoto={Boolean(vehicle.hero_media_id)}
-            />
-            <Link href={`/garage/${vehicle.id}/edit`}>
-              <Button variant="ghost" className="px-3 py-1.5 text-sm">
-                Edit details
-              </Button>
-            </Link>
-            <Link href="/tools/fitment">
-              <Button variant="ghost" className="px-3 py-1.5 text-sm">
-                Fitment calculator
-              </Button>
-            </Link>
-            <DeleteVehicleButton vehicleId={vehicle.id} />
-          </div>
+          <section>
+            <SectionTitle>Manage</SectionTitle>
+            <GroupedList>
+              <CoverPhotoUploader
+                vehicleId={vehicle.id}
+                userId={user!.id}
+                hasPhoto={Boolean(vehicle.hero_media_id)}
+              />
+              <GroupedRow
+                href={`/garage/${vehicle.id}/edit`}
+                label="Edit details"
+                icon={
+                  <RowIcon color="#8e8e93">
+                    <EditIcon />
+                  </RowIcon>
+                }
+              />
+              <GroupedRow
+                href="/tools/fitment"
+                label="Fitment calculator"
+                icon={
+                  <RowIcon color="#30b0c7">
+                    <WheelIcon />
+                  </RowIcon>
+                }
+              />
+              <DeleteVehicleButton vehicleId={vehicle.id} />
+            </GroupedList>
+          </section>
         )}
+      </div>
 
+      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
         <VehicleTabs
           vehicleId={vehicle.id}
           vehicleLabel={[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ")}
@@ -414,6 +369,12 @@ export default async function VehiclePage({
           posts={postThumbnails}
           maintenanceRecords={maintenanceRecords}
         />
+
+        {!isOwner && user && (
+          <div className="mt-12 flex justify-center">
+            <ReportButton targetType="vehicle" targetId={vehicle.id} />
+          </div>
+        )}
       </div>
     </div>
   );

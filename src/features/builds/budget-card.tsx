@@ -5,6 +5,7 @@ import { updateBudgetAction, type BudgetFormState } from "@/features/builds/acti
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Callout } from "@/components/ui/callout";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { formatCents } from "@/lib/format/money";
 import type { BudgetSummary } from "@/lib/builds/budget";
 
@@ -33,7 +34,7 @@ export function BudgetCard({
 
   if (isEditing) {
     return (
-      <div className="glass rounded-2xl p-4">
+      <div className="glass-raised elev-1 rounded-[22px] p-5">
         <form action={formAction} className="flex items-end gap-3">
           <div className="flex-1">
             {state.error && (
@@ -73,49 +74,45 @@ export function BudgetCard({
   const overBudget = summary.remainingCents != null && summary.remainingCents < 0;
 
   return (
-    <div className="glass rounded-2xl p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Budget</h2>
+    <div className="glass-raised elev-1 rounded-[22px] p-5">
+      <div className="flex items-center gap-4">
+        {summary.budgetCents != null && (
+          <ProgressRing
+            value={percent / 100}
+            size={64}
+            stroke={7}
+            color={overBudget ? "var(--danger)" : "var(--accent)"}
+            label={`${Math.round(percent)}% of budget used`}
+          >
+            <span className="numeral text-[0.8125rem] leading-none">{Math.round(percent)}%</span>
+          </ProgressRing>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[0.8125rem] font-medium text-muted">Spent</p>
+          <p className="numeral mt-0.5 text-[1.625rem] leading-none">{formatCents(summary.spentCents)}</p>
+          <p className={`mt-1.5 text-[0.8125rem] ${overBudget ? "text-danger" : "text-muted"}`}>
+            {summary.budgetCents == null
+              ? "No budget set"
+              : overBudget
+                ? `${formatCents(-summary.remainingCents!)} over ${formatCents(summary.budgetCents)}`
+                : `${formatCents(summary.remainingCents!)} left of ${formatCents(summary.budgetCents)}`}
+          </p>
+        </div>
         {isOwner && (
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="text-xs text-muted hover:text-foreground"
+            className="flex-shrink-0 self-start text-[0.875rem] font-medium text-accent"
           >
             {summary.budgetCents != null ? "Edit" : "Set budget"}
           </button>
         )}
       </div>
 
-      {summary.budgetCents != null ? (
-        <>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-background">
-            <div
-              className={`h-full rounded-full ${overBudget ? "bg-danger" : "bg-accent"}`}
-              style={{ width: `${percent}%` }}
-            />
-          </div>
-          <div className="mt-2 flex items-center justify-between text-sm">
-            <span>
-              <strong>{formatCents(summary.spentCents)}</strong> spent of{" "}
-              {formatCents(summary.budgetCents)}
-            </span>
-            <span className={overBudget ? "text-danger" : "text-muted"}>
-              {overBudget
-                ? `${formatCents(-summary.remainingCents!)} over`
-                : `${formatCents(summary.remainingCents!)} left`}
-            </span>
-          </div>
-        </>
-      ) : (
-        <p className="text-sm text-muted">
-          {formatCents(summary.spentCents)} spent so far — no budget set.
-        </p>
-      )}
-
       {summary.plannedCents > 0 && (
-        <p className="mt-1.5 text-xs text-muted">
-          Plus {formatCents(summary.plannedCents)} planned but not yet ordered.
+        <p className="mt-4 border-t border-border pt-3 text-[0.8125rem] text-muted">
+          Plus <span className="numeral text-foreground">{formatCents(summary.plannedCents)}</span> planned
+          but not yet ordered.
         </p>
       )}
     </div>

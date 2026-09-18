@@ -36,7 +36,9 @@ function StarRow({
         >
           <StarIcon
             className={`${starClass} transition-colors duration-150`}
-            style={{ color: n <= value ? STAR_COLOR : "rgba(255,255,255,0.14)" }}
+            style={{
+              color: n <= value ? STAR_COLOR : "color-mix(in srgb, var(--foreground) 14%, transparent)",
+            }}
           />
         </button>
       ))}
@@ -89,21 +91,19 @@ export function PeerRatingCard({
   const displayedValue = hovered ?? myRating ?? 0;
 
   return (
-    <div className="glass rounded-3xl p-6">
+    <div className="glass-raised elev-1 rounded-[22px] p-5">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">Community Rating</p>
+          <p className="text-[0.8125rem] font-medium text-muted">Community rating</p>
           {summary.count > 0 ? (
-            <p className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold tabular-nums" style={{ color: STAR_COLOR }}>
-                {summary.average!.toFixed(1)}
-              </span>
-              <span className="text-sm text-muted">
-                ({summary.count} {summary.count === 1 ? "rating" : "ratings"})
+            <p className="mt-1 flex items-baseline gap-2">
+              <span className="numeral text-[1.75rem] leading-none">{summary.average!.toFixed(1)}</span>
+              <span className="text-[0.8125rem] text-muted">
+                {summary.count} {summary.count === 1 ? "rating" : "ratings"}
               </span>
             </p>
           ) : (
-            <p className="mt-1 text-sm text-muted">No ratings yet</p>
+            <p className="mt-1 text-[0.9375rem] font-semibold">No ratings yet</p>
           )}
         </div>
         <StarRow value={Math.round(summary.average ?? 0)} size="sm" />
@@ -111,8 +111,8 @@ export function PeerRatingCard({
 
       {canRate && (
         <div className="mt-4 flex flex-col items-center gap-2 border-t border-border pt-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted">
-            {myRating ? "Your rating" : "Rate this build"}
+          <p className="text-[0.8125rem] font-medium text-muted">
+            {myRating ? "Your rating" : "Tap to rate"}
           </p>
           <StarRow value={displayedValue} size="lg" onHover={setHovered} onClick={handleRate} />
           {error && <p className="text-xs text-danger">{error}</p>}

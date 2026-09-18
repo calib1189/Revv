@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { RANK_LABELS, RANK_TEXT_COLORS, rankForScore } from "@/lib/rating/rank";
+import { RANK_LABELS, rankForScore, tierColorVar } from "@/lib/rating/rank";
 import { CloseIcon } from "@/components/ui/icons";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { RatingSparkline } from "@/features/garage/rating-sparkline";
 import { formatDateOnly } from "@/lib/format/date";
 import type { BuildRatingSubscores } from "@/lib/providers/rating-provider";
@@ -45,7 +46,9 @@ export function RatingBreakdownTrigger({
   topPercent,
   history = [],
   children,
+  className = "min-w-0 text-left",
 }: {
+  className?: string;
   score: number;
   subscores: BuildRatingSubscores | null;
   topPercent: number | null;
@@ -60,7 +63,7 @@ export function RatingBreakdownTrigger({
 
   return (
     <>
-      <button type="button" onClick={() => setIsOpen(true)} className="min-w-0 text-left">
+      <button type="button" onClick={() => setIsOpen(true)} className={className}>
         {children}
       </button>
 
@@ -70,56 +73,62 @@ export function RatingBreakdownTrigger({
             type="button"
             aria-label="Close"
             onClick={() => setIsOpen(false)}
-            className="absolute inset-0 bg-black/60"
+            className="animate-fade-in absolute inset-0 bg-black/55"
           />
-          <div className="glass-raised relative z-10 w-full max-w-lg rounded-t-[2rem] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/15" />
-            <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Rating breakdown</h2>
+          <div className="animate-sheet-up glass-raised relative z-10 w-full max-w-lg rounded-t-[28px] px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-2.5">
+            <div className="mx-auto mb-4 h-[5px] w-9 rounded-full bg-foreground/20" />
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-[1.25rem] font-bold tracking-[-0.02em]">Breakdown</h2>
               <button
                 type="button"
                 aria-label="Close"
                 onClick={() => setIsOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-foreground"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground/10 text-muted hover:text-foreground"
               >
-                <CloseIcon className="h-5 w-5" />
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
-            <p className="mb-6 text-sm font-medium" style={{ color: RANK_TEXT_COLORS[tier] }}>
-              {RANK_LABELS[tier]} · {score.toFixed(2)}
-              {topPercent != null && (
-                <span className="text-muted"> · Top {topPercent}% of rated builds on SORZA</span>
-              )}
-            </p>
+
+            <div className="mb-6 flex items-center gap-4">
+              <ProgressRing value={score / 100} size={72} stroke={7} color={tierColorVar(tier)}>
+                <span className="numeral text-[0.9375rem] leading-none">{score.toFixed(1)}</span>
+              </ProgressRing>
+              <div className="min-w-0">
+                <p className="text-[1.125rem] font-bold" style={{ color: tierColorVar(tier) }}>
+                  {RANK_LABELS[tier]} · <span className="numeral">{score.toFixed(2)}</span>
+                </p>
+                {topPercent != null && (
+                  <p className="mt-0.5 text-[0.875rem] text-muted">Top {topPercent}% of rated builds on SORZA</p>
+                )}
+              </div>
+            </div>
 
             {validSubscores ? (
-              <div className="flex flex-col gap-4">
+              <div className="glass-inset flex flex-col gap-4 rounded-[20px] p-4">
                 {SUBSCORE_KEYS.map((key) => (
                   <div key={key}>
-                    <div className="mb-1.5 flex items-center justify-between text-sm">
-                      <span className="font-medium">{SUBSCORE_LABELS[key]}</span>
-                      <span className="tabular-nums text-muted">{validSubscores[key].toFixed(0)}</span>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-[0.875rem] font-medium">{SUBSCORE_LABELS[key]}</span>
+                      <span className="numeral text-[0.875rem]">{validSubscores[key].toFixed(0)}</span>
                     </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <div className="h-[6px] w-full overflow-hidden rounded-full bg-foreground/10">
                       <div
-                        className="h-full rounded-full bg-accent"
-                        style={{ width: `${validSubscores[key]}%` }}
+                        className="h-full rounded-full"
+                        style={{ width: `${validSubscores[key]}%`, background: tierColorVar(tier) }}
                       />
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted">
-                This build was rated before subscores existed — re-rate to see a full breakdown.
+              <p className="text-[0.9375rem] text-muted">
+                This build was rated before subscores existed. Re-rate it to see a full breakdown.
               </p>
             )}
 
             {history.length >= 2 && (
               <div className="mt-6 border-t border-border pt-5">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
-                  Rating history
-                </p>
+                <p className="mb-2 text-[0.8125rem] font-semibold">Rating history</p>
                 <RatingSparkline scores={history.map((h) => h.score)} />
                 <p className="mt-2 text-xs text-muted">
                   {history.length} ratings since {formatDateOnly(history[0].ratedAt)}

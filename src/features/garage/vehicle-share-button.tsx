@@ -40,7 +40,7 @@ export function VehicleShareButton({ vehicleId }: { vehicleId: string }) {
       type="button"
       onClick={handleShare}
       aria-label="Share this build"
-      className="relative flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-black/50 text-white"
+      className="pressable relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-xl"
     >
       <ShareIcon className="h-4.5 w-4.5" />
       {status !== "idle" && (

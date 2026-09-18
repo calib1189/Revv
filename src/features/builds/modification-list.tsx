@@ -13,7 +13,9 @@ import { ProductCard } from "@/features/builds/product-card";
 import { BuyButton } from "@/features/parts/buy-button";
 import { buildPartSearchUrl } from "@/lib/affiliate/amazon-search-link";
 import { Button } from "@/components/ui/button";
-import { SearchIcon } from "@/components/ui/icons";
+import { SearchIcon, PlusIcon } from "@/components/ui/icons";
+import { SectionTitle } from "@/components/ui/grouped-list";
+import { EmptyState } from "@/components/ui/empty-state";
 import { formatCents } from "@/lib/format/money";
 import { formatDateOnly } from "@/lib/format/date";
 import { formatCompactNumber } from "@/lib/format/compact-number";
@@ -28,9 +30,9 @@ const STATUS_LABEL: Record<BuildPart["status"], string> = {
 };
 
 const STATUS_CLASS: Record<BuildPart["status"], string> = {
-  planned: "text-muted",
-  ordered: "text-foreground",
-  installed: "text-accent",
+  planned: "bg-foreground/10 text-muted",
+  ordered: "bg-[#0a84ff]/15 text-[#0a84ff]",
+  installed: "bg-success/15 text-success",
 };
 
 /** Read-only equivalent of ModificationPhotoUploader for a viewer who
@@ -46,7 +48,7 @@ function ModificationIcon({
   rawName: string;
 }) {
   return (
-    <div className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-raised text-muted">
+    <div className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-foreground/[0.06] text-muted">
       {photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- decorative thumbnail in a list; not worth a sized-ancestor Image setup here
         <img src={photoUrl} alt="" className="h-full w-full object-cover" />
@@ -88,7 +90,7 @@ function ModificationRow({
 
   if (isEditing) {
     return (
-      <li className="border-b border-border py-4 last:border-b-0">
+      <li className="relative p-4">
         <ModificationForm
           action={updateBuildPartAction.bind(null, part.id, vehicleId)}
           buildPart={part}
@@ -114,8 +116,8 @@ function ModificationRow({
     .join(" ");
 
   return (
-    <li className="flex items-start justify-between gap-4 border-b border-border py-4 last:border-b-0">
-      <div className="flex min-w-0 flex-1 gap-3">
+    <li className="relative flex items-start justify-between gap-3 p-4">
+      <div className="flex min-w-0 flex-1 gap-3.5">
         {isOwner && userId ? (
           <ModificationPhotoUploader
             buildPartId={part.id}
@@ -128,18 +130,20 @@ function ModificationRow({
           <ModificationIcon photoUrl={photoUrl} category={part.category} rawName={part.raw_name} />
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">{part.raw_name}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-            {part.category && <span>{part.category}</span>}
-            <span className={STATUS_CLASS[part.status]}>
+          <p className="text-[0.9375rem] font-semibold leading-snug">{part.raw_name}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-muted">
+            <span
+              className={`rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${STATUS_CLASS[part.status]}`}
+            >
               {STATUS_LABEL[part.status]}
             </span>
+            {part.category && <span>{part.category}</span>}
             {part.installed_at && (
-              <span>{formatDateOnly(part.installed_at)}</span>
+              <span>· {formatDateOnly(part.installed_at)}</span>
             )}
           </div>
           {part.notes && (
-            <p className="mt-1 text-xs text-muted">{part.notes}</p>
+            <p className="mt-1.5 text-[0.8125rem] leading-snug text-muted">{part.notes}</p>
           )}
           {linkedPart ? (
             <div className="mt-2 max-w-sm">
@@ -163,7 +167,7 @@ function ModificationRow({
               href={buildPartSearchUrl(searchQuery)}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="mt-2 inline-flex items-center gap-1 text-xs text-muted hover:text-foreground"
+              className="mt-2 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-accent"
             >
               <SearchIcon className="h-3.5 w-3.5" />
               Search for this part
@@ -174,16 +178,16 @@ function ModificationRow({
 
       <div className="flex flex-shrink-0 flex-col items-end gap-1">
         {part.price_cents != null && (
-          <span className="text-sm font-medium">
+          <span className="numeral text-[0.9375rem]">
             {formatCents(part.price_cents)}
           </span>
         )}
         {isOwner && (
-          <div className="flex items-center gap-2">
+          <div className="mt-1 flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="text-xs text-muted hover:text-foreground"
+              className="text-[0.8125rem] font-medium text-accent"
             >
               Edit
             </button>
@@ -218,21 +222,28 @@ export function ModificationList({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Modifications</h2>
-        {isOwner && !isAdding && (
-          <Button
-            variant="secondary"
-            className="px-3 py-1.5 text-sm"
-            onClick={() => setIsAdding(true)}
-          >
-            Add modification
-          </Button>
-        )}
-      </div>
+      <SectionTitle
+        action={
+          <span className="flex items-center gap-3">
+            <span className="numeral">{buildParts.length}</span>
+            {isOwner && !isAdding && (
+              <button
+                type="button"
+                onClick={() => setIsAdding(true)}
+                aria-label="Add modification"
+                className="pressable flex h-8 w-8 items-center justify-center rounded-full bg-accent text-accent-foreground"
+              >
+                <PlusIcon className="h-4 w-4" />
+              </button>
+            )}
+          </span>
+        }
+      >
+        Modifications
+      </SectionTitle>
 
       {isAdding && (
-        <div className="mb-4">
+        <div className="glass-raised elev-1 mb-4 rounded-[22px] p-4">
           <ModificationForm
             action={createBuildPartAction.bind(null, vehicleId)}
             submitLabel="Add"
@@ -243,9 +254,24 @@ export function ModificationList({
       )}
 
       {buildParts.length === 0 ? (
-        <p className="text-sm text-muted">No modifications listed yet.</p>
+        <EmptyState
+          card
+          title="No mods yet"
+          body={
+            isOwner
+              ? "Log every part on the car. Mods feed your build score and budget."
+              : "The owner hasn't logged any mods yet."
+          }
+          action={
+            isOwner && !isAdding ? (
+              <Button className="px-5" onClick={() => setIsAdding(true)}>
+                Add modification
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
-        <ul>
+        <ul className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>li+li]:before:absolute [&>li+li]:before:left-[5.375rem] [&>li+li]:before:right-0 [&>li+li]:before:top-0 [&>li+li]:before:h-px [&>li+li]:before:bg-border [&>li+li]:before:content-['']">
           {buildParts.map((part) => (
             <ModificationRow
               key={part.id}

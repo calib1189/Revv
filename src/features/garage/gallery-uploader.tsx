@@ -76,9 +76,9 @@ export function GalleryUploader({
         variant="secondary"
         disabled={isUploading}
         onClick={() => inputRef.current?.click()}
-        className="px-3 py-1.5 text-sm"
+        className="h-8 px-3.5 py-0 text-[0.8125rem] font-semibold"
       >
-        {isUploading ? "Uploading…" : "Add photos"}
+        {isUploading ? "Uploading…" : "Add"}
       </Button>
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
     </div>

@@ -384,7 +384,37 @@ html.native-app body::-webkit-scrollbar {
   animation: section-rise 560ms var(--ease-ios) both;
 }
 
+/* Bottom sheets rise from the bottom edge on the iOS curve; their
+   backdrop fades in underneath. */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-sheet-up {
+  animation: sheet-up 420ms var(--ease-ios) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 280ms ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-sheet-up,
+  .animate-fade-in,
   .animate-ring-draw,
   .animate-section-rise {
     animation: none;

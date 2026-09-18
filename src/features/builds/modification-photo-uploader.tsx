@@ -92,7 +92,7 @@ export function ModificationPhotoUploader({
         disabled={isUploading}
         onClick={() => inputRef.current?.click()}
         aria-label={photoUrl ? "Change photo" : "Add a real photo of this part"}
-        className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-surface-raised text-muted disabled:opacity-60"
+        className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-[14px] bg-foreground/[0.06] text-muted disabled:opacity-60"
       >
         {photoUrl ? (
           <Image src={photoUrl} alt="" fill sizes="56px" className="object-cover" />

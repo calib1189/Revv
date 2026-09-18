@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { WheelIcon, CameraIcon, GridIcon, WrenchIcon } from "@/components/ui/icons";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { SectionTitle } from "@/components/ui/grouped-list";
+import { EmptyState } from "@/components/ui/empty-state";
 import { BudgetCard } from "@/features/builds/budget-card";
 import { ModificationList } from "@/features/builds/modification-list";
 import { GalleryUploader } from "@/features/garage/gallery-uploader";
@@ -14,31 +16,6 @@ import type { BudgetSummary } from "@/lib/builds/budget";
 import type { MaintenanceRecord } from "@/lib/db/maintenance";
 
 type Tab = "mods" | "photos" | "posts" | "history";
-
-function TabButton({
-  active,
-  onClick,
-  icon,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium transition-colors ${
-        active ? "bg-accent text-accent-foreground" : "glass text-muted hover:text-foreground"
-      }`}
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
 
 /** Same shape as CrewTabs/ProfileTabs: local tab state, every tab's data
  * pre-fetched server-side by the vehicle page and passed down as props —
@@ -76,33 +53,18 @@ export function VehicleTabs({
 }) {
   const [tab, setTab] = useState<Tab>("mods");
 
+  const options: { value: Tab; label: string }[] = [
+    { value: "mods", label: "Mods" },
+    { value: "photos", label: "Photos" },
+    { value: "posts", label: "Posts" },
+    ...(isOwner ? [{ value: "history" as const, label: "Service" }] : []),
+  ];
+
   return (
     <div className="mt-10">
-      <div className="no-scrollbar mb-5 flex gap-2 overflow-x-auto pb-0.5">
-        <TabButton active={tab === "mods"} onClick={() => setTab("mods")} icon={<WheelIcon className="h-4 w-4" />}>
-          Mods · {buildParts.length}
-        </TabButton>
-        <TabButton
-          active={tab === "photos"}
-          onClick={() => setTab("photos")}
-          icon={<CameraIcon className="h-4 w-4" />}
-        >
-          Photos · {photos.length}
-        </TabButton>
-        <TabButton active={tab === "posts"} onClick={() => setTab("posts")} icon={<GridIcon className="h-4 w-4" />}>
-          Posts · {posts.length}
-        </TabButton>
-        {isOwner && (
-          <TabButton
-            active={tab === "history"}
-            onClick={() => setTab("history")}
-            icon={<WrenchIcon className="h-4 w-4" />}
-          >
-            History · {maintenanceRecords.length}
-          </TabButton>
-        )}
-      </div>
+      <SegmentedControl options={options} value={tab} onChange={setTab} className="mb-6" />
 
+      <div key={tab} className="animate-tab-content-in">
       {tab === "mods" && (
         <div className="flex flex-col gap-10">
           <BudgetCard summary={budgetSummary} vehicleId={vehicleId} isOwner={isOwner} />
@@ -121,22 +83,32 @@ export function VehicleTabs({
 
       {tab === "photos" && (
         <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Photos</h2>
-            {isOwner && userId && (
-              <GalleryUploader vehicleId={vehicleId} userId={userId} nextPosition={photos.length} />
-            )}
-          </div>
-          <GalleryGrid photos={photos} isOwner={isOwner} />
-          {photos.length === 0 && <p className="text-sm text-muted">No photos in the gallery yet.</p>}
+          <SectionTitle
+            action={
+              isOwner && userId ? (
+                <GalleryUploader vehicleId={vehicleId} userId={userId} nextPosition={photos.length} />
+              ) : undefined
+            }
+          >
+            Photos
+          </SectionTitle>
+          {photos.length === 0 ? (
+            <EmptyState
+              title="No photos yet"
+              body={isOwner ? "Add shots of the car from every angle." : "The owner hasn't added any photos."}
+            />
+          ) : (
+            <GalleryGrid photos={photos} isOwner={isOwner} />
+          )}
         </div>
       )}
 
       {tab === "posts" &&
         (posts.length === 0 ? (
-          <p className="text-sm text-muted">
-            No posts tagged to this build yet — tag it when you post from the feed.
-          </p>
+          <EmptyState
+            title="No posts yet"
+            body="Posts tagged to this car show up here. Tag it when you post from the feed."
+          />
         ) : (
           <PostThumbnailGrid posts={posts} />
         ))}
@@ -144,6 +116,7 @@ export function VehicleTabs({
       {tab === "history" && isOwner && (
         <MaintenanceList records={maintenanceRecords} vehicleId={vehicleId} isOwner={isOwner} />
       )}
+      </div>
     </div>
   );
 }

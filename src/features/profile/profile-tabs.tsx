@@ -5,6 +5,8 @@ import { PostThumbnailGrid, type PostThumbnail } from "@/features/profile/post-t
 import { VehicleBay } from "@/features/garage/vehicle-bay";
 import { AchievementsGrid } from "@/features/achievements/achievements-grid";
 import { AchievementShowcaseEditor } from "@/features/achievements/achievement-showcase-editor";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { Vehicle } from "@/lib/db/vehicles";
 
 export interface ProfileVehicleItem {
@@ -20,69 +22,7 @@ interface TabDef {
   label: string;
 }
 
-/** An iOS segmented control: equal-width segments on a tinted track,
- * with a lifted thumb that slides to the active one. Equal widths mean
- * the thumb's position is pure arithmetic (index × segment width) — no
- * measuring, no layout effect, no flash before first measure. */
-function SegmentedControl({
-  tabs,
-  active,
-  onChange,
-}: {
-  tabs: TabDef[];
-  active: Tab;
-  onChange: (tab: Tab) => void;
-}) {
-  const activeIndex = Math.max(
-    0,
-    tabs.findIndex((t) => t.key === active),
-  );
-
-  return (
-    <div
-      role="tablist"
-      className="relative flex rounded-[12px] p-[3px]"
-      style={{ background: "var(--segment-track)" }}
-    >
-      <div
-        aria-hidden
-        className="absolute bottom-[3px] top-[3px] rounded-[9px] shadow-[0_3px_8px_rgb(0_0_0/0.12),0_3px_1px_rgb(0_0_0/0.04)] transition-transform duration-300 ease-[var(--ease-ios)]"
-        style={{
-          left: 3,
-          width: `calc((100% - 6px) / ${tabs.length})`,
-          transform: `translateX(${activeIndex * 100}%)`,
-          background: "var(--segment-thumb)",
-        }}
-      />
-      {tabs.map((t) => {
-        const isActive = active === t.key;
-        return (
-          <button
-            key={t.key}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            onClick={() => onChange(t.key)}
-            className={`relative z-10 min-w-0 flex-1 truncate px-1 py-[7px] text-[0.8125rem] transition-[color,font-weight] duration-200 ${
-              isActive ? "font-semibold text-foreground" : "font-medium text-foreground/70"
-            }`}
-          >
-            {t.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function EmptyTab({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="flex flex-col items-center px-6 py-16 text-center">
-      <p className="text-[1.0625rem] font-semibold">{title}</p>
-      <p className="mt-1 max-w-xs text-[0.875rem] leading-relaxed text-muted">{body}</p>
-    </div>
-  );
-}
+const EmptyTab = EmptyState;
 
 export function ProfileTabs({
   posts,
@@ -127,7 +67,11 @@ export function ProfileTabs({
 
   return (
     <div className="mt-8">
-      <SegmentedControl tabs={tabs} active={tab} onChange={setTab} />
+      <SegmentedControl
+        options={tabs.map((t) => ({ value: t.key, label: t.label }))}
+        value={tab}
+        onChange={setTab}
+      />
 
       {/* Remounted per tab (key={tab}) purely for the fade-in — a tab
           switch should feel like new content settling in, not an

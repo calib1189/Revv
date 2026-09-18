@@ -74,28 +74,37 @@ export function OwnershipVerification({
 
   if (status === "approved") {
     return (
-      <div className="flex items-center gap-2 text-sm text-success">
-        <CheckIcon className="h-4 w-4" />
-        Verified — eligible for the leaderboard
+      <div className="glass-raised elev-1 flex items-center gap-3 rounded-[22px] px-4 py-3">
+        <span className="flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-full bg-success text-white">
+          <CheckIcon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[0.9375rem] font-semibold">Verified owner</p>
+          <p className="text-[0.8125rem] text-muted">This build counts on the leaderboard</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="glass rounded-2xl p-4">
-      <p className="text-sm font-medium">Verify ownership for the leaderboard</p>
-      <p className="mt-1 text-xs text-muted">
-        Upload one photo showing the whole car, with your username written on
-        paper somewhere in frame. An admin reviews it before this build can
-        appear on the leaderboard.
+    <div className="glass-raised elev-1 rounded-[22px] p-5">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[1.0625rem] font-semibold tracking-[-0.01em]">Get on the leaderboard</p>
+        {status === "pending" && (
+          <span className="flex-shrink-0 rounded-full bg-foreground/10 px-2.5 py-0.5 text-[0.75rem] font-semibold text-muted">
+            In review
+          </span>
+        )}
+      </div>
+      <p className="mt-1.5 text-[0.875rem] leading-relaxed text-muted">
+        Upload one photo of the whole car with your username written on paper
+        somewhere in frame. An admin reviews it before this build can appear
+        on the leaderboard.
       </p>
-      {status === "pending" && (
-        <p className="mt-2 text-xs text-muted">Submitted — waiting on review.</p>
-      )}
       {status === "rejected" && (
-        <p className="mt-2 text-xs text-danger">
-          Not approved — make sure the whole car and a clearly legible
-          username are both visible, then try again.
+        <p className="mt-2 text-[0.8125rem] text-danger">
+          Not approved. Make sure the whole car and a clearly legible username
+          are both visible, then try again.
         </p>
       )}
       <input
@@ -114,7 +123,7 @@ export function OwnershipVerification({
         variant="secondary"
         disabled={isUploading}
         onClick={() => inputRef.current?.click()}
-        className="mt-3 px-3 py-1.5 text-sm"
+        className="mt-4 h-10 w-full text-[0.9375rem] font-semibold"
       >
         {isUploading ? "Uploading…" : status === "none" ? "Upload photo" : "Resubmit photo"}
       </Button>

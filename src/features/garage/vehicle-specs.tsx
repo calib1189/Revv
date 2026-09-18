@@ -1,7 +1,15 @@
+import { GroupedList, GroupedRow, SectionTitle } from "@/components/ui/grouped-list";
 import type { Vehicle } from "@/lib/db/vehicles";
 
+/** The car's spec sheet as a grouped list — label left, value right,
+ * the way Settings › About reads out a device. Only rows the owner has
+ * actually filled in are shown. */
 export function VehicleSpecs({ vehicle }: { vehicle: Vehicle }) {
   const specs: { label: string; value: string | number | null }[] = [
+    { label: "Year", value: vehicle.year },
+    { label: "Make", value: vehicle.make },
+    { label: "Model", value: vehicle.model },
+    { label: "Trim", value: vehicle.trim },
     { label: "Engine", value: vehicle.engine },
     { label: "Drivetrain", value: vehicle.drivetrain },
     { label: "Color", value: vehicle.color },
@@ -14,17 +22,13 @@ export function VehicleSpecs({ vehicle }: { vehicle: Vehicle }) {
   if (specs.length === 0) return null;
 
   return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-y border-border py-6 sm:grid-cols-4">
-      {specs.map((spec) => (
-        <div key={spec.label}>
-          <dt className="text-xs font-medium uppercase tracking-wide text-muted">
-            {spec.label}
-          </dt>
-          <dd className="mt-1 text-sm font-medium text-foreground">
-            {spec.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <section>
+      <SectionTitle>Specs</SectionTitle>
+      <GroupedList>
+        {specs.map((spec) => (
+          <GroupedRow key={spec.label} label={spec.label} value={spec.value} />
+        ))}
+      </GroupedList>
+    </section>
   );
 }
