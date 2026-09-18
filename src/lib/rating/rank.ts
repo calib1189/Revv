@@ -101,6 +101,35 @@ export function rankForScore(score: number): RankTier {
   return RANK_TIERS.find((t) => score >= t.min)!.tier;
 }
 
+export interface TierProgress {
+  tier: RankTier;
+  /** The tier above, or null at the top (Cosmic). */
+  next: RankTier | null;
+  /** Points still needed to reach `next`; null at the top. */
+  pointsToNext: number | null;
+  /** 0–1 position within the current tier's band (1 at the top tier). */
+  withinTier: number;
+}
+
+/** Where a score sits on the ladder: its tier, the next one up, how far
+ * away it is, and how far through the current band it has come.
+ * Derived from RANK_TIERS, never stored. */
+export function tierProgress(score: number): TierProgress {
+  const index = RANK_TIERS.findIndex((t) => score >= t.min);
+  const { tier, min } = RANK_TIERS[index];
+  const above = RANK_TIERS[index - 1];
+  if (!above) return { tier, next: null, pointsToNext: null, withinTier: 1 };
+  const span = above.min - min;
+  return {
+    tier,
+    next: above.tier,
+    // Rounded to cents of a point so float noise (95 - 91.25) never
+    // prints as 3.7499999.
+    pointsToNext: Math.round((above.min - score) * 100) / 100,
+    withinTier: Math.min(1, Math.max(0, (score - min) / span)),
+  };
+}
+
 /** "95 – 100", "90 – 94.99", etc. — the inclusive score range for a tier. */
 export function rankRangeLabel(tier: RankTier): string {
   const index = RANK_TIERS.findIndex((t) => t.tier === tier);

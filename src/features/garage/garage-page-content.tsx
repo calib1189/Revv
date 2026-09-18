@@ -7,8 +7,11 @@ import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { listBuildPartsForBuilds } from "@/lib/db/build-parts";
 import { VehicleBay } from "@/features/garage/vehicle-bay";
 import { GarageStatPanel } from "@/features/garage/garage-stat-panel";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { BrushIcon, PlusIcon } from "@/components/ui/icons";
+import { BrushIcon, PlusIcon, WheelIcon, StarIcon, GemIcon, WrenchIcon } from "@/components/ui/icons";
+import { GarageShowroom } from "@/features/garage/garage-showroom";
+import { formatCompactNumber } from "@/lib/format/compact-number";
 import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
 import { AchievementUnlockToast } from "@/features/achievements/achievement-unlock-toast";
 import { getWeeklyChallengeProgress } from "@/lib/challenges/progress";
@@ -137,76 +140,43 @@ export async function GaragePageContent() {
       <AchievementUnlockToast achievements={newlyUnlocked} />
       <ChallengeCompleteToast challenges={newlyCompleted} />
 
-      {/* Large-title header: the page name set big and left, with
-          round icon buttons for the two actions instead of a row of
-          text buttons competing with it. */}
-      <header className="animate-section-rise mb-6 flex items-end justify-between gap-4">
+      {/* Large title, a one-line summary of what's parked here, and a
+          single primary action. Everything else lives in the quick
+          actions row under the showroom. */}
+      <header className="animate-section-rise mb-5 flex items-end justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[0.8125rem] font-medium text-muted">
-            {vehicles.length === 0
-              ? "Nothing parked yet"
-              : `${vehicles.length} ${vehicles.length === 1 ? "vehicle" : "vehicles"}`}
+            {vehicles.length === 0 ? (
+              "Nothing parked yet"
+            ) : (
+              <>
+                <span className="numeral">{vehicles.length}</span> {vehicles.length === 1 ? "car" : "cars"} ·{" "}
+                <span className="numeral">{formatCompactNumber(modCount)}</span> {modCount === 1 ? "mod" : "mods"}
+              </>
+            )}
           </p>
           <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">
             Garage
           </h1>
         </div>
-        <div className="mb-1 flex flex-shrink-0 items-center gap-2.5">
-          {vehicles.length > 0 && (
-            <Link
-              href="/garage/customize"
-              aria-label="Customize garage"
-              title="Customize"
-              className="pressable glass-raised elev-1 flex h-10 w-10 items-center justify-center rounded-full"
-            >
-              <BrushIcon className="h-[18px] w-[18px]" />
-            </Link>
-          )}
-          <Link
-            href="/garage/new"
-            aria-label="Add vehicle"
-            title="Add vehicle"
-            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-foreground elev-2"
-          >
-            <PlusIcon className="h-5 w-5" />
-          </Link>
-        </div>
+        <Link
+          href="/garage/new"
+          aria-label="Add vehicle"
+          title="Add vehicle"
+          className="pressable mb-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground elev-2"
+        >
+          <PlusIcon className="h-5 w-5" />
+        </Link>
       </header>
 
       {vehicles.length === 0 ? (
-        <div className="animate-section-rise glass-raised elev-2 flex flex-col items-center gap-3 rounded-[28px] px-6 py-16 text-center">
-          <span className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-accent/12 text-accent">
-            <PlusIcon className="h-7 w-7" />
-          </span>
-          <p className="text-[1.375rem] font-bold tracking-[-0.02em]">Park your first car</p>
-          <p className="max-w-xs text-[0.9375rem] leading-relaxed text-muted">
-            Add a vehicle to track its mods, photos, and build score.
-          </p>
-          <Link href="/garage/new" className="mt-3">
-            <Button className="px-6 py-2.5">Add vehicle</Button>
-          </Link>
-        </div>
+        <GarageEmptyState />
       ) : (
         <>
-          <div className="animate-section-rise mb-10" style={{ animationDelay: "60ms" }}>
-            <GarageStatPanel
-              stats={{
-                vehicleCount: vehicles.length,
-                modCount,
-                investedCents,
-                bestScore,
-              }}
-            />
-          </div>
-
-          {/* One large feature card per car. VehicleBay handles its own
-              equipped backdrop (vehicles.equipped_backdrop), so there's
-              no page-level branching between decorated and plain cars. */}
-          <section className="animate-section-rise mb-10" style={{ animationDelay: "120ms" }}>
-            <h2 className="mb-2.5 px-1 text-[1.375rem] font-bold tracking-[-0.02em]">
-              {vehicles.length === 1 ? "Your Car" : "Your Cars"}
-            </h2>
-            <div className="flex flex-col gap-6">
+          {/* The showroom: one car per page, swipe between them. Each
+              card handles its own equipped backdrop. */}
+          <section className="animate-section-rise mb-7" style={{ animationDelay: "40ms" }}>
+            <GarageShowroom>
               {vehicles.map((vehicle, index) => (
                 <VehicleBay
                   key={vehicle.id}
@@ -222,7 +192,30 @@ export async function GaragePageContent() {
                   nameColorEffectClassName={nameColorItem?.effectClassName}
                 />
               ))}
-            </div>
+            </GarageShowroom>
+          </section>
+
+          <nav
+            aria-label="Garage shortcuts"
+            className="animate-section-rise mb-9 grid grid-cols-4 gap-2"
+            style={{ animationDelay: "90ms" }}
+          >
+            <QuickAction href="/garage/customize" label="Customize" tint="#bf5af2" icon={<BrushIcon />} />
+            <QuickAction href="/tools/fitment" label="Fitment" tint="#30b0c7" icon={<WheelIcon />} />
+            <QuickAction href="/leaderboard" label="Rankings" tint="#ff9f0a" icon={<StarIcon />} />
+            <QuickAction href="/store" label="Store" tint="#ff375f" icon={<GemIcon />} />
+          </nav>
+
+          <section className="mb-10">
+            <h2 className="mb-2.5 px-1 text-[1.375rem] font-bold tracking-[-0.02em]">Overview</h2>
+            <GarageStatPanel
+              stats={{
+                vehicleCount: vehicles.length,
+                modCount,
+                investedCents,
+                bestScore,
+              }}
+            />
           </section>
         </>
       )}
@@ -232,6 +225,68 @@ export async function GaragePageContent() {
           <WeeklyChallengesCard progress={challengeProgress} />
         </div>
       )}
+    </div>
+  );
+}
+
+/** A round tinted icon with its label underneath — the Wallet / Control
+ * Center shortcut pattern. */
+function QuickAction({ href, label, tint, icon }: { href: string; label: string; tint: string; icon: ReactNode }) {
+  return (
+    <Link href={href} className="pressable flex flex-col items-center gap-1.5">
+      <span
+        className="glass-raised elev-1 flex h-14 w-14 items-center justify-center rounded-full [&>svg]:h-[22px] [&>svg]:w-[22px]"
+        style={{ color: tint }}
+      >
+        {icon}
+      </span>
+      <span className="text-[0.75rem] font-medium">{label}</span>
+    </Link>
+  );
+}
+
+/** First-run garage: a portrait placeholder the shape of a real car card,
+ * so the page already reads as a showroom waiting for its first car, and
+ * the three things a garage does. */
+function GarageEmptyState() {
+  const steps = [
+    { icon: <WrenchIcon />, tint: "#ff9f0a", title: "Log every mod", body: "Parts, prices, and install dates, as real data." },
+    { icon: <StarIcon />, tint: "#ffd60a", title: "Get a build score", body: "AI rates the whole build from 0 to 100." },
+    { icon: <GemIcon />, tint: "#bf5af2", title: "Climb the tiers", body: "Bronze to Cosmic, on the leaderboard." },
+  ];
+  return (
+    <div className="animate-section-rise">
+      <Link
+        href="/garage/new"
+        className="pressable flex aspect-[4/5] flex-col items-center justify-center gap-4 rounded-[28px] border-2 border-dashed border-foreground/15 bg-foreground/[0.03] px-8 text-center sm:aspect-[16/10]"
+      >
+        <span className="flex h-20 w-20 items-center justify-center rounded-full bg-accent text-accent-foreground elev-3">
+          <PlusIcon className="h-9 w-9" />
+        </span>
+        <div>
+          <p className="text-[1.625rem] font-bold tracking-[-0.025em]">Park your first car</p>
+          <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-muted">
+            Add a vehicle to start your garage.
+          </p>
+        </div>
+      </Link>
+
+      <ul className="mt-8 flex flex-col gap-5 px-1">
+        {steps.map((step) => (
+          <li key={step.title} className="flex items-start gap-4">
+            <span
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[13px] [&>svg]:h-5 [&>svg]:w-5"
+              style={{ background: `color-mix(in srgb, ${step.tint} 16%, transparent)`, color: step.tint }}
+            >
+              {step.icon}
+            </span>
+            <div className="min-w-0 pt-0.5">
+              <p className="text-[1rem] font-semibold">{step.title}</p>
+              <p className="mt-0.5 text-[0.875rem] text-muted">{step.body}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

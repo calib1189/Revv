@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rankForScore, rankRangeLabel } from "./rank";
+import { rankForScore, rankRangeLabel, tierProgress } from "./rank";
 
 describe("rankForScore", () => {
   it.each([
@@ -43,5 +43,27 @@ describe("rankRangeLabel", () => {
     ["cosmic", "95 – 100"],
   ] as const)("labels %s as %s", (tier, label) => {
     expect(rankRangeLabel(tier)).toBe(label);
+  });
+});
+
+describe("tierProgress", () => {
+  it("reports the next tier and points remaining", () => {
+    expect(tierProgress(91.25)).toEqual({ tier: "ruby", next: "cosmic", pointsToNext: 3.75, withinTier: 0.25 });
+  });
+
+  it("is at the start of a band exactly on a boundary", () => {
+    expect(tierProgress(80)).toMatchObject({ tier: "diamond", next: "ruby", pointsToNext: 10, withinTier: 0 });
+  });
+
+  it("measures progress through a ten-point band", () => {
+    expect(tierProgress(74.5).withinTier).toBeCloseTo(0.45);
+  });
+
+  it("has no next tier at the top", () => {
+    expect(tierProgress(97)).toEqual({ tier: "cosmic", next: null, pointsToNext: null, withinTier: 1 });
+  });
+
+  it("starts from zero at the bottom", () => {
+    expect(tierProgress(0)).toMatchObject({ tier: "bronze", next: "copper", pointsToNext: 20, withinTier: 0 });
   });
 });

@@ -188,7 +188,21 @@ export default async function ProfilePage({
   const actionButtonClass = "h-10 w-full px-3 py-0 text-[0.9375rem] font-semibold";
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-4 sm:px-6 sm:pt-8">
+    <div className="relative w-full flex-1 overflow-x-clip">
+      {/* Equipped profile background as an ambient wash: full-bleed
+          behind the whole top of the profile, dissolving into the page
+          (.ambient-fade) instead of sitting in a box. Dimmed so the name
+          and stats stay the foreground. */}
+      {backgroundItem && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[420px] sm:h-[460px]">
+          <div
+            className={`ambient-fade absolute inset-0 opacity-60 ${backgroundItem.effectClassName ?? ""}`}
+            style={{ backgroundImage: backgroundItem.value }}
+          />
+        </div>
+      )}
+
+    <div className="relative mx-auto w-full max-w-2xl px-4 pb-16 pt-4 sm:px-6 sm:pt-8">
       <AchievementUnlockToast achievements={newlyUnlocked} />
 
       {isOwnProfile && (
@@ -203,52 +217,37 @@ export default async function ProfilePage({
         </div>
       )}
 
-      {/* Equipped profile background becomes a banner the avatar sits
-          on, rather than a ring around the whole header — the pattern
-          gets real presence, and no text ever sits on top of it. */}
-      {backgroundItem && (
-        <div
-          aria-hidden
-          className={`h-32 rounded-[28px] elev-2 sm:h-40 ${backgroundItem.effectClassName ?? ""}`}
-          style={{ backgroundImage: backgroundItem.value }}
-        />
-      )}
-
-      <header
-        className={`animate-section-rise flex flex-col items-center text-center ${
-          backgroundItem ? "-mt-16 sm:-mt-[4.5rem]" : "mt-2"
-        }`}
-      >
+      <header className={`animate-section-rise flex flex-col items-center text-center ${isOwnProfile ? "" : "mt-12"}`}>
         {/* The avatar sits inside its owner's best build score, drawn as
-            a ring in that tier's colour. Unrated profiles get a plain
-            hairline instead of an empty ring. */}
-        <div className="rounded-full bg-background p-1">
-          {bestTier && bestRatingScore != null ? (
-            <ProgressRing
-              value={bestRatingScore / 100}
-              size={128}
-              stroke={5}
-              color={tierColorVar(bestTier)}
-              label={`Best build ${bestRatingScore.toFixed(2)} out of 100`}
-            >
-              <Avatar
-                username={profile.username}
-                avatarUrl={avatarUrl}
-                className="h-[106px] w-[106px] text-4xl"
-                priority
-              />
-            </ProgressRing>
-          ) : (
-            <div className="rounded-full p-[3px] ring-1 ring-border">
-              <Avatar
-                username={profile.username}
-                avatarUrl={avatarUrl}
-                className="h-[112px] w-[112px] text-4xl"
-                priority
-              />
-            </div>
-          )}
-        </div>
+            a ring in that tier's colour, with a light that keeps
+            travelling around the filled arc. Unrated profiles get the
+            empty track with the light orbiting faintly. */}
+        {bestTier && bestRatingScore != null ? (
+          <ProgressRing
+            value={bestRatingScore / 100}
+            size={132}
+            stroke={5}
+            color={tierColorVar(bestTier)}
+            label={`Best build ${bestRatingScore.toFixed(2)} out of 100`}
+            glint
+          >
+            <Avatar
+              username={profile.username}
+              avatarUrl={avatarUrl}
+              className="h-[110px] w-[110px] text-4xl"
+              priority
+            />
+          </ProgressRing>
+        ) : (
+          <ProgressRing value={0} size={132} stroke={3} color="var(--muted)" glint>
+            <Avatar
+              username={profile.username}
+              avatarUrl={avatarUrl}
+              className="h-[114px] w-[114px] text-4xl"
+              priority
+            />
+          </ProgressRing>
+        )}
 
         <h1 className="mt-4 flex max-w-full items-center justify-center gap-1.5 text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">
           {nameIsGradient ? (
@@ -398,6 +397,7 @@ export default async function ProfilePage({
           ratingScore: activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null,
         }))}
       />
+    </div>
     </div>
   );
 }

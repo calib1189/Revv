@@ -1,8 +1,9 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ProgressRing } from "@/components/ui/progress-ring";
-import { ChevronRightIcon } from "@/components/ui/icons";
+import { ChevronRightIcon, WrenchIcon, WheelIcon, GemIcon } from "@/components/ui/icons";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
+import { RANK_LABELS, tierColorVar, tierProgress } from "@/lib/rating/rank";
 import { formatCents } from "@/lib/format/money";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 
@@ -18,89 +19,160 @@ export interface GarageStats {
   bestScore: number | null;
 }
 
-function Readout({ label, value }: { label: string; value: string }) {
+/** A small square widget — tinted glyph top-left, figure and label at
+ * the bottom — like an iOS home-screen widget. */
+function SmallWidget({
+  icon,
+  tint,
+  value,
+  label,
+  delay,
+}: {
+  icon: ReactNode;
+  tint: string;
+  value: string;
+  label: string;
+  delay: number;
+}) {
   return (
-    <div className="min-w-0 flex-1 text-center">
-      <p className="numeral truncate text-[1.375rem] leading-none">{value}</p>
-      <p className="mt-1.5 text-[0.6875rem] font-medium text-muted">{label}</p>
+    <div
+      className="animate-section-rise glass-raised elev-1 flex aspect-square min-w-0 flex-col justify-between rounded-[22px] p-3.5 sm:aspect-auto sm:min-h-[132px] sm:p-4"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <span
+        className="flex h-8 w-8 items-center justify-center rounded-full [&>svg]:h-4 [&>svg]:w-4"
+        style={{ background: `color-mix(in srgb, ${tint} 18%, transparent)`, color: tint }}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="numeral truncate text-[1.375rem] leading-none sm:text-[1.625rem]">{value}</p>
+        <p className="mt-1 truncate text-[0.75rem] font-medium text-muted">{label}</p>
+      </div>
     </div>
   );
 }
 
-/** The garage's summary card — the best build's score drawn as a ring
- * (score out of 100, in its tier colour), with the garage's totals
- * underneath. Every figure is read back from build_parts at request
- * time; nothing here is stored. */
+/** The garage's widget stack: one large Best Build widget — the score as
+ * a ring with a light travelling around it, the tier, and how far it is
+ * to the next tier — over a row of three small widgets for mods, spend
+ * and cars. Every figure is read back from build_parts at request time;
+ * nothing here is stored. */
 export function GarageStatPanel({ stats }: { stats: GarageStats }) {
-  const tier = stats.bestScore != null ? rankForScore(stats.bestScore) : null;
-  const TierIcon = tier ? RANK_MATERIAL_ICONS[tier] : null;
-  const ringColor = tier ? tierColorVar(tier) : "var(--muted)";
+  const progress = stats.bestScore != null ? tierProgress(stats.bestScore) : null;
+  const TierIcon = progress ? RANK_MATERIAL_ICONS[progress.tier] : null;
+  const ringColor = progress ? tierColorVar(progress.tier) : "var(--muted)";
 
   return (
-    <div className="glass-raised elev-2 overflow-hidden rounded-[28px]">
-      <div className="flex items-center gap-5 p-5 sm:p-6">
-        <ProgressRing
-          value={stats.bestScore != null ? stats.bestScore / 100 : 0}
-          size={116}
-          stroke={11}
-          color={ringColor}
-          label={
-            stats.bestScore != null
-              ? `Best build ${stats.bestScore.toFixed(2)} out of 100`
-              : "No build rated yet"
-          }
-        >
-          <div className="text-center">
-            <p className="numeral text-[1.5rem] leading-none">
-              {stats.bestScore != null ? stats.bestScore.toFixed(2) : "--"}
-            </p>
-            <p className="mt-1 text-[0.625rem] font-medium text-muted">of 100</p>
-          </div>
-        </ProgressRing>
-
-        <div className="min-w-0 flex-1">
-          <p className="text-[0.8125rem] font-medium text-muted">Best build</p>
-          {tier && TierIcon ? (
-            <>
-              <div className="mt-1 flex items-center gap-2">
-                <TierIcon className="h-6 w-6 flex-shrink-0" />
-                <p
-                  className="truncate text-[1.375rem] font-bold tracking-[-0.02em]"
-                  style={{ color: tierColorVar(tier) }}
-                >
-                  {RANK_LABELS[tier]}
-                </p>
-              </div>
-              <Link
-                href="/leaderboard"
-                className="mt-2 inline-flex items-center gap-0.5 text-[0.8125rem] font-medium text-accent transition-opacity hover:opacity-80"
-              >
-                Leaderboard
-                <ChevronRightIcon className="h-3.5 w-3.5" />
-              </Link>
-            </>
-          ) : (
-            <>
-              <p className="mt-1 text-[1.375rem] font-bold tracking-[-0.02em]">Not rated</p>
-              <p className="mt-1 text-[0.8125rem] leading-snug text-muted">
-                Open a car and rate its build to see where it ranks.
+    <div className="flex flex-col gap-3">
+      <Link
+        href="/leaderboard"
+        className="animate-section-rise pressable glass-raised elev-2 block overflow-hidden rounded-[28px] p-5 sm:p-6"
+      >
+        <div className="flex items-center gap-5">
+          <ProgressRing
+            value={stats.bestScore != null ? stats.bestScore / 100 : 0}
+            size={120}
+            stroke={11}
+            color={ringColor}
+            glint
+            label={
+              stats.bestScore != null
+                ? `Best build ${stats.bestScore.toFixed(2)} out of 100`
+                : "No build rated yet"
+            }
+          >
+            <div className="text-center">
+              <p className="numeral text-[1.5rem] leading-none">
+                {stats.bestScore != null ? stats.bestScore.toFixed(2) : "--"}
               </p>
-            </>
-          )}
-        </div>
-      </div>
+              <p className="mt-1 text-[0.625rem] font-medium text-muted">of 100</p>
+            </div>
+          </ProgressRing>
 
-      {/* border-border, not a white alpha: this card renders on a
-          near-white surface in light theme, where a white hairline is
-          invisible. */}
-      <div className="mx-5 flex items-stretch border-t border-border py-4 sm:mx-6">
-        <Readout label="Vehicles" value={String(stats.vehicleCount)} />
-        <div className="w-px flex-shrink-0 bg-border" />
-        <Readout label="Mods" value={formatCompactNumber(stats.modCount)} />
-        <div className="w-px flex-shrink-0 bg-border" />
-        <Readout
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[0.8125rem] font-medium text-muted">Best build</p>
+              <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
+            </div>
+            {progress && TierIcon ? (
+              <>
+                <div className="mt-1 flex items-center gap-2">
+                  <TierIcon className="h-7 w-7 flex-shrink-0" />
+                  <p
+                    className="truncate text-[1.5rem] font-bold tracking-[-0.02em]"
+                    style={{ color: tierColorVar(progress.tier) }}
+                  >
+                    {RANK_LABELS[progress.tier]}
+                  </p>
+                </div>
+                {/* Progress through the current tier's band, toward the
+                    next one — the reason to open a car and keep building. */}
+                <div className="mt-3 h-[5px] overflow-hidden rounded-full bg-foreground/10">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.max(4, progress.withinTier * 100)}%`,
+                      background: progress.next
+                        ? `linear-gradient(90deg, ${tierColorVar(progress.tier)}, ${tierColorVar(progress.next)})`
+                        : tierColorVar(progress.tier),
+                    }}
+                  />
+                </div>
+                <p className="mt-1.5 text-[0.8125rem] text-muted">
+                  {progress.next && progress.pointsToNext != null ? (
+                    <>
+                      <span className="numeral text-foreground">{progress.pointsToNext.toFixed(2)}</span> to{" "}
+                      <span className="font-semibold" style={{ color: tierColorVar(progress.next) }}>
+                        {RANK_LABELS[progress.next]}
+                      </span>
+                    </>
+                  ) : (
+                    "Top tier reached"
+                  )}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-[1.5rem] font-bold tracking-[-0.02em]">Not rated</p>
+                <p className="mt-1 text-[0.8125rem] leading-snug text-muted">
+                  Open a car and rate its build to see where it ranks.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      </Link>
+
+      <div className="grid grid-cols-3 gap-3">
+        <SmallWidget
+          icon={<WrenchIcon />}
+          tint="#ff9f0a"
+          value={formatCompactNumber(stats.modCount)}
+          label={stats.modCount === 1 ? "Mod" : "Mods"}
+          delay={60}
+        />
+        <SmallWidget
+          icon={<GemIcon />}
+          tint="#30d158"
+          // Compact ($18K) in a widget this size — the exact figure
+          // lives on each car's budget card.
+          value={
+            stats.investedCents <= 0
+              ? "--"
+              : stats.investedCents < 100_000
+                ? formatCents(stats.investedCents)
+                : `$${formatCompactNumber(Math.round(stats.investedCents / 100))}`
+          }
           label="Invested"
-          value={stats.investedCents > 0 ? formatCents(stats.investedCents) : "--"}
+          delay={100}
+        />
+        <SmallWidget
+          icon={<WheelIcon />}
+          tint="#0a84ff"
+          value={String(stats.vehicleCount)}
+          label={stats.vehicleCount === 1 ? "Car" : "Cars"}
+          delay={140}
         />
       </div>
     </div>
