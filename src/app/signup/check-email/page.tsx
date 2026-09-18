@@ -1,17 +1,17 @@
 import Link from "next/link";
+import { AuthCard, MailGlyph } from "@/features/auth/auth-card";
+import { Button } from "@/components/ui/button";
 
 export default function CheckEmailPage() {
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16 text-center">
-      <h1 className="mb-3 text-xl font-semibold">Check your email</h1>
-      <p className="text-sm text-muted">
-        We sent you a confirmation link. Click it to finish setting up your
-        account, then come back and{" "}
-        <Link href="/login" className="text-foreground underline">
-          log in
-        </Link>
-        .
-      </p>
-    </div>
+    <AuthCard
+      icon={<MailGlyph />}
+      title="Check your email"
+      subtitle="We sent you a confirmation link. Open it to finish setting up your account, then log in."
+    >
+      <Link href="/login">
+        <Button className="h-12 w-full text-[1rem] font-semibold">Log In</Button>
+      </Link>
+    </AuthCard>
   );
 }

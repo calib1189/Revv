@@ -384,6 +384,36 @@ html.native-app body::-webkit-scrollbar {
   animation: section-rise 560ms var(--ease-ios) both;
 }
 
+/* Long-form documents (Terms, Privacy, Guidelines, Support): a readable
+   measure, generous leading, and section headings that step out without
+   shouting. Applied to the document's wrapper; styles its direct
+   sections so the legal pages need no per-element classes. */
+.prose-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 38rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: color-mix(in srgb, var(--foreground) 88%, transparent);
+}
+.prose-doc h2 {
+  margin-bottom: 0.5rem !important;
+  font-size: 1.125rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  color: var(--foreground);
+}
+.prose-doc a {
+  color: var(--accent);
+  font-weight: 500;
+}
+.prose-doc ul {
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+
 /* Bottom sheets rise from the bottom edge on the iOS curve; their
    backdrop fades in underneath. */
 @keyframes sheet-up {

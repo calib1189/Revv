@@ -4,12 +4,12 @@ export const metadata = { title: "Community Guidelines — SORZA" };
 
 export default function GuidelinesPage() {
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Community Guidelines</h1>
-      <p className="mb-1 text-sm text-muted">Last updated: August 31, 2026.</p>
+    <div className="mx-auto w-full max-w-2xl flex-1 px-5 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <h1 className="mb-2 text-balance text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">Community Guidelines</h1>
+      <p className="mb-1 text-[0.875rem] text-muted">Last updated: August 31, 2026.</p>
       <LegalDisclaimer />
 
-      <div className="flex flex-col gap-6 text-sm leading-relaxed text-foreground">
+      <div className="prose-doc">
         <section>
           <h2 className="mb-2 text-base font-semibold">Post your own build</h2>
           <p>

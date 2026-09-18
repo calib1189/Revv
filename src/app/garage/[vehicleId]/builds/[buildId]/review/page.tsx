@@ -17,6 +17,8 @@ import { ProductCard } from "@/features/builds/product-card";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { formatCents } from "@/lib/format/money";
+import { PageHeader, PageShell } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default async function ReviewDraftBuildPage({
   params,
@@ -53,102 +55,96 @@ export default async function ReviewDraftBuildPage({
   );
 
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">
-        Review copied build
-      </h1>
-      {sourceVehicle && (
-        <p className="mb-6 text-sm text-muted">
-          Copied from{" "}
-          {sourceVehicle.nickname || `${sourceVehicle.make} ${sourceVehicle.model}`}
-          . Nothing is saved to your active build until you accept.
-        </p>
-      )}
+    <PageShell>
+      <PageHeader
+        title="Review Build"
+        eyebrow="Draft"
+        back={{ href: `/garage/${vehicleId}`, label: vehicle.nickname || `${vehicle.make} ${vehicle.model}` }}
+        description={
+          sourceVehicle
+            ? `Copied from ${sourceVehicle.nickname || `${sourceVehicle.make} ${sourceVehicle.model}`}. Nothing is saved to your active build until you accept.`
+            : "Nothing is saved to your active build until you accept."
+        }
+      />
 
       {comparison && comparison.differences.length > 0 && (
         <div className="mb-6">
           <Callout tone="danger">
-            <p className="font-medium">Check compatibility before installing:</p>
-            <ul className="mt-1 list-inside list-disc">
+            <p className="font-semibold">Check compatibility before installing</p>
+            <ul className="mt-1.5 list-inside list-disc">
               {comparison.differences.map((d) => (
                 <li key={d}>{d}</li>
               ))}
             </ul>
-            <Link href="/tools/fitment" className="mt-1 inline-block underline">
+            <Link href="/tools/fitment" className="mt-2 inline-block font-semibold underline">
               Open the fitment calculator
             </Link>
           </Callout>
         </div>
       )}
 
-      <div className="glass mb-6 flex items-center justify-between rounded-xl px-4 py-3">
-        <span className="text-sm text-muted">Estimated total</span>
-        <span className="text-sm font-medium">{formatCents(totalCents)}</span>
+      <div className="glass-raised elev-2 mb-8 flex items-stretch rounded-[22px] py-4">
+        <div className="min-w-0 flex-1 text-center">
+          <p className="numeral text-[1.625rem] leading-none">{buildParts.length}</p>
+          <p className="mt-1.5 text-[0.75rem] font-medium text-muted">{buildParts.length === 1 ? "Mod" : "Mods"}</p>
+        </div>
+        <div className="w-px bg-border" />
+        <div className="min-w-0 flex-1 text-center">
+          <p className="numeral text-[1.625rem] leading-none">{formatCents(totalCents)}</p>
+          <p className="mt-1.5 text-[0.75rem] font-medium text-muted">Estimated total</p>
+        </div>
       </div>
 
-      <ul className="mb-6">
-        {buildParts.map((part) => {
-          const linkedPart = part.part_id ? partsById.get(part.part_id) : null;
-          return (
-            <li
-              key={part.id}
-              className="flex items-start justify-between gap-4 border-b border-border py-4 last:border-b-0"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{part.raw_name}</p>
-                {part.category && (
-                  <p className="text-xs text-muted">{part.category}</p>
-                )}
-                {linkedPart && (
-                  <div className="mt-2 max-w-sm">
-                    <ProductCard part={linkedPart} />
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-shrink-0 flex-col items-end gap-1">
-                {part.price_cents != null && (
-                  <span className="text-sm font-medium">
-                    {formatCents(part.price_cents)}
-                  </span>
-                )}
-                <form
-                  action={removeDraftBuildPartAction.bind(
-                    null,
-                    part.id,
-                    vehicleId,
-                    buildId,
+      {buildParts.length === 0 ? (
+        <EmptyState
+          card
+          title="No mods left in this draft"
+          body="Accepting will give you an empty active build."
+          className="mb-8"
+        />
+      ) : (
+        <ul className="glass-raised elev-1 mb-8 overflow-hidden rounded-[22px] [&>li+li]:before:absolute [&>li+li]:before:left-4 [&>li+li]:before:right-0 [&>li+li]:before:top-0 [&>li+li]:before:h-px [&>li+li]:before:bg-border [&>li+li]:before:content-['']">
+          {buildParts.map((part) => {
+            const linkedPart = part.part_id ? partsById.get(part.part_id) : null;
+            return (
+              <li key={part.id} className="relative flex items-start justify-between gap-4 p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.9375rem] font-semibold">{part.raw_name}</p>
+                  {part.category && <p className="mt-0.5 text-[0.8125rem] text-muted">{part.category}</p>}
+                  {linkedPart && (
+                    <div className="mt-2 max-w-sm">
+                      <ProductCard part={linkedPart} />
+                    </div>
                   )}
-                >
-                  <button
-                    type="submit"
-                    className="text-xs text-muted hover:text-danger"
-                  >
-                    Remove
-                  </button>
-                </form>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      {buildParts.length === 0 && (
-        <p className="mb-6 text-sm text-muted">
-          No modifications left in this draft — accepting will give you an
-          empty active build.
-        </p>
+                </div>
+                <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
+                  {part.price_cents != null && (
+                    <span className="numeral text-[0.9375rem]">{formatCents(part.price_cents)}</span>
+                  )}
+                  <form action={removeDraftBuildPartAction.bind(null, part.id, vehicleId, buildId)}>
+                    <button type="submit" className="text-[0.8125rem] font-medium text-danger">
+                      Remove
+                    </button>
+                  </form>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-2.5">
         <form action={acceptDraftBuildAction.bind(null, vehicleId, buildId)}>
-          <Button type="submit">Accept as my active build</Button>
+          <Button type="submit" className="h-12 w-full text-[1rem] font-semibold">
+            Accept as Active Build
+          </Button>
         </form>
         <form action={discardDraftBuildAction.bind(null, vehicleId, buildId)}>
-          <Button type="submit" variant="secondary">
-            Discard
+          <Button type="submit" variant="secondary" className="h-12 w-full text-[1rem] font-semibold">
+            Discard Draft
           </Button>
         </form>
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -30,8 +30,8 @@ export function ResetPasswordForm() {
         />
       </div>
 
-      <Button type="submit" disabled={isPending} className="mt-2 w-full">
-        {isPending ? "Saving…" : "Set new password"}
+      <Button type="submit" disabled={isPending} className="mt-2 h-12 w-full text-[1rem] font-semibold">
+        {isPending ? "Saving…" : "Set New Password"}
       </Button>
     </form>
   );

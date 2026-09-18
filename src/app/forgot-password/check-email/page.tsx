@@ -1,16 +1,19 @@
 import Link from "next/link";
+import { AuthCard, MailGlyph } from "@/features/auth/auth-card";
+import { Button } from "@/components/ui/button";
 
 export default function ForgotPasswordCheckEmailPage() {
   return (
-    <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-16 text-center">
-      <h1 className="mb-3 text-xl font-semibold">Check your email</h1>
-      <p className="text-sm text-muted">
-        If an account exists for that email, we sent a link to reset your
-        password. Click it, then set a new password.
-      </p>
-      <Link href="/login" className="mt-6 text-sm text-foreground underline">
-        Back to log in
+    <AuthCard
+      icon={<MailGlyph />}
+      title="Check your email"
+      subtitle="If an account exists for that email, we sent a link to reset your password. Open it, then set a new one."
+    >
+      <Link href="/login">
+        <Button variant="secondary" className="h-12 w-full text-[1rem] font-semibold">
+          Back to Log In
+        </Button>
       </Link>
-    </div>
+    </AuthCard>
   );
 }

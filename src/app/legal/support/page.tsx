@@ -4,13 +4,13 @@ export const metadata = { title: "Support — SORZA" };
 
 export default function SupportPage() {
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Support</h1>
+    <div className="mx-auto w-full max-w-2xl flex-1 px-5 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <h1 className="mb-2 text-balance text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">Support</h1>
       <p className="mb-6 text-sm text-muted">
         Questions, problems, or something to report — here&apos;s how to reach us.
       </p>
 
-      <div className="flex flex-col gap-6 text-sm leading-relaxed text-foreground">
+      <div className="prose-doc">
         <section>
           <h2 className="mb-2 text-base font-semibold">Contact</h2>
           <p>
