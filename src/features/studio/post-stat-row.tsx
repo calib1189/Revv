@@ -36,8 +36,8 @@ export function PostStatRow({
   const href = post.post_type === "video" ? `/u/${authorUsername}/reel/${post.id}` : `/p/${post.id}`;
 
   return (
-    <li className="flex gap-3 border-b border-border py-4 last:border-b-0">
-      <Link href={href} className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-surface-raised">
+    <li className="relative flex gap-3.5 p-4">
+      <Link href={href} className="relative h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-[14px] bg-foreground/[0.06]">
         {thumbnailUrl && post.post_type === "video" && (
           <VideoThumbnail url={thumbnailUrl} className="h-full w-full object-cover" />
         )}
@@ -48,14 +48,14 @@ export function PostStatRow({
 
       <div className="min-w-0 flex-1">
         <Link href={href} className="block min-w-0">
-          <p className="truncate text-sm font-medium">{post.caption || "Untitled post"}</p>
-          <p className="text-xs text-muted">{formatDateOnly(post.created_at)}</p>
+          <p className="truncate text-[0.9375rem] font-semibold">{post.caption || "Untitled post"}</p>
+          <p className="text-[0.8125rem] text-muted">{formatDateOnly(post.created_at)}</p>
         </Link>
 
         {stats.vsAveragePercent != null && (
           <span
-            className={`mt-1 flex w-fit items-center gap-0.5 text-xs font-medium ${
-              stats.vsAveragePercent >= 0 ? "text-success" : "text-muted"
+            className={`mt-1.5 flex w-fit items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
+              stats.vsAveragePercent >= 0 ? "bg-success/12 text-success" : "bg-foreground/10 text-muted"
             }`}
           >
             {stats.vsAveragePercent >= 0 ? (
@@ -67,7 +67,7 @@ export function PostStatRow({
           </span>
         )}
 
-        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+        <div className="mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-[0.8125rem] text-muted">
           <Stat icon={EyeIcon} value={stats.views} />
           {stats.completionRate != null && <span>{stats.completionRate}% completion</span>}
           <Stat icon={HeartIcon} value={stats.likes} />

@@ -1,5 +1,7 @@
-import Link from "next/link";
+import type { CSSProperties } from "react";
 import { notFound } from "next/navigation";
+import { PageHeader, PageShell } from "@/components/ui/page-header";
+import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/grouped-list";
 import { createClient } from "@/lib/supabase/server";
 import { getShopDetailsAction, recordShopProfileVisitAction } from "@/features/shops/actions";
 import { getShopCategory, isShopCategoryId } from "@/lib/shops/categories";
@@ -12,7 +14,7 @@ import { DirectionsButton, GetAQuoteButton, WebsiteLink } from "@/features/shops
 import { PromoteThisShop } from "@/features/shops/promote-this-shop";
 import { ShopAnalyticsSection } from "@/features/shops/shop-analytics-section";
 import { PhotoCarousel } from "@/features/feed/photo-carousel";
-import { BackIcon, StarIcon, PinIcon, GemIcon, WrenchIcon, VerifiedBadgeIcon } from "@/components/ui/icons";
+import { StarIcon, PinIcon, GemIcon, WrenchIcon, VerifiedBadgeIcon, GlobeIcon } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 
 const TIER_METAL_COLORS: Record<ShopPromotionTier, string> = {
@@ -93,96 +95,121 @@ export default async function ShopDetailPage({
   const tierColor = shop.promotionTier ? TIER_METAL_COLORS[shop.promotionTier] : null;
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <Link href="/discover" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground">
-        <BackIcon className="h-4 w-4" />
-        Shops near you
-      </Link>
+    <PageShell width="2xl">
+      <PageHeader back={{ href: "/discover", label: "Shops" }} className="mb-2" />
 
-      <div className="glass overflow-hidden rounded-2xl">
-        <div className="p-5">
-          <div className="flex items-start gap-3.5">
-            <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-surface-raised text-accent">
-              {logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- small fixed-size logo, next/image overhead isn't worth it here
-                <img src={logoUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <CategoryIcon className="h-6 w-6" />
-              )}
+      {/* App Store-style listing header: icon tile, name, category,
+          then the two actions side by side. */}
+      <div className="flex items-start gap-4">
+        <span className="flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-[22px] bg-foreground/[0.06] text-accent elev-1">
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- small fixed-size logo, next/image overhead isn't worth it here
+            <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <CategoryIcon className="h-9 w-9" />
+          )}
+        </span>
+        <div className="min-w-0 flex-1 pt-1">
+          <h1 className="flex items-center gap-1.5 text-[1.5rem] font-bold leading-tight tracking-[-0.02em]">
+            <span className="min-w-0">{shop.name}</span>
+            {isVerifiedBusiness && (
+              <VerifiedBadgeIcon className="h-5 w-5 flex-shrink-0 text-accent" aria-label="Verified business" />
+            )}
+          </h1>
+          {category && <p className="mt-0.5 text-[0.9375rem] text-muted">{category.label}</p>}
+          {shop.promotionTier && (
+            <span
+              className="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wide"
+              style={{ backgroundColor: `${tierColor}26`, color: tierColor! }}
+            >
+              <GemIcon className="h-3 w-3" />
+              {SHOP_PROMOTION_TIERS[shop.promotionTier].label}
             </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight">{shop.name}</h1>
-                {isVerifiedBusiness && (
-                  <span className="flex flex-shrink-0 items-center gap-1 text-accent" title="Verified business">
-                    <VerifiedBadgeIcon className="h-4.5 w-4.5" />
-                  </span>
-                )}
-                {shop.promotionTier && (
-                  <span
-                    className="flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide"
-                    style={{ backgroundColor: `${tierColor}26`, color: tierColor! }}
-                  >
-                    <GemIcon className="h-2.5 w-2.5" />
-                    {SHOP_PROMOTION_TIERS[shop.promotionTier].label}
-                  </span>
-                )}
-              </div>
-              {category && <p className="text-sm text-muted">{category.label}</p>}
-
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                {shop.rating != null && (
-                  <span className="flex items-center gap-1 text-foreground">
-                    <StarIcon className="h-3.5 w-3.5 text-accent" />
-                    <span className="font-medium">{shop.rating.toFixed(1)}</span>
-                    {shop.reviewCount != null && (
-                      <span className="text-muted">({shop.reviewCount})</span>
-                    )}
-                  </span>
-                )}
-                {shop.isOpenNow != null && (
-                  <span className={shop.isOpenNow ? "text-success" : "text-danger"}>
-                    {shop.isOpenNow ? "Open now" : "Closed"}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {shop.address && (
-            <div className="mt-4 flex items-start gap-1.5 text-sm text-muted">
-              <PinIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <span>{shop.address}</span>
-            </div>
           )}
-
-          {(shop.phoneNumber || shop.websiteUrl) && (
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              {shop.phoneNumber && (
-                <a href={`tel:${shop.phoneNumber}`} className="text-accent hover:underline">
-                  {shop.phoneNumber}
-                </a>
-              )}
-              {shop.websiteUrl && <WebsiteLink placeId={shop.placeId} url={shop.websiteUrl} />}
-            </div>
-          )}
-
-          {isVerifiedBusiness && businessProfile?.description && (
-            <p className="mt-4 text-sm leading-relaxed text-foreground">{businessProfile.description}</p>
-          )}
-
-          <div className="mt-5 flex gap-2.5">
-            <DirectionsButton placeId={shop.placeId} name={shop.name} lat={shop.lat} lng={shop.lng} />
-            <GetAQuoteButton placeId={shop.placeId} />
-          </div>
         </div>
-
-        {businessGallery.length > 0 && (
-          <PhotoCarousel photos={businessGallery.map((item) => ({ url: publicMediaUrl(supabase, item.media.storage_path) }))} />
-        )}
       </div>
 
-      <div className="mt-6">
+      {/* Stat strip, like an App Store listing's ratings row. */}
+      {(shop.rating != null || shop.isOpenNow != null) && (
+        <div className="mt-5 flex items-stretch border-y border-border py-3">
+          {shop.rating != null && (
+            <div className="min-w-0 flex-1 text-center">
+              <p className="numeral text-[1.25rem] leading-none">{shop.rating.toFixed(1)}</p>
+              <p className="mt-1.5 flex items-center justify-center gap-0.5 text-[0.75rem] text-muted">
+                <StarIcon className="h-3 w-3 text-[#f0cd6e]" />
+                {shop.reviewCount != null ? `${shop.reviewCount} reviews` : "Rating"}
+              </p>
+            </div>
+          )}
+          {shop.rating != null && shop.isOpenNow != null && <div className="my-1 w-px bg-border" />}
+          {shop.isOpenNow != null && (
+            <div className="min-w-0 flex-1 text-center">
+              <p className={`text-[1rem] font-semibold leading-none ${shop.isOpenNow ? "text-success" : "text-danger"}`}>
+                {shop.isOpenNow ? "Open" : "Closed"}
+              </p>
+              <p className="mt-1.5 text-[0.75rem] text-muted">Right now</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-5 flex gap-2.5">
+        <DirectionsButton placeId={shop.placeId} name={shop.name} lat={shop.lat} lng={shop.lng} />
+        <GetAQuoteButton placeId={shop.placeId} />
+      </div>
+
+      {businessGallery.length > 0 && (
+        <div className="mt-6 overflow-hidden rounded-[24px] elev-2">
+          <PhotoCarousel photos={businessGallery.map((item) => ({ url: publicMediaUrl(supabase, item.media.storage_path) }))} />
+        </div>
+      )}
+
+      {isVerifiedBusiness && businessProfile?.description && (
+        <p className="mt-6 px-1 text-[0.9375rem] leading-relaxed">{businessProfile.description}</p>
+      )}
+
+      {(shop.address || shop.phoneNumber || shop.websiteUrl) && (
+        <section className="mt-8">
+          <SectionTitle>Information</SectionTitle>
+          <GroupedList>
+            {shop.address && (
+              <GroupedRow
+                label={shop.address}
+                detail="Address"
+                icon={
+                  <RowIcon color="#ff453a">
+                    <PinIcon />
+                  </RowIcon>
+                }
+              />
+            )}
+            {shop.phoneNumber && (
+              <a href={`tel:${shop.phoneNumber}`} className="relative flex min-h-[48px] items-center gap-3 px-4 py-2.5 active:bg-foreground/[0.06]" style={{ "--row-inset": "3.625rem" } as CSSProperties}>
+                <RowIcon color="#34c759">
+                  <PhoneGlyph />
+                </RowIcon>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[0.9375rem] text-accent">{shop.phoneNumber}</p>
+                  <p className="mt-0.5 text-[0.8125rem] text-muted">Phone</p>
+                </div>
+              </a>
+            )}
+            {shop.websiteUrl && (
+              <div className="relative flex min-h-[48px] items-center gap-3 px-4 py-2.5" style={{ "--row-inset": "3.625rem" } as CSSProperties}>
+                <RowIcon color="#0a84ff">
+                  <GlobeIcon />
+                </RowIcon>
+                <div className="min-w-0 flex-1">
+                  <WebsiteLink placeId={shop.placeId} url={shop.websiteUrl} />
+                  <p className="mt-0.5 text-[0.8125rem] text-muted">Website</p>
+                </div>
+              </div>
+            )}
+          </GroupedList>
+        </section>
+      )}
+
+      <div className="mt-8">
         <ShopAnalyticsSection placeId={shop.placeId} />
       </div>
 
@@ -194,6 +221,15 @@ export default async function ShopDetailPage({
           category={categoryId}
         />
       </div>
-    </div>
+    </PageShell>
+  );
+}
+
+/** A handset glyph for the phone row — the icon set has no phone icon. */
+function PhoneGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z" />
+    </svg>
   );
 }

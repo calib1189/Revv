@@ -134,7 +134,7 @@ export function SoundUploadForm({
             type="file"
             accept="audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/x-wav"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground file:mr-3 file:rounded-full file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-accent-foreground"
+            className="glass-inset w-full rounded-[14px] px-4 py-3 text-foreground file:mr-3 file:rounded-full file:border-0 file:bg-accent file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-accent-foreground"
           />
         </div>
 

@@ -60,7 +60,7 @@ export function CrewLogoUploader({
   }
 
   return (
-    <div>
+    <div className="min-w-0 flex-1">
       <input
         ref={inputRef}
         type="file"
@@ -74,10 +74,10 @@ export function CrewLogoUploader({
       />
       <Button
         type="button"
-        variant={hasLogo ? "secondary" : "primary"}
+        variant="secondary"
         disabled={isUploading}
         onClick={() => inputRef.current?.click()}
-        className={hasLogo ? "px-3 py-1.5 text-sm" : ""}
+        className="h-10 w-full text-[0.9375rem] font-semibold"
       >
         {isUploading ? "Uploading…" : hasLogo ? "Change logo" : "Add logo"}
       </Button>

@@ -73,7 +73,7 @@ export function ReportButton({
         name="reason"
         required
         defaultValue=""
-        className="glass-inset w-full rounded-xl px-3 py-2 text-sm text-foreground transition-colors focus:border-accent/60 focus:outline-none"
+        className="glass-inset w-full rounded-[14px] px-4 py-3 text-foreground transition-[box-shadow,border-color] focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent/15"
       >
         <option value="" disabled>
           Why are you reporting this?

@@ -47,9 +47,11 @@ export function CrewForm({ action, crew, submitLabel }: CrewFormProps) {
               key={c}
               type="button"
               onClick={() => setCategory(c)}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                category === c ? "bg-accent text-accent-foreground" : "glass text-muted hover:text-foreground"
+              aria-pressed={category === c}
+              className={`pressable rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
+                category === c ? "bg-foreground text-background" : "text-foreground/80"
               }`}
+              style={category === c ? undefined : { background: "var(--segment-track)" }}
             >
               {CREW_CATEGORY_LABELS[c]}
             </button>
@@ -74,24 +76,26 @@ export function CrewForm({ action, crew, submitLabel }: CrewFormProps) {
           <button
             type="button"
             onClick={() => setVisibility("public")}
-            className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3.5 text-center transition-colors ${
-              visibility === "public" ? "border-accent bg-accent/10" : "border-border"
+            aria-pressed={visibility === "public"}
+            className={`pressable flex flex-col items-center gap-1.5 rounded-[18px] border-2 p-4 text-center transition-colors ${
+              visibility === "public" ? "border-accent bg-accent/8" : "border-border"
             }`}
           >
-            <GlobeIcon className={`h-5 w-5 ${visibility === "public" ? "text-accent" : "text-muted"}`} />
-            <span className="text-sm font-semibold">Public</span>
-            <span className="text-xs text-muted">Anyone can join instantly</span>
+            <GlobeIcon className={`h-6 w-6 ${visibility === "public" ? "text-accent" : "text-muted"}`} />
+            <span className="text-[0.9375rem] font-semibold">Public</span>
+            <span className="text-[0.75rem] text-muted">Anyone can join instantly</span>
           </button>
           <button
             type="button"
             onClick={() => setVisibility("private")}
-            className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3.5 text-center transition-colors ${
-              visibility === "private" ? "border-accent bg-accent/10" : "border-border"
+            aria-pressed={visibility === "private"}
+            className={`pressable flex flex-col items-center gap-1.5 rounded-[18px] border-2 p-4 text-center transition-colors ${
+              visibility === "private" ? "border-accent bg-accent/8" : "border-border"
             }`}
           >
-            <LockIcon className={`h-5 w-5 ${visibility === "private" ? "text-accent" : "text-muted"}`} />
-            <span className="text-sm font-semibold">Private</span>
-            <span className="text-xs text-muted">People must request to join</span>
+            <LockIcon className={`h-6 w-6 ${visibility === "private" ? "text-accent" : "text-muted"}`} />
+            <span className="text-[0.9375rem] font-semibold">Private</span>
+            <span className="text-[0.75rem] text-muted">People request to join</span>
           </button>
         </div>
       </div>
@@ -104,11 +108,11 @@ export function CrewForm({ action, crew, submitLabel }: CrewFormProps) {
           rows={4}
           placeholder="What's this crew about?"
           defaultValue={crew?.description ?? ""}
-          className="glass-inset w-full rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted transition-colors focus:border-accent/60 focus:outline-none"
+          className="glass-inset w-full rounded-[14px] px-4 py-3 text-foreground placeholder:text-muted transition-[box-shadow,border-color] focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent/15"
         />
       </div>
 
-      <Button type="submit" disabled={isPending} className="self-start">
+      <Button type="submit" disabled={isPending} className="h-12 w-full text-[1rem] font-semibold">
         {isPending ? "Saving…" : submitLabel}
       </Button>
     </form>

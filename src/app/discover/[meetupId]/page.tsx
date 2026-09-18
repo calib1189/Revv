@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PageHeader, PageShell } from "@/components/ui/page-header";
+import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/grouped-list";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getMeetupById } from "@/lib/db/meetups";
 import { listMeetupMediaForMeetups } from "@/lib/db/meetup-media";
-import { publicMediaUrl } from "@/lib/db/media";
+import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMeetupViewCount, recordMeetupView } from "@/lib/db/meetup-views";
 import { PhotoCarousel } from "@/features/feed/photo-carousel";
@@ -48,62 +49,83 @@ export default async function MeetupDetailPage({
   }
   const viewCount = await getMeetupViewCount(supabase, meetup.id);
 
+  const start = new Date(meetup.starts_at);
+  const hostAvatarMedia = host?.avatar_media_id
+    ? await getMediaById(supabase, host.avatar_media_id).catch(() => null)
+    : null;
+  const hostAvatarUrl = hostAvatarMedia ? publicMediaUrl(supabase, hostAvatarMedia.storage_path) : null;
+
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <Link href="/discover" className="mb-4 inline-block text-sm text-muted hover:text-foreground">
-        ← Back to meets
-      </Link>
+    <PageShell width="2xl">
+      <PageHeader title={meetup.title} back={{ href: "/discover", label: "Meets" }} className="mb-5" />
 
       {isHost && meetup.status === "pending_payment" && (
         <div className="mb-4">
           <Callout tone="danger">
-            This meetup is only visible to you until payment finishes — it
+            This meetup is only visible to you until payment finishes. It
             won&apos;t show up for anyone else yet.
           </Callout>
         </div>
       )}
 
-      <div className="glass overflow-hidden rounded-2xl">
-        {photos.length > 0 && <PhotoCarousel photos={photos} />}
+      <div className="flex flex-col gap-6">
+        {photos.length > 0 && (
+          <div className="overflow-hidden rounded-[28px] elev-2">
+            <PhotoCarousel photos={photos} />
+          </div>
+        )}
 
-        <div className="p-5">
-          <h1 className="text-xl font-semibold">{meetup.title}</h1>
-          <div className="mt-1 flex items-center gap-3 text-sm text-muted">
-            <span>{formatDateTime(meetup.starts_at)}</span>
-            <span className="flex items-center gap-1">
-              <EyeIcon className="h-3.5 w-3.5" />
-              {formatCompactNumber(viewCount)}
+        <div className="glass-raised elev-1 flex items-center gap-4 rounded-[22px] p-4">
+          <span className="flex w-14 flex-shrink-0 flex-col items-center overflow-hidden rounded-[14px] bg-white text-center shadow" suppressHydrationWarning>
+            <span className="w-full bg-accent py-0.5 text-[0.6875rem] font-bold uppercase text-white" suppressHydrationWarning>
+              {start.toLocaleString("en-US", { month: "short" })}
             </span>
-          </div>
-
-          <div className="mt-3 flex items-center gap-1.5 text-sm text-foreground">
-            <PinIcon className="h-4 w-4 flex-shrink-0 text-muted" />
-            <span>{meetup.location_name}</span>
-          </div>
-
-          {meetup.description && (
-            <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">
-              {meetup.description}
+            <span className="numeral py-1 text-[1.5rem] leading-none text-neutral-900" suppressHydrationWarning>
+              {start.getDate()}
+            </span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[1rem] font-semibold" suppressHydrationWarning>
+              {formatDateTime(meetup.starts_at)}
             </p>
-          )}
-
-          <Link
-            href={`/u/${host?.username ?? "unknown"}`}
-            className="mt-5 flex items-center gap-2.5 hover:opacity-80"
-          >
-            <Avatar username={host?.username ?? "unknown"} />
-            <span className="text-sm text-muted">
-              Hosted by <span className="font-medium text-foreground">@{host?.username ?? "unknown"}</span>
-            </span>
-          </Link>
-
-          {isHost && (
-            <div className="mt-5 border-t border-border pt-4">
-              <MeetupDetailDeleteButton meetupId={meetup.id} />
-            </div>
-          )}
+            <p className="mt-0.5 flex items-center gap-1 text-[0.875rem] text-muted">
+              <EyeIcon className="h-3.5 w-3.5" />
+              <span className="numeral">{formatCompactNumber(viewCount)}</span> views
+            </p>
+          </div>
         </div>
+
+        <GroupedList>
+          <GroupedRow
+            label={meetup.location_name}
+            detail="Location"
+            icon={
+              <RowIcon color="#ff453a">
+                <PinIcon />
+              </RowIcon>
+            }
+          />
+          <GroupedRow
+            href={`/u/${host?.username ?? "unknown"}`}
+            label={host?.display_name || host?.username || "unknown"}
+            detail="Host"
+            icon={<Avatar username={host?.username ?? "unknown"} avatarUrl={hostAvatarUrl} className="h-[30px] w-[30px] text-xs" />}
+          />
+        </GroupedList>
+
+        {meetup.description && (
+          <section>
+            <SectionTitle>About</SectionTitle>
+            <p className="whitespace-pre-wrap px-1 text-[0.9375rem] leading-relaxed">{meetup.description}</p>
+          </section>
+        )}
+
+        {isHost && (
+          <div className="glass-raised elev-1 rounded-[22px] px-4 py-3">
+            <MeetupDetailDeleteButton meetupId={meetup.id} />
+          </div>
+        )}
       </div>
-    </div>
+    </PageShell>
   );
 }

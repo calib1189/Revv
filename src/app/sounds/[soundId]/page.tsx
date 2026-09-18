@@ -30,18 +30,19 @@ export default async function SoundPage({
 
   if (posts.length === 0) {
     return (
-      <div className="mx-auto flex max-w-md flex-1 flex-col items-center gap-4 px-4 py-16 text-center">
-        <MusicIcon className="h-10 w-10 text-muted" />
-        <div>
-          <p className="text-lg font-semibold">{sound.title}</p>
-          <p className="text-sm text-muted">{sound.artist_name || "Unknown artist"}</p>
-        </div>
-        <p className="text-sm text-muted">No videos use this sound yet — be the first.</p>
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center px-4 pb-16 pt-12 text-center">
+        <span className="flex h-28 w-28 items-center justify-center rounded-[26px] bg-gradient-to-br from-accent to-[#ff8a5c] text-white elev-3">
+          <MusicIcon className="h-12 w-12" />
+        </span>
+        <h1 className="mt-5 text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">{sound.title}</h1>
+        <p className="mt-0.5 text-[1rem] text-muted">{sound.artist_name || "Unknown artist"}</p>
+        <p className="mt-6 text-[0.9375rem] text-muted">No videos use this sound yet. Be the first.</p>
         <Link
           href={`/feed/new?soundId=${sound.id}`}
-          className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground"
+          className="pressable mt-5 flex h-12 w-full max-w-xs items-center justify-center gap-2 rounded-full bg-accent text-[1rem] font-semibold text-accent-foreground"
         >
-          Use this sound
+          <MusicIcon className="h-4 w-4" />
+          Use This Sound
         </Link>
       </div>
     );

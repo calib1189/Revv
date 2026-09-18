@@ -9,15 +9,20 @@ import { getCreatorPostStats, getCreatorPeriodSummary } from "@/lib/analytics/cr
 import { EyeIcon, HeartIcon, CommentIcon, ShareIcon, BookmarkIcon, UsersIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { PostStatRow } from "@/features/studio/post-stat-row";
+import { PageHeader, PageShell } from "@/components/ui/page-header";
+import { SectionTitle } from "@/components/ui/grouped-list";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const PERIOD_DAYS = 7;
 
-function SummaryTile({ icon: Icon, value, label }: { icon: typeof EyeIcon; value: number; label: string }) {
+function SummaryTile({ icon: Icon, value, label, color }: { icon: typeof EyeIcon; value: number; label: string; color: string }) {
   return (
-    <div className="glass flex flex-col items-center gap-1 rounded-2xl p-4 text-center">
-      <Icon className="h-4 w-4 text-muted" />
-      <p className="text-xl font-semibold">{formatCompactNumber(value)}</p>
-      <p className="text-xs text-muted">{label}</p>
+    <div className="flex flex-col gap-1.5 p-4">
+      <span className="flex items-center gap-1.5 text-[0.75rem] font-medium text-muted">
+        <Icon className="h-3.5 w-3.5" style={{ color }} />
+        {label}
+      </span>
+      <p className="numeral text-[1.625rem] leading-none">{formatCompactNumber(value)}</p>
     </div>
   );
 }
@@ -46,32 +51,35 @@ export default async function StudioPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6">
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">Creator Studio</h1>
-      <p className="mb-6 text-sm text-muted">
-        Last {PERIOD_DAYS} days, across everything you&apos;ve posted.
-      </p>
+    <PageShell width="2xl">
+      <PageHeader
+        title="Creator Studio"
+        eyebrow={`Last ${PERIOD_DAYS} days`}
+        back={{ href: "/settings", label: "Settings" }}
+      />
 
-      <div className="mb-8 grid grid-cols-3 gap-3 sm:grid-cols-6">
-        <SummaryTile icon={EyeIcon} value={summary.views} label="Views" />
-        <SummaryTile icon={HeartIcon} value={summary.likes} label="Likes" />
-        <SummaryTile icon={CommentIcon} value={summary.comments} label="Comments" />
-        <SummaryTile icon={ShareIcon} value={summary.shares} label="Shares" />
-        <SummaryTile icon={BookmarkIcon} value={summary.saves} label="Saves" />
-        <SummaryTile icon={UsersIcon} value={summary.newFollowers} label="New followers" />
+      {/* One card, a 3×2 grid of figures divided by hairlines — the
+          Health / Screen Time summary pattern. */}
+      <div className="glass-raised elev-2 mb-10 grid grid-cols-3 overflow-hidden rounded-[22px] [&>*]:border-border [&>*:nth-child(-n+3)]:border-b [&>*:not(:nth-child(3n))]:border-r sm:grid-cols-6 sm:[&>*]:border-b-0 sm:[&>*:not(:last-child)]:border-r">
+        <SummaryTile icon={EyeIcon} value={summary.views} label="Views" color="#0a84ff" />
+        <SummaryTile icon={HeartIcon} value={summary.likes} label="Likes" color="#ff375f" />
+        <SummaryTile icon={CommentIcon} value={summary.comments} label="Comments" color="#30b0c7" />
+        <SummaryTile icon={ShareIcon} value={summary.shares} label="Shares" color="#34c759" />
+        <SummaryTile icon={BookmarkIcon} value={summary.saves} label="Saves" color="#ff9f0a" />
+        <SummaryTile icon={UsersIcon} value={summary.newFollowers} label="Followers" color="#bf5af2" />
       </div>
 
-      <h2 className="mb-2 text-lg font-semibold">Your content</h2>
+      <SectionTitle>Your posts</SectionTitle>
 
       {posts.length === 0 ? (
-        <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
-          <p className="text-sm font-medium">No posts yet</p>
-          <p className="max-w-xs text-xs text-muted">
-            Once you post a build update or a video, its stats show up here.
-          </p>
-        </div>
+        <EmptyState
+          card
+          icon={<EyeIcon />}
+          title="No posts yet"
+          body="Once you post a build update or a video, its stats show up here."
+        />
       ) : (
-        <ul>
+        <ul className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>li+li]:before:absolute [&>li+li]:before:left-[6.125rem] [&>li+li]:before:right-0 [&>li+li]:before:top-0 [&>li+li]:before:h-px [&>li+li]:before:bg-border [&>li+li]:before:content-['']">
           {posts.map((post) => {
             const stats = statsByPostId.get(post.id);
             if (!stats) return null;
@@ -88,6 +96,6 @@ export default async function StudioPage() {
           })}
         </ul>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -60,7 +60,7 @@ export function CrewBannerUploader({
   }
 
   return (
-    <div>
+    <div className="min-w-0 flex-1">
       <input
         ref={inputRef}
         type="file"
@@ -74,10 +74,10 @@ export function CrewBannerUploader({
       />
       <Button
         type="button"
-        variant={hasBanner ? "secondary" : "primary"}
+        variant="secondary"
         disabled={isUploading}
         onClick={() => inputRef.current?.click()}
-        className={hasBanner ? "px-3 py-1.5 text-sm" : ""}
+        className="h-10 w-full text-[0.9375rem] font-semibold"
       >
         {isUploading ? "Uploading…" : hasBanner ? "Change banner" : "Add banner"}
       </Button>

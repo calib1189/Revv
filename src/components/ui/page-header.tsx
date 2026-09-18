@@ -14,7 +14,8 @@ export function PageHeader({
   action,
   className = "mb-6",
 }: {
-  title: ReactNode;
+  /** Omit for a back-link-only header (the page sets its own title). */
+  title?: ReactNode;
   eyebrow?: ReactNode;
   description?: ReactNode;
   back?: { href: string; label: string };
@@ -32,15 +33,19 @@ export function PageHeader({
           {back.label}
         </Link>
       )}
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          {eyebrow && <p className="text-[0.8125rem] font-medium text-muted">{eyebrow}</p>}
-          <h1 className="text-balance text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">
-            {title}
-          </h1>
+      {(title || eyebrow || action) && (
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            {eyebrow && <p className="text-[0.8125rem] font-medium text-muted">{eyebrow}</p>}
+            {title && (
+              <h1 className="text-balance text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">
+                {title}
+              </h1>
+            )}
+          </div>
+          {action && <div className="mb-1 flex-shrink-0">{action}</div>}
         </div>
-        {action && <div className="mb-1 flex-shrink-0">{action}</div>}
-      </div>
+      )}
       {description && (
         <p className="mt-2 max-w-prose text-[0.9375rem] leading-relaxed text-muted">{description}</p>
       )}

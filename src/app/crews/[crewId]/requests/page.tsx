@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { PageHeader, PageShell } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getCrewById } from "@/lib/db/crews";
@@ -7,7 +7,6 @@ import { getCrewMemberRole, listPendingJoinRequests } from "@/lib/db/crew-member
 import { getProfilesByIds } from "@/lib/db/profiles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { JoinRequestsList, type PendingRequestItem } from "@/features/crews/join-requests-list";
-import { BackIcon } from "@/components/ui/icons";
 
 export default async function CrewRequestsPage({ params }: { params: Promise<{ crewId: string }> }) {
   const { crewId } = await params;
@@ -38,16 +37,9 @@ export default async function CrewRequestsPage({ params }: { params: Promise<{ c
   });
 
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-6 py-10">
-      <Link
-        href={`/crews/${crewId}`}
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
-      >
-        <BackIcon className="h-4 w-4" />
-        {crew.name}
-      </Link>
-      <h1 className="mb-8 text-2xl font-semibold tracking-tight">Join requests</h1>
+    <PageShell>
+      <PageHeader title="Requests" back={{ href: `/crews/${crewId}`, label: crew.name }} />
       <JoinRequestsList crewId={crewId} requests={requests} />
-    </div>
+    </PageShell>
   );
 }
