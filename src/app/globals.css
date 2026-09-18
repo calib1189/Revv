@@ -374,6 +374,59 @@ html.native-app body::-webkit-scrollbar {
   animation: ring-glint 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) 1.1s infinite;
 }
 
+/* Rank line — the tier's material as a thin animated rule, used as the
+   divider between a car's photo and its score bar (vehicle-bay.tsx).
+   The ring version (.rank-frame) spins a conic gradient around a centre,
+   which on a 3px-tall line would just flicker between two colours — so
+   the line flows each tier's own palette sideways instead, with a white
+   glint sweeping across on top. Tile is 200% wide and the gradient ends
+   on its start colour, so shifting by one tile loops seamlessly. */
+.rank-line {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  background-size: 200% 100%;
+  background-repeat: repeat-x;
+  animation: rank-line-flow var(--rank-line-speed, 4s) linear infinite;
+}
+.rank-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.85), transparent);
+  animation: rank-line-glint var(--rank-line-glint, 2.6s) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+@keyframes rank-line-flow {
+  from { background-position: 0% 0; }
+  to { background-position: -200% 0; }
+}
+@keyframes rank-line-glint {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(300%); }
+}
+
+.rank-line-bronze { background-image: linear-gradient(90deg, #6b3f1f, #c98a52, #6b3f1f, #a3652f, #c98a52, #6b3f1f); --rank-line-speed: 4.2s; --rank-line-glint: 3.4s; }
+.rank-line-copper { background-image: linear-gradient(90deg, #7a3f22, #e0a374, #7a3f22, #c17a4d, #e0a374, #7a3f22); --rank-line-speed: 3.8s; --rank-line-glint: 3.2s; }
+.rank-line-iron { background-image: linear-gradient(90deg, #52555e, #b8bcc4, #52555e, #82858e, #b8bcc4, #52555e); --rank-line-speed: 5s; --rank-line-glint: 3.6s; }
+.rank-line-silver { background-image: linear-gradient(90deg, #8b909a, #ffffff, #8b909a, #cbd0d8, #ffffff, #8b909a); --rank-line-speed: 3.2s; --rank-line-glint: 3s; }
+.rank-line-gold { background-image: linear-gradient(90deg, #7a5a13, #fbe08a, #7a5a13, #e8bf4f, #fbe08a, #7a5a13); --rank-line-speed: 2.8s; --rank-line-glint: 2.6s; }
+.rank-line-platinum { background-image: linear-gradient(90deg, #a9bac6, #ffffff, #a9bac6, #e4ecf2, #ffffff, #a9bac6); --rank-line-speed: 2.4s; --rank-line-glint: 2.4s; }
+.rank-line-emerald { background-image: linear-gradient(90deg, #094328, #2fd48a, #8bffce, #17b374, #2fd48a, #094328); --rank-line-speed: 3s; --rank-line-glint: 2.4s; }
+.rank-line-diamond { background-image: linear-gradient(90deg, #6bc4ea, #ffffff, #bff4ff, #7dd3fc, #ffffff, #6bc4ea); --rank-line-speed: 2.2s; --rank-line-glint: 2s; }
+.rank-line-ruby { background-image: linear-gradient(90deg, #5c0819, #ff3b5c, #ffc2cf, #e33a5c, #8c0f27, #ff5c78, #5c0819); --rank-line-speed: 1.8s; --rank-line-glint: 1.6s; }
+.rank-line-cosmic { background-image: linear-gradient(90deg, #351768, #7c3aed, #ec4899, #3b5bdb, #9d5cff, #351768); --rank-line-speed: 6s; --rank-line-glint: 3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-line,
+  .rank-line::after {
+    animation: none;
+  }
+  .rank-line::after {
+    display: none;
+  }
+}
+
 /* The profile's ambient cosmetic wash: full-bleed behind the header,
    dissolving into the page toward the bottom so nothing ever reads as a
    box or a banner. */

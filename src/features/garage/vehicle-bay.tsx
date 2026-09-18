@@ -49,8 +49,17 @@ function ScoreBar({ score }: { score: number | null }) {
   const Icon = tier ? RANK_MATERIAL_ICONS[tier] : null;
 
   return (
+    <div>
+      {/* The divider between photo and score is the tier itself: an
+          animated rule in the rank's material (.rank-line, globals.css).
+          Unrated cars get a plain hairline. */}
+      {tier ? (
+        <div className={`rank-line rank-line-${tier}`} aria-hidden />
+      ) : (
+        <div className="h-px bg-white/10" aria-hidden />
+      )}
     <div
-      className="flex items-center gap-3 border-t border-white/10 bg-black/35 px-4 py-3 text-white backdrop-blur-2xl sm:px-6 sm:py-4"
+      className="flex items-center gap-3 bg-black/35 px-4 py-3 text-white backdrop-blur-2xl sm:px-6 sm:py-4"
       style={{ WebkitBackdropFilter: "blur(40px) saturate(180%)", backdropFilter: "blur(40px) saturate(180%)" }}
     >
       {tier && Icon && score != null ? (
@@ -71,6 +80,7 @@ function ScoreBar({ score }: { score: number | null }) {
         </div>
       )}
       <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-white/50" />
+    </div>
     </div>
   );
 }
