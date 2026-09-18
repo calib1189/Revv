@@ -1,21 +1,23 @@
 import Link from "next/link";
 import Image from "next/image";
+import { ChevronRightIcon } from "@/components/ui/icons";
+import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import type { LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
 
-/** The #1 build gets a podium, not another row. A leaderboard's whole
- * emotional job is making the top spot look worth chasing, which an
- * identical-to-everything-else list item can't do — so first place gets
- * the car at full width with the score set like a readout over it, and
- * everyone below it stays in the dense list (leaderboard-row.tsx). */
+/** First place, presented as a feature card: the car full-bleed and
+ * tall, a "No. 1" eyebrow and the name over a top scrim, and a frosted
+ * score bar along the bottom — the same language as the garage's
+ * vehicle cards, so the top of the board reads as the thing to chase. */
 export function LeaderboardHeroCard({ entry }: { entry: LeaderboardEntry }) {
   const tier = rankForScore(entry.score);
+  const Icon = RANK_MATERIAL_ICONS[tier];
 
   return (
     <Link
       href={`/garage/${entry.vehicleId}`}
-      className="elev-3 group relative block aspect-[4/3] w-full overflow-hidden rounded-3xl bg-surface sm:aspect-[16/9]"
+      className="pressable group relative flex aspect-[4/5] w-full flex-col overflow-hidden rounded-[28px] bg-neutral-950 elev-3 sm:aspect-[16/10]"
     >
       {entry.heroUrl && (
         <Image
@@ -24,36 +26,67 @@ export function LeaderboardHeroCard({ entry }: { entry: LeaderboardEntry }) {
           fill
           priority
           sizes="(min-width: 640px) 672px, 100vw"
-          className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+          className="object-cover transition-transform duration-[900ms] ease-[var(--ease-ios)] group-hover:scale-[1.035]"
         />
       )}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/70 via-black/20 to-transparent" />
 
-      {/* The scrim is what makes text over an arbitrary user photo
-          legible — a bright engine bay and a black night shot both have
-          to carry the same white type. */}
-      <div className="photo-scrim absolute inset-0" />
+      <div className="relative p-5 sm:p-7">
+        <p className="micro-label text-white/80">No. 1 · {VEHICLE_CATEGORY_LABELS[entry.category]}</p>
+        <h3 className="mt-1.5 line-clamp-2 text-[1.75rem] font-bold leading-[1.08] tracking-[-0.025em] text-white sm:text-[2.5rem]">
+          {entry.vehicleTitle}
+        </h3>
+        <p className="mt-1 text-[0.875rem] text-white/75">@{entry.ownerUsername}</p>
+      </div>
 
-      <span className="micro-label absolute left-4 top-4 rounded-full bg-accent px-2.5 py-1 text-accent-foreground">
-        #1 Overall
-      </span>
-
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4 sm:p-5">
+      <div
+        className="relative mt-auto flex items-center gap-3 border-t border-white/10 bg-black/35 px-4 py-3 text-white sm:px-6 sm:py-4"
+        style={{ WebkitBackdropFilter: "blur(40px) saturate(180%)", backdropFilter: "blur(40px) saturate(180%)" }}
+      >
+        <Icon className="h-9 w-9 flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">
-            {entry.vehicleTitle}
-          </h3>
-          <p className="mt-0.5 truncate text-sm text-white/70">
-            @{entry.ownerUsername} · {VEHICLE_CATEGORY_LABELS[entry.category]}
-          </p>
-        </div>
-
-        <div className="flex-shrink-0 text-right">
-          <p className="numeral text-4xl leading-none text-white sm:text-5xl">
-            {entry.score.toFixed(2)}
-          </p>
-          <p className="micro-label mt-1.5" style={{ color: RANK_TEXT_COLORS[tier] }}>
+          <p className="micro-label" style={{ color: RANK_TEXT_COLORS[tier] }}>
             {RANK_LABELS[tier]}
           </p>
+          <p className="mt-0.5 text-xs text-white/60">Top build</p>
+        </div>
+        <span className="numeral text-[1.75rem] leading-none">{entry.score.toFixed(2)}</span>
+        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-white/50" />
+      </div>
+    </Link>
+  );
+}
+
+/** Second and third place, side by side under the hero card. */
+export function LeaderboardRunnerUpCard({ rank, entry }: { rank: number; entry: LeaderboardEntry }) {
+  const tier = rankForScore(entry.score);
+
+  return (
+    <Link
+      href={`/garage/${entry.vehicleId}`}
+      className="pressable group relative flex aspect-[3/4] flex-col justify-end overflow-hidden rounded-[22px] bg-neutral-950 elev-2"
+    >
+      {entry.heroUrl && (
+        <Image
+          src={entry.heroUrl}
+          alt=""
+          fill
+          sizes="(min-width: 640px) 330px, 50vw"
+          className="object-cover transition-transform duration-[900ms] ease-[var(--ease-ios)] group-hover:scale-[1.04]"
+        />
+      )}
+      <div className="photo-scrim pointer-events-none absolute inset-0" />
+      <span className="numeral absolute left-3 top-3 flex h-8 min-w-8 items-center justify-center rounded-full bg-black/40 px-2 text-[0.875rem] text-white backdrop-blur-md">
+        {rank}
+      </span>
+      <div className="relative p-3.5">
+        <p className="truncate text-[0.9375rem] font-bold tracking-[-0.01em] text-white">{entry.vehicleTitle}</p>
+        <p className="truncate text-[0.75rem] text-white/70">@{entry.ownerUsername}</p>
+        <div className="mt-2 flex items-baseline justify-between gap-2">
+          <span className="micro-label" style={{ color: RANK_TEXT_COLORS[tier] }}>
+            {RANK_LABELS[tier]}
+          </span>
+          <span className="numeral text-[1.125rem] leading-none text-white">{entry.score.toFixed(2)}</span>
         </div>
       </div>
     </Link>

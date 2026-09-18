@@ -112,11 +112,15 @@ export default async function LandingPage() {
             else on SORZA.
           </p>
 
-          <div className="mt-8 flex flex-col gap-2">
+          <div className="mt-8 flex flex-col gap-4">
             <LeaderboardHeroCard entry={topEntries[0]} />
-            {topEntries.slice(1).map((entry, i) => (
-              <LeaderboardRow key={entry.buildId} rank={i + 2} entry={entry} showCategory />
-            ))}
+            {topEntries.length > 1 && (
+              <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[6.875rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
+                {topEntries.slice(1).map((entry, i) => (
+                  <LeaderboardRow key={entry.buildId} rank={i + 2} entry={entry} showCategory />
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-8">

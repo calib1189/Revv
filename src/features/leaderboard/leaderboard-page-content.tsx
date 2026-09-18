@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
@@ -13,7 +12,10 @@ import { listFollowingIds } from "@/lib/db/follows";
 import { listCrewIdsForUser, listApprovedMembersForCrews } from "@/lib/db/crew-members";
 import { composeLeaderboard } from "@/lib/leaderboard/compose-leaderboard";
 import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
-import { LeaderboardHeroCard } from "@/features/leaderboard/leaderboard-hero-card";
+import { LeaderboardHeroCard, LeaderboardRunnerUpCard } from "@/features/leaderboard/leaderboard-hero-card";
+import { SegmentedLinks, FilterChips } from "@/components/ui/segmented-links";
+import { SectionTitle } from "@/components/ui/grouped-list";
+import { EmptyState } from "@/components/ui/empty-state";
 import { RatingExplainer } from "@/features/leaderboard/rating-explainer";
 import { TierLadder } from "@/features/leaderboard/tier-ladder";
 import { VEHICLE_CATEGORIES, VEHICLE_CATEGORY_LABELS, type VehicleCategory } from "@/lib/vehicles/category";
@@ -98,100 +100,100 @@ export async function LeaderboardPageContent({
   const builds = await listTopRatedBuilds(supabase, 50, vehicleIds);
   const entries = await composeLeaderboard(supabase, builds);
 
+  const runnersUp = entries.slice(1, 3);
+  const rest = entries.slice(3);
+
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <h1 className="mb-2 text-2xl font-semibold tracking-tight">Leaderboard</h1>
-      <p className="mb-5 text-sm text-muted">
-        {initialCategory
-          ? `The highest-rated ${VEHICLE_CATEGORY_LABELS[initialCategory]} builds on SORZA, ranked by AI.`
-          : "The highest-rated builds on SORZA right now, ranked by AI."}
-      </p>
+    <div className="mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <header className="animate-section-rise mb-5">
+        <p className="text-[0.8125rem] font-medium text-muted">
+          {initialCategory ? VEHICLE_CATEGORY_LABELS[initialCategory] : "Verified builds, ranked by AI"}
+        </p>
+        <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">
+          Leaderboard
+        </h1>
+      </header>
 
-      {currentUser && (
-        <div className="mb-4 flex gap-2">
-          {LEADERBOARD_SCOPES.map((s) => (
-            <Link
-              key={s}
-              href={categoryHref(initialCategory, s)}
-              className={`flex-1 rounded-full py-1.5 text-center text-sm font-medium transition-colors ${
-                scope === s ? "bg-accent text-accent-foreground" : "glass text-muted hover:text-foreground"
-              }`}
-            >
-              {SCOPE_LABELS[s]}
-            </Link>
-          ))}
-        </div>
-      )}
-
-      <div className="no-scrollbar fade-edge-r mb-6 flex gap-2 overflow-x-auto pb-1">
-        <Link
-          href={categoryHref(null, scope)}
-          className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-            !initialCategory ? "bg-accent text-accent-foreground" : "glass text-muted hover:text-foreground"
-          }`}
-        >
-          All
-        </Link>
-        {VEHICLE_CATEGORIES.map((c) => (
-          <Link
-            key={c}
-            href={categoryHref(c, scope)}
-            className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-              initialCategory === c
-                ? "bg-accent text-accent-foreground"
-                : "glass text-muted hover:text-foreground"
-            }`}
-          >
-            {VEHICLE_CATEGORY_LABELS[c]}
-          </Link>
-        ))}
+      <div className="animate-section-rise mb-6 flex flex-col gap-3" style={{ animationDelay: "60ms" }}>
+        {currentUser && (
+          <SegmentedLinks
+            options={LEADERBOARD_SCOPES.map((s) => ({
+              href: categoryHref(initialCategory, s),
+              label: SCOPE_LABELS[s],
+              active: scope === s,
+            }))}
+          />
+        )}
+        <FilterChips
+          options={[
+            { href: categoryHref(null, scope), label: "All", active: !initialCategory },
+            ...VEHICLE_CATEGORIES.map((c) => ({
+              href: categoryHref(c, scope),
+              label: VEHICLE_CATEGORY_LABELS[c],
+              active: initialCategory === c,
+            })),
+          ]}
+        />
       </div>
 
       {entries.length === 0 ? (
-        <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-24 text-center">
-          <p className="text-lg font-medium">
-            {scope === "friends"
+        <EmptyState
+          card
+          title={
+            scope === "friends"
               ? "Nobody you follow is on the board yet"
               : scope === "crew"
                 ? "Nobody in your crews is on the board yet"
-                : "No verified builds yet"}
-          </p>
-          <p className="max-w-xs text-sm text-muted">
-            {scope === "friends"
+                : "No verified builds yet"
+          }
+          body={
+            scope === "friends"
               ? "Once someone you follow rates and verifies a build, they'll show up here."
               : scope === "crew"
                 ? "Once a crewmate rates and verifies a build, they'll show up here."
                 : initialCategory
-                  ? `Rate and verify ownership of a ${VEHICLE_CATEGORY_LABELS[initialCategory]} build from your garage to be the first on this board.`
-                  : "Rate your build and verify ownership from your garage to be the first on the board."}
-          </p>
-        </div>
+                  ? `Rate and verify a ${VEHICLE_CATEGORY_LABELS[initialCategory]} build from your garage to be first on this board.`
+                  : "Rate your build and verify ownership from your garage to be first on the board."
+          }
+        />
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="animate-section-rise flex flex-col gap-4" style={{ animationDelay: "120ms" }}>
           <LeaderboardHeroCard entry={entries[0]} />
-          {entries.slice(1).map((entry, i) => (
-            <LeaderboardRow
-              key={entry.buildId}
-              rank={i + 2}
-              entry={entry}
-              showCategory={!initialCategory}
-            />
-          ))}
+          {runnersUp.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              {runnersUp.map((entry, i) => (
+                <LeaderboardRunnerUpCard key={entry.buildId} rank={i + 2} entry={entry} />
+              ))}
+            </div>
+          )}
+          {rest.length > 0 && (
+            <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[6.875rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
+              {rest.map((entry, i) => (
+                <LeaderboardRow
+                  key={entry.buildId}
+                  rank={i + 4}
+                  entry={entry}
+                  showCategory={!initialCategory}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      <div className="mt-10 flex flex-col gap-8">
+      <section className="mt-12">
+        <SectionTitle>How ratings work</SectionTitle>
         <RatingExplainer />
+      </section>
 
-        <div>
-          <h2 className="mb-1 text-lg font-semibold">The tiers</h2>
-          <p className="mb-5 text-sm text-muted">
-            Every tier has its own look on your profile and garage photos — climb from
-            Bronze to Cosmic as your build (and its score) grows.
-          </p>
-          <TierLadder />
-        </div>
-      </div>
+      <section className="mt-10">
+        <SectionTitle>The tiers</SectionTitle>
+        <p className="mb-3 px-1 text-[0.875rem] leading-relaxed text-muted">
+          Every tier has its own look on your profile and garage. Climb from
+          Bronze to Cosmic as your build and its score grow.
+        </p>
+        <TierLadder />
+      </section>
     </div>
   );
 }
