@@ -13,7 +13,9 @@ import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { maxScore } from "@/lib/crews/best-rank";
 import { CrewDiscoverGrid, type CrewCardData } from "@/features/crews/crew-discover-grid";
 import { CrewsPageTabs } from "@/features/crews/crews-page-tabs";
-import { FlagIcon } from "@/components/ui/icons";
+import { FlagIcon, PlusIcon } from "@/components/ui/icons";
+import { SectionTitle } from "@/components/ui/grouped-list";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import type { Crew } from "@/lib/db/crews";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -93,41 +95,41 @@ export default async function CrewsPage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/15 text-accent">
-            <FlagIcon className="h-5 w-5" />
-          </span>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Crews</h1>
+    <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <header className="mb-6 flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[0.8125rem] font-medium text-muted">Clubs, scenes, and local groups</p>
+          <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">Crews</h1>
         </div>
-        <Link href="/crews/new">
-          <Button className="px-4 py-2 text-sm">Create a crew</Button>
+        <Link
+          href="/crews/new"
+          aria-label="Create a crew"
+          title="Create a crew"
+          className="pressable mb-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground elev-2"
+        >
+          <PlusIcon className="h-5 w-5" />
         </Link>
-      </div>
+      </header>
 
       {user && yourCardData.length > 0 && (
-        <div className="mb-10">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">Your crews</h2>
+        <section className="mb-10">
+          <SectionTitle>Your crews</SectionTitle>
           <CrewDiscoverGrid crews={yourCardData} showFilter={false} />
-        </div>
+        </section>
       )}
 
       {publicCardData.length === 0 ? (
-        <div className="glass flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent/15 text-accent">
-            <FlagIcon className="h-7 w-7" />
-          </span>
-          <div>
-            <p className="text-lg font-medium">No crews yet</p>
-            <p className="mx-auto mt-1 max-w-xs text-sm text-muted">
-              Start one around your car, your area, or your scene.
-            </p>
-          </div>
-          <Link href="/crews/new">
-            <Button>Create the first crew</Button>
-          </Link>
-        </div>
+        <EmptyState
+          card
+          icon={<FlagIcon />}
+          title="No crews yet"
+          body="Start one around your car, your area, or your scene."
+          action={
+            <Link href="/crews/new">
+              <Button className="px-5">Create the first crew</Button>
+            </Link>
+          }
+        />
       ) : (
         <CrewsPageTabs crews={publicCardData} />
       )}

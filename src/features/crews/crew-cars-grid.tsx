@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { VehicleCard } from "@/features/garage/vehicle-card";
-import { RankFrame } from "@/features/garage/rank-frame";
+import { VehicleBay } from "@/features/garage/vehicle-bay";
+import { ProgressRing } from "@/components/ui/progress-ring";
 import { Avatar } from "@/features/feed/avatar";
+import { rankForScore, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import type { Vehicle } from "@/lib/db/vehicles";
 
 export interface CrewCarItem {
@@ -18,25 +19,18 @@ export interface CrewCarItem {
   ownerNameColorEffectClassName?: string;
 }
 
-/** The crew page's default view — every member's car in one flat grid,
- * not grouped by member, so the crew reads as one shared garage rather
- * than a roster you have to dig through. Each tile is the same
- * VehicleCard used everywhere else (its own rank ring is the car's own
- * best build rating), with the owner's avatar overlaid in the corner —
- * wrapped in its own RankFrame ring too, using that owner's best score
- * across all of *their* cars, not just this one. Two independent rings
- * on one tile, deliberately: "how good is this specific build" and "how
- * good is this person's garage overall" are different facts. */
+/** The crew page's default view — every member's car as the same
+ * feature card the garage uses, not grouped by member, so the crew reads
+ * as one shared garage. Each card carries its owner's avatar in the top
+ * corner, inside a ring of that owner's best score across all of their
+ * cars: "how good is this build" (the card's own score bar) and "how
+ * good is this person's garage" are different facts. */
 export function CrewCarsGrid({ cars }: { cars: CrewCarItem[] }) {
-  if (cars.length === 0) {
-    return <p className="text-sm text-muted">No cars in this crew&apos;s garages yet.</p>;
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
       {cars.map((car) => (
         <div key={car.vehicle.id} className="relative">
-          <VehicleCard
+          <VehicleBay
             vehicle={car.vehicle}
             heroUrl={car.heroUrl}
             ratingScore={car.vehicleScore}
@@ -46,11 +40,20 @@ export function CrewCarsGrid({ cars }: { cars: CrewCarItem[] }) {
           <Link
             href={`/u/${car.ownerUsername}`}
             aria-label={`@${car.ownerUsername}`}
-            className="absolute left-2 top-2 z-10"
+            className="absolute right-3 top-3 z-10 rounded-full bg-black/40 p-0.5 backdrop-blur-md"
           >
-            <RankFrame score={car.ownerBestScore} compact hideBadge className="rounded-full">
-              <Avatar username={car.ownerUsername} avatarUrl={car.ownerAvatarUrl} className="h-9 w-9 text-xs" />
-            </RankFrame>
+            {car.ownerBestScore != null ? (
+              <ProgressRing
+                value={car.ownerBestScore / 100}
+                size={42}
+                stroke={3}
+                color={RANK_TEXT_COLORS[rankForScore(car.ownerBestScore)]}
+              >
+                <Avatar username={car.ownerUsername} avatarUrl={car.ownerAvatarUrl} className="h-[34px] w-[34px] text-xs" />
+              </ProgressRing>
+            ) : (
+              <Avatar username={car.ownerUsername} avatarUrl={car.ownerAvatarUrl} className="h-[38px] w-[38px] text-xs" />
+            )}
           </Link>
         </div>
       ))}

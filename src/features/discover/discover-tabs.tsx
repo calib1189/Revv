@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MeetupsList, type MeetupListItem } from "@/features/meetups/meetups-list";
 import { ShopsBrowser } from "@/features/shops/shops-browser";
 import { SoundBrowser } from "@/features/sounds/sound-browser";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { Crew } from "@/lib/db/crews";
 import type { Sound } from "@/lib/db/sounds";
 
@@ -42,36 +43,19 @@ export function DiscoverTabs({
 
   return (
     <div>
-      <div className="mx-auto w-full max-w-2xl px-4 pt-6 sm:px-6">
-        <div className="glass inline-flex rounded-full p-1">
-          <button
-            type="button"
-            onClick={() => setTab("meets")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === "meets" ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"
-            }`}
-          >
-            Meets
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("shops")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === "shops" ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"
-            }`}
-          >
-            Shops
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("sounds")}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === "sounds" ? "bg-accent text-accent-foreground" : "text-muted hover:text-foreground"
-            }`}
-          >
-            Sounds
-          </button>
-        </div>
+      <div className="mx-auto w-full max-w-2xl px-4 pt-8 sm:px-6 sm:pt-12">
+        <h1 className="mb-4 text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">
+          Discover
+        </h1>
+        <SegmentedControl
+          options={[
+            { value: "meets", label: "Meets" },
+            { value: "shops", label: "Shops" },
+            { value: "sounds", label: "Sounds" },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
       </div>
 
       {tab === "meets" && (

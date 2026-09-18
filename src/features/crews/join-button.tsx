@@ -19,11 +19,13 @@ export function JoinButton({
   visibility,
   initialMembership,
   isOwner,
+  className = "px-4 py-1.5 text-sm",
 }: {
   crewId: string;
   visibility: Crew["visibility"];
   initialMembership: CrewMember | null;
   isOwner: boolean;
+  className?: string;
 }) {
   const [status, setStatus] = useState<LocalStatus>(
     initialMembership?.status === "approved"
@@ -35,7 +37,7 @@ export function JoinButton({
   const [, startTransition] = useTransition();
 
   if (isOwner) {
-    return <p className="text-sm text-muted">You lead this crew.</p>;
+    return null;
   }
 
   function handleClick() {
@@ -68,7 +70,7 @@ export function JoinButton({
     <Button
       type="button"
       variant={status === "none" ? "primary" : "secondary"}
-      className="px-4 py-1.5 text-sm"
+      className={className}
       onClick={handleClick}
     >
       {label}

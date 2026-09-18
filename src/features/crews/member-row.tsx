@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Avatar } from "@/features/feed/avatar";
-import { RankFrame } from "@/features/garage/rank-frame";
-import { Button } from "@/components/ui/button";
+import { ProgressRing } from "@/components/ui/progress-ring";
+import { rankForScore, tierColorVar } from "@/lib/rating/rank";
 import { updateMemberRoleAction, removeMemberAction } from "@/features/crews/actions";
 import type { CrewMember, CrewMemberRole } from "@/lib/db/crew-members";
 
@@ -20,12 +20,12 @@ const ROLE_LABELS: Record<CrewMemberRole, string> = {
  * gets a quieter neutral pill one step up from plain text. */
 function RoleBadge({ role }: { role: CrewMemberRole }) {
   if (role === "member") {
-    return <p className="text-xs text-muted">Member</p>;
+    return <p className="text-[0.8125rem] text-muted">Member</p>;
   }
   return (
     <span
-      className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-        role === "leader" ? "bg-accent/15 text-accent" : "bg-white/10 text-foreground"
+      className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold ${
+        role === "leader" ? "bg-accent/15 text-accent" : "bg-foreground/10 text-foreground"
       }`}
     >
       {ROLE_LABELS[role]}
@@ -92,18 +92,31 @@ export function MemberRow({
     });
   }
 
+  // A row of the Members grouped list (crew-tabs.tsx draws the card and
+  // hairlines).
   return (
-    <div className="glass flex items-center gap-3.5 rounded-2xl p-4 transition-colors hover:brightness-110">
+    <div className="relative flex items-center gap-3 px-4 py-2.5">
       <Link href={`/u/${username}`} className="flex-shrink-0">
-        <RankFrame score={bestScore} compact hideBadge className="rounded-full">
-          <Avatar username={username} avatarUrl={avatarUrl} className="h-11 w-11 text-sm" />
-        </RankFrame>
+        {bestScore != null ? (
+          <ProgressRing
+            value={bestScore / 100}
+            size={48}
+            stroke={3}
+            color={tierColorVar(rankForScore(bestScore))}
+          >
+            <Avatar username={username} avatarUrl={avatarUrl} className="h-10 w-10 text-sm" />
+          </ProgressRing>
+        ) : (
+          <span className="flex h-12 w-12 items-center justify-center">
+            <Avatar username={username} avatarUrl={avatarUrl} className="h-10 w-10 text-sm" />
+          </span>
+        )}
       </Link>
       <div className="min-w-0 flex-1">
-        <Link href={`/u/${username}`} className="truncate text-sm font-medium hover:underline">
-          @{username}
+        <Link href={`/u/${username}`} className="block truncate text-[0.9375rem] font-semibold">
+          {username}
         </Link>
-        <div className="mt-1">
+        <div className="mt-0.5">
           <RoleBadge role={role} />
         </div>
       </div>
@@ -114,16 +127,21 @@ export function MemberRow({
             <select
               value={role}
               onChange={(e) => handleRoleChange(e.target.value as CrewMemberRole)}
-              className="glass-inset rounded-lg px-2 py-1 text-xs text-foreground focus:border-accent/60 focus:outline-none"
+              aria-label={`Role for ${username}`}
+              className="glass-inset rounded-[10px] px-2 py-1 text-foreground focus:outline-none"
             >
               <option value="member">Member</option>
               <option value="admin">Admin</option>
               {viewerRole === "leader" && <option value="leader">Leader</option>}
             </select>
           ) : null}
-          <Button variant="ghost" className="px-2 py-1 text-xs text-danger hover:bg-danger/10" onClick={handleRemove}>
+          <button
+            type="button"
+            className="px-1.5 py-1 text-[0.8125rem] font-medium text-danger"
+            onClick={handleRemove}
+          >
             Remove
-          </Button>
+          </button>
         </div>
       )}
     </div>

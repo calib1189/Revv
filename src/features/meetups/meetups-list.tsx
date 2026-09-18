@@ -6,6 +6,8 @@ import { MeetupCard } from "@/features/meetups/meetup-card";
 import { CreateMeetupForm } from "@/features/meetups/create-meetup-form";
 import { MyMeetupsPanel } from "@/features/meetups/my-meetups-panel";
 import { CompassIcon } from "@/components/ui/icons";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 import { haversineMiles } from "@/lib/geo/distance";
 import { MEETUP_TIER_RANK, type Meetup } from "@/lib/db/meetups";
 import type { Crew } from "@/lib/db/crews";
@@ -80,21 +82,20 @@ export function MeetupsList({
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Car meets near you</h1>
-          <p className="mt-1 text-sm text-muted">
-            Cars &amp; coffee, cruises, track days — real meets happening close by.
-          </p>
+    <div className="mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-7 sm:px-6">
+      <div className="mb-4 flex items-end justify-between gap-3 px-1">
+        <div className="min-w-0">
+          <h2 className="text-[1.375rem] font-bold tracking-[-0.02em]">Meets near you</h2>
+          <p className="mt-0.5 text-[0.875rem] text-muted">Cars &amp; coffee, cruises, track days.</p>
         </div>
         {currentUserId && (
           <button
             type="button"
             onClick={() => setIsMyMeetupsPanelOpen(true)}
-            className="self-start flex-shrink-0 rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
+            className="pressable flex-shrink-0 rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold text-accent"
+            style={{ background: "var(--segment-track)" }}
           >
-            My meetups
+            My meets
           </button>
         )}
       </div>
@@ -102,8 +103,8 @@ export function MeetupsList({
       {isMyMeetupsPanelOpen && <MyMeetupsPanel onClose={() => setIsMyMeetupsPanelOpen(false)} />}
 
       {locationDenied && (
-        <p className="mb-4 text-sm text-muted">
-          Turn on location to sort these by distance — showing upcoming meets by date instead.
+        <p className="mb-4 px-1 text-[0.8125rem] text-muted">
+          Turn on location to sort by distance. Showing upcoming meets by date.
         </p>
       )}
 
@@ -114,29 +115,25 @@ export function MeetupsList({
       )}
 
       {sorted.length === 0 ? (
-        <div className="glass flex flex-col items-center gap-3 rounded-2xl px-6 py-20 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-raised text-accent">
-            <CompassIcon className="h-6 w-6" />
-          </span>
-          <div>
-            <p className="text-lg font-medium">No upcoming meets yet</p>
-            <p className="mt-1 max-w-xs text-sm text-muted">
-              {currentUserId
-                ? "Be the first to post one — a cars & coffee, a cruise, a track day."
-                : "Log in to post one, or check back later."}
-            </p>
-          </div>
-          {!currentUserId && (
-            <Link
-              href="/login"
-              className="mt-1 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground"
-            >
-              Log in
-            </Link>
-          )}
-        </div>
+        <EmptyState
+          card
+          icon={<CompassIcon />}
+          title="No upcoming meets yet"
+          body={
+            currentUserId
+              ? "Be the first to post one: a cars & coffee, a cruise, a track day."
+              : "Log in to post one, or check back later."
+          }
+          action={
+            !currentUserId ? (
+              <Link href="/login">
+                <Button className="px-5">Log in</Button>
+              </Link>
+            ) : undefined
+          }
+        />
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
           {sorted.map(({ meetup, hostUsername, photoUrl, photoCount }, index) => (
             <MeetupCard
               key={meetup.id}

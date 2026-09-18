@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
+import { PlusIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
 import type { Crew } from "@/lib/db/crews";
 
@@ -166,13 +167,20 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
 
   if (!isOpen) {
     return (
-      <Button
+      <button
         type="button"
-        className="px-3 py-1.5 text-sm"
         onClick={() => setIsOpen(true)}
+        className="pressable glass-raised elev-1 flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left"
       >
-        Add meetup
-      </Button>
+        <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+          <PlusIcon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-semibold">Host a meet</span>
+          <span className="block text-[0.8125rem] text-muted">Post a cars &amp; coffee, cruise, or track day</span>
+        </span>
+        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
+      </button>
     );
   }
 
@@ -181,7 +189,7 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
       <form
         ref={formRef}
         onSubmit={handleSubmit}
-        className="glass flex flex-col gap-4 rounded-2xl p-4"
+        className="glass-raised elev-1 flex flex-col gap-4 rounded-[22px] p-5"
       >
         {error && <Callout tone="danger">{error}</Callout>}
 

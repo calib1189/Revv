@@ -1,60 +1,53 @@
 import Link from "next/link";
 import Image from "next/image";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
 import type { CrewCardData } from "@/features/crews/crew-discover-grid";
 
-/** Same podium-badge treatment as the main leaderboard's LeaderboardRow —
- * deliberately not sharing the component directly, since a crew row's
- * data shape (logo, member count, no owner/category) is different enough
- * that reusing it would mean threading vehicle-shaped fields through a
- * crew. */
-const PODIUM_STYLES: Record<number, string> = {
-  1: "bg-accent text-accent-foreground",
-  2: "bg-white/20 text-foreground",
-  3: "bg-white/10 text-foreground",
-};
-
+/** One row of the crew leaderboard, in the same grouped-list language
+ * as the main leaderboard's LeaderboardRow — kept as its own component
+ * because a crew's shape (logo, member count, no owner) differs enough
+ * from a vehicle's. Meant to sit inside a grouped card that draws the
+ * hairlines. */
 export function CrewLeaderboardRow({ rank, data }: { rank: number; data: CrewCardData }) {
   const { crew, logoUrl, memberCount, bestScore } = data;
-  const podiumStyle = PODIUM_STYLES[rank];
   const tier = bestScore != null ? rankForScore(bestScore) : null;
 
   return (
     <Link
       href={`/crews/${crew.id}`}
-      className="glass flex items-center gap-3 rounded-2xl p-3 transition-colors hover:brightness-110"
+      className="relative flex items-center gap-3 px-3.5 py-3 transition-colors active:bg-foreground/[0.06]"
     >
-      {podiumStyle ? (
-        <span
-          className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${podiumStyle}`}
-        >
-          {rank}
-        </span>
-      ) : (
-        <span className="w-8 flex-shrink-0 text-center text-sm font-semibold text-muted">{rank}</span>
-      )}
+      <span className={`numeral w-6 flex-shrink-0 text-center text-[0.9375rem] ${rank <= 3 ? "text-accent" : "text-muted"}`}>
+        {rank}
+      </span>
 
-      <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-surface">
-        {logoUrl && <Image src={logoUrl} alt="" fill sizes="56px" className="object-cover" />}
+      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-[12px] bg-foreground/[0.06]">
+        {logoUrl ? (
+          <Image src={logoUrl} alt="" fill sizes="48px" className="object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-lg font-bold text-muted">
+            {crew.name.charAt(0).toUpperCase()}
+          </div>
+        )}
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{crew.name}</p>
-        <p className="mt-1 text-xs text-muted">
-          {memberCount} {memberCount === 1 ? "member" : "members"}
+        <p className="truncate text-[0.9375rem] font-semibold">{crew.name}</p>
+        <p className="mt-0.5 text-[0.8125rem] text-muted">
+          <span className="numeral">{memberCount}</span> {memberCount === 1 ? "member" : "members"}
         </p>
       </div>
 
       <div className="flex-shrink-0 text-right">
         {tier && bestScore != null ? (
           <>
-            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: RANK_TEXT_COLORS[tier] }}>
+            <p className="numeral text-[1.125rem] leading-none">{bestScore.toFixed(2)}</p>
+            <p className="micro-label mt-1" style={{ color: tierColorVar(tier) }}>
               {RANK_LABELS[tier]}
             </p>
-            <p className="text-sm font-semibold tabular-nums">{bestScore.toFixed(2)}</p>
           </>
         ) : (
-          <p className="text-xs text-muted">No ratings yet</p>
+          <p className="text-[0.8125rem] text-muted">Unrated</p>
         )}
       </div>
     </Link>

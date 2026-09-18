@@ -117,26 +117,26 @@ export function ShopsBrowser() {
   const categoryLabel = getShopCategory(category).label;
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Shops near you</h1>
-          <p className="mt-1 text-sm text-muted">Mechanics, tint, body work — real local shops, real reviews.</p>
-        </div>
-        <div className="flex flex-shrink-0 gap-2 self-start">
-          <button
-            type="button"
-            onClick={() => setIsMyPromotionsPanelOpen(true)}
-            className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
-          >
-            My promotions
-          </button>
+    <div className="mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-7 sm:px-6">
+      <div className="mb-4 px-1">
+        <h2 className="text-[1.375rem] font-bold tracking-[-0.02em]">Shops near you</h2>
+        <p className="mt-0.5 text-[0.875rem] text-muted">Mechanics, tint, body work. Real local shops.</p>
+        <div className="mt-3 flex gap-2">
           <button
             type="button"
             onClick={() => setIsPromotePanelOpen(true)}
-            className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-medium text-foreground hover:bg-white/[0.15]"
+            className="pressable rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold text-accent"
+            style={{ background: "var(--segment-track)" }}
           >
             Promote your shop
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsMyPromotionsPanelOpen(true)}
+            className="pressable rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold text-foreground/80"
+            style={{ background: "var(--segment-track)" }}
+          >
+            My promotions
           </button>
         </div>
       </div>
@@ -152,15 +152,16 @@ export function ShopsBrowser() {
         <MyPromotionsPanel onClose={() => setIsMyPromotionsPanelOpen(false)} />
       )}
 
-      <div className="no-scrollbar mb-6 flex gap-2 overflow-x-auto pb-1">
+      <div className="no-scrollbar fade-edge-r -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
         {SHOP_CATEGORIES.map((c) => (
           <button
             key={c.id}
             type="button"
             onClick={() => setCategory(c.id)}
-            className={`flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-              category === c.id ? "bg-accent text-accent-foreground" : "glass text-muted"
+            className={`pressable flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
+              category === c.id ? "bg-foreground text-background" : "text-foreground/80"
             }`}
+            style={category === c.id ? undefined : { background: "var(--segment-track)" }}
           >
             <c.icon className="h-3.5 w-3.5" />
             {c.label}
@@ -171,9 +172,9 @@ export function ShopsBrowser() {
       {location.status === "loading" && <p className="text-sm text-muted">Finding your location…</p>}
 
       {location.status === "denied" && (
-        <div className="glass flex flex-col items-center gap-3 rounded-2xl px-6 py-10 text-center">
-          <p className="text-sm font-medium">Turn on location to see shops near you</p>
-          <p className="max-w-xs text-xs text-muted">
+        <div className="glass-raised elev-1 flex flex-col items-center gap-3 rounded-[28px] px-6 py-10 text-center">
+          <p className="text-[1.0625rem] font-semibold">Turn on location to see shops near you</p>
+          <p className="max-w-xs text-[0.875rem] text-muted">
             SORZA needs your location to find local shops — check your device or browser settings.
           </p>
           <form
@@ -218,8 +219,8 @@ export function ShopsBrowser() {
           {error && <Callout tone="danger">{error}</Callout>}
 
           {isMock && (
-            <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
-              <p className="text-sm font-medium">Shops aren&apos;t set up yet</p>
+            <div className="glass-raised elev-1 flex flex-col items-center gap-2 rounded-[28px] px-6 py-14 text-center">
+              <p className="text-[1.0625rem] font-semibold">Shops aren&apos;t set up yet</p>
               <p className="max-w-xs text-xs text-muted">
                 This needs a Google Places connection SORZA hasn&apos;t configured yet — check back
                 soon.
@@ -232,8 +233,8 @@ export function ShopsBrowser() {
           )}
 
           {!isMock && !error && shops !== null && shops.length === 0 && isRateLimited && (
-            <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
-              <p className="text-sm font-medium">You&apos;ve searched a lot just now</p>
+            <div className="glass-raised elev-1 flex flex-col items-center gap-2 rounded-[28px] px-6 py-14 text-center">
+              <p className="text-[1.0625rem] font-semibold">You&apos;ve searched a lot just now</p>
               <p className="max-w-xs text-xs text-muted">
                 Give it a few minutes and try again — this isn&apos;t a sign there are no real
                 shops nearby.
@@ -242,8 +243,8 @@ export function ShopsBrowser() {
           )}
 
           {!isMock && !error && shops !== null && shops.length === 0 && !isRateLimited && (
-            <div className="glass flex flex-col items-center gap-2 rounded-2xl py-16 text-center">
-              <p className="text-sm font-medium">No {categoryLabel.toLowerCase()} nearby</p>
+            <div className="glass-raised elev-1 flex flex-col items-center gap-2 rounded-[28px] px-6 py-14 text-center">
+              <p className="text-[1.0625rem] font-semibold">No {categoryLabel.toLowerCase()} nearby</p>
               <p className="max-w-xs text-xs text-muted">Try a different category.</p>
             </div>
           )}
