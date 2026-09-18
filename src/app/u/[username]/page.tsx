@@ -15,7 +15,7 @@ import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
 import { ProfileTabs } from "@/features/profile/profile-tabs";
 import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
 import { listUnlockedAchievements } from "@/lib/db/user-achievements";
@@ -277,7 +277,7 @@ export default async function ProfilePage({
         <div className="mt-4 flex items-center gap-2.5">
           <span
             className="micro-label"
-            style={{ color: RANK_TEXT_COLORS[rankForScore(bestRatingScore)] }}
+            style={{ color: tierColorVar(rankForScore(bestRatingScore)) }}
           >
             {RANK_LABELS[rankForScore(bestRatingScore)]}
           </span>

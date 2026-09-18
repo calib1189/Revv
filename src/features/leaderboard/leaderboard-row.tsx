@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
 import type { LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
 
 /** One row of the dense board below the #1 podium card
@@ -49,7 +49,7 @@ export function LeaderboardRow({
 
       <div className="flex-shrink-0 pr-1 text-right">
         <p className="numeral text-xl leading-none">{entry.score.toFixed(2)}</p>
-        <p className="micro-label mt-1" style={{ color: RANK_TEXT_COLORS[tier] }}>
+        <p className="micro-label mt-1" style={{ color: tierColorVar(tier) }}>
           {RANK_LABELS[tier]}
         </p>
       </div>

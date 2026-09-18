@@ -4,10 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
+import { listBuildPartsForBuilds } from "@/lib/db/build-parts";
 import { VehicleBay } from "@/features/garage/vehicle-bay";
+import { GarageStatPanel } from "@/features/garage/garage-stat-panel";
 import { Button } from "@/components/ui/button";
-import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
 import { AchievementUnlockToast } from "@/features/achievements/achievement-unlock-toast";
 import { getWeeklyChallengeProgress } from "@/lib/challenges/progress";
@@ -62,7 +62,26 @@ export async function GaragePageContent() {
     if (score == null) return best;
     return best == null || score > best ? score : best;
   }, null);
-  const bestTier = bestScore != null ? rankForScore(bestScore) : null;
+
+  // What this garage actually contains, read back from the parts
+  // themselves rather than stored anywhere (CLAUDE.md invariant 3).
+  // Best-effort like everything else on this page: the Garage panel is
+  // mounted on every route via the tab pager, so a failure here must
+  // not take down the whole app — it just costs the stat panel its
+  // mod/spend figures.
+  let modCount = 0;
+  let investedCents = 0;
+  try {
+    const buildIds = [...activeBuildByVehicle.values()].map((b) => b.id);
+    const parts = await listBuildPartsForBuilds(supabase, buildIds);
+    modCount = parts.length;
+    investedCents = parts.reduce(
+      (sum, p) => sum + (p.price_cents ?? 0) + (p.install_cost_cents ?? 0),
+      0,
+    );
+  } catch (err) {
+    console.error("Garage parts aggregate failed:", err);
+  }
 
   // Nameplate Color is account-wide, bought/equipped from the central
   // Store (/store) — this just displays whatever's currently equipped.
@@ -118,32 +137,8 @@ export async function GaragePageContent() {
         <WeeklyChallengesCard progress={challengeProgress} />
       </div>
 
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Your Garage</h1>
-          {vehicles.length > 0 ? (
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">
-              <span>
-                <span className="font-semibold text-foreground">{vehicles.length}</span>{" "}
-                vehicle{vehicles.length === 1 ? "" : "s"}
-              </span>
-              {bestTier && bestScore != null && (
-                <Link href="/leaderboard" className="flex items-center gap-1.5 hover:text-foreground">
-                  {(() => {
-                    const Icon = RANK_MATERIAL_ICONS[bestTier];
-                    return <Icon className="h-4 w-4" />;
-                  })()}
-                  Best:{" "}
-                  <span className="font-semibold" style={{ color: RANK_TEXT_COLORS[bestTier] }}>
-                    {RANK_LABELS[bestTier]} · {bestScore.toFixed(2)}
-                  </span>
-                </Link>
-              )}
-            </div>
-          ) : (
-            <p className="mt-2 text-sm text-muted">Every build you own, in one showroom.</p>
-          )}
-        </div>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Your Garage</h1>
         <div className="flex flex-shrink-0 items-center gap-2">
           {vehicles.length > 0 && (
             <Link href="/garage/customize">
@@ -157,6 +152,19 @@ export async function GaragePageContent() {
           </Link>
         </div>
       </div>
+
+      {vehicles.length > 0 && (
+        <div className="mb-8">
+          <GarageStatPanel
+            stats={{
+              vehicleCount: vehicles.length,
+              modCount,
+              investedCents,
+              bestScore,
+            }}
+          />
+        </div>
+      )}
 
       {vehicles.length === 0 ? (
         <div className="glass flex aspect-[16/10] flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-white/10 text-center">

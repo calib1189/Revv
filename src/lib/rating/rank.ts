@@ -45,6 +45,26 @@ export const RANK_TEXT_COLORS: Record<RankTier, string> = {
   cosmic: "#c9b6ff",
 };
 
+/**
+ * The theme-aware form of a tier color, resolving to the --tier-* custom
+ * properties defined in globals.css.
+ *
+ * Which one to reach for:
+ * - Drawing a tier color over a photo, or over a permanently-dark scrim
+ *   or badge (leaderboard hero card, vehicle bay badge, RankFrame's
+ *   badge, crew/meetup/shop cards) — use RANK_TEXT_COLORS. Those
+ *   surfaces are dark in both themes, and the literals are tuned for
+ *   exactly that.
+ * - Drawing a tier color on a surface that follows the theme (the garage
+ *   stat panel, a profile line, the vehicle page's rating card, a glass
+ *   row) — use this. Silver, platinum and diamond are all within a few
+ *   percent of white as literals, so on a light ground they render as
+ *   invisible text.
+ */
+export function tierColorVar(tier: RankTier): string {
+  return `var(--tier-${tier})`;
+}
+
 /** Background-wash color per tier, for the rating-reveal's full-screen
  * ambient background specifically. Identical to RANK_TEXT_COLORS except
  * for diamond: #c9f4ff reads fine as icon/text color but is too close

@@ -112,7 +112,10 @@ export function VehicleBay({
   return (
     <Link
       href={`/garage/${vehicle.id}`}
-      className="group relative block aspect-[16/10] overflow-hidden rounded-2xl bg-surface"
+      /* Taller on phones: 16/10 across a 351px column is a 219px-high
+         strip, which reads as a thumbnail of a car rather than a
+         showroom bay. Wide screens keep the cinematic ratio. */
+      className="group relative block aspect-[4/3] overflow-hidden rounded-2xl bg-surface sm:aspect-[16/10]"
     >
       {backdropItem ? (
         <>

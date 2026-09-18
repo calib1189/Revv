@@ -27,6 +27,24 @@
      -webkit- prefix, and the ~4% tint alone is invisible without it. */
   --glass-solid-raised: rgb(26 26 29 / 0.96);
 
+  /* Tier colors, theme-aware. The literals in lib/rating/rank.ts
+     (RANK_TEXT_COLORS) are tuned for dark surfaces — silver #dde1e7,
+     platinum #eef4f8 and diamond #c9f4ff are all within a few percent
+     of white, which is correct over a photo or a dark panel and
+     invisible on a light one. Anything drawing a tier color on a
+     surface that follows the theme uses these instead; anything drawing
+     over a photo or a permanently-dark scrim keeps the literals. */
+  --tier-bronze: #c98a52;
+  --tier-copper: #d99569;
+  --tier-iron: #aeb2bb;
+  --tier-silver: #dde1e7;
+  --tier-gold: #f0cd6e;
+  --tier-platinum: #eef4f8;
+  --tier-emerald: #5be3a9;
+  --tier-diamond: #c9f4ff;
+  --tier-ruby: #f27a93;
+  --tier-cosmic: #c9b6ff;
+
   --bg-glow-1: rgb(255 255 255 / 0.05);
   --bg-glow-2: rgb(255 68 51 / 0.04);
 
@@ -61,6 +79,18 @@
   --glass-highlight: rgb(255 255 255 / 0.7);
   --glass-solid-raised: rgb(255 255 255 / 0.96);
 
+  /* Same tier identities, darkened to hold contrast on a light ground. */
+  --tier-bronze: #8a5a2b;
+  --tier-copper: #9c5b2f;
+  --tier-iron: #5c6270;
+  --tier-silver: #6b7280;
+  --tier-gold: #8a6d1f;
+  --tier-platinum: #5a6b78;
+  --tier-emerald: #0f8a5f;
+  --tier-diamond: #1a7f9c;
+  --tier-ruby: #b8324f;
+  --tier-cosmic: #6b4bc4;
+
   --bg-glow-1: rgb(0 0 0 / 0.025);
   --bg-glow-2: rgb(255 68 51 / 0.05);
 }
@@ -86,6 +116,17 @@
     --glass-border-raised: rgb(var(--glass-tint) / 0.13);
     --glass-highlight: rgb(255 255 255 / 0.7);
     --glass-solid-raised: rgb(255 255 255 / 0.96);
+
+    --tier-bronze: #8a5a2b;
+    --tier-copper: #9c5b2f;
+    --tier-iron: #5c6270;
+    --tier-silver: #6b7280;
+    --tier-gold: #8a6d1f;
+    --tier-platinum: #5a6b78;
+    --tier-emerald: #0f8a5f;
+    --tier-diamond: #1a7f9c;
+    --tier-ruby: #b8324f;
+    --tier-cosmic: #6b4bc4;
 
     --bg-glow-1: rgb(0 0 0 / 0.025);
     --bg-glow-2: rgb(255 68 51 / 0.05);

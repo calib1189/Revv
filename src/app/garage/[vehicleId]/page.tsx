@@ -30,7 +30,7 @@ import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
 import { VehicleTabs } from "@/features/garage/vehicle-tabs";
 import { RankFrame } from "@/features/garage/rank-frame";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, tierColorVar } from "@/lib/rating/rank";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
@@ -313,7 +313,7 @@ export default async function VehiclePage({
                         </p>
                         <p
                           className="micro-label mt-1.5"
-                          style={{ color: RANK_TEXT_COLORS[tier] }}
+                          style={{ color: tierColorVar(tier) }}
                         >
                           {RANK_LABELS[tier]}
                         </p>
