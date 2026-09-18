@@ -13,6 +13,12 @@ import { CHALLENGE_COMPLETION_POINTS } from "@/lib/points/values";
 export interface ClaimState {
   error: string | null;
   amount: number | null;
+  /** True specifically for "you already claimed this" — the caller
+   * treats this differently from a real failure (see
+   * weekly-challenges-card.tsx's claim()): the challenge genuinely is
+   * claimed, so the UI should stay showing that, not revert to
+   * "Claim" and invite retrying the exact call that just told it so. */
+  alreadyClaimed?: boolean;
 }
 
 /** Claims the points for one already-completed weekly challenge.
@@ -28,7 +34,7 @@ export async function claimChallengePointsAction(challengeId: string): Promise<C
 
   const row = await getChallengeCompletion(supabase, user.id, challengeId, key);
   if (!row) return { error: "You haven't completed this yet.", amount: null };
-  if (row.claimedAt) return { error: "Already claimed.", amount: null };
+  if (row.claimedAt) return { error: "Already claimed.", amount: null, alreadyClaimed: true };
 
   try {
     // Same trust boundary as claimAchievementPointsAction: the checks

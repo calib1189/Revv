@@ -31,7 +31,12 @@ export function WeeklyChallengesCard({ progress }: { progress: ProgressWithClaim
     setClaimedIds((prev) => new Set(prev).add(challengeId));
     startTransition(async () => {
       const result = await claimChallengePointsAction(challengeId);
-      if (result.error) {
+      // alreadyClaimed means the challenge genuinely is claimed server-
+      // side — reverting the optimistic state here would flip the button
+      // back to "Claim", which a second tap (or a stale reload that
+      // rendered claimed: false when the DB already had it) could
+      // otherwise turn into an endless claim-fails-reverts-claim loop.
+      if (result.error && !result.alreadyClaimed) {
         setClaimedIds((prev) => {
           const next = new Set(prev);
           next.delete(challengeId);

@@ -323,6 +323,18 @@ const PROFILE_ITEMS: StoreItem[] = [
     effectClassName: "bg-chrome-flow-anim",
   },
   {
+    id: "bg_ruby",
+    category: "profile_background",
+    name: "Ruby",
+    price: 480,
+    // Near-black bookends swelling into a saturated, almost-neon red
+    // core — the gemstone's own glint, not a flat red wash. Positioned
+    // just above Diamond in price, matching Ruby's own spot one rung
+    // above Diamond on the rank ladder (lib/rating/rank.ts).
+    value: "linear-gradient(150deg, #1a0004, #5c0014, #ff0a2e, #ff4d6d, #ff0a2e, #5c0014, #1a0004)",
+    effectClassName: "bg-ruby-anim",
+  },
+  {
     id: "bg_legendary",
     category: "profile_background",
     name: "Legendary",
@@ -421,10 +433,17 @@ const MATERIAL_THEMES = [
   "founder",
 ] as const;
 
-const GARAGE_ITEMS: StoreItem[] = MATERIAL_THEMES.flatMap((theme) => [
-  deriveItem(`name_${theme}`, `vname_${theme}`, "vehicle_name_color"),
-  deriveItem(`bg_${theme}`, `gbackdrop_${theme}`, "garage_backdrop"),
-]);
+const GARAGE_ITEMS: StoreItem[] = [
+  ...MATERIAL_THEMES.flatMap((theme) => [
+    deriveItem(`name_${theme}`, `vname_${theme}`, "vehicle_name_color"),
+    deriveItem(`bg_${theme}`, `gbackdrop_${theme}`, "garage_backdrop"),
+  ]),
+  // Ruby only ever had a name color (NAME_COLOR_ONLY_THEMES below) —
+  // this is its garage backdrop, added on its own rather than promoting
+  // ruby into MATERIAL_THEMES, since that loop also derives a crew_frame
+  // from frame_ruby, which doesn't exist and isn't part of this ask.
+  deriveItem("bg_ruby", "gbackdrop_ruby", "garage_backdrop"),
+];
 
 const CREW_ITEMS: StoreItem[] = MATERIAL_THEMES.flatMap((theme) => [
   deriveItem(`name_${theme}`, `cname_${theme}`, "crew_name_color"),

@@ -584,6 +584,20 @@ html.native-app body::-webkit-scrollbar {
     50% { background-position: 50% 70%; }
   }
 
+  /* Ruby garage backdrop — a gemstone glint, not a flat red wash: the
+     position sweep is paired with a brightness/saturation pulse (unlike
+     inferno/aurora's pure position moves) so the bright core actually
+     flares like light catching a facet. */
+  .bg-ruby-anim {
+    background-size: 220% 220%;
+    animation: bg-ruby-move 5.5s ease-in-out infinite;
+  }
+
+  @keyframes bg-ruby-move {
+    0%, 100% { background-position: 20% 20%; filter: brightness(1) saturate(1); }
+    50% { background-position: 80% 80%; filter: brightness(1.2) saturate(1.15); }
+  }
+
   .bg-aurora-anim {
     background-size: 200% 200%;
     animation: bg-aurora-move 14s ease-in-out infinite;
