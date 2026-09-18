@@ -212,6 +212,11 @@ export interface Database {
           ai_rating_subscores: Json | null;
           ai_rating_rated_at: string | null;
           ai_rating_last_attempt_at: string | null;
+          ai_rating_pending_score: number | null;
+          ai_rating_pending_strengths: string | null;
+          ai_rating_pending_limiting_factors: string | null;
+          ai_rating_pending_subscores: Json | null;
+          ai_rating_pending_is_mock: boolean | null;
           created_at: string;
         };
         Insert: {
@@ -228,6 +233,11 @@ export interface Database {
           ai_rating_subscores?: Json | null;
           ai_rating_rated_at?: string | null;
           ai_rating_last_attempt_at?: string | null;
+          ai_rating_pending_score?: number | null;
+          ai_rating_pending_strengths?: string | null;
+          ai_rating_pending_limiting_factors?: string | null;
+          ai_rating_pending_subscores?: Json | null;
+          ai_rating_pending_is_mock?: boolean | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["builds"]["Insert"]>;

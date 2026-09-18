@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getVehicleById } from "@/lib/db/vehicles";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
@@ -10,6 +11,8 @@ import {
   getOrCreateActiveBuild,
   updateBuildRating,
   markBuildRatingAttempt,
+  savePendingBuildRating,
+  getPendingBuildRating,
 } from "@/lib/db/builds";
 import { insertBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { listBuildParts } from "@/lib/db/build-parts";
@@ -96,6 +99,14 @@ export async function generateBuildRatingAction(
     // call itself, not on choosing to keep the result.
     const build = await getOrCreateActiveBuild(supabase, vehicleId);
     await markBuildRatingAttempt(supabase, build.id);
+    // Stored via service role, not the caller's own session — this is
+    // the one write of rating content that's trustworthy, because it's
+    // exactly what the provider just returned, not anything a client
+    // supplied. confirmBuildRatingAction reads this back rather than
+    // accepting rating content as arguments (see 0088's migration
+    // comment for what that used to allow).
+    const serviceRole = createServiceRoleClient();
+    await savePendingBuildRating(serviceRole, build.id, rating);
     return { data: rating };
   } catch {
     return { error: "Couldn't rate that build right now. Try again in a bit." };
@@ -112,46 +123,36 @@ function isValidSubscores(value: BuildRatingSubscores): boolean {
   ).every((key) => Number.isFinite(value[key]) && value[key] >= 0 && value[key] <= 100);
 }
 
-export async function confirmBuildRatingAction(
-  vehicleId: string,
-  score: number,
-  strengths: string,
-  limitingFactors: string,
-  subscores: BuildRatingSubscores,
-  isMock: boolean,
-): Promise<ConfirmRatingState> {
-  if (!Number.isFinite(score) || score < 0 || score > 100) {
-    return { error: "Invalid rating." };
-  }
-  if (typeof strengths !== "string" || strengths.length === 0 || strengths.length > 500) {
-    return { error: "Invalid rating." };
-  }
-  if (
-    typeof limitingFactors !== "string" ||
-    limitingFactors.length === 0 ||
-    limitingFactors.length > 500
-  ) {
-    return { error: "Invalid rating." };
-  }
-  if (!subscores || !isValidSubscores(subscores)) {
-    return { error: "Invalid rating." };
-  }
-
+/**
+ * Deliberately takes no rating content — just which build. Confirming
+ * means "save whatever the server itself generated and is still holding
+ * pending for this build," never "save whatever values I'm handing you,"
+ * which is what let this be called with an arbitrary score before (see
+ * 0088's migration comment). requireOwner still gates *whose* pending
+ * rating can be confirmed; it no longer has any say over its content.
+ */
+export async function confirmBuildRatingAction(vehicleId: string): Promise<ConfirmRatingState> {
   const { supabase } = await requireOwner(vehicleId);
   const build = await getOrCreateActiveBuild(supabase, vehicleId);
 
+  // Reads and writes both go through service role — protect_ai_rating_
+  // columns (0088) silently no-ops these columns for the caller's own
+  // 'authenticated' session regardless of RLS, so the promotion itself
+  // has to happen as service role too, not just the read.
+  const serviceRole = createServiceRoleClient();
+  const pending = await getPendingBuildRating(serviceRole, build.id);
+  if (!pending || !isValidSubscores(pending.subscores)) {
+    return { error: "Nothing to confirm — rate this build again." };
+  }
+
   try {
-    await updateBuildRating(supabase, build.id, { score, strengths, limitingFactors, subscores });
+    await updateBuildRating(serviceRole, build.id, pending);
     // Best-effort: the current rating is already saved by this point —
     // a failed history write shouldn't fail the whole confirm action,
     // just mean this one re-rate is missing from the timeline.
-    await insertBuildRatingHistory(supabase, build.id, {
-      score,
-      strengths,
-      limitingFactors,
-      subscores,
-      isMock,
-    }).catch((err) => console.error("insertBuildRatingHistory failed:", err));
+    await insertBuildRatingHistory(serviceRole, build.id, pending).catch((err) =>
+      console.error("insertBuildRatingHistory failed:", err),
+    );
   } catch (err) {
     // No logging here before meant a failed save was a total black box —
     // same fix as identifyVehicleAction's equivalent catch: log the real

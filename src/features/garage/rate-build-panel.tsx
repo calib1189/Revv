@@ -82,14 +82,11 @@ export function RateBuildPanel({
     setIsConfirming(true);
     setError(null);
     try {
-      const result = await confirmBuildRatingAction(
-        vehicleId,
-        pending.score,
-        pending.strengths,
-        pending.limitingFactors,
-        pending.subscores,
-        pending.isMock,
-      );
+      // pending here is only ever used to render the "New rating"
+      // preview card below — the actual save reads the server's own
+      // stored copy of this same rating, not these values (see
+      // confirmBuildRatingAction's doc comment).
+      const result = await confirmBuildRatingAction(vehicleId);
       if (result.error) {
         setError(result.error);
       } else {

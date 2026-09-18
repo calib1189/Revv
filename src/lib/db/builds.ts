@@ -112,6 +112,12 @@ export async function updateBuildStatus(
   return data;
 }
 
+/** Callable only with a service-role client — protect_ai_rating_columns
+ * (0088) silently reverts every ai_rating_ and ai_rating_pending_ column
+ * on any write coming from the 'authenticated' role, regardless of RLS.
+ * This is the one legitimate write path: confirmBuildRatingAction, after
+ * verifying (via getPendingBuildRating) that the values being promoted
+ * are what the server itself generated, not whatever a caller supplied. */
 export async function updateBuildRating(
   supabase: SupabaseClient<Database>,
   id: string,
@@ -130,6 +136,13 @@ export async function updateBuildRating(
       ai_rating_limiting_factors: rating.limitingFactors,
       ai_rating_subscores: rating.subscores as unknown as Json,
       ai_rating_rated_at: new Date().toISOString(),
+      // Cleared in the same write a rating is promoted, so a stale
+      // pending value can never be confirmed twice.
+      ai_rating_pending_score: null,
+      ai_rating_pending_strengths: null,
+      ai_rating_pending_limiting_factors: null,
+      ai_rating_pending_subscores: null,
+      ai_rating_pending_is_mock: null,
     })
     .eq("id", id)
     .select("*")
@@ -137,6 +150,72 @@ export async function updateBuildRating(
 
   if (error) throw error;
   return data;
+}
+
+export interface PendingBuildRating {
+  score: number;
+  strengths: string;
+  limitingFactors: string;
+  subscores: BuildRatingSubscores;
+  isMock: boolean;
+}
+
+/** Stores exactly what provider.rateBuild() returned — called only with a
+ * service-role client, right after that real call resolves
+ * (generateBuildRatingAction). This is the one place rating content is
+ * ever written from server-derived data rather than a caller's own
+ * input, which is what makes confirming it afterward trustworthy. */
+export async function savePendingBuildRating(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  rating: PendingBuildRating,
+): Promise<void> {
+  const { error } = await supabase
+    .from("builds")
+    .update({
+      ai_rating_pending_score: rating.score,
+      ai_rating_pending_strengths: rating.strengths,
+      ai_rating_pending_limiting_factors: rating.limitingFactors,
+      ai_rating_pending_subscores: rating.subscores as unknown as Json,
+      ai_rating_pending_is_mock: rating.isMock,
+    })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** What confirmBuildRatingAction actually promotes — null when nothing's
+ * pending (never generated, or already confirmed/cleared), which the
+ * action treats as "nothing to confirm" rather than trusting a caller to
+ * supply the content itself. */
+export async function getPendingBuildRating(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<PendingBuildRating | null> {
+  const { data, error } = await supabase
+    .from("builds")
+    .select(
+      "ai_rating_pending_score, ai_rating_pending_strengths, ai_rating_pending_limiting_factors, ai_rating_pending_subscores, ai_rating_pending_is_mock",
+    )
+    .eq("id", id)
+    .single();
+
+  if (error) throw error;
+  if (
+    data.ai_rating_pending_score == null ||
+    data.ai_rating_pending_strengths == null ||
+    data.ai_rating_pending_limiting_factors == null ||
+    data.ai_rating_pending_subscores == null
+  ) {
+    return null;
+  }
+
+  return {
+    score: data.ai_rating_pending_score,
+    strengths: data.ai_rating_pending_strengths,
+    limitingFactors: data.ai_rating_pending_limiting_factors,
+    subscores: data.ai_rating_pending_subscores as unknown as BuildRatingSubscores,
+    isMock: data.ai_rating_pending_is_mock ?? false,
+  };
 }
 
 /** Marks the moment an AI rating call actually happened — independent of
