@@ -68,7 +68,7 @@ export function AchievementShowcaseEditor({
   }
 
   return (
-    <div className="glass rounded-2xl p-4">
+    <div className="glass-raised elev-1 rounded-[22px] p-4">
       <p className="text-sm font-semibold">Showcase</p>
       <p className="mt-0.5 text-xs text-muted">
         Pin up to {MAX_SHOWCASED} achievements to show on your profile.

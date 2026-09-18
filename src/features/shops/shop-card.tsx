@@ -81,7 +81,7 @@ export function ShopCard({
       onKeyDown={(e) => {
         if (e.key === "Enter") router.push(`/discover/shop/${shop.placeId}?category=${category}`);
       }}
-      className="glass flex cursor-pointer flex-col gap-2.5 rounded-2xl p-4 transition-opacity hover:opacity-90"
+      className="pressable glass-raised elev-1 flex cursor-pointer flex-col gap-2.5 rounded-[22px] p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">

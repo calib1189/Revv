@@ -16,7 +16,7 @@ export function ClaimUsernameForm() {
   );
 
   return (
-    <form action={formAction} className="glass flex flex-col gap-3 rounded-2xl p-4">
+    <form action={formAction} className="flex flex-col gap-3">
       {state.error && <Callout tone="danger">{state.error}</Callout>}
       <div>
         <Label htmlFor="username">Pick a username</Label>

@@ -1,16 +1,8 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { NotFoundState } from "@/components/ui/not-found-state";
+import { GridIcon } from "@/components/ui/icons";
 
 export default function PostNotFound() {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
-      <h1 className="text-xl font-semibold">Post not found</h1>
-      <p className="text-sm text-muted">
-        This post doesn&apos;t exist or was removed.
-      </p>
-      <Link href="/feed">
-        <Button variant="secondary">Back to feed</Button>
-      </Link>
-    </div>
+    <NotFoundState icon={<GridIcon />} title="Post not found" body="This post doesn't exist or was removed." />
   );
 }

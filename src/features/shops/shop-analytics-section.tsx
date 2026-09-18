@@ -60,13 +60,13 @@ export function ShopAnalyticsSection({ placeId }: { placeId: string }) {
       </div>
 
       {total === 0 ? (
-        <p className="glass rounded-2xl p-4 text-sm text-muted">
+        <p className="glass-raised elev-1 rounded-[22px] p-4 text-[0.875rem] text-muted">
           No activity yet — check back once your promotion has had some time in front of people.
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {METRICS.map(({ key, label, icon: Icon, color }) => (
-            <div key={key} className="glass flex flex-col gap-2.5 rounded-2xl p-4">
+            <div key={key} className="glass-raised elev-1 flex flex-col gap-2.5 rounded-[22px] p-4">
               <span
                 className="flex h-9 w-9 items-center justify-center rounded-full"
                 style={{ backgroundColor: `${color}26`, color }}

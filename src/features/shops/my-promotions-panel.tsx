@@ -34,7 +34,7 @@ function PromotionRow({ item }: { item: ShopPromotionWithCounts }) {
     counts.impressions > 0 ? `${((counts.clicks / counts.impressions) * 100).toFixed(1)}% CTR` : null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border p-3.5">
+    <div className="glass-raised elev-1 flex flex-col gap-3 rounded-[18px] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-medium">{promotion.place_name}</p>

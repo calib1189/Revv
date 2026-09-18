@@ -51,7 +51,7 @@ export function ModificationForm({
   return (
     <form
       action={formAction}
-      className="glass flex flex-col gap-4 rounded-2xl p-4"
+      className="flex flex-col gap-4"
     >
       {state.error && <Callout tone="danger">{state.error}</Callout>}
 

@@ -62,7 +62,7 @@ export function PromoteThisShop({
 
   if (currentTier === "diamond") {
     return (
-      <p className="glass rounded-2xl p-4 text-center text-sm text-muted">
+      <p className="glass-raised elev-1 rounded-[22px] p-4 text-center text-[0.875rem] text-muted">
         {placeName} already has the top Diamond spot.
       </p>
     );
@@ -114,7 +114,7 @@ export function PromoteThisShop({
 
   if (sentToWeb) {
     return (
-      <p className="glass rounded-2xl p-4 text-center text-sm text-muted">
+      <p className="glass-raised elev-1 rounded-[22px] p-4 text-center text-[0.875rem] text-muted">
         Opened in your browser, already signed in — pick a plan and pay there to
         finish promoting {placeName}.
       </p>
@@ -122,7 +122,7 @@ export function PromoteThisShop({
   }
 
   return (
-    <div className="glass flex flex-col gap-3 rounded-2xl p-4">
+    <div className="glass-raised elev-1 flex flex-col gap-3 rounded-[22px] p-5">
       <h2 className="text-sm font-semibold">Promote {placeName}</h2>
       {error && <Callout tone="danger">{error}</Callout>}
       <TierPicker

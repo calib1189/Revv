@@ -33,7 +33,7 @@ export function DirectionsButton({
     <a
       href={buildAppleMapsUrl(name, lat, lng)}
       onClick={() => recordShopPromotionClickAction(placeId)}
-      className="flex flex-1 items-center justify-center gap-2 rounded-full bg-accent px-4 py-3 text-sm font-semibold text-accent-foreground"
+      className="pressable flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-4 text-[0.9375rem] font-semibold text-accent-foreground"
     >
       <PinIcon className="h-4 w-4" />
       Directions
@@ -51,7 +51,7 @@ export function GetAQuoteButton({ placeId }: { placeId: string }) {
 
   if (sent) {
     return (
-      <span className="flex flex-1 items-center justify-center gap-2 rounded-full border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
+      <span className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-success/12 px-4 text-[0.9375rem] font-semibold text-success">
         <CheckIcon className="h-4 w-4" />
         Interest sent
       </span>
@@ -65,7 +65,7 @@ export function GetAQuoteButton({ placeId }: { placeId: string }) {
         setSent(true);
         recordShopInquiryAction(placeId);
       }}
-      className="glass flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-foreground"
+      className="pressable glass flex h-11 flex-1 items-center justify-center gap-2 rounded-full px-4 text-[0.9375rem] font-semibold text-foreground"
     >
       Get a quote
     </button>

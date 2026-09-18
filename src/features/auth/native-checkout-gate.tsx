@@ -57,7 +57,7 @@ export function NativeCheckoutGate({
   if (!isNative) return <>{children}</>;
 
   return (
-    <div className="glass flex flex-col items-center gap-3 rounded-2xl p-6 text-center">
+    <div className="glass-raised elev-1 flex flex-col items-center gap-3 rounded-[22px] p-6 text-center">
       {error && <Callout tone="danger">{error}</Callout>}
       {sentToWeb ? (
         <p className="text-sm text-muted">
