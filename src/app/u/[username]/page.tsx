@@ -15,7 +15,7 @@ import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { Avatar } from "@/features/feed/avatar";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import { ProgressRing } from "@/components/ui/progress-ring";
+import { RankFrame } from "@/features/garage/rank-frame";
 import { ProfileMoreMenu } from "@/features/profile/profile-more-menu";
 import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
 import { ProfileTabs } from "@/features/profile/profile-tabs";
@@ -218,35 +218,34 @@ export default async function ProfilePage({
       )}
 
       <header className={`animate-section-rise flex flex-col items-center text-center ${isOwnProfile ? "" : "mt-12"}`}>
-        {/* The avatar sits inside its owner's best build score, drawn as
-            a ring in that tier's colour, with a light that keeps
-            travelling around the filled arc. Unrated profiles get the
-            empty track with the light orbiting faintly. */}
-        {bestTier && bestRatingScore != null ? (
-          <ProgressRing
-            value={bestRatingScore / 100}
-            size={132}
-            stroke={5}
-            color={tierColorVar(bestTier)}
-            label={`Best build ${bestRatingScore.toFixed(2)} out of 100`}
-            glint
+        {/* The avatar wears its owner's rank ring — the exact animated
+            tier border the car photos and feed avatars use (RankFrame:
+            metal shine for Bronze–Platinum, spinning gem facets for
+            Emerald–Ruby, starfield for Cosmic), so the profile photo
+            reads as the same rank everywhere. Unrated profiles get a
+            plain hairline. */}
+        {bestRatingScore != null ? (
+          <RankFrame
+            score={bestRatingScore}
+            hideBadge
+            className="h-[124px] w-[124px] rounded-full"
           >
             <Avatar
               username={profile.username}
               avatarUrl={avatarUrl}
-              className="h-[110px] w-[110px] text-4xl"
+              className="h-full w-full text-4xl"
               priority
             />
-          </ProgressRing>
+          </RankFrame>
         ) : (
-          <ProgressRing value={0} size={132} stroke={3} color="var(--muted)" glint>
+          <div className="rounded-full p-[3px] ring-1 ring-border">
             <Avatar
               username={profile.username}
               avatarUrl={avatarUrl}
-              className="h-[114px] w-[114px] text-4xl"
+              className="h-[118px] w-[118px] text-4xl"
               priority
             />
-          </ProgressRing>
+          </div>
         )}
 
         <h1 className="mt-4 flex max-w-full items-center justify-center gap-1.5 text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">
