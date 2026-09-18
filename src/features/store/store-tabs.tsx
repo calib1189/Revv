@@ -6,8 +6,10 @@ import { StorePageContent } from "@/features/store/store-page-content";
 import { purchaseItemAction, equipItemAction } from "@/features/store/actions";
 import { equipCrewItemAction } from "@/features/crews/actions";
 import type { StoreCategory, StoreItem } from "@/lib/store/catalog";
-import { PersonIcon, WheelIcon, FlagIcon } from "@/components/ui/icons";
+import { FlagIcon, GemIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type Tab = "profile" | "garage" | "crew";
 type Equipped = Partial<Record<StoreCategory, string | null>>;
@@ -25,31 +27,6 @@ export interface OwnedCrewOption {
   id: string;
   name: string;
   equipped: Equipped;
-}
-
-function TopTabButton({
-  active,
-  onClick,
-  icon,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-        active ? "bg-accent text-accent-foreground" : "glass text-muted hover:text-foreground"
-      }`}
-    >
-      {icon}
-      {children}
-    </button>
-  );
 }
 
 /** The single entry point for every cosmetic shop in the app — Profile,
@@ -148,20 +125,33 @@ export function StoreTabs({
 
   return (
     <div>
-      <div className="mb-6 flex gap-2">
-        <TopTabButton active={tab === "profile"} onClick={() => setTab("profile")} icon={<PersonIcon className="h-4 w-4" />}>
-          Profile
-        </TopTabButton>
-        <TopTabButton active={tab === "garage"} onClick={() => setTab("garage")} icon={<WheelIcon className="h-4 w-4" />}>
-          Garage
-        </TopTabButton>
-        <TopTabButton active={tab === "crew"} onClick={() => setTab("crew")} icon={<FlagIcon className="h-4 w-4" />}>
-          Crew
-        </TopTabButton>
-      </div>
+      <header className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">Store</h1>
+        </div>
+        <div
+          className="mb-1 flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5"
+          style={{ background: "var(--segment-track)" }}
+          aria-label={`${balance} points`}
+        >
+          <GemIcon className="h-4 w-4 text-accent" />
+          <span className="numeral text-[1.0625rem] leading-none">{balance}</span>
+        </div>
+      </header>
+
+      <SegmentedControl
+        className="mb-6"
+        options={[
+          { value: "profile", label: "Profile" },
+          { value: "garage", label: "Garage" },
+          { value: "crew", label: "Crew" },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
       {error && (
-        <p className="mb-4 rounded-xl bg-danger/10 px-4 py-2 text-sm text-danger">{error}</p>
+        <p className="mb-4 rounded-[14px] bg-danger/10 px-4 py-2.5 text-[0.875rem] text-danger">{error}</p>
       )}
 
       <div className={tab === "profile" ? "" : "hidden"}>
@@ -181,19 +171,19 @@ export function StoreTabs({
       </div>
 
       <div className={tab === "garage" ? "" : "hidden"}>
-        <div className="glass mb-6 flex items-center justify-between gap-3 rounded-2xl p-4">
-          <div>
-            <p className="text-sm font-medium">Want a backdrop for one of your cars?</p>
-            <p className="text-xs text-muted">
-              Backdrops are per-vehicle now — pick a car and its scene in the Garage Editor.
+        <Link
+          href="/garage/customize"
+          className="pressable glass-raised elev-1 mb-6 flex items-center gap-3.5 rounded-[22px] p-4"
+        >
+          <span className="bg-ruby-anim h-12 w-12 flex-shrink-0 rounded-[12px]" style={{ backgroundImage: "linear-gradient(150deg, #1a0004, #5c0014, #ff0a2e, #ff4d6d, #ff0a2e, #5c0014, #1a0004)" }} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.9375rem] font-semibold">Garage backdrops</p>
+            <p className="text-[0.8125rem] leading-snug text-muted">
+              Pick a scene for each car in the Garage Editor.
             </p>
           </div>
-          <Link href="/garage/customize" className="flex-shrink-0">
-            <Button variant="secondary" className="px-3 py-1.5 text-sm">
-              Open Editor
-            </Button>
-          </Link>
-        </div>
+          <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
+        </Link>
         <StorePageContent
           title="Garage Shop"
           subtitle="Spend your points on how your cars look."
@@ -211,29 +201,30 @@ export function StoreTabs({
 
       <div className={tab === "crew" ? "" : "hidden"}>
         {crews.length === 0 ? (
-          <div className="glass flex flex-col items-center justify-center gap-4 rounded-2xl py-24 text-center">
-            <p className="text-lg font-medium">You don&apos;t own a crew yet</p>
-            <p className="max-w-xs text-sm text-muted">
-              Create a crew to customize how its page looks for everyone who visits.
-            </p>
-            <Link href="/crews/new">
-              <Button>Create a crew</Button>
-            </Link>
-          </div>
+          <EmptyState
+            card
+            icon={<FlagIcon />}
+            title="You don't own a crew yet"
+            body="Create a crew to customize how its page looks for everyone who visits."
+            action={
+              <Link href="/crews/new">
+                <Button className="px-5">Create a crew</Button>
+              </Link>
+            }
+          />
         ) : (
           <>
             {crews.length > 1 && (
-              <div className="mb-6 flex flex-wrap gap-2">
+              <div className="no-scrollbar -mx-4 mb-6 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
                 {crews.map((crew) => (
                   <button
                     key={crew.id}
                     type="button"
                     onClick={() => selectCrew(crew.id)}
-                    className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                      selectedCrewId === crew.id
-                        ? "bg-accent text-accent-foreground"
-                        : "glass text-muted hover:text-foreground"
+                    className={`pressable flex-shrink-0 rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
+                      selectedCrewId === crew.id ? "bg-foreground text-background" : "text-foreground/80"
                     }`}
+                    style={selectedCrewId === crew.id ? undefined : { background: "var(--segment-track)" }}
                   >
                     {crew.name}
                   </button>

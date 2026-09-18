@@ -9,6 +9,8 @@ import { Avatar } from "@/features/feed/avatar";
 import { MessageForm } from "@/features/messages/message-form";
 import { MarkReadOnView } from "@/features/messages/mark-read-on-view";
 import { relativeTime } from "@/lib/format/relative-time";
+import { getMediaById, publicMediaUrl } from "@/lib/db/media";
+import { BackIcon, ChevronRightIcon } from "@/components/ui/icons";
 
 export default async function ConversationPage({
   params,
@@ -42,48 +44,83 @@ export default async function ConversationPage({
   const verified = await getConversationBetween(supabase, user.id, otherUserId);
   if (!verified || verified.id !== conversationId) notFound();
 
+  const avatarMedia = otherProfile?.avatar_media_id
+    ? await getMediaById(supabase, otherProfile.avatar_media_id).catch(() => null)
+    : null;
+  const avatarUrl = avatarMedia ? publicMediaUrl(supabase, avatarMedia.storage_path) : null;
+  const username = otherProfile?.username ?? "unknown";
+
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 py-6 sm:px-6">
+    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
       <MarkReadOnView conversationId={conversationId} />
 
-      <div className="mb-4 flex items-center gap-3 border-b border-border pb-4">
-        <Link href="/messages" className="text-sm text-muted hover:text-foreground">
-          &larr;
-        </Link>
-        <Avatar username={otherProfile?.username ?? "unknown"} />
+      {/* Messages-style header: back on the left, the other person's
+          photo and name stacked in the centre, tapping through to their
+          profile. */}
+      <div className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-border px-3 py-2">
         <Link
-          href={`/u/${otherProfile?.username ?? ""}`}
-          className="text-sm font-medium hover:underline"
+          href="/messages"
+          aria-label="Back to inbox"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-accent"
         >
-          @{otherProfile?.username ?? "unknown"}
+          <BackIcon className="h-5 w-5" />
         </Link>
+        <Link href={`/u/${username}`} className="flex flex-col items-center gap-1">
+          <Avatar username={username} avatarUrl={avatarUrl} className="h-10 w-10 text-sm" />
+          <span className="flex max-w-full items-center gap-0.5 truncate text-[0.75rem] font-medium">
+            {otherProfile?.display_name || username}
+            <ChevronRightIcon className="h-3 w-3 flex-shrink-0 text-muted" />
+          </span>
+        </Link>
+        <span />
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto py-2">
+      <div className="flex flex-1 flex-col px-3 py-4">
         {messages.length === 0 ? (
-          <p className="text-sm text-muted">No messages yet. Say hi.</p>
+          <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
+            <Avatar username={username} avatarUrl={avatarUrl} className="h-20 w-20 text-3xl" />
+            <p className="mt-3 text-[1.0625rem] font-semibold">{otherProfile?.display_name || username}</p>
+            <p className="mt-1 text-[0.875rem] text-muted">Say hi to start the conversation.</p>
+          </div>
         ) : (
-          messages.map((message) => {
+          messages.map((message, i) => {
             const isMine = message.sender_id === user.id;
+            const prev = messages[i - 1];
+            const next = messages[i + 1];
+            const time = new Date(message.created_at).getTime();
+            // A timestamp separator whenever an hour or more passed —
+            // iMessage's rhythm, instead of a time on every bubble.
+            const showTime = !prev || time - new Date(prev.created_at).getTime() > 60 * 60 * 1000;
+            const sameSenderAsPrev = prev && prev.sender_id === message.sender_id && !showTime;
+            const lastInRun =
+              !next ||
+              next.sender_id !== message.sender_id ||
+              new Date(next.created_at).getTime() - time > 60 * 60 * 1000;
+
             return (
-              <div
-                key={message.id}
-                className={`flex ${isMine ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${
-                    isMine
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-surface text-foreground"
-                  }`}
-                >
-                  <p className="whitespace-pre-wrap">{message.body}</p>
+              <div key={message.id}>
+                {showTime && (
                   <p
-                    className={`mt-0.5 text-[10px] ${isMine ? "text-accent-foreground/70" : "text-muted"}`}
+                    className="mb-2 mt-4 text-center text-[0.6875rem] font-medium text-muted first:mt-0"
                     suppressHydrationWarning
                   >
                     {relativeTime(message.created_at)}
                   </p>
+                )}
+                <div
+                  className={`flex ${isMine ? "justify-end" : "justify-start"} ${
+                    sameSenderAsPrev ? "mt-0.5" : "mt-2"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[78%] rounded-[20px] px-3.5 py-2 text-[0.9375rem] leading-snug ${
+                      isMine
+                        ? `bg-accent text-accent-foreground ${lastInRun ? "rounded-br-[6px]" : ""}`
+                        : `bg-foreground/[0.09] text-foreground ${lastInRun ? "rounded-bl-[6px]" : ""}`
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                  </div>
                 </div>
               </div>
             );
@@ -91,7 +128,7 @@ export default async function ConversationPage({
         )}
       </div>
 
-      <div className="mt-2 border-t border-border pt-4">
+      <div className="border-t border-border px-3 py-2.5">
         <MessageForm conversationId={conversationId} />
       </div>
     </div>

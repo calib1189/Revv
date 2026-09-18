@@ -7,8 +7,11 @@ import { searchProfilesByUsername, getProfilesByIds } from "@/lib/db/profiles";
 import { searchPosts } from "@/lib/db/posts";
 import { listPostMediaForPosts } from "@/lib/db/post-media";
 import { publicMediaUrl } from "@/lib/db/media";
-import { Avatar } from "@/features/feed/avatar";
-import { SearchIcon, PlayIcon } from "@/components/ui/icons";
+import { PeopleList } from "@/features/profile/people-list";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
+import { SearchIcon, PlayIcon, CloseIcon } from "@/components/ui/icons";
 import type { Profile } from "@/lib/db/profiles";
 
 interface PostResult {
@@ -77,80 +80,72 @@ export function SearchPanel() {
 
   return (
     <div>
-      <div className="glass-inset flex items-center gap-2 rounded-full px-4 py-2.5">
-        <SearchIcon className="h-4 w-4 flex-shrink-0 text-muted" />
+      {/* iOS search field: a tinted rounded rectangle, glyph inside,
+          clear button once there's text. */}
+      <div
+        className="flex h-11 items-center gap-2 rounded-[12px] px-3"
+        style={{ background: "var(--segment-track)" }}
+      >
+        <SearchIcon className="h-[18px] w-[18px] flex-shrink-0 text-muted" />
         <input
-          type="text"
+          type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search accounts, cars, #hashtags…"
+          placeholder="Accounts, cars, #hashtags"
           autoFocus
-          className="w-full bg-transparent text-sm text-foreground placeholder:text-muted focus:outline-none"
+          aria-label="Search"
+          className="w-full bg-transparent text-foreground placeholder:text-muted focus:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label="Clear search"
+            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted/60 text-background"
+          >
+            <CloseIcon className="h-3 w-3" />
+          </button>
+        )}
       </div>
+
+      {!trimmedQuery && (
+        <EmptyState
+          icon={<SearchIcon />}
+          title="Search SORZA"
+          body="Find builders by username, or posts by car, caption, or #hashtag."
+        />
+      )}
 
       {trimmedQuery && (
         <>
-          <div className="glass mt-4 inline-flex rounded-full p-1">
-            <button
-              type="button"
-              onClick={() => setTab("accounts")}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                tab === "accounts"
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              Accounts{hasSearched ? ` (${profiles.length})` : ""}
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("posts")}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                tab === "posts"
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              Posts{hasSearched ? ` (${posts.length})` : ""}
-            </button>
-          </div>
+          <SegmentedControl
+            className="mt-4"
+            options={[
+              { value: "accounts", label: hasSearched ? `Accounts · ${profiles.length}` : "Accounts" },
+              { value: "posts", label: hasSearched ? `Posts · ${posts.length}` : "Posts" },
+            ]}
+            value={tab}
+            onChange={setTab}
+          />
 
-          <div className="mt-4">
+          <div className="mt-5">
             {isSearching ? (
-              <p className="text-sm text-muted">Searching…</p>
+              <div className="flex justify-center py-12">
+                <Spinner className="h-5 w-5 text-muted" />
+              </div>
             ) : tab === "accounts" ? (
               profiles.length > 0 ? (
-                <ul className="flex flex-col divide-y divide-border">
-                  {profiles.map((profile) => (
-                    <li key={profile.id}>
-                      <Link
-                        href={`/u/${profile.username}`}
-                        className="flex items-center gap-3 py-3 hover:opacity-80"
-                      >
-                        <Avatar username={profile.username} />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">@{profile.username}</p>
-                          {profile.bio && (
-                            <p className="truncate text-xs text-muted">{profile.bio}</p>
-                          )}
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <PeopleList profiles={profiles} />
               ) : hasSearched ? (
-                <p className="text-sm text-muted">
-                  No accounts found for &ldquo;{trimmedQuery}&rdquo;.
-                </p>
+                <EmptyState title="No accounts" body={`Nothing matches “${trimmedQuery}”.`} />
               ) : null
             ) : posts.length > 0 ? (
-              <div className="grid grid-cols-3 gap-1">
+              <div className="grid grid-cols-3 gap-[3px] overflow-hidden rounded-[16px]">
                 {posts.map((post) => (
                   <Link
                     key={post.id}
                     href={`/p/${post.id}`}
-                    className="group relative aspect-[3/4] overflow-hidden rounded-md bg-surface"
+                    className="group relative aspect-[3/4] overflow-hidden bg-surface"
                   >
                     {post.thumbnailUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- small grid thumbnail, next/image fill overhead isn't worth it here
@@ -172,9 +167,7 @@ export function SearchPanel() {
                 ))}
               </div>
             ) : hasSearched ? (
-              <p className="text-sm text-muted">
-                No posts found for &ldquo;{trimmedQuery}&rdquo;.
-              </p>
+              <EmptyState title="No posts" body={`Nothing matches “${trimmedQuery}”.`} />
             ) : null}
           </div>
         </>

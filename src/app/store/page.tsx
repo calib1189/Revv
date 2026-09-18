@@ -52,7 +52,7 @@ export default async function StorePage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+    <div className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
       <StoreTabs
         initialBalance={balance}
         initialOwnedItemIds={ownedItemIds}

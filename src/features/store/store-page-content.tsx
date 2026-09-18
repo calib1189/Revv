@@ -5,7 +5,6 @@ import {
   type StoreItem,
 } from "@/lib/store/catalog";
 import { GemIcon, CheckIcon, StarIcon } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
 
 /** Which of the three visual treatments a category's items use — every
  * shop's categories fall into one of these, whether it's a profile
@@ -33,12 +32,15 @@ const CATEGORY_KIND: Record<StoreCategory, "text" | "background" | "ring"> = {
 function ItemPreview({ item, previewLabel }: { item: StoreItem; previewLabel: string }) {
   const kind = CATEGORY_KIND[item.category];
 
+  // Text previews sit on a fixed near-black stage in both themes — name
+  // colours are designed to be seen on the dark app surfaces, and
+  // several (silver, chrome, white) vanish on a light card.
   if (kind === "text") {
     const isGradient = item.value.includes("gradient");
     return (
-      <div className="flex h-16 items-center justify-center rounded-xl bg-surface">
+      <div className="flex aspect-[4/3] items-center justify-center rounded-[16px] bg-neutral-900">
         <span
-          className={`truncate px-2 text-lg font-bold ${isGradient ? "bg-clip-text text-transparent" : ""} ${item.effectClassName ?? ""}`}
+          className={`truncate px-3 text-[1.25rem] font-bold tracking-[-0.01em] ${isGradient ? "bg-clip-text text-transparent" : ""} ${item.effectClassName ?? ""}`}
           style={isGradient ? { backgroundImage: item.value } : { color: item.value }}
         >
           {previewLabel}
@@ -50,16 +52,16 @@ function ItemPreview({ item, previewLabel }: { item: StoreItem; previewLabel: st
   if (kind === "background") {
     return (
       <div
-        className={`h-16 rounded-xl ${item.effectClassName ?? ""}`}
+        className={`aspect-[4/3] rounded-[16px] ${item.effectClassName ?? ""}`}
         style={{ backgroundImage: item.value }}
       />
     );
   }
 
   return (
-    <div className="flex h-16 items-center justify-center rounded-xl bg-surface">
-      <span className={`flex h-9 w-9 items-center justify-center rounded-full bg-accent/15 ${item.value}`}>
-        <StarIcon className="h-5 w-5 text-accent" />
+    <div className="flex aspect-[4/3] items-center justify-center rounded-[16px] bg-neutral-900">
+      <span className={`flex h-12 w-12 items-center justify-center rounded-full bg-white/10 ${item.value}`}>
+        <StarIcon className="h-6 w-6 text-[#f0cd6e]" />
       </span>
     </div>
   );
@@ -84,51 +86,51 @@ function StoreItemCard({
   onBuy: () => void;
   onEquip: () => void;
 }) {
+  // App Store "Get" capsule: grey pill, accent label. Equipped flips to
+  // a solid accent pill with a check.
+  const capsule =
+    "pressable flex h-[30px] min-w-[76px] items-center justify-center gap-1 rounded-full px-3.5 text-[0.8125rem] font-bold disabled:opacity-50";
+
   return (
-    <div
-      className={`glass flex flex-col gap-3 rounded-2xl p-3 transition-all duration-200 ${
-        equipped ? "ring-1 ring-inset ring-accent/60" : ""
-      }`}
-    >
-      <ItemPreview item={item} previewLabel={previewLabel} />
-      <div>
-        <p className="truncate text-sm font-semibold">{item.name}</p>
-        {!owned && (
-          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
-            <GemIcon className="h-3.5 w-3.5 text-accent" />
-            {item.price}
-          </p>
+    <div className="flex w-[44vw] max-w-[200px] flex-shrink-0 snap-start flex-col sm:w-auto sm:max-w-none">
+      <div className={`rounded-[18px] transition-shadow ${equipped ? "ring-2 ring-accent ring-offset-2 ring-offset-background" : ""}`}>
+        <ItemPreview item={item} previewLabel={previewLabel} />
+      </div>
+      <div className="mt-2.5 flex items-center justify-between gap-2">
+        <p className="min-w-0 truncate text-[0.875rem] font-semibold">{item.name}</p>
+      </div>
+      <div className="mt-2">
+        {owned ? (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={onEquip}
+            className={`${capsule} ${equipped ? "bg-accent text-accent-foreground" : "text-accent"}`}
+            style={equipped ? undefined : { background: "var(--segment-track)" }}
+          >
+            {equipped ? (
+              <>
+                <CheckIcon className="h-3.5 w-3.5" />
+                On
+              </>
+            ) : (
+              "Equip"
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={isPending || !canAfford}
+            onClick={onBuy}
+            aria-label={`Buy ${item.name} for ${item.price} points`}
+            className={`${capsule} text-accent`}
+            style={{ background: "var(--segment-track)" }}
+          >
+            <GemIcon className="h-3.5 w-3.5" />
+            <span className="numeral">{item.price}</span>
+          </button>
         )}
       </div>
-
-      {owned ? (
-        <Button
-          type="button"
-          variant={equipped ? "primary" : "secondary"}
-          disabled={isPending}
-          onClick={onEquip}
-          className="w-full justify-center py-1.5 text-xs"
-        >
-          {equipped ? (
-            <span className="flex items-center gap-1">
-              <CheckIcon className="h-3.5 w-3.5" />
-              Equipped
-            </span>
-          ) : (
-            "Equip"
-          )}
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={isPending || !canAfford}
-          onClick={onBuy}
-          className="w-full justify-center py-1.5 text-xs"
-        >
-          {canAfford ? "Buy" : "Not enough"}
-        </Button>
-      )}
     </div>
   );
 }
@@ -171,23 +173,18 @@ export function StorePageContent({
 }) {
   return (
     <div>
-      <div className="glass-raised flex items-center justify-between rounded-3xl p-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          <p className="mt-1 text-sm text-muted">{subtitle}</p>
-        </div>
-        <div className="flex flex-shrink-0 items-center gap-2 rounded-full bg-surface-raised px-4 py-2">
-          <GemIcon className="h-5 w-5 text-accent" />
-          <span className="text-xl font-bold tabular-nums">{balance}</span>
-        </div>
-      </div>
+      <p className="px-1 text-[0.9375rem] leading-relaxed text-muted" aria-label={title}>
+        {subtitle}
+      </p>
 
       {categories.map((category) => (
         <section key={category} className="mt-8">
-          <h2 className="text-lg font-semibold tracking-tight">
+          <h2 className="mb-3 px-1 text-[1.375rem] font-bold tracking-[-0.02em]">
             {STORE_CATEGORY_LABELS[category]}
           </h2>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {/* A swipeable shelf on phones (App Store style), a grid once
+              there's room for one. */}
+          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 lg:grid-cols-4">
             {listStoreItemsByCategory(category, { includeFounderOnly: isFounder }).map((item) => (
               <StoreItemCard
                 key={item.id}

@@ -2,79 +2,60 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Avatar } from "@/features/feed/avatar";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
+import { UsersIcon } from "@/components/ui/icons";
+import { PeopleList } from "@/features/profile/people-list";
 import type { Profile } from "@/lib/db/profiles";
 
 export function FriendsTabs({
   following,
   followers,
+  avatarUrlById,
 }: {
   following: Profile[];
   followers: Profile[];
+  avatarUrlById?: Record<string, string | null>;
 }) {
   const [tab, setTab] = useState<"following" | "followers">("following");
   const list = tab === "following" ? following : followers;
 
   return (
     <div>
-      <div className="glass mb-4 inline-flex rounded-full p-1">
-        <button
-          type="button"
-          onClick={() => setTab("following")}
-          className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-            tab === "following"
-              ? "bg-accent text-accent-foreground"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          Following ({following.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("followers")}
-          className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-            tab === "followers"
-              ? "bg-accent text-accent-foreground"
-              : "text-muted hover:text-foreground"
-          }`}
-        >
-          Followers ({followers.length})
-        </button>
-      </div>
+      <SegmentedControl
+        className="mb-5"
+        options={[
+          { value: "following", label: `Following · ${following.length}` },
+          { value: "followers", label: `Followers · ${followers.length}` },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
-      {list.length === 0 ? (
-        <div className="glass flex flex-col items-center justify-center gap-2 rounded-2xl py-16 text-center">
-          <p className="text-sm text-muted">
-            {tab === "following"
-              ? "You're not following anyone yet."
-              : "No one follows you yet."}
-          </p>
-          {tab === "following" && (
-            <Link href="/search" className="text-sm text-accent hover:underline">
-              Find people to follow
-            </Link>
-          )}
-        </div>
-      ) : (
-        <ul className="flex flex-col divide-y divide-border">
-          {list.map((profile) => (
-            <li key={profile.id}>
-              <Link
-                href={`/u/${profile.username}`}
-                className="flex items-center gap-3 py-3 hover:opacity-80"
-              >
-                <Avatar username={profile.username} />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">@{profile.username}</p>
-                  {profile.bio && (
-                    <p className="truncate text-xs text-muted">{profile.bio}</p>
-                  )}
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div key={tab} className="animate-tab-content-in">
+        {list.length === 0 ? (
+          <EmptyState
+            card
+            icon={<UsersIcon />}
+            title={tab === "following" ? "Not following anyone yet" : "No followers yet"}
+            body={
+              tab === "following"
+                ? "Find builders you like and follow them to fill your feed."
+                : "Post your build and people will find you."
+            }
+            action={
+              tab === "following" ? (
+                <Link href="/search">
+                  <Button className="px-5">Find people</Button>
+                </Link>
+              ) : undefined
+            }
+          />
+        ) : (
+          <PeopleList profiles={list} avatarUrlById={avatarUrlById} />
+        )}
+      </div>
     </div>
   );
 }
