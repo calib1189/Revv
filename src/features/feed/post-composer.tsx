@@ -15,9 +15,18 @@ import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { RowIcon } from "@/components/ui/grouped-list";
 import { SoundPickerSheet } from "@/features/sounds/sound-picker-sheet";
+import { SoundTrimSheet } from "@/features/sounds/sound-trim-sheet";
+import { SOUND_CLIP_MS } from "@/lib/validation/sound";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Crew } from "@/lib/db/crews";
 import type { Sound } from "@/lib/db/sounds";
+
+function formatClock(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 interface SelectedPhoto {
   file: File;
@@ -57,6 +66,8 @@ export function PostComposer({
   onCrewIdChange,
   sound,
   onSoundChange,
+  soundStartMs,
+  onSoundStartMsChange,
   onBack,
   onRemovePhoto,
   onSubmit,
@@ -78,6 +89,10 @@ export function PostComposer({
   onCrewIdChange: (value: string) => void;
   sound: Sound | null;
   onSoundChange: (sound: Sound | null) => void;
+  /** Where in `sound` playback starts — the part picked in the trim
+   * sheet below. Meaningless while `sound` is null. */
+  soundStartMs: number;
+  onSoundStartMsChange: (startMs: number) => void;
   onBack: () => void;
   onRemovePhoto: (index: number) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -85,6 +100,7 @@ export function PostComposer({
   error: string | null;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [trimOpen, setTrimOpen] = useState(false);
   const hashtagChips = parseHashtags(hashtags);
   // Starts muted so the background preview can autoplay the instant this
   // screen mounts — unmuted autoplay without a fresh tap gets blocked on
@@ -282,12 +298,17 @@ export function PostComposer({
                 <RowIcon color="#ff375f">
                   <MusicIcon />
                 </RowIcon>
-                <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => setTrimOpen(true)}
+                  className="min-w-0 flex-1 text-left"
+                >
                   <p className="truncate text-[0.9375rem] font-medium">{sound.title}</p>
-                  {sound.artist_name && (
-                    <p className="truncate text-[0.8125rem] text-muted">{sound.artist_name}</p>
-                  )}
-                </div>
+                  <p className="truncate text-[0.8125rem] text-muted">
+                    {sound.artist_name ? `${sound.artist_name} · ` : ""}
+                    {formatClock(soundStartMs)}–{formatClock(Math.min(sound.duration_ms, soundStartMs + SOUND_CLIP_MS))}
+                  </p>
+                </button>
                 <button
                   type="button"
                   onClick={() => onSoundChange(null)}
@@ -342,8 +363,24 @@ export function PostComposer({
           onSelect={(selected) => {
             onSoundChange(selected);
             setPickerOpen(false);
+            // Straight into picking the part — mirrors the picker: no
+            // reason to make someone find their way back to a "choose
+            // this part" affordance right after they just chose a sound.
+            setTrimOpen(true);
           }}
           onClose={() => setPickerOpen(false)}
+        />
+      )}
+
+      {trimOpen && sound && (
+        <SoundTrimSheet
+          sound={sound}
+          initialStartMs={soundStartMs}
+          onConfirm={(startMs) => {
+            onSoundStartMsChange(startMs);
+            setTrimOpen(false);
+          }}
+          onClose={() => setTrimOpen(false)}
         />
       )}
     </div>

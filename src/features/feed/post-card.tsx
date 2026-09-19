@@ -29,6 +29,9 @@ export interface PostCardData {
   /** Only meaningful for a photo post — a video's own native audio plays
    * as normal instead; see swipe-slide.tsx's PhotoMedia/VideoMedia split. */
   soundUrl: string | null;
+  /** Where in that sound to start — the part the poster picked in the
+   * composer's trim sheet. 0 when there's no attached sound. */
+  soundStartMs: number;
   /** The author's single best build score across all their vehicles —
    * same source as the rank ring on their profile page, not just
    * whichever vehicle (if any) is tagged on this specific post. */

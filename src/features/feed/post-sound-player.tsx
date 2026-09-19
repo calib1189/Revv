@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { VolumeIcon } from "@/components/ui/icons";
+import { useSoundSegment } from "@/features/feed/use-sound-segment";
 
 /** A photo post's attached sound, played on the single-post page — the
  * page's only source of audio, since a video's own native track plays
  * unchanged (see swipe-slide.tsx's identical split). Autoplays on
  * mount, since the whole card is already the page's primary content
- * rather than something scrolled into view.
+ * rather than something scrolled into view. Loops just the poster's
+ * chosen SOUND_CLIP_MS window starting at `startMs`, not the whole file
+ * — see use-sound-segment.ts.
  *
  * Browsers refuse to autoplay *audible* media outside a real user
  * gesture — a plain `.play()` call on mount doesn't count on iOS Safari
@@ -16,10 +19,12 @@ import { VolumeIcon } from "@/components/ui/icons";
  * muted playback (always allowed) and shows a persistent tap-to-unmute
  * button, which — because it runs inside a real click handler — browsers
  * do honor. */
-export function PostSoundPlayer({ url }: { url: string }) {
+export function PostSoundPlayer({ url, startMs }: { url: string; startMs: number }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+
+  useSoundSegment(audioRef, startMs);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -47,7 +52,7 @@ export function PostSoundPlayer({ url }: { url: string }) {
 
   return (
     <>
-      <audio ref={audioRef} src={url} loop muted={isMuted} />
+      <audio ref={audioRef} src={url} muted={isMuted} />
       <button
         type="button"
         onClick={toggleMute}

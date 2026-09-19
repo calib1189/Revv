@@ -393,6 +393,7 @@ export interface Database {
           build_id: string | null;
           crew_id: string | null;
           sound_id: string | null;
+          sound_start_ms: number;
           post_type: "photo" | "video";
           caption: string | null;
           created_at: string;
@@ -404,6 +405,7 @@ export interface Database {
           build_id?: string | null;
           crew_id?: string | null;
           sound_id?: string | null;
+          sound_start_ms?: number;
           post_type?: "photo" | "video";
           caption?: string | null;
           created_at?: string;

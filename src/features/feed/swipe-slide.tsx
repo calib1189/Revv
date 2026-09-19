@@ -12,6 +12,7 @@ import { CaptionText } from "@/features/feed/caption-text";
 import { recordViewAction, recordViewCompletionAction, recordShareAction } from "@/features/feed/actions";
 import { usePostLike } from "@/features/feed/use-post-like";
 import { useDoubleTap } from "@/features/feed/use-double-tap";
+import { useSoundSegment } from "@/features/feed/use-sound-segment";
 import { CommentIcon, EyeIcon, HeartIcon, MusicIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon, VolumeIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { SITE_URL } from "@/lib/site-url";
@@ -203,16 +204,26 @@ function PhotoMedia({
   urls,
   shouldLoad,
   soundUrl,
+  soundStartMs,
 }: {
   urls: string[];
   shouldLoad: boolean;
   soundUrl: string | null;
+  /** Where in the attached sound to start — the part the poster picked
+   * in the composer's trim sheet, not necessarily the top of the file. */
+  soundStartMs: number;
 }) {
   const [index, setIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+
+  // Loops just the chosen SOUND_CLIP_MS window, not the whole file — see
+  // use-sound-segment.ts. Requires the `loop` attribute to stay off the
+  // element itself (below), or the browser's own whole-file loop would
+  // fight this.
+  useSoundSegment(audioRef, soundStartMs);
 
   function handleScroll() {
     const el = containerRef.current;
@@ -263,7 +274,7 @@ function PhotoMedia({
 
   return (
     <div className="absolute inset-0">
-      {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} loop muted={isMuted} />}
+      {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} muted={isMuted} />}
       <div
         ref={containerRef}
         onScroll={handleScroll}
@@ -397,6 +408,7 @@ export function SwipeSlide({
             urls={data.media.map((m) => m.url)}
             shouldLoad={shouldLoadMedia}
             soundUrl={data.soundUrl}
+            soundStartMs={data.soundStartMs}
           />
         ))}
 

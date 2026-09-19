@@ -15,6 +15,7 @@ import {
 } from "@/lib/validation/media";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { validateCaption, validatePhotoCount } from "@/lib/validation/post";
+import { clampSoundStartMs } from "@/lib/validation/sound";
 import { trackEvent } from "@/lib/analytics/track";
 import { moderateMediaAction } from "@/features/moderation/actions";
 import { captureVideoFrame } from "@/features/moderation/capture-video-frame";
@@ -158,12 +159,22 @@ export function ComposePostForm({
   const [vehicleId, setVehicleId] = useState("");
   const [crewId, setCrewId] = useState("");
   const [sound, setSound] = useState<Sound | null>(initialSound);
+  const [soundStartMs, setSoundStartMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const mode: "photo" | "video" | null = video ? "video" : photos.length > 0 ? "photo" : null;
+
+  // A previously-chosen trim point is meaningless for a different (or no)
+  // sound, so every real sound change — a new pick or removing it —
+  // resets back to the start rather than silently carrying an offset
+  // that belongs to a different track.
+  function handleSoundChange(next: Sound | null) {
+    setSound(next);
+    setSoundStartMs(0);
+  }
 
   function clearVideo() {
     if (video) URL.revokeObjectURL(video.previewUrl);
@@ -343,6 +354,7 @@ export function ComposePostForm({
         vehicle_id: vehicleId || null,
         crew_id: crewId || null,
         sound_id: sound?.id || null,
+        sound_start_ms: sound ? clampSoundStartMs(soundStartMs, sound.duration_ms) : 0,
         post_type: mode!,
         caption: finalCaption || null,
       });
@@ -431,7 +443,9 @@ export function ComposePostForm({
           crewId={crewId}
           onCrewIdChange={setCrewId}
           sound={sound}
-          onSoundChange={setSound}
+          onSoundChange={handleSoundChange}
+          soundStartMs={soundStartMs}
+          onSoundStartMsChange={setSoundStartMs}
           onBack={() => setStep("camera")}
           onRemovePhoto={removePhoto}
           onSubmit={handleSubmit}

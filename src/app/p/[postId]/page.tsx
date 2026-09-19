@@ -13,6 +13,7 @@ import { getViewCount, recordPostView } from "@/lib/db/post-views";
 import { listCommentsByPost } from "@/lib/db/comments";
 import { getBestRatingScoresByOwnerIds } from "@/lib/rating/best-build-scores";
 import { getSoundById, publicSoundUrl } from "@/lib/db/sounds";
+import { clampSoundStartMs } from "@/lib/validation/sound";
 import { Avatar } from "@/features/feed/avatar";
 import { CaptionText } from "@/features/feed/caption-text";
 import { EyeIcon, MusicIcon } from "@/components/ui/icons";
@@ -59,6 +60,7 @@ export default async function PostPage({
   // own native track plays unchanged (same split as swipe-slide.tsx).
   // The attribution chip below still shows for either post type.
   const soundUrl = sound && post.post_type === "photo" ? publicSoundUrl(supabase, sound.storage_path) : null;
+  const soundStartMs = sound ? clampSoundStartMs(post.sound_start_ms, sound.duration_ms) : 0;
 
   if (user) {
     try {
@@ -198,7 +200,7 @@ export default async function PostPage({
           />
         ) : (
           <div className="relative">
-            {soundUrl && <PostSoundPlayer url={soundUrl} />}
+            {soundUrl && <PostSoundPlayer url={soundUrl} startMs={soundStartMs} />}
             <PostPhotoView
               postId={post.id}
               photos={photosWithHotspots}

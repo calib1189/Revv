@@ -11,6 +11,7 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { listVehiclesByOwnerIds } from "@/lib/db/vehicles";
 import { getSoundsByIds, publicSoundUrl } from "@/lib/db/sounds";
+import { clampSoundStartMs } from "@/lib/validation/sound";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Profile } from "@/lib/db/profiles";
 import type { PostCardData, PostMediaItem } from "@/features/feed/post-card";
@@ -134,6 +135,10 @@ export async function composePostCards(
       soundId: post.sound_id,
       soundTitle: sound?.title ?? null,
       soundUrl: sound ? publicSoundUrl(supabase, sound.storage_path) : null,
+      // Defensively re-clamped against the sound's real length, not just
+      // trusted as stored — belt-and-suspenders alongside createPost's
+      // own clamp at write time.
+      soundStartMs: sound ? clampSoundStartMs(post.sound_start_ms, sound.duration_ms) : 0,
       authorBestRatingScore: bestScoreByAuthor.get(post.author_id) ?? null,
       media: mediaByPost.get(post.id) ?? [],
       likeCount: likeCounts.get(post.id) ?? 0,
