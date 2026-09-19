@@ -12,12 +12,14 @@ import { getSavedPostIds } from "@/lib/db/saves";
 import { getViewCount, recordPostView } from "@/lib/db/post-views";
 import { listCommentsByPost } from "@/lib/db/comments";
 import { getBestRatingScoresByOwnerIds } from "@/lib/rating/best-build-scores";
+import { getSoundById, publicSoundUrl } from "@/lib/db/sounds";
 import { Avatar } from "@/features/feed/avatar";
 import { CaptionText } from "@/features/feed/caption-text";
-import { EyeIcon } from "@/components/ui/icons";
+import { EyeIcon, MusicIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { VideoPlayer } from "@/features/feed/video-player";
 import { PostPhotoView } from "@/features/feed/post-photo-view";
+import { PostSoundPlayer } from "@/features/feed/post-sound-player";
 import { listHotspotsForMedia } from "@/lib/db/hotspots";
 import { getActiveBuild } from "@/lib/db/builds";
 import { listBuildParts } from "@/lib/db/build-parts";
@@ -45,13 +47,18 @@ export default async function PostPage({
   ]);
   if (!post) notFound();
 
-  const [author, vehicle, postMedia, likeCount, comments] = await Promise.all([
+  const [author, vehicle, postMedia, likeCount, comments, sound] = await Promise.all([
     getProfileByUserId(supabase, post.author_id),
     post.vehicle_id ? getVehicleById(supabase, post.vehicle_id) : null,
     listPostMediaForPosts(supabase, [post.id]),
     getLikeCount(supabase, post.id),
     listCommentsByPost(supabase, post.id),
+    post.sound_id ? getSoundById(supabase, post.sound_id) : null,
   ]);
+  // Only a photo post actually needs the audio played here — a video's
+  // own native track plays unchanged (same split as swipe-slide.tsx).
+  // The attribution chip below still shows for either post type.
+  const soundUrl = sound && post.post_type === "photo" ? publicSoundUrl(supabase, sound.storage_path) : null;
 
   if (user) {
     try {
@@ -168,6 +175,15 @@ export default async function PostPage({
                 {vehicleTitle}
               </Link>
             )}
+            {sound && (
+              <Link
+                href={`/sounds/${sound.id}`}
+                className="flex items-center gap-1 truncate text-[0.8125rem] text-muted hover:text-foreground"
+              >
+                <MusicIcon className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">{sound.title}</span>
+              </Link>
+            )}
           </div>
           <span className="flex-shrink-0 text-[0.8125rem] text-muted" suppressHydrationWarning>
             {relativeTime(post.created_at)}
@@ -181,13 +197,16 @@ export default async function PostPage({
             height={postMedia[0].media.height}
           />
         ) : (
-          <PostPhotoView
-            postId={post.id}
-            photos={photosWithHotspots}
-            isOwner={isOwner}
-            canTag={isOwner && Boolean(vehicle)}
-            availableParts={buildParts}
-          />
+          <div className="relative">
+            {soundUrl && <PostSoundPlayer url={soundUrl} />}
+            <PostPhotoView
+              postId={post.id}
+              photos={photosWithHotspots}
+              isOwner={isOwner}
+              canTag={isOwner && Boolean(vehicle)}
+              availableParts={buildParts}
+            />
+          </div>
         )}
 
         <div className="flex items-center gap-4 px-4 pt-3.5">
