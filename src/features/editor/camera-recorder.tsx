@@ -13,6 +13,7 @@ import {
   SettingsIcon,
 } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
+import { StudioAction, STUDIO_ACCENT } from "@/features/editor/studio-ui";
 
 /** Exposure/white-balance/focus manual control and torch are all part of
  * the same still-non-standard, inconsistently-implemented MediaTrackConstraints
@@ -693,8 +694,10 @@ export function CameraRecorder({
   // chrome uses fixed dark-glass values rather than the theme tokens —
   // the settings sheet previously used .glass-raised (theme-following)
   // with white text, which went white-on-white in light mode.
+  // Same surface the editors' chrome uses, so moving from the camera
+  // into the editor doesn't change what a button looks like.
   const chromeButton =
-    "pressable flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl disabled:opacity-40";
+    "pressable flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-xl disabled:opacity-40";
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col overflow-hidden bg-black">
@@ -842,18 +845,12 @@ export function CameraRecorder({
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="animate-sheet-up max-h-[78vh] overflow-y-auto rounded-t-[28px] bg-[#1c1c1e]/95 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-2.5 text-white backdrop-blur-2xl"
+            className="animate-sheet-up max-h-[78vh] overflow-y-auto rounded-t-[28px] bg-[#0d0d0f]/92 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-2.5 text-white ring-1 ring-white/10 backdrop-blur-2xl"
           >
             <div className="mx-auto mb-3 h-[5px] w-9 rounded-full bg-white/25" />
             <div className="mb-5 flex items-center justify-between px-1">
               <h2 className="text-[1.25rem] font-bold tracking-[-0.02em]">Camera</h2>
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(false)}
-                className="text-[0.9375rem] font-semibold text-[#ffd60a]"
-              >
-                Done
-              </button>
+              <StudioAction onClick={() => setIsSettingsOpen(false)}>Done</StudioAction>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -1010,7 +1007,7 @@ export function CameraRecorder({
                 type="button"
                 onClick={onImportRequested}
                 aria-label="Choose from your library"
-                className="pressable flex h-12 w-12 items-center justify-center rounded-[12px] bg-white/15 text-white ring-2 ring-white/70 backdrop-blur-xl"
+                className="pressable flex h-12 w-12 items-center justify-center rounded-[14px] bg-white/10 text-white ring-1 ring-white/50 backdrop-blur-xl"
               >
                 <GalleryIcon className="h-5 w-5" />
               </button>
@@ -1077,7 +1074,8 @@ export function CameraRecorder({
                 type="button"
                 onClick={finishRecording}
                 aria-label="Finish recording"
-                className="pressable flex h-12 w-12 items-center justify-center rounded-full bg-[#ffd60a] text-black shadow-lg"
+                className="pressable flex h-12 w-12 items-center justify-center rounded-full text-black shadow-[0_8px_24px_-6px_rgb(255_214_10/0.6)]"
+                style={{ background: STUDIO_ACCENT }}
               >
                 <CheckIcon className="h-5 w-5" />
               </button>
@@ -1086,7 +1084,7 @@ export function CameraRecorder({
                 type="button"
                 onClick={() => setFacingMode((m) => (m === "user" ? "environment" : "user"))}
                 aria-label="Flip camera"
-                className="pressable flex h-12 w-12 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-xl"
+                className="pressable flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-xl"
               >
                 <CameraFlipIcon className="h-[22px] w-[22px]" />
               </button>
@@ -1095,7 +1093,10 @@ export function CameraRecorder({
         </div>
 
         {!error && (
-          <p className="mt-4 text-center text-[0.75rem] font-semibold uppercase tracking-[0.12em] text-[#ffd60a]">
+          <p
+            className="mt-4 text-center text-[0.75rem] font-semibold uppercase tracking-[0.12em]"
+            style={{ color: STUDIO_ACCENT }}
+          >
             {isRecording ? "Recording" : hasSession ? "Tap to resume" : "Tap photo · Hold video"}
           </p>
         )}
