@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
+import { getProfileByUserId } from "@/lib/db/profiles";
 import { listTopRatedBuilds } from "@/lib/db/builds";
 import {
   listVehicleIdsByCategory,
@@ -11,6 +12,8 @@ import {
 import { listFollowingIds } from "@/lib/db/follows";
 import { listCrewIdsForUser, listApprovedMembersForCrews } from "@/lib/db/crew-members";
 import { composeLeaderboard } from "@/lib/leaderboard/compose-leaderboard";
+import { rankForScore, RANK_AMBIENT_COLORS } from "@/lib/rating/rank";
+import { ViewerStandingCard } from "@/features/leaderboard/viewer-standing-card";
 import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
 import { LeaderboardHeroCard, LeaderboardRunnerUpCard } from "@/features/leaderboard/leaderboard-hero-card";
 import { SegmentedLinks, FilterChips } from "@/components/ui/segmented-links";
@@ -103,8 +106,33 @@ export async function LeaderboardPageContent({
   const runnersUp = entries.slice(1, 3);
   const rest = entries.slice(3);
 
+  // Where the viewer's own best build sits, so the first thing they look
+  // for is the first thing the page answers. Matched on username because
+  // that's the owner identity a composed entry carries.
+  const viewerProfile = currentUser ? await getProfileByUserId(supabase, currentUser.id) : null;
+  const viewerIndex = viewerProfile
+    ? entries.findIndex((e) => e.ownerUsername === viewerProfile.username)
+    : -1;
+  const viewerEntry = viewerIndex >= 0 ? entries[viewerIndex] : null;
+
+  // The board's ambient colour is whoever currently leads it — the page
+  // literally changes mood the day someone new takes No. 1.
+  const leadTier = entries[0] ? rankForScore(entries[0].score) : null;
+
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+    <div className="relative w-full flex-1 overflow-x-clip">
+      {leadTier && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[360px]">
+          <div
+            className="ambient-fade absolute inset-0 opacity-40"
+            style={{
+              backgroundImage: `radial-gradient(120% 90% at 50% 0%, ${RANK_AMBIENT_COLORS[leadTier]}40 0%, transparent 70%)`,
+            }}
+          />
+        </div>
+      )}
+
+      <div className="relative mx-auto w-full max-w-2xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
       <header className="animate-section-rise mb-5">
         <p className="text-[0.8125rem] font-medium text-muted">
           {initialCategory ? VEHICLE_CATEGORY_LABELS[initialCategory] : "Verified builds, ranked by AI"}
@@ -134,6 +162,9 @@ export async function LeaderboardPageContent({
             })),
           ]}
         />
+        {viewerEntry && (
+          <ViewerStandingCard rank={viewerIndex + 1} entry={viewerEntry} total={entries.length} />
+        )}
       </div>
 
       {entries.length === 0 ? (
@@ -167,33 +198,43 @@ export async function LeaderboardPageContent({
             </div>
           )}
           {rest.length > 0 && (
-            <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[6.875rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
-              {rest.map((entry, i) => (
-                <LeaderboardRow
-                  key={entry.buildId}
-                  rank={i + 4}
-                  entry={entry}
-                  showCategory={!initialCategory}
-                />
-              ))}
+            <div className="mt-1">
+              <p className="micro-label mb-2 px-1 text-muted">The rest of the board</p>
+              <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[6.875rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
+                {rest.map((entry, i) => (
+                  <LeaderboardRow
+                    key={entry.buildId}
+                    rank={i + 4}
+                    entry={entry}
+                    showCategory={!initialCategory}
+                    highlight={entry.buildId === viewerEntry?.buildId}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
       )}
 
-      <section className="mt-12">
-        <SectionTitle>How ratings work</SectionTitle>
-        <RatingExplainer />
-      </section>
+      {/* Everything below is reference material about the board rather
+          than the board itself — the rule and the extra air are what keep
+          two blocks of explanatory copy from out-weighing the ranking. */}
+      <div className="mt-14 border-t border-border pt-9">
+        <section>
+          <SectionTitle>How ratings work</SectionTitle>
+          <RatingExplainer />
+        </section>
 
-      <section className="mt-10">
-        <SectionTitle>The tiers</SectionTitle>
-        <p className="mb-3 px-1 text-[0.875rem] leading-relaxed text-muted">
-          Every tier has its own look on your profile and garage. Climb from
-          Bronze to Cosmic as your build and its score grow.
-        </p>
-        <TierLadder />
-      </section>
+        <section className="mt-10">
+          <SectionTitle>The tiers</SectionTitle>
+          <p className="mb-3 px-1 text-[0.875rem] leading-relaxed text-muted">
+            Every tier has its own look on your profile and garage. Climb from
+            Bronze to Cosmic as your build and its score grow.
+          </p>
+          <TierLadder />
+        </section>
+      </div>
+      </div>
     </div>
   );
 }
