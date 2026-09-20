@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage, uploadVideo } from "@/lib/storage/upload";
@@ -167,6 +167,21 @@ export function ComposePostForm({
 
   const mode: "photo" | "video" | null = video ? "video" : photos.length > 0 ? "photo" : null;
 
+  // Every preview here is a blob: URL held open by the browser until it's
+  // explicitly revoked. Backing out of the composer with media selected
+  // used to leak all of them for the lifetime of the tab — long sessions
+  // of shooting and discarding clips added up to real memory.
+  const liveUrlsRef = useRef<string[]>([]);
+  useEffect(() => {
+    liveUrlsRef.current = [
+      ...photos.map((p) => p.previewUrl),
+      ...(video ? [video.previewUrl] : []),
+    ];
+  }, [photos, video]);
+  useEffect(() => {
+    return () => liveUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+
   // A previously-chosen trim point is meaningless for a different (or no)
   // sound, so every real sound change — a new pick or removing it —
   // resets back to the start rather than silently carrying an offset
@@ -190,26 +205,39 @@ export function ComposePostForm({
     setError(null);
     clearVideo();
     const next: SelectedPhoto[] = [...photos];
+    let rejected: string | null = null;
     for (const rawFile of Array.from(files)) {
+      // Caught at pick time rather than at publish: filling the tray past
+      // the limit and only being told once you hit Share means redoing
+      // the whole selection, and the extra previews are decoded and held
+      // in memory the entire time.
+      const countError = validatePhotoCount(next.length + 1);
+      if (countError) {
+        rejected = countError;
+        break;
+      }
       const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
       const fileError = validateImageFile(file);
       if (fileError) {
-        setError(fileError);
+        rejected = fileError;
         continue;
       }
       next.push({ file, previewUrl: URL.createObjectURL(file) });
     }
     setPhotos(next);
+    if (rejected) setError(rejected);
   }
 
   function removePhoto(index: number) {
-    setPhotos((prev) => {
-      const removedUrl = prev[index]?.previewUrl;
-      const next = prev.filter((_, i) => i !== index);
-      if (removedUrl) URL.revokeObjectURL(removedUrl);
-      if (next.length === 0) setStep("camera");
-      return next;
-    });
+    // Both the revoke and the step change used to live inside the
+    // updater, which React is free to call more than once — the revoke
+    // ran twice and the step change was a second component's state being
+    // set mid-update. Computed here instead, with the updater left pure.
+    const removedUrl = photos[index]?.previewUrl;
+    const next = photos.filter((_, i) => i !== index);
+    if (removedUrl) URL.revokeObjectURL(removedUrl);
+    setPhotos(next);
+    if (next.length === 0) setStep("camera");
   }
 
   async function handleImportFiles(files: FileList) {
@@ -263,9 +291,18 @@ export function ComposePostForm({
     }
   }
 
-  async function handleVideoEditorExported(file: File) {
+  async function handleVideoEditorExported(
+    file: File,
+    editorSound: Sound | null,
+    editorSoundStartMs: number,
+  ) {
     setVideoEditorSource(null);
     setError(null);
+    // A video's sound is chosen in the editor, where it gets mixed into
+    // the exported file itself. What comes back here is only the catalog
+    // row to credit the post to.
+    setSound(editorSound);
+    setSoundStartMs(editorSound ? editorSoundStartMs : 0);
     const fileError = validateVideoFile(file);
     if (fileError) return setError(fileError);
 
@@ -349,18 +386,16 @@ export function ComposePostForm({
       }
 
       const supabase = createClient();
-      const post = await createPost(supabase, {
-        author_id: userId,
-        vehicle_id: vehicleId || null,
-        crew_id: crewId || null,
-        sound_id: sound?.id || null,
-        sound_start_ms: sound ? clampSoundStartMs(soundStartMs, sound.duration_ms) : 0,
-        post_type: mode!,
-        caption: finalCaption || null,
-      });
 
+      // Every byte is uploaded and every media row created BEFORE the
+      // post row exists. The order used to be the other way round, which
+      // meant a failure partway through publishing — one photo of three
+      // failing to upload, the connection dropping — left a post already
+      // visible in the feed with no media attached to it and no way for
+      // the author to finish it. An upload that fails now leaves only
+      // orphaned media rows, which nothing renders.
+      const mediaIds: string[] = [];
       if (mode === "photo") {
-        let position = 0;
         for (const photo of photos) {
           const uploaded = await uploadImage(supabase, userId, photo.file);
           const media = await createMedia(supabase, {
@@ -370,8 +405,7 @@ export function ComposePostForm({
             width: uploaded.width,
             height: uploaded.height,
           });
-          await addPostMedia(supabase, post.id, media.id, position);
-          position += 1;
+          mediaIds.push(media.id);
         }
       } else if (video) {
         const uploaded = await uploadVideo(supabase, userId, video.file);
@@ -383,7 +417,21 @@ export function ComposePostForm({
           height: uploaded.height,
           duration_ms: uploaded.durationMs,
         });
-        await addPostMedia(supabase, post.id, media.id, 0);
+        mediaIds.push(media.id);
+      }
+
+      const post = await createPost(supabase, {
+        author_id: userId,
+        vehicle_id: vehicleId || null,
+        crew_id: crewId || null,
+        sound_id: sound?.id || null,
+        sound_start_ms: sound ? clampSoundStartMs(soundStartMs, sound.duration_ms) : 0,
+        post_type: mode!,
+        caption: finalCaption || null,
+      });
+
+      for (let position = 0; position < mediaIds.length; position += 1) {
+        await addPostMedia(supabase, post.id, mediaIds[position], position);
       }
 
       await trackEvent(supabase, userId, "post_created", {
@@ -457,6 +505,7 @@ export function ComposePostForm({
       {videoEditorSource && (
         <VideoEditor
           source={videoEditorSource}
+          initialSound={initialSound}
           onCancel={() => setVideoEditorSource(null)}
           onExported={handleVideoEditorExported}
         />

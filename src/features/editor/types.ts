@@ -74,6 +74,13 @@ export interface EditState {
   textLayers: TextLayer[];
   drawStrokes: DrawStroke[];
   musicFile: File | null;
+  /** Where in `musicFile` the mix starts, in milliseconds. A library
+   * sound is usually several minutes long and the part someone wants
+   * behind a 15-second clip is rarely its first 15 seconds, so both the
+   * preview and the export loop a window that begins here rather than
+   * always starting the track from zero. Meaningless while `musicFile`
+   * is null. */
+  musicStartMs: number;
   musicVolume: number;
   originalVolume: number;
   /** A narration track recorded in-app (mic only, via the Voice tool),
@@ -106,6 +113,7 @@ export const DEFAULT_EDIT_STATE: Omit<EditState, "trimStart" | "trimEnd"> = {
   textLayers: [],
   drawStrokes: [],
   musicFile: null,
+  musicStartMs: 0,
   musicVolume: 0.8,
   originalVolume: 1,
   voiceoverFile: null,

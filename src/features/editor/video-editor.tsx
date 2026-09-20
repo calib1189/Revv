@@ -37,6 +37,9 @@ import {
   MicIcon,
 } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
+import { SoundPickerSheet } from "@/features/sounds/sound-picker-sheet";
+import { fetchSoundFile } from "@/features/sounds/fetch-sound-file";
+import type { Sound } from "@/lib/db/sounds";
 
 type Tool = "trim" | "crop" | "filter" | "text" | "sticker" | "draw" | "speed" | "music" | "voice" | null;
 
@@ -70,6 +73,13 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function formatClock(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(totalSeconds / 60);
+  const sec = totalSeconds % 60;
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+}
+
 /** Re-points an already-mounted <video> element at a new source and
  * waits for its metadata to actually be ready, rather than assuming the
  * assignment takes effect synchronously. Used to swap the live preview
@@ -101,10 +111,16 @@ export function VideoEditor({
   source,
   onCancel,
   onExported,
+  initialSound = null,
 }: {
   source: File;
   onCancel: () => void;
-  onExported: (file: File) => void;
+  /** The chosen library sound rides along with the exported file: its
+   * audio is already mixed into those bytes, but the post still records
+   * which sound it was so it shows up on that sound's own page and in
+   * "use this sound". */
+  onExported: (file: File, sound: Sound | null, soundStartMs: number) => void;
+  initialSound?: Sound | null;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -133,6 +149,13 @@ export function VideoEditor({
   const [compressionStage, setCompressionStage] = useState<"idle" | "loading" | "compressing">("idle");
   const [compressionProgress, setCompressionProgress] = useState(0);
   const [isRecordingVoiceover, setIsRecordingVoiceover] = useState(false);
+  // The library sound behind this clip, kept beside EditState rather than
+  // inside it: EditState describes the edit (and musicFile already holds
+  // the audio being mixed), while this is the catalog row the finished
+  // post gets attributed to.
+  const [librarySound, setLibrarySound] = useState<Sound | null>(null);
+  const [soundPickerOpen, setSoundPickerOpen] = useState(false);
+  const [isLoadingSound, setIsLoadingSound] = useState(false);
   const voiceoverAudioRef = useRef<HTMLAudioElement>(null);
   const voiceoverUrl = useRef<string | null>(null);
   const voiceoverRecorderRef = useRef<MediaRecorder | null>(null);
@@ -296,7 +319,6 @@ export function VideoEditor({
   // precise Web Audio graph the export pass builds — close enough for
   // editing, and far simpler than duplicating that graph just to preview.
   useEffect(() => {
-    if (musicUrl.current) URL.revokeObjectURL(musicUrl.current);
     if (!state.musicFile) {
       musicUrl.current = null;
       if (musicAudioRef.current) musicAudioRef.current.src = "";
@@ -309,12 +331,45 @@ export function VideoEditor({
       musicAudioRef.current.loop = true;
       musicAudioRef.current.play().catch(() => {});
     }
-    return () => URL.revokeObjectURL(url);
+    // Revoked only here, on the way out. Revoking at the top of the
+    // effect body as well used to double-revoke the exact same URL on
+    // every change, since React runs this cleanup first.
+    return () => {
+      URL.revokeObjectURL(url);
+      if (musicUrl.current === url) musicUrl.current = null;
+    };
   }, [state.musicFile]);
 
   useEffect(() => {
     if (musicAudioRef.current) musicAudioRef.current.volume = state.musicVolume;
   }, [state.musicVolume]);
+
+  // Keeps the preview on the part of the track that will actually be
+  // mixed in. The plain <audio> element loops the whole file, so it needs
+  // hauling back to the chosen start each time it runs past the end of
+  // the window the clip is long enough to use.
+  useEffect(() => {
+    const audio = musicAudioRef.current;
+    if (!audio || !state.musicFile) return;
+    const startSeconds = state.musicStartMs / 1000;
+
+    function seekToStart() {
+      if (audio && Number.isFinite(audio.duration)) {
+        audio.currentTime = Math.min(startSeconds, audio.duration);
+      }
+    }
+    function onTimeUpdate() {
+      if (!audio) return;
+      if (audio.currentTime < startSeconds - 0.25) seekToStart();
+    }
+    seekToStart();
+    audio.addEventListener("loadedmetadata", seekToStart);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    return () => {
+      audio.removeEventListener("loadedmetadata", seekToStart);
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+    };
+  }, [state.musicStartMs, state.musicFile]);
 
   // Voiceover preview: same plain-<audio>-loop pattern as music above, so
   // a recorded narration can be played back once for a sanity check —
@@ -350,6 +405,45 @@ export function VideoEditor({
   function updateState(patch: Partial<EditState>) {
     setState((s) => ({ ...s, ...patch }));
   }
+
+  /** Attaching a library sound downloads it and treats it exactly like a
+   * track picked off the device — same mixer, same export path — so what
+   * the audience hears is baked into the clip's own audio rather than
+   * depending on a second player that video posts never had. The clip's
+   * own audio ducks to silent, matching what picking a song in any other
+   * short-video app does; the Original slider brings it back. */
+  async function chooseLibrarySound(sound: Sound) {
+    setSoundPickerOpen(false);
+    setIsLoadingSound(true);
+    setError(null);
+    try {
+      const file = await fetchSoundFile(sound);
+      setLibrarySound(sound);
+      updateState({ musicFile: file, musicStartMs: 0, originalVolume: 0 });
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      setError(`Couldn't add that sound. (${detail})`);
+    } finally {
+      setIsLoadingSound(false);
+    }
+  }
+
+  function removeMusic() {
+    setLibrarySound(null);
+    updateState({ musicFile: null, musicStartMs: 0, originalVolume: 1 });
+  }
+
+  // A sound chosen before the editor opened (arriving from a sound's own
+  // "use this sound" button) is attached as soon as the editor mounts, so
+  // it's already in place rather than needing to be picked a second time.
+  const initialSoundRef = useRef(initialSound);
+  useEffect(() => {
+    const pending = initialSoundRef.current;
+    if (!pending) return;
+    initialSoundRef.current = null;
+    void chooseLibrarySound(pending);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once for the sound the editor opened with
+  }, []);
 
   function rotateClockwise() {
     setState((s) => {
@@ -558,6 +652,7 @@ export function VideoEditor({
       state.textLayers.length === 0 &&
       state.drawStrokes.length === 0 &&
       state.musicFile === null &&
+      state.musicStartMs === baseline.musicStartMs &&
       state.musicVolume === baseline.musicVolume &&
       state.originalVolume === baseline.originalVolume &&
       state.voiceoverFile === null &&
@@ -574,7 +669,7 @@ export function VideoEditor({
     // source's resolution, so this is expected to succeed even when the
     // pass-through can't.
     if (isUnedited && source.size <= MAX_VIDEO_BYTES) {
-      onExported(source);
+      onExported(source, librarySound, state.musicStartMs);
       return;
     }
 
@@ -608,7 +703,7 @@ export function VideoEditor({
       setCompressionStage("idle");
 
       if (isUnedited) {
-        onExported(effectiveSource);
+        onExported(effectiveSource, librarySound, state.musicStartMs);
         return;
       }
 
@@ -630,7 +725,7 @@ export function VideoEditor({
     try {
       const { blob, extension } = await exportVideo(video, effectiveSource, state);
       const file = new File([blob], `sorza-clip.${extension}`, { type: blob.type });
-      onExported(file);
+      onExported(file, librarySound, state.musicStartMs);
     } catch (err) {
       // Surfaces the real underlying reason (a MediaRecorder construction
       // failure, a codec issue, decodeAudioData rejecting) instead of one
@@ -642,6 +737,12 @@ export function VideoEditor({
   }
 
   const selectedLayer = state.textLayers.find((l) => l.id === selectedTextId) ?? null;
+  // How much of a sound this clip can actually use — the trimmed length,
+  // sped up or slowed down by the chosen rate.
+  const clipDurationMs = Math.max(
+    500,
+    ((state.trimEnd - state.trimStart) / Math.max(state.playbackRate, 0.1)) * 1000,
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black">
@@ -1104,24 +1205,98 @@ export function VideoEditor({
 
         {tool === "music" && (
           <div className="flex flex-col gap-4 px-4 py-4">
-            <label className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 py-4 text-sm font-medium text-white/80">
-              <MusicIcon className="h-4 w-4" />
-              {state.musicFile ? state.musicFile.name : "Choose audio from your device"}
-              <input
-                type="file"
-                accept="audio/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) updateState({ musicFile: file });
-                  e.target.value = "";
-                }}
-              />
-            </label>
-            {state.musicFile && (
+            {!state.musicFile ? (
+              <div className="flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setSoundPickerOpen(true)}
+                  disabled={isLoadingSound}
+                  className="pressable flex items-center gap-3 rounded-[16px] bg-white px-4 py-3 text-left text-black disabled:opacity-60"
+                >
+                  <MusicIcon className="h-5 w-5 flex-shrink-0" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[0.9375rem] font-semibold">
+                      {isLoadingSound ? "Adding sound…" : "SORZA sounds"}
+                    </span>
+                    <span className="block text-[0.75rem] text-black/55">
+                      Trending tracks, credited on your post
+                    </span>
+                  </span>
+                </button>
+                <label className="pressable flex items-center gap-3 rounded-[16px] bg-white/10 px-4 py-3 text-white/85">
+                  <PlusIcon className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-[0.9375rem] font-medium">Use a file from this device</span>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setLibrarySound(null);
+                        updateState({ musicFile: file, musicStartMs: 0, originalVolume: 0 });
+                      }
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+            ) : (
               <>
+                <div className="flex items-center gap-3 rounded-[16px] bg-white/10 px-3.5 py-2.5">
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#ff375f] text-white">
+                    <MusicIcon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[0.9375rem] font-semibold text-white">
+                      {librarySound ? librarySound.title : state.musicFile.name}
+                    </p>
+                    <p className="truncate text-[0.75rem] text-white/55">
+                      {librarySound?.artist_name
+                        ? librarySound.artist_name
+                        : librarySound
+                          ? "SORZA sound"
+                          : "From this device"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeMusic}
+                    aria-label="Remove sound"
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/15 text-white/80"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Which part of the track plays. The window is the clip's
+                    own trimmed length rather than a fixed slice, so what
+                    the slider promises is exactly what the finished post
+                    carries. */}
+                {librarySound && librarySound.duration_ms > clipDurationMs && (
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between text-[0.75rem] text-white/55">
+                      <span className="font-semibold uppercase tracking-[0.08em]">Starts at</span>
+                      <span className="numeral text-white/80">
+                        {formatClock(state.musicStartMs)} –{" "}
+                        {formatClock(Math.min(librarySound.duration_ms, state.musicStartMs + clipDurationMs))}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={Math.max(0, librarySound.duration_ms - clipDurationMs)}
+                      step={250}
+                      value={state.musicStartMs}
+                      onChange={(e) => updateState({ musicStartMs: Number(e.target.value) })}
+                      aria-label="Starting point in the sound"
+                      className="w-full accent-[#ffd60a]"
+                    />
+                  </div>
+                )}
+
                 <div className="flex items-center gap-3 text-sm text-white/80">
-                  <span className="w-20 flex-shrink-0">Music</span>
+                  <span className="w-20 flex-shrink-0">Sound</span>
                   <input
                     type="range"
                     min={0}
@@ -1129,7 +1304,7 @@ export function VideoEditor({
                     step={0.05}
                     value={state.musicVolume}
                     onChange={(e) => updateState({ musicVolume: Number(e.target.value) })}
-                    className="flex-1"
+                    className="flex-1 accent-[#ffd60a]"
                   />
                 </div>
                 <div className="flex items-center gap-3 text-sm text-white/80">
@@ -1141,29 +1316,27 @@ export function VideoEditor({
                     step={0.05}
                     value={state.originalVolume}
                     onChange={(e) => updateState({ originalVolume: Number(e.target.value) })}
-                    className="flex-1"
+                    className="flex-1 accent-[#ffd60a]"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => updateState({ musicFile: null })}
-                  className="self-start text-[0.8125rem] font-medium text-[#ff453a]"
-                >
-                  Remove music
-                </button>
               </>
             )}
           </div>
         )}
 
-        <div className="flex items-center justify-around px-2 py-2">
+        {/* Scrolls. Nine tools laid out with justify-around need about
+            430px, so on any normal phone the last two — Voice and Music —
+            were pushed past the right edge with no way to reach them at
+            all. The fade tells you the row continues. */}
+        <div className="no-scrollbar fade-edge-r flex items-center gap-1 overflow-x-auto px-3 py-2">
           {TOOLS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               type="button"
               onClick={() => setTool((t) => (t === id ? null : id))}
-              className={`flex flex-col items-center gap-1 rounded-xl px-3 py-2 transition-colors ${
-                tool === id ? "text-[#ffd60a]" : "text-white/70"
+              aria-pressed={tool === id}
+              className={`flex w-[4.25rem] flex-shrink-0 flex-col items-center gap-1 rounded-[14px] py-2 transition-colors ${
+                tool === id ? "bg-white/10 text-[#ffd60a]" : "text-white/70"
               }`}
             >
               <Icon className="h-5 w-5" />
@@ -1172,6 +1345,10 @@ export function VideoEditor({
           ))}
         </div>
       </div>
+
+      {soundPickerOpen && (
+        <SoundPickerSheet onSelect={chooseLibrarySound} onClose={() => setSoundPickerOpen(false)} />
+      )}
     </div>
   );
 }

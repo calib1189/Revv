@@ -34,19 +34,65 @@ function exportCanvasSize(
   };
 }
 
-function pickMimeType(): { mimeType: string; extension: string } {
-  const candidates = [
-    { mimeType: "video/mp4;codecs=avc1,mp4a.40.2", extension: "mp4" },
-    { mimeType: "video/mp4", extension: "mp4" },
-    { mimeType: "video/webm;codecs=vp9,opus", extension: "webm" },
-    { mimeType: "video/webm;codecs=vp8,opus", extension: "webm" },
-    { mimeType: "video/webm", extension: "webm" },
-  ];
-  for (const candidate of candidates) {
-    if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(candidate.mimeType)) {
-      return candidate;
-    }
+const MIME_CANDIDATES = [
+  { mimeType: "video/mp4;codecs=avc1,mp4a.40.2", extension: "mp4" },
+  { mimeType: "video/mp4", extension: "mp4" },
+  { mimeType: "video/webm;codecs=vp9,opus", extension: "webm" },
+  { mimeType: "video/webm;codecs=vp8,opus", extension: "webm" },
+  { mimeType: "video/webm", extension: "webm" },
+];
+
+/** Picks a container/codec the encoder will genuinely accept for THIS
+ * stream, by briefly running a throwaway recorder on it.
+ *
+ * `MediaRecorder.isTypeSupported` only answers "do I know this string",
+ * not "can I encode this stream that way". A device with no usable H.264
+ * encoder still answers true for video/mp4 and then fails at record time
+ * with EncodingError — asynchronously, on the recorder's error event,
+ * several seconds into an export that the user has already sat through.
+ * The old code took the first isTypeSupported hit and had no way back
+ * from that, so on such a device every single video export failed with a
+ * codec error no matter what was in the clip. A ~200ms probe up front
+ * costs nothing next to a full real-time re-encode. */
+async function pickWorkingMimeType(
+  stream: MediaStream,
+): Promise<{ mimeType: string; extension: string }> {
+  if (typeof MediaRecorder === "undefined") return { mimeType: "video/webm", extension: "webm" };
+
+  for (const candidate of MIME_CANDIDATES) {
+    if (!MediaRecorder.isTypeSupported(candidate.mimeType)) continue;
+
+    const works = await new Promise<boolean>((resolve) => {
+      let probe: MediaRecorder;
+      try {
+        probe = new MediaRecorder(stream, { mimeType: candidate.mimeType });
+      } catch {
+        resolve(false);
+        return;
+      }
+      let failed = false;
+      probe.onerror = () => {
+        failed = true;
+      };
+      try {
+        probe.start(100);
+      } catch {
+        resolve(false);
+        return;
+      }
+      setTimeout(() => {
+        try {
+          if (probe.state !== "inactive") probe.stop();
+        } catch {
+          // already torn down by the failure itself
+        }
+        resolve(!failed);
+      }, 200);
+    });
+
+    if (works) return candidate;
   }
+
   return { mimeType: "video/webm", extension: "webm" };
 }
 
@@ -177,7 +223,14 @@ export function useVideoExport() {
               const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
               musicNode = audioCtx.createBufferSource();
               musicNode.buffer = audioBuffer;
+              // Loops the part the poster actually chose, not the track
+              // from its first second. loopStart alone isn't enough — a
+              // plain `loop = true` restarts at 0 on every pass, so a
+              // clip longer than the remaining track would drift back to
+              // the intro halfway through.
               musicNode.loop = true;
+              musicNode.loopStart = Math.min(state.musicStartMs / 1000, audioBuffer.duration);
+              musicNode.loopEnd = audioBuffer.duration;
               const gain = audioCtx.createGain();
               gain.gain.value = state.musicVolume;
               musicNode.connect(gain).connect(destination);
@@ -211,7 +264,7 @@ export function useVideoExport() {
         canvasStream = canvas.captureStream(30);
         combinedStream = new MediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
 
-        const { mimeType, extension } = pickMimeType();
+        const { mimeType, extension } = await pickWorkingMimeType(combinedStream);
         // The Blob's own type drops the ;codecs=... suffix MediaRecorder
         // needs — validateVideoFile does an exact match against plain
         // "video/mp4"/"video/webm", not a prefix check.
@@ -262,7 +315,10 @@ export function useVideoExport() {
         // trimStart/trimEnd are already expressed in everywhere else.
         const durationSeconds = Math.max(0.1, state.trimEnd - state.trimStart);
         originalNode?.start(0, state.trimStart, durationSeconds);
-        musicNode?.start(0);
+        // Second argument is the offset into the buffer, so the mix opens
+        // on the chosen part of the track rather than fading in from
+        // wherever the loop points happen to put it.
+        musicNode?.start(0, Math.min(state.musicStartMs / 1000, musicNode.buffer?.duration ?? 0));
         voiceoverNode?.start(0);
         // currentTime still advances in source-time regardless of rate —
         // the trimEnd check below stays correct unchanged — but the
