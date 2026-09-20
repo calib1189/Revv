@@ -9,18 +9,55 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-// Applied to the icon itself (drop-shadow follows the icon's own
-// silhouette, unlike a box-shadow on the flex column around it) so an
-// active tab gets a subtle glow without the "glow bleeding past the
-// edges of an invisible box" bug the top tab bar's underline had.
-const ACTIVE_GLOW = "drop-shadow-[0_0_5px_rgb(255_68_51_/_0.55)]";
-// FlagIcon's thin, curvy outline (a separate pole line plus a wavy flag
-// stroke, both close together) blurs into a visibly brighter halo than
-// the bulkier Users/Comment/Person icons at the same drop-shadow values
-// — same filter, but a thin multi-stroke silhouette scatters more of it.
-// Tuned down specifically so Crews reads at the same intensity as every
-// other tab instead of "lighting up" more than the rest.
-const CREWS_ACTIVE_GLOW = "drop-shadow-[0_0_2px_rgb(255_68_51_/_0.35)]";
+/** One tab. Active state is carried by a filled pill behind the icon
+ * plus the accent colour — not by a drop-shadow glow, which is what this
+ * bar used to do. That approach needed per-icon tuning (FlagIcon's thin
+ * multi-stroke silhouette scattered visibly more light than the bulkier
+ * ones at identical values, so Crews had its own weaker constant), and a
+ * glow is exactly the effect the house style rules out. A pill needs no
+ * tuning because it sits behind the icon rather than tracing it. */
+function TabItem({
+  href,
+  label,
+  active,
+  badge,
+  children,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  badge?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={badge ? `${label}, ${badge} unread` : label}
+      aria-current={active ? "page" : undefined}
+      className="group flex w-[4.5rem] flex-col items-center gap-[3px] pt-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90"
+    >
+      <span
+        className={`relative flex h-8 w-[3.25rem] items-center justify-center rounded-full transition-colors duration-200 ${
+          active ? "bg-accent/12 text-accent" : "text-muted"
+        }`}
+      >
+        {children}
+        {badge !== undefined && badge > 0 && (
+          <span className="absolute -right-0.5 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[0.625rem] font-bold leading-none text-accent-foreground ring-2 ring-[var(--glass-solid-raised)]">
+            {badge > 9 ? "9+" : badge}
+          </span>
+        )}
+      </span>
+      <span
+        className={`text-[0.625rem] leading-none transition-colors duration-200 ${
+          active ? "font-bold text-accent" : "font-semibold text-muted"
+        }`}
+      >
+        {label}
+      </span>
+    </Link>
+  );
+}
 
 // Feed no longer gets its own icon here — it's the top tab bar's first
 // tab (top-tab-bar.tsx) now, and having it in both places was
@@ -36,63 +73,30 @@ export function BottomTabBar({
   const pathname = usePathname();
   const profileHref = username ? `/u/${username}` : "/settings/profile";
 
-  const friends = isActive(pathname, "/friends");
-  const crews = isActive(pathname, "/crews");
-  const inbox = isActive(pathname, "/messages") || isActive(pathname, "/notifications");
-  const profile = isActive(pathname, profileHref);
-
   return (
-    <div className="mx-auto flex h-16 max-w-5xl items-center justify-around px-4">
-      <Link
-        href="/friends"
-        aria-label="Friends"
-        className={`flex flex-col items-center gap-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
-          friends ? `${ACTIVE_GLOW} text-foreground` : "text-muted"
-        }`}
-      >
-        <UsersIcon className="h-7 w-7" />
-        <span className={`text-[11px] ${friends ? "font-bold" : "font-medium"}`}>Friends</span>
-      </Link>
+    <div className="mx-auto flex h-16 max-w-5xl items-stretch justify-around px-2">
+      <TabItem href="/friends" label="Friends" active={isActive(pathname, "/friends")}>
+        <UsersIcon className="h-[1.375rem] w-[1.375rem]" />
+      </TabItem>
 
-      <Link
-        href="/crews"
-        aria-label="Crews"
-        className={`flex flex-col items-center gap-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
-          crews ? `${CREWS_ACTIVE_GLOW} text-foreground` : "text-muted"
-        }`}
-      >
-        <FlagIcon className="h-7 w-7" />
-        <span className={`text-[11px] ${crews ? "font-bold" : "font-medium"}`}>Crews</span>
-      </Link>
+      <TabItem href="/crews" label="Crews" active={isActive(pathname, "/crews")}>
+        <FlagIcon className="h-[1.375rem] w-[1.375rem]" />
+      </TabItem>
 
       <CreateMenu />
 
-      <Link
+      <TabItem
         href="/messages"
-        aria-label="Inbox"
-        className={`relative flex flex-col items-center gap-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
-          inbox ? `${ACTIVE_GLOW} text-foreground` : "text-muted"
-        }`}
+        label="Inbox"
+        active={isActive(pathname, "/messages") || isActive(pathname, "/notifications")}
+        badge={unreadInboxCount}
       >
-        <CommentIcon className="h-7 w-7" />
-        {unreadInboxCount > 0 && (
-          <span className="absolute -right-1.5 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-accent text-[9px] font-medium text-accent-foreground shadow-[0_0_6px_1px_rgb(255_68_51_/_0.7)]">
-            {unreadInboxCount > 9 ? "9+" : unreadInboxCount}
-          </span>
-        )}
-        <span className={`text-[11px] ${inbox ? "font-bold" : "font-medium"}`}>Inbox</span>
-      </Link>
+        <CommentIcon className="h-[1.375rem] w-[1.375rem]" />
+      </TabItem>
 
-      <Link
-        href={profileHref}
-        aria-label="Profile"
-        className={`flex flex-col items-center gap-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90 ${
-          profile ? `${ACTIVE_GLOW} text-foreground` : "text-muted"
-        }`}
-      >
-        <PersonIcon className="h-7 w-7" />
-        <span className={`text-[11px] ${profile ? "font-bold" : "font-medium"}`}>Profile</span>
-      </Link>
+      <TabItem href={profileHref} label="Profile" active={isActive(pathname, profileHref)}>
+        <PersonIcon className="h-[1.375rem] w-[1.375rem]" />
+      </TabItem>
     </div>
   );
 }

@@ -22,14 +22,22 @@ export function CreateMenu() {
 
   return (
     <>
+      <div className="flex w-[4.5rem] flex-shrink-0 items-center justify-center">
       <button
         type="button"
         aria-label="Create"
         onClick={() => setIsOpen(true)}
-        className="flex h-12 w-16 items-center justify-center rounded-2xl bg-accent text-accent-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255_/_0.3),0_0_0_1px_rgb(255_68_51_/_0.4),0_10px_28px_-8px_rgb(255_68_51_/_0.9)] transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90"
+        // Sits in the same 4.5rem column every other tab uses so the
+        // row stays evenly spaced, with the button itself inset. The
+        // old treatment stacked a coloured 1px ring on top of a heavy
+        // coloured drop shadow, which read as the glowing border the
+        // house style rules out; this keeps a single shadow doing
+        // honest elevation work and one inset highlight for the edge.
+        className="my-auto flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-[1.125rem] bg-accent text-accent-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255_/_0.25),0_8px_20px_-8px_rgb(0_0_0_/_0.6)] transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90"
       >
-        <PlusIcon className="h-7 w-7" strokeWidth={2.5} />
+        <PlusIcon className="h-[1.625rem] w-[1.625rem]" strokeWidth={2.5} />
       </button>
+      </div>
 
       {isOpen && (
         <div className="fixed inset-0 z-30 flex items-end justify-center">

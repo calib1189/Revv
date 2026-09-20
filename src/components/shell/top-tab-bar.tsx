@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { SearchIcon, BellIcon } from "@/components/ui/icons";
 import { useTabPagerContext } from "@/components/shell/tab-pager-context";
@@ -34,28 +35,65 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
   // video can run edge to edge behind it.
   const isImmersive = onPager ? TABS[activeIndex]?.href === "/feed" : pathname === "/feed";
 
+  const selected = onPager ? activeIndex : TABS.findIndex((t) => isActive(pathname, t.href));
+
+  // The underline is one element that slides between tabs rather than a
+  // separate bar per tab appearing and disappearing. It has to be
+  // measured because the tabs are text of differing widths spread with
+  // justify-between, so there is no arithmetic that gives its position —
+  // only the laid-out DOM knows.
+  const navRef = useRef<HTMLElement>(null);
+  const tabRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    function measure() {
+      const nav = navRef.current;
+      const el = selected >= 0 ? tabRefs.current[selected] : null;
+      if (!nav || !el) {
+        setIndicator(null);
+        return;
+      }
+      const navBox = nav.getBoundingClientRect();
+      const tabBox = el.getBoundingClientRect();
+      setIndicator({ left: tabBox.left - navBox.left + nav.scrollLeft, width: tabBox.width });
+    }
+    measure();
+    // Fonts landing after first paint change every label's width, which
+    // would otherwise leave the underline measured against fallback
+    // metrics and visibly offset from the word it belongs to.
+    document.fonts?.ready.then(measure).catch(() => {});
+    const observer = new ResizeObserver(measure);
+    if (navRef.current) observer.observe(navRef.current);
+    return () => observer.disconnect();
+  }, [selected]);
+
   return (
     <header
       className={`sticky top-0 z-10 isolate rounded-none pt-[env(safe-area-inset-top)] will-change-transform ${
         isImmersive ? "border-none bg-transparent" : "glass-raised border-x-0 border-t-0"
       }`}
     >
-      {/* flex, not grid, for the same "nav needs to actually shrink"
-          reason as before. justify-between (no fixed gap) spreads the 4
-          tabs across the nav's full width instead of packing them to the
-          left with all the slack space left over after the last one —
-          which is exactly what a fixed gap does, since it only ever
-          creates space where explicitly told to. "Does 'Leaderboard'
-          still fit without clipping" is the tightest case here, same as
-          it was with Garage in the lineup before. */}
-      <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-3">
-        <nav className="no-scrollbar flex min-w-0 flex-1 items-center justify-between overflow-x-auto">
+      <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-3">
+        {/* flex, not grid, so the nav can actually shrink.
+            justify-between spreads the four tabs across the full width
+            rather than packing them left with the slack left over after
+            the last one. "Does Leaderboard still fit" is the tight
+            case. */}
+        <nav
+          ref={navRef}
+          className="no-scrollbar relative flex min-w-0 flex-1 items-center justify-between self-stretch overflow-x-auto"
+        >
           {TABS.map((tab, index) => {
-            const active = onPager ? activeIndex === index : isActive(pathname, tab.href);
+            const active = index === selected;
             return (
               <Link
                 key={tab.href}
+                ref={(el) => {
+                  tabRefs.current[index] = el;
+                }}
                 href={tab.href}
+                aria-current={active ? "page" : undefined}
                 onClick={(e) => {
                   if (!onPager) return;
                   e.preventDefault();
@@ -72,56 +110,77 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
                   // content — this is a scroll, never a page navigation.
                   requestScrollToIndex(index);
                 }}
-                className={`relative flex-shrink-0 whitespace-nowrap py-1 text-sm transition-colors active:opacity-60 ${
+                // Weight stays put across states. Bolding only the
+                // active tab changed its width, which nudged every other
+                // label sideways on each switch and left the sliding
+                // underline chasing a target that moved as it travelled.
+                className={`relative flex flex-shrink-0 items-center whitespace-nowrap px-0.5 text-[0.9375rem] font-semibold tracking-[-0.01em] transition-colors duration-200 active:opacity-60 ${
                   isImmersive ? "[text-shadow:0_1px_4px_rgb(0_0_0_/_0.7)]" : ""
                 } ${
                   active
-                    ? "font-extrabold text-foreground"
+                    ? isImmersive
+                      ? "text-white"
+                      : "text-foreground"
                     : isImmersive
-                      ? "font-semibold text-white/85 hover:text-white"
-                      : "font-semibold text-muted hover:text-foreground"
+                      ? "text-white/60 hover:text-white/90"
+                      : "text-muted hover:text-foreground"
                 }`}
               >
                 {tab.label}
-                {/* A dedicated thin bar instead of a shadow on the whole
-                    link — a box-shadow on the text's own box (which
-                    includes its vertical padding) blurs outward on
-                    every side, not just downward, so it read as a stray
-                    glow beside the label instead of a glowing underline.
-                    Scoping the glow to a 3px bar sized to just this
-                    underline keeps it confined to where it's supposed
-                    to be. */}
-                {active && (
-                  <span className="absolute inset-x-0 -bottom-0.5 h-[3px] rounded-full bg-accent shadow-[0_0_8px_1px_rgb(255_68_51_/_0.7)]" />
-                )}
               </Link>
             );
           })}
+
+          {/* One underline for the whole bar. No glow: a shadow on a
+              3px bar reads as a smear at this size, and the house style
+              rules it out anyway. */}
+          {indicator && (
+            <span
+              aria-hidden
+              // Measured in a layout effect, so the first paint
+              // already has the right transform — the transition only
+              // ever animates a genuine tab change, never an entrance
+              // from the left edge.
+              className={`pointer-events-none absolute bottom-[0.6875rem] h-[2.5px] rounded-full transition-[transform,width] duration-[320ms] ease-[var(--ease-ios)] ${
+                isImmersive ? "bg-white" : "bg-accent"
+              }`}
+              style={{
+                width: `${indicator.width}px`,
+                transform: `translateX(${indicator.left}px)`,
+                left: 0,
+              }}
+            />
+          )}
         </nav>
-        <div className="flex flex-shrink-0 items-center gap-2.5">
+
+        <div className="flex flex-shrink-0 items-center gap-1">
           <Link
             href="/search"
             aria-label="Search"
-            className={
-              isImmersive
-                ? "text-white/85 [filter:drop-shadow(0_1px_3px_rgb(0_0_0_/_0.7))] hover:text-white"
-                : "text-muted hover:text-foreground"
-            }
-          >
-            <SearchIcon className="h-5 w-5" />
-          </Link>
-          <Link
-            href="/notifications"
-            aria-label="Notifications"
-            className={`relative ${
+            className={`pressable flex h-9 w-9 items-center justify-center rounded-full ${
               isImmersive
                 ? "text-white/85 [filter:drop-shadow(0_1px_3px_rgb(0_0_0_/_0.7))] hover:text-white"
                 : "text-muted hover:text-foreground"
             }`}
           >
-            <BellIcon className="h-5 w-5" />
+            <SearchIcon className="h-[1.125rem] w-[1.125rem]" />
+          </Link>
+          <Link
+            href="/notifications"
+            aria-label={
+              unreadNotificationCount > 0
+                ? `Notifications, ${unreadNotificationCount} unread`
+                : "Notifications"
+            }
+            className={`pressable relative flex h-9 w-9 items-center justify-center rounded-full ${
+              isImmersive
+                ? "text-white/85 [filter:drop-shadow(0_1px_3px_rgb(0_0_0_/_0.7))] hover:text-white"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            <BellIcon className="h-[1.125rem] w-[1.125rem]" />
             {unreadNotificationCount > 0 && (
-              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent shadow-[0_0_6px_1px_rgb(255_68_51_/_0.8)]" />
+              <span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full bg-accent ring-2 ring-[var(--glass-solid-raised)]" />
             )}
           </Link>
         </div>
