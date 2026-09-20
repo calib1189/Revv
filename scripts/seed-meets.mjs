@@ -100,14 +100,40 @@ const MEETS = [
 const IDS = MEETS.map((m) => m.id);
 
 async function clean() {
-  // meetup_media first: the FK may or may not cascade depending on how
-  // 0018 declared it, and a leftover join row pointing at a deleted meet
-  // is worse than an extra query.
+  // Work inward: join rows, then the storage objects and media rows the
+  // seeder uploaded, then the meets. Anything skipped here is invisible
+  // litter — an orphaned media row or a file still sitting in the bucket
+  // that nobody will ever think to look for again.
+  const { data: links } = await supabase
+    .from("meetup_media")
+    .select("media_id")
+    .in("meetup_id", IDS);
   await supabase.from("meetup_media").delete().in("meetup_id", IDS);
+
+  const mediaIds = (links ?? []).map((l) => l.media_id);
+  let removedFiles = 0;
+  if (mediaIds.length > 0) {
+    const { data: media } = await supabase
+      .from("media")
+      .select("id, storage_path")
+      .in("id", mediaIds);
+    // Only ever touches files this script uploaded. A meet photographed
+    // some other way, or a hero shot reused from the host's garage,
+    // doesn't match the prefix and is left completely alone.
+    const seeded = (media ?? []).filter((m) => m.storage_path.includes("/demo-meet-"));
+    if (seeded.length > 0) {
+      await supabase.storage.from(BUCKET).remove(seeded.map((m) => m.storage_path));
+      await supabase
+        .from("media")
+        .delete()
+        .in("id", seeded.map((m) => m.id));
+      removedFiles = seeded.length;
+    }
+  }
+
   const { error } = await supabase.from("meetups").delete().in("id", IDS);
   if (error) throw error;
-  console.log(`Removed ${IDS.length} demo meets and their photo links.`);
-  console.log("The photos themselves are untouched — they belong to the host's cars.");
+  console.log(`Removed ${IDS.length} demo meets and ${removedFiles} uploaded photos.`);
 }
 
 /** The account being filmed — whoever has the most cars with a chosen
@@ -146,34 +172,84 @@ async function resolveHost() {
   return profile;
 }
 
-/** A meet card with no photo is ~180px of empty space, which looks
- * broken on camera. Rather than inventing imagery, each demo meet reuses
- * one of the host's OWN vehicle hero photos — their content, already
- * curated as the best shot of that car, and unambiguously theirs to
- * reuse. Only the host's own media is ever touched. */
+/** Unsplash photos of real car meets, fetched at run time rather than
+ * committed, so the repo doesn't carry stock imagery and the source of
+ * every picture stays visible right here.
+ *
+ * The Unsplash License permits commercial use with no attribution, which
+ * is what makes these safe to put in an App Store listing. It explicitly
+ * does NOT cover people or trademarks depicted in a photo, though — so
+ * every one of these was picked for having no identifiable faces. Two
+ * otherwise-better shots (a crowd around some Skylines, an R34 with its
+ * hood up) were rejected on exactly that basis: recognisable strangers
+ * in a commercial listing is a model-release question nobody wants to
+ * answer later.
+ *
+ * Fetched pre-cropped to 1600x1000 — the card is landscape, and a known
+ * size means no image decoding is needed here just to fill in the media
+ * row's width/height. */
+const PHOTO_WIDTH = 1600;
+const PHOTO_HEIGHT = 1000;
+const UNSPLASH_PHOTOS = {
+  // Cars & Coffee — bagged BMWs, golden hour, crowd far enough back to
+  // be anonymous.
+  "5ee90000-0000-4000-8000-000000000001": "photo-1638247311144-54dec39cabc6",
+  // Sunset Cruise — muscle under an overpass. No people in frame at all.
+  "5ee90000-0000-4000-8000-000000000002": "photo-1622512641095-685bf461c92d",
+  // Track Day — aerial drone shot; people are unidentifiable specks.
+  "5ee90000-0000-4000-8000-000000000003": "photo-1593280405106-e438ebe93f5b",
+  // Import Night — a row of JDM coupes, no faces.
+  "5ee90000-0000-4000-8000-000000000004": "photo-1576709350718-7df53805fd9b",
+};
+
+const BUCKET = "media";
+
+/** A meet card with no photo is ~180px of dead space, which looks broken
+ * on camera. Uploads one licensed photo per meet into the host's own
+ * media, and records the storage paths so --clean can remove the files
+ * too rather than orphaning them in the bucket. */
 async function attachPhotos(hostId) {
-  const { data: vehicles, error } = await supabase
-    .from("vehicles")
-    .select("hero_media_id")
-    .eq("owner_id", hostId)
-    .not("hero_media_id", "is", null);
-  if (error) throw error;
-
-  const heroIds = vehicles.map((v) => v.hero_media_id);
-  if (heroIds.length === 0) {
-    console.log("Host has no vehicle photos — meets seeded without imagery.");
-    return 0;
-  }
-
   await supabase.from("meetup_media").delete().in("meetup_id", IDS);
-  const rows = MEETS.map((m, i) => ({
-    meetup_id: m.id,
-    media_id: heroIds[i % heroIds.length],
-    position: 0,
-  }));
-  const { error: insertError } = await supabase.from("meetup_media").insert(rows);
-  if (insertError) throw insertError;
-  return heroIds.length;
+
+  let attached = 0;
+  for (const meet of MEETS) {
+    const photoId = UNSPLASH_PHOTOS[meet.id];
+    if (!photoId) continue;
+
+    const res = await fetch(
+      `https://images.unsplash.com/${photoId}?w=${PHOTO_WIDTH}&h=${PHOTO_HEIGHT}&fit=crop&q=80&fm=jpg`,
+    );
+    if (!res.ok) throw new Error(`Couldn't fetch ${photoId} (${res.status}).`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+
+    // Deterministic path off the meet id, so a re-run overwrites the
+    // same object instead of littering the bucket with copies.
+    const storagePath = `${hostId}/demo-meet-${meet.id.slice(-12)}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET)
+      .upload(storagePath, bytes, { contentType: "image/jpeg", upsert: true });
+    if (uploadError) throw uploadError;
+
+    const { data: media, error: mediaError } = await supabase
+      .from("media")
+      .insert({
+        owner_id: hostId,
+        storage_path: storagePath,
+        kind: "image",
+        width: PHOTO_WIDTH,
+        height: PHOTO_HEIGHT,
+      })
+      .select("id")
+      .single();
+    if (mediaError) throw mediaError;
+
+    const { error: linkError } = await supabase
+      .from("meetup_media")
+      .insert({ meetup_id: meet.id, media_id: media.id, position: 0 });
+    if (linkError) throw linkError;
+    attached += 1;
+  }
+  return attached;
 }
 
 async function seed() {
@@ -210,7 +286,7 @@ async function seed() {
   const photoCount = await attachPhotos(host.id);
 
   console.log(`Seeded ${rows.length} demo meets, hosted by @${host.username}`);
-  console.log(`Photos: reused ${photoCount} of the host's own vehicle hero shots.`);
+  console.log(`Photos: ${photoCount} licensed car-meet shots (Unsplash License, no faces).`);
   for (const row of rows) {
     console.log(`  ${row.title} — ${row.location_name} — ${new Date(row.starts_at).toDateString()}`);
   }
