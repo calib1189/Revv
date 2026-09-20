@@ -16,6 +16,7 @@ import {
   updateMeetupStatus,
   MEETUP_TIERS,
   isMeetupTier,
+  isPaidMeetupTier,
   type Meetup,
 } from "@/lib/db/meetups";
 import { getMeetupViewCountsForMeetups } from "@/lib/db/meetup-views";
@@ -31,6 +32,9 @@ export async function deleteMeetupAction(meetupId: string): Promise<void> {
 export interface CreateMeetupDraftResult {
   error?: string;
   meetupId?: string;
+  /** False for a free listing, which is already in the review queue and
+   * must NOT be sent on to checkout. */
+  requiresPayment?: boolean;
 }
 
 /** Creates the unpaid draft row only — checkout happens in a separate
@@ -60,11 +64,15 @@ export async function createMeetupDraftAction({
   tier: string;
   crewId?: string | null;
 }): Promise<CreateMeetupDraftResult> {
-  if (!isMeetupBillingConfigured()) {
-    return { error: "Posting a meetup isn't set up yet." };
-  }
   if (!isMeetupTier(tier)) {
     return { error: "Choose a valid tier." };
+  }
+  // Only the paid tiers need Stripe wired up. A free listing never
+  // touches it, so an unconfigured billing environment shouldn't stop
+  // someone posting a meet.
+  const requiresPayment = isPaidMeetupTier(tier);
+  if (requiresPayment && !isMeetupBillingConfigured()) {
+    return { error: "Paid promotion isn't set up yet." };
   }
   const validationError = validateMeetup({ title, locationName, startsAt });
   if (validationError) return { error: validationError };
@@ -81,10 +89,17 @@ export async function createMeetupDraftAction({
       lat,
       lng,
       tier,
+      // Server-side from MEETUP_TIERS, never the client — a tampered
+      // request claiming 'free' still gets 0 here, and RLS additionally
+      // refuses a pending_review insert whose tier isn't 'free'.
       price_cents: MEETUP_TIERS[tier].priceCents,
+      // A free meetup skips pending_payment entirely and lands in the
+      // same admin review queue a paid one reaches once its webhook
+      // fires. It is never self-published; RLS enforces this too.
+      status: requiresPayment ? "pending_payment" : "pending_review",
       crew_id: crewId || null,
     });
-    return { meetupId: meetup.id };
+    return { meetupId: meetup.id, requiresPayment };
   } catch {
     return { error: "Couldn't create that meetup. Try again." };
   }

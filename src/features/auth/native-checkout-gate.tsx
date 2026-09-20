@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createWebHandoffAction } from "@/features/auth/actions";
+import { useIsNative } from "@/lib/native/use-is-native";
 import { openExternalBrowser } from "@/lib/native/open-external";
 import { SITE_URL } from "@/lib/site-url";
 import { Button } from "@/components/ui/button";
@@ -26,21 +27,15 @@ export function NativeCheckoutGate({
   nextPath: string;
   /** e.g. "Creating an ad" — used in "X happens on the web." */
   what: string;
-  children: React.ReactNode;
+  /** What to render off-native. Omit when the caller has already decided
+   * this is the native-only branch and wants just the handoff card — the
+   * meetup form does exactly that, since only its paid tiers hand off
+   * while the free one posts in-app. */
+  children?: React.ReactNode;
 }) {
-  const [isNative, setIsNative] = useState<boolean | null>(null);
+  const isNative = useIsNative();
   const [error, setError] = useState<string | null>(null);
   const [sentToWeb, setSentToWeb] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    import("@capacitor/core").then(({ Capacitor }) => {
-      if (!cancelled) setIsNative(Capacitor.isNativePlatform());
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   async function handleContinue() {
     setError(null);
@@ -54,7 +49,7 @@ export function NativeCheckoutGate({
   }
 
   if (isNative === null) return null;
-  if (!isNative) return <>{children}</>;
+  if (!isNative) return <>{children ?? null}</>;
 
   return (
     <div className="glass-raised elev-1 flex flex-col items-center gap-3 rounded-[22px] p-6 text-center">

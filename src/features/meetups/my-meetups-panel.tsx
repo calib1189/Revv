@@ -10,6 +10,7 @@ import { formatCompactNumber } from "@/lib/format/compact-number";
 import { formatDateTime } from "@/lib/format/date";
 
 const TIER_METAL_COLORS: Record<MeetupTier, string> = {
+  free: RANK_TEXT_COLORS.iron,
   standard: RANK_TEXT_COLORS.silver,
   promoted: RANK_TEXT_COLORS.gold,
   diamond: RANK_TEXT_COLORS.diamond,

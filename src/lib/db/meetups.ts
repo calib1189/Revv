@@ -17,17 +17,26 @@ export type MeetupTier = Meetup["tier"];
  * whoever's viewing, same as shop promotions (see
  * shop-promotions.ts) — don't market it as exclusive in copy. */
 export const MEETUP_TIERS: Record<MeetupTier, { label: string; priceCents: number }> = {
+  free: { label: "Free", priceCents: 0 },
   standard: { label: "Silver", priceCents: 1000 },
   promoted: { label: "Gold", priceCents: 2500 },
   diamond: { label: "Diamond", priceCents: 5000 },
 };
 
+/** A free listing is the one tier that never touches Stripe, which is
+ * what lets it be created entirely inside the iOS app — see
+ * 0090_meetup_free_tier.sql. */
+export function isPaidMeetupTier(tier: MeetupTier): boolean {
+  return MEETUP_TIERS[tier].priceCents > 0;
+}
+
 /** Higher first — the single source of truth for ranking tiers against
  * each other when sorting meetups, mirroring SHOP_PROMOTION_TIER_RANK. */
 export const MEETUP_TIER_RANK: Record<MeetupTier, number> = {
-  diamond: 3,
-  promoted: 2,
-  standard: 1,
+  diamond: 4,
+  promoted: 3,
+  standard: 2,
+  free: 1,
 };
 
 export function isMeetupTier(value: string): value is MeetupTier {

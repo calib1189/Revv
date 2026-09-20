@@ -6,15 +6,17 @@ import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
  * with build ranks, and never touches that system. Sharing the palette
  * just means "premium tier" reads the same way everywhere in the app
  * instead of two unrelated color languages for the same idea. */
-export type TierMetal = "silver" | "gold" | "diamond";
+export type TierMetal = "iron" | "silver" | "gold" | "diamond";
 
 const METAL_COLORS: Record<TierMetal, string> = {
+  iron: RANK_TEXT_COLORS.iron,
   silver: RANK_TEXT_COLORS.silver,
   gold: RANK_TEXT_COLORS.gold,
   diamond: RANK_TEXT_COLORS.diamond,
 };
 
 const METAL_LABELS: Record<TierMetal, string> = {
+  iron: "Free",
   silver: "Silver",
   gold: "Gold",
   diamond: "Diamond",
@@ -31,6 +33,10 @@ export interface TierPickerOption {
   /** Shown instead of the price/subtitle when disabled — e.g. "Already
    * active". */
   disabledReason?: string;
+  /** Overrides the metal's own name — a free tier isn't "Iron". */
+  label?: string;
+  /** Overrides the "$N" read-out, for a tier that isn't a price. */
+  priceLabel?: string;
 }
 
 export function TierPicker({
@@ -81,14 +87,14 @@ export function TierPicker({
                 className="block text-sm font-semibold"
                 style={isSelected && !option.disabled ? { color } : undefined}
               >
-                {METAL_LABELS[option.metal]}
+                {option.label ?? METAL_LABELS[option.metal]}
               </span>
               <span className="block truncate text-xs text-muted">
                 {option.disabled ? (option.disabledReason ?? "Not available") : option.subtitle}
               </span>
             </span>
             <span className="flex-shrink-0 text-base font-bold tabular-nums">
-              ${(option.priceCents / 100).toFixed(0)}
+              {option.priceLabel ?? `$${(option.priceCents / 100).toFixed(0)}`}
             </span>
           </label>
         );

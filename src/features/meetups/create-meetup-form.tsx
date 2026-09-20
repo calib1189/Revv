@@ -13,7 +13,8 @@ import {
   createMeetupCheckoutAction,
 } from "@/features/meetups/actions";
 import { NativeCheckoutGate } from "@/features/auth/native-checkout-gate";
-import { MEETUP_TIERS, type MeetupTier } from "@/lib/db/meetups";
+import { useIsNative } from "@/lib/native/use-is-native";
+import { MEETUP_TIERS, isPaidMeetupTier, type MeetupTier } from "@/lib/db/meetups";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,11 +24,18 @@ import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
 import type { Crew } from "@/lib/db/crews";
 
 const MAX_PHOTOS = 5;
-const TIER_ORDER: MeetupTier[] = ["standard", "promoted", "diamond"];
+const TIER_ORDER: MeetupTier[] = ["free", "standard", "promoted", "diamond"];
 const TIER_METALS: Record<MeetupTier, TierMetal> = {
+  free: "iron",
   standard: "silver",
   promoted: "gold",
   diamond: "diamond",
+};
+const TIER_SUBTITLES: Record<MeetupTier, string> = {
+  free: "Listed by date, like every other meet",
+  standard: "Sorts above free listings",
+  promoted: "Sorts above Silver listings",
+  diamond: "Top-tier placement — sorts above every Gold and Silver meet",
 };
 
 interface SelectedPhoto {
@@ -46,8 +54,15 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
     "idle" | "loading" | "denied"
   >("idle");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
-  const [tier, setTier] = useState<MeetupTier>("standard");
+  const [tier, setTier] = useState<MeetupTier>("free");
   const [crewId, setCrewId] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const isNative = useIsNative();
+  // Paying to promote still has to happen on the website (Apple requires
+  // In-App Purchase for anything that buys placement inside the app — see
+  // createWebHandoffAction). A free listing is not a purchase, so it runs
+  // entirely in the app; only the paid tiers hand off.
+  const needsWebHandoff = isNative === true && isPaidMeetupTier(tier);
   const formRef = useRef<HTMLFormElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,9 +70,10 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
     photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     setPhotos([]);
     setCoords(null);
-    setTier("standard");
+    setTier("free");
     setCrewId("");
     setError(null);
+    setSubmitted(false);
     formRef.current?.reset();
     setIsOpen(false);
   }
@@ -149,9 +165,14 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
         position += 1;
       }
 
-      // NativeCheckoutGate (wrapping the form below) guarantees this
-      // only ever runs on non-native, so this never needs to branch on
-      // platform itself.
+      // A free listing is already sitting in the admin review queue — it
+      // has no checkout to start, and sending it to one would be the bug
+      // this whole tier exists to remove.
+      if (!draft.requiresPayment) {
+        setSubmitted(true);
+        return;
+      }
+
       const checkout = await createMeetupCheckoutAction({ meetupId });
       if (checkout.error || !checkout.url) {
         setError(checkout.error ?? "Couldn't start checkout. Try again.");
@@ -163,6 +184,25 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
     } finally {
       setIsPending(false);
     }
+  }
+
+  if (submitted) {
+    return (
+      <div className="glass-raised elev-1 flex flex-col items-center gap-2 rounded-[22px] p-6 text-center">
+        <p className="text-[0.9375rem] font-semibold">Sent for review</p>
+        <p className="max-w-xs text-[0.8125rem] text-muted">
+          An admin checks every meet before it goes live. Yours shows up in
+          Discover once it&apos;s approved — you can follow it under My meets.
+        </p>
+        <button
+          type="button"
+          onClick={resetAndClose}
+          className="mt-1 text-[0.8125rem] font-semibold text-accent"
+        >
+          Done
+        </button>
+      </div>
+    );
   }
 
   if (!isOpen) {
@@ -185,12 +225,11 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
   }
 
   return (
-    <NativeCheckoutGate nextPath="/discover" what="Creating a meetup">
-      <form
-        ref={formRef}
-        onSubmit={handleSubmit}
-        className="glass-raised elev-1 flex flex-col gap-4 rounded-[22px] p-5"
-      >
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className="glass-raised elev-1 flex flex-col gap-4 rounded-[22px] p-5"
+    >
         {error && <Callout tone="danger">{error}</Callout>}
 
         <div>
@@ -341,38 +380,43 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
               id: t,
               metal: TIER_METALS[t],
               priceCents: MEETUP_TIERS[t].priceCents,
-              subtitle:
-                t === "diamond"
-                  ? "Top-tier placement — sorts above every Gold and Silver meet"
-                  : t === "promoted"
-                    ? "Sorts above Silver listings"
-                    : "Just requires payment to post",
+              label: MEETUP_TIERS[t].label,
+              priceLabel: t === "free" ? "Free" : undefined,
+              subtitle: TIER_SUBTITLES[t],
             }))}
           />
           <p className="mt-1.5 text-xs text-muted">
-            Higher tiers sort ahead of lower ones, regardless of distance.
+            Posting is free. Paid tiers sort ahead of free ones, regardless of
+            distance.
           </p>
         </div>
 
-        <div className="flex gap-3">
-          <Button
-            type="submit"
-            disabled={isPending}
-            className="px-4 py-2.5 text-sm"
-          >
-            {isPending
-              ? "Starting checkout…"
-              : `Continue to payment · $${(MEETUP_TIERS[tier].priceCents / 100).toFixed(0)}`}
-          </Button>
-          <button
-            type="button"
-            onClick={resetAndClose}
-            className="px-1 py-2.5 text-sm text-muted hover:text-foreground"
-          >
-            Cancel
-          </button>
-        </div>
+        {needsWebHandoff ? (
+          <NativeCheckoutGate nextPath="/discover" what="Paying to promote a meet" />
+        ) : (
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              disabled={isPending}
+              className="px-4 py-2.5 text-sm"
+            >
+              {isPending
+                ? isPaidMeetupTier(tier)
+                  ? "Starting checkout…"
+                  : "Posting…"
+                : isPaidMeetupTier(tier)
+                  ? `Continue to payment · $${(MEETUP_TIERS[tier].priceCents / 100).toFixed(0)}`
+                  : "Post meet"}
+            </Button>
+            <button
+              type="button"
+              onClick={resetAndClose}
+              className="px-1 py-2.5 text-sm text-muted hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </form>
-    </NativeCheckoutGate>
   );
 }

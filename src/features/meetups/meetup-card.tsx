@@ -9,6 +9,7 @@ import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
 // Same silver/gold/diamond palette as components/ui/tier-picker.tsx —
 // reused for color only, no functional link to the rank system.
 const TIER_METAL_COLORS: Record<MeetupTier, string> = {
+  free: RANK_TEXT_COLORS.iron,
   standard: RANK_TEXT_COLORS.silver,
   promoted: RANK_TEXT_COLORS.gold,
   diamond: RANK_TEXT_COLORS.diamond,
