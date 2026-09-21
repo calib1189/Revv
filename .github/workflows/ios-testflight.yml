@@ -1,0 +1,151 @@
+name: iOS TestFlight
+
+# Builds the iOS app on a macOS runner and uploads it to TestFlight.
+#
+# Manual only. Every run consumes runner minutes and creates a build in
+# App Store Connect, so nothing here should fire on a push.
+#
+# The app is a Capacitor shell around the live site (capacitor.config.ts
+# points its WebView at https://sorza.net), so this never builds the web
+# app: shipping a website change needs a Vercel deploy, not a TestFlight
+# build. A new build is only needed when something NATIVE changes — a
+# plugin, an entitlement, an icon, Info.plist.
+#
+# ── One-time setup ──────────────────────────────────────────────────────
+# Repository → Settings → Secrets and variables → Actions.
+#
+#   Secrets (encrypted, never printed):
+#     ASC_KEY_ID       Key ID of an App Store Connect API key
+#     ASC_ISSUER_ID    Issuer ID shown above that key list
+#     ASC_KEY_P8       the downloaded AuthKey_XXXX.p8 file, base64-encoded
+#                      (on Windows PowerShell:
+#                       [Convert]::ToBase64String([IO.File]::ReadAllBytes("AuthKey_XXXX.p8")) )
+#
+#   Variables (not secret):
+#     APPLE_TEAM_ID    10-character Team ID from developer.apple.com → Membership
+#
+# Create the API key at App Store Connect → Users and Access → Integrations
+# → App Store Connect API, with the "App Manager" role. The .p8 can only be
+# downloaded ONCE, so keep a copy somewhere safe.
+#
+# Signing is fully cloud-managed: -allowProvisioningUpdates plus the API
+# key lets Xcode create the distribution certificate and provisioning
+# profile itself, so no certificates or profiles are stored in this repo.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+
+    steps:
+      - name: Check required configuration
+        run: |
+          missing=0
+          for name in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is not set. See the setup notes at the top of this workflow."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Regenerates ios/App/CapApp-SPM/Package.swift for THIS machine.
+      # That file is written with the OS's path separators, so the copy
+      # committed from Windows would have backslashes that macOS can't
+      # resolve. Syncing here makes the build independent of who last
+      # committed it.
+      - name: Sync Capacitor
+        run: npx cap sync ios
+
+      # Apple rejects uploads built with an SDK older than its current
+      # minimum, and that minimum moves every year. Rather than pin a
+      # version that will quietly go stale, use the newest Xcode the
+      # runner image ships.
+      - name: Select newest Xcode
+        run: |
+          XCODE="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
+      - name: Show available schemes
+        run: xcodebuild -list -project ios/App/App.xcodeproj
+
+      - name: Install App Store Connect API key
+        run: |
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$ASC_KEY_P8" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      # The build number must increase on every upload to the same version
+      # or App Store Connect refuses it. run_number does that, and the +100
+      # keeps clear of any build uploaded by hand from Xcode before this
+      # workflow existed (those start at 1).
+      - name: Archive
+        run: |
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CURRENT_PROJECT_VERSION="$(( GITHUB_RUN_NUMBER + 100 ))"
+
+      - name: Write export options
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          PLIST
+
+      # destination=upload sends the build straight to App Store Connect,
+      # so there is no .ipa to keep and no separate upload tool to install.
+      - name: Export and upload to TestFlight
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Remove API key
+        if: always()
+        run: rm -rf "$HOME/.appstoreconnect"
