@@ -61,9 +61,17 @@ What it needs on the Apple side:
       `https://<project-ref>.supabase.co/auth/v1/callback`.
 - [ ] **Keys → "+":** create a second key with **Sign in with Apple**
       ticked and download it.
-- [ ] **Supabase → Authentication → Providers → Apple:** enter the
-      Services ID, Team ID, Key ID and the secret. Supabase documents
-      generating the client secret from the key.
+- [ ] Make the client secret Supabase needs. It does not accept the
+      `.p8` file itself, only a signed token built from it, which this
+      repo generates locally so the key never touches a website:
+      `node scripts/apple-client-secret.mjs --team=TEAMID --key-id=KEYID --services-id=com.sorza.app.signin --p8=C:/path/to/AuthKey_KEYID.p8`
+- [ ] **Supabase → Authentication → Providers → Apple:** enable it, set
+      Client IDs to the **Services ID** (not `com.sorza.app`), and paste
+      the token into Secret Key.
+- [ ] Step 4 of Apple's Sign in with Apple screen ("Register Email
+      Sources") is optional and can be skipped: it only matters if you
+      email people who chose "Hide My Email", and it requires the
+      sending domain to pass SPF.
 - [ ] **Put a reminder in your calendar.** Apple client secrets expire
       after at most **6 months**, and Apple sign-in then breaks silently
       for everyone until it is regenerated.
