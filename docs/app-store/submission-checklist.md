@@ -63,8 +63,11 @@ What it needs on the Apple side:
       ticked and download it.
 - [ ] Make the client secret Supabase needs. It does not accept the
       `.p8` file itself, only a signed token built from it, which this
-      repo generates locally so the key never touches a website:
-      `node scripts/apple-client-secret.mjs --team=TEAMID --key-id=KEYID --services-id=com.sorza.app.signin --p8=C:/path/to/AuthKey_KEYID.p8`
+      repo generates locally so the key never touches a website. Run
+      `node scripts/apple-client-secret.mjs` from the repo folder and
+      answer the four questions (drag the `.p8` file into the window to
+      fill in its path). The token is copied to your clipboard rather
+      than printed. Never paste it anywhere except Supabase.
 - [ ] **Supabase → Authentication → Providers → Apple:** enable it, set
       Client IDs to the **Services ID** (not `com.sorza.app`), and paste
       the token into Secret Key.
