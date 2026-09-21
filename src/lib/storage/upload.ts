@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { moderateMediaAction } from "@/features/moderation/actions";
+import { ModerationRejectedError } from "@/lib/storage/upload-errors";
+
+// Callers import these from here alongside uploadImage.
+export { ModerationRejectedError, uploadErrorMessage } from "@/lib/storage/upload-errors";
 
 // Supabase Storage's upload() defaults cache-control to 3600 (1 hour)
 // when not set explicitly. Every path here is a fresh
@@ -40,11 +45,36 @@ export interface UploadedImage {
   height: number;
 }
 
+export interface UploadImageOptions {
+  /** Screens the photo with the automated moderation check BEFORE any
+   * byte reaches storage, so a refused photo never exists anywhere.
+   * Off by default so existing callers behave exactly as before.
+   *
+   * Turn it on for anything other people can see. Leave it off for the
+   * post composer (which screens up front, before creating any rows) and
+   * for private or admin-reviewed uploads. */
+  moderate?: boolean;
+}
+
 export async function uploadImage(
   supabase: SupabaseClient<Database>,
   userId: string,
   file: File,
+  options: UploadImageOptions = {},
 ): Promise<UploadedImage> {
+  if (options.moderate) {
+    const formData = new FormData();
+    formData.append("file", file);
+    // Fails CLOSED: if the check itself errors, this throws and nothing
+    // is uploaded. See moderateMediaAction.
+    const check = await moderateMediaAction(formData);
+    if (!check.allowed) {
+      throw new ModerationRejectedError(
+        check.reason ?? "That photo doesn't meet our community guidelines.",
+      );
+    }
+  }
+
   const dimensions = await readImageDimensions(file);
   const extension = file.name.split(".").pop() || "jpg";
   const storagePath = `${userId}/${crypto.randomUUID()}.${extension}`;

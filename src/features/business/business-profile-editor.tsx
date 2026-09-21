@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImage } from "@/lib/storage/upload";
+import { uploadImage, uploadErrorMessage } from "@/lib/storage/upload";
 import { createMedia, publicMediaUrl } from "@/lib/db/media";
 import {
   addBusinessProfileMedia,
@@ -94,7 +94,7 @@ export function BusinessProfileEditor({
     setLogoUploading(true);
     try {
       const supabase = createClient();
-      const uploaded = await uploadImage(supabase, userId, file);
+      const uploaded = await uploadImage(supabase, userId, file, { moderate: true });
       const media = await createMedia(supabase, {
         owner_id: userId,
         storage_path: uploaded.storagePath,
@@ -108,8 +108,8 @@ export function BusinessProfileEditor({
         .eq("id", businessProfileId);
       if (updateError) throw updateError;
       setLogoUrl(publicMediaUrl(supabase, uploaded.storagePath));
-    } catch {
-      setLogoError("Couldn't upload that photo. Try again.");
+    } catch (err) {
+      setLogoError(uploadErrorMessage(err, "Couldn't upload that photo. Try again."));
     } finally {
       setLogoUploading(false);
     }
@@ -130,7 +130,7 @@ export function BusinessProfileEditor({
           setGalleryError(fileError);
           continue;
         }
-        const uploaded = await uploadImage(supabase, userId, file);
+        const uploaded = await uploadImage(supabase, userId, file, { moderate: true });
         const media = await createMedia(supabase, {
           owner_id: userId,
           storage_path: uploaded.storagePath,
@@ -142,8 +142,8 @@ export function BusinessProfileEditor({
         next.push({ id: row.id, url: publicMediaUrl(supabase, uploaded.storagePath) });
       }
       setGallery(next);
-    } catch {
-      setGalleryError("Couldn't upload one of those photos. Try again.");
+    } catch (err) {
+      setGalleryError(uploadErrorMessage(err, "Couldn't upload one of those photos. Try again."));
     } finally {
       setGalleryUploading(false);
     }
@@ -169,7 +169,7 @@ export function BusinessProfileEditor({
     setVerifyUploading(true);
     try {
       const supabase = createClient();
-      const uploaded = await uploadImage(supabase, userId, file);
+      const uploaded = await uploadImage(supabase, userId, file, { moderate: true });
       const media = await createMedia(supabase, {
         owner_id: userId,
         storage_path: uploaded.storagePath,
@@ -183,8 +183,8 @@ export function BusinessProfileEditor({
         .eq("id", businessProfileId);
       if (updateError) throw updateError;
       setVerificationStatus("pending");
-    } catch {
-      setVerifyError("Couldn't upload that. Try again.");
+    } catch (err) {
+      setVerifyError(uploadErrorMessage(err, "Couldn't upload that. Try again."));
     } finally {
       setVerifyUploading(false);
     }

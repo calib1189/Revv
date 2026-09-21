@@ -18,14 +18,16 @@ export default function PrivacyPage() {
             <li>Content you post: photos, videos, captions, comments, messages</li>
             <li>Garage data: vehicles, builds, parts, maintenance records you enter</li>
             <li>
-              Photos you submit to AI features (vehicle identification, build rating) and content
-              you post, which may be screened by an automated moderation check — each sent to the
-              configured AI provider for that one request
+              Photos you submit to AI features (vehicle identification, build rating) and photos
+              you post, which are screened by an automated moderation check — each sent to
+              Google&apos;s Gemini AI service for that one request
             </li>
             <li>
-              Location, only when you grant permission — used to find nearby shops and sort meets
-              by distance. Never stored against your account; used for that one search and
-              discarded
+              Location, only when you grant permission. Used to find nearby shops and sort meets
+              by distance, and for those searches it is used once and discarded. If you choose
+              &quot;Use my current location&quot; while hosting a meet, those coordinates are saved
+              with that meet so others can see how far away it is, and are removed if you delete
+              the meet or your account
             </li>
             <li>
               A push notification token, only if you opt in to notifications — used solely to
@@ -48,9 +50,10 @@ export default function PrivacyPage() {
           <h2 className="mb-2 text-base font-semibold">3. AI processing</h2>
           <p>
             When you use an AI-assisted feature — identifying a vehicle from a photo or rating a
-            build — the photo or text you submit is sent to the AI provider configured for that
-            feature. Posted photos and captions may also be sent for automated moderation
-            screening. We do not use your content to train models beyond what the provider&apos;s
+            build — the photo or text you submit is sent to Google&apos;s Gemini AI service to
+            produce the result. Each photo you post (for a video, one still frame from it) is also
+            sent to Gemini for automated moderation screening before it is published. Captions
+            and comments are not sent. We do not use your content to train models beyond what the provider&apos;s
             own terms specify. AI output is shown to you as a suggestion and is never saved to
             your account until you confirm it.
           </p>
@@ -60,7 +63,7 @@ export default function PrivacyPage() {
           <h2 className="mb-2 text-base font-semibold">4. Who we share it with</h2>
           <ul className="ml-5 list-disc space-y-1">
             <li>Infrastructure providers (hosting, database, storage) needed to run SORZA</li>
-            <li>The AI providers behind AI-assisted features and moderation, for the request you initiate</li>
+            <li>Google (Gemini AI), which receives the photos and text you submit to AI features, and each photo you post (or one frame of a video) for moderation screening</li>
             <li>Google, for shop search and meet locations, when you use those features — only the coordinates needed for that search</li>
             <li>Stripe, for billing, if you subscribe to a paid feature — we never see your card details</li>
             <li>Affiliate partners, only in aggregate/click-through form when you follow an affiliate product link</li>

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImage } from "@/lib/storage/upload";
+import { uploadImage, uploadErrorMessage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { addVehicleMedia } from "@/lib/db/vehicle-media";
 import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
@@ -38,7 +38,7 @@ export function GalleryUploader({
           setError(validationError);
           continue;
         }
-        const uploaded = await uploadImage(supabase, userId, file);
+        const uploaded = await uploadImage(supabase, userId, file, { moderate: true });
         const media = await createMedia(supabase, {
           owner_id: userId,
           storage_path: uploaded.storagePath,
@@ -51,8 +51,8 @@ export function GalleryUploader({
       }
 
       router.refresh();
-    } catch {
-      setError("Couldn't upload one of those photos. Try again.");
+    } catch (err) {
+      setError(uploadErrorMessage(err, "Couldn't upload one of those photos. Try again."));
     } finally {
       setIsUploading(false);
     }

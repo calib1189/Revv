@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImage } from "@/lib/storage/upload";
+import { uploadImage, uploadErrorMessage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { publicMediaUrl } from "@/lib/db/media";
 import { updateProfileAvatar } from "@/lib/db/profiles";
@@ -38,7 +38,7 @@ export function EditAvatarForm({
     setIsUploading(true);
     try {
       const supabase = createClient();
-      const uploaded = await uploadImage(supabase, userId, file);
+      const uploaded = await uploadImage(supabase, userId, file, { moderate: true });
       const media = await createMedia(supabase, {
         owner_id: userId,
         storage_path: uploaded.storagePath,
@@ -49,8 +49,8 @@ export function EditAvatarForm({
       await updateProfileAvatar(supabase, userId, media.id);
       setPreviewUrl(publicMediaUrl(supabase, uploaded.storagePath));
       router.refresh();
-    } catch {
-      setError("Couldn't update your profile picture. Try again.");
+    } catch (err) {
+      setError(uploadErrorMessage(err, "Couldn't update your profile picture. Try again."));
       setPreviewUrl(initialAvatarUrl);
     } finally {
       setIsUploading(false);

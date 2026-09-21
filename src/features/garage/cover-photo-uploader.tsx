@@ -3,7 +3,7 @@
 import { useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImage } from "@/lib/storage/upload";
+import { uploadImage, uploadErrorMessage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
@@ -36,7 +36,7 @@ export function CoverPhotoUploader({
     setIsUploading(true);
     try {
       const supabase = createClient();
-      const uploaded = await uploadImage(supabase, userId, file);
+      const uploaded = await uploadImage(supabase, userId, file, { moderate: true });
       const media = await createMedia(supabase, {
         owner_id: userId,
         storage_path: uploaded.storagePath,
@@ -51,8 +51,8 @@ export function CoverPhotoUploader({
       if (updateError) throw updateError;
 
       router.refresh();
-    } catch {
-      setError("Couldn't upload that photo. Try again.");
+    } catch (err) {
+      setError(uploadErrorMessage(err, "Couldn't upload that photo. Try again."));
     } finally {
       setIsUploading(false);
     }

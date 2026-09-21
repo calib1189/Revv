@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { generateBuildRatingAction, confirmBuildRatingAction } from "@/features/garage/rating-actions";
+import { AiDisclosure } from "@/features/garage/ai-disclosure";
 import { RatingReveal } from "@/features/garage/rating-reveal";
 import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
 import { RatingBreakdownTrigger, type RatingHistoryPoint } from "@/features/garage/rating-breakdown-modal";
@@ -193,6 +194,7 @@ export function RateBuildPanel({
               {isGenerating ? "Rating…" : "Re-rate"}
             </Button>
           </div>
+          <AiDisclosure className="mt-3" />
         </div>
       </>
     );
@@ -217,6 +219,7 @@ export function RateBuildPanel({
         >
           {isGenerating ? "Rating…" : "Rate my build"}
         </Button>
+        <AiDisclosure className="mt-3 max-w-xs" />
         {error && (
           <div className="mt-4 w-full">
             <Callout tone="danger">{error}</Callout>
