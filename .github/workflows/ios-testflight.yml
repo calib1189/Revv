@@ -106,8 +106,15 @@ jobs:
       # or App Store Connect refuses it. run_number does that, and the +100
       # keeps clear of any build uploaded by hand from Xcode before this
       # workflow existed (those start at 1).
+      # Output is teed to a file so the step below can pull the real error
+      # out of it. xcodebuild's own exit code is only ever "65", which says
+      # a build failed and nothing about why, and the log for a run is
+      # hundreds of lines long and only readable when signed in to GitHub.
+      # pipefail keeps xcodebuild's failure from being masked by tee.
       - name: Archive
+        id: archive
         run: |
+          set -o pipefail
           xcodebuild archive \
             -project ios/App/App.xcodeproj \
             -scheme App \
@@ -119,7 +126,20 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CURRENT_PROJECT_VERSION="$(( GITHUB_RUN_NUMBER + 100 ))"
+            CURRENT_PROJECT_VERSION="$(( GITHUB_RUN_NUMBER + 100 ))" \
+            2>&1 | tee "$RUNNER_TEMP/archive.log"
+
+      # Turns the failure into error annotations, which are shown at the top
+      # of the run page and readable without logging in. Secrets are masked
+      # by the runner in these too.
+      - name: Show archive errors
+        if: failure() && steps.archive.outcome == 'failure'
+        run: |
+          LOG="$RUNNER_TEMP/archive.log"
+          grep -E "error:|error \(|\*\* ARCHIVE FAILED|requires a development team|No profiles|provisioning profile|Unable to|cannot find|Missing" "$LOG" \
+            | sort -u | head -8 \
+            | while IFS= read -r line; do echo "::error title=Archive::${line:0:600}"; done
+          echo "::error title=Archive (last lines)::$(tail -14 "$LOG" | cut -c1-260 | awk 'BEGIN{ORS="%0A"}{print}')"
 
       - name: Write export options
         run: |
@@ -140,7 +160,9 @@ jobs:
       # destination=upload sends the build straight to App Store Connect,
       # so there is no .ipa to keep and no separate upload tool to install.
       - name: Export and upload to TestFlight
+        id: export
         run: |
+          set -o pipefail
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
@@ -148,7 +170,17 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8" \
             -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/export.log"
+
+      - name: Show export errors
+        if: failure() && steps.export.outcome == 'failure'
+        run: |
+          LOG="$RUNNER_TEMP/export.log"
+          grep -E "error:|error \(|\*\* EXPORT FAILED|requires a development team|No profiles|provisioning profile|Unable to|cannot find|Missing|Authentication|Forbidden|denied" "$LOG" \
+            | sort -u | head -8 \
+            | while IFS= read -r line; do echo "::error title=Export::${line:0:600}"; done
+          echo "::error title=Export (last lines)::$(tail -14 "$LOG" | cut -c1-260 | awk 'BEGIN{ORS="%0A"}{print}')"
 
       - name: Remove API key
         if: always()
