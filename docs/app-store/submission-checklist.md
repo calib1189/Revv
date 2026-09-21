@@ -23,9 +23,11 @@ an icon, `Info.plist`).
       If it is already taken by another developer, pick a new ID and
       change it in `capacitor.config.ts` and both build configurations in
       `ios/App/App.xcodeproj/project.pbxproj`, plus `APNS_BUNDLE_ID`.
-- [ ] On that App ID, enable **Push Notifications**. (Cloud signing turns
-      it on automatically the first time a build needs it, but ticking
-      it now avoids a confusing first failure.)
+- [ ] On that App ID, tick exactly two capabilities and nothing else:
+      **Push Notifications**, and **Sign In with Apple** (click
+      Configure and choose **Enable as a primary App ID**). The second
+      is required by step 3: the Services ID created there must point at
+      a primary App ID that has the capability, or it cannot be saved.
 - [ ] Note your **Team ID** (Membership details, 10 characters).
 
 ## 2. Push notifications key (you)
@@ -49,8 +51,9 @@ nothing, because the mock provider sends nothing.
 
 The login button is already in the app, and Apple requires it because
 you also offer Google login. It works through the browser (OAuth), not
-the native sign-in sheet, so **no entitlement is needed**. What it does
-need is configuring on the Apple side:
+the native sign-in sheet, so **the app binary needs no entitlement**
+(the App ID capability in step 1 is a separate thing and is needed).
+What it needs on the Apple side:
 
 - [ ] **Identifiers → "+" → Services IDs:** create one (for example
       `com.sorza.app.signin`), enable **Sign in with Apple**, and set the
