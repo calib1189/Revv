@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { isSafeAppPath } from "@/lib/push/validation";
+import { listenForNotificationTaps, refreshNativePushRegistration } from "@/lib/native/push";
 
 /** No-ops entirely on the regular web/PWA — only does anything when this
  * page is running inside the Capacitor-wrapped native shell. Dynamically
@@ -10,6 +12,7 @@ export function NativeAppBridge() {
   useEffect(() => {
     let cancelled = false;
     let listenerHandle: { remove: () => void } | undefined;
+    let tapHandle: { remove: () => void } | undefined;
 
     (async () => {
       const { Capacitor } = await import("@capacitor/core");
@@ -59,16 +62,32 @@ export function NativeAppBridge() {
         window.location.href = `${window.location.origin}${targetPath}${parsed.search}`;
       });
 
+      // Tapping a push notification opens whatever it was about. The path
+      // is validated on the device as well as built safely on the server:
+      // a full-page navigation to an attacker-supplied URL from a
+      // notification would be an open redirect with the app's name on it.
+      const taps = await listenForNotificationTaps((path) => {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.href = `${window.location.origin}${path}`;
+      }, isSafeAppPath);
+
+      // Keeps the server's copy of this device's push token current. Never
+      // prompts for permission — see refreshNativePushRegistration.
+      void refreshNativePushRegistration().catch(() => {});
+
       if (cancelled) {
         listener.remove();
+        taps?.remove();
       } else {
         listenerHandle = listener;
+        tapHandle = taps ?? undefined;
       }
     })();
 
     return () => {
       cancelled = true;
       listenerHandle?.remove();
+      tapHandle?.remove();
     };
   }, []);
 

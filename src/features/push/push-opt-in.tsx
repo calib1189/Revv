@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { subscribeToPushAction, unsubscribeFromPushAction } from "@/features/push/push-actions";
+import {
+  subscribeToPushAction,
+  unsubscribeFromPushAction,
+  hasDeviceTokenAction,
+} from "@/features/push/push-actions";
+import {
+  isNativeApp,
+  getNativePushPermission,
+  enableNativePush,
+  disableNativePush,
+  readStoredPushToken,
+} from "@/lib/native/push";
 import { Toggle } from "@/components/ui/toggle";
 import { Spinner } from "@/components/ui/spinner";
 import { Callout } from "@/components/ui/callout";
@@ -38,9 +49,27 @@ export function PushOptIn() {
   const [status, setStatus] = useState<Status>("loading");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The App Store build is a WKWebView, which has no Web Push at all —
+  // there the toggle drives APNs through the native plugin instead.
+  const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
     (async () => {
+      if (await isNativeApp()) {
+        setIsNative(true);
+        const permission = await getNativePushPermission();
+        if (permission === "denied") {
+          setStatus("denied");
+          return;
+        }
+        // Ask the server, not localStorage: the remembered token
+        // survives a sign-out, so trusting it would show "on" for a
+        // different person who signed in on the same phone.
+        const token = readStoredPushToken();
+        const attached = permission === "granted" && token ? await hasDeviceTokenAction(token) : false;
+        setStatus(attached ? "on" : "off");
+        return;
+      }
       if (!VAPID_PUBLIC_KEY || !("serviceWorker" in navigator) || !("PushManager" in window)) {
         setStatus(isIos() && !isStandalone() ? "ios-needs-install" : "unsupported");
         return;
@@ -58,6 +87,19 @@ export function PushOptIn() {
   async function handleEnable() {
     setError(null);
     setIsPending(true);
+    if (isNative) {
+      try {
+        const result = await enableNativePush();
+        if (result.ok) setStatus("on");
+        else if (result.reason === "denied") setStatus("denied");
+        else setError("Couldn't enable notifications. Check your connection and try again.");
+      } catch {
+        setError("Couldn't enable notifications. Try again.");
+      } finally {
+        setIsPending(false);
+      }
+      return;
+    }
     try {
       const registration = await navigator.serviceWorker.ready;
       const permission = await Notification.requestPermission();
@@ -90,6 +132,17 @@ export function PushOptIn() {
   async function handleDisable() {
     setError(null);
     setIsPending(true);
+    if (isNative) {
+      try {
+        await disableNativePush();
+        setStatus("off");
+      } catch {
+        setError("Couldn't turn off notifications. Try again.");
+      } finally {
+        setIsPending(false);
+      }
+      return;
+    }
     try {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
@@ -109,7 +162,9 @@ export function PushOptIn() {
     status === "ios-needs-install"
       ? "On iPhone, add SORZA to your Home Screen first: tap Share, then Add to Home Screen. Open it from there to turn this on."
       : status === "denied"
-        ? "Notifications are blocked for this site. Allow them in your browser settings to turn this on."
+        ? isNative
+          ? "Notifications are turned off for SORZA. Open the Settings app, tap SORZA, then Notifications, and allow them."
+          : "Notifications are blocked for this site. Allow them in your browser settings to turn this on."
         : status === "unsupported"
           ? "This browser doesn't support push notifications."
           : "Likes, comments, new followers, and messages.";

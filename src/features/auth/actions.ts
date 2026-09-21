@@ -13,6 +13,8 @@ import {
 } from "@/lib/auth/signup-rate-limit";
 import { getClientIp } from "@/lib/http/get-client-ip";
 import { SITE_URL } from "@/lib/site-url";
+import { deleteDevicePushToken } from "@/lib/db/device-push-tokens";
+import { isValidDeviceToken } from "@/lib/push/validation";
 
 export interface AuthActionState {
   error: string | null;
@@ -109,8 +111,18 @@ export async function signIn(
   redirect(next.startsWith("/") ? next : "/feed");
 }
 
-export async function signOut(_formData: FormData): Promise<void> {
+export async function signOut(formData: FormData): Promise<void> {
   const supabase = await createClient();
+
+  // Detach this device from the account BEFORE the session ends: the
+  // delete goes through RLS as the signed-in user, which stops working
+  // the moment signOut() runs. Best-effort — failing to remove a token
+  // must never trap someone in a session they are trying to leave.
+  const pushToken = formData.get("pushToken");
+  if (isValidDeviceToken(pushToken)) {
+    await deleteDevicePushToken(supabase, pushToken).catch(() => {});
+  }
+
   await supabase.auth.signOut();
   redirect("/");
 }

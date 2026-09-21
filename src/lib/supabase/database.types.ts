@@ -841,6 +841,26 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>;
         Relationships: never[];
       };
+      device_push_tokens: {
+        Row: {
+          id: string;
+          user_id: string;
+          token: string;
+          platform: "ios";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          token: string;
+          platform?: "ios";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["device_push_tokens"]["Insert"]>;
+        Relationships: never[];
+      };
       push_subscriptions: {
         Row: {
           id: string;
