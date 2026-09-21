@@ -51,3 +51,8 @@ next-env.d.ts
 /ios/App/DerivedData
 /ios/**/xcuserdata
 *.xcworkspace/xcuserdata
+
+# Apple private keys (APNs, Sign in with Apple, App Store Connect API).
+# Committing one hands out the ability to act as this app to Apple.
+*.p8
+AuthKey_*
