@@ -31,6 +31,13 @@ name: iOS TestFlight
 # Signing is fully cloud-managed: -allowProvisioningUpdates plus the API
 # key lets Xcode create the distribution certificate and provisioning
 # profile itself, so no certificates or profiles are stored in this repo.
+# That key needs the Admin role, not just App Manager — App Manager can
+# manage an existing app but can't create the distribution certificate a
+# brand-new setup needs, which fails as "Cloud signing permission error".
+#
+# Signing/packaging (Export IPA) and the actual network upload (Upload to
+# TestFlight) are deliberately two separate steps rather than one — see
+# the comment on "Write export options" for why.
 
 on:
   workflow_dispatch:
@@ -42,7 +49,15 @@ concurrency:
 jobs:
   testflight:
     runs-on: macos-15
-    timeout-minutes: 60
+    # The job-level ceiling is a last resort, not the expected path — see
+    # the per-step timeout-minutes below. A run that reaches this one
+    # gets cancelled with no useful log at all, which is what happened on
+    # 2026-09-21: "Export and upload" hung silently for the full hour.
+    # Every real step now has its own shorter limit specifically so that
+    # can't happen again — set well above their sum (20 + 15 + 20 = 55,
+    # plus setup) so a step's own timeout always gets to fire, and report
+    # why, before this one can cut it off first.
+    timeout-minutes: 75
     env:
       APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -111,8 +126,14 @@ jobs:
       # a build failed and nothing about why, and the log for a run is
       # hundreds of lines long and only readable when signed in to GitHub.
       # pipefail keeps xcodebuild's failure from being masked by tee.
+      # Fully offline (nothing here talks to Apple's upload servers — only
+      # the local cloud-signing lookup, which Archive already exercised
+      # successfully last run), so it should finish in a few minutes. Given
+      # its own ceiling well under the job's, rather than sharing the job
+      # timeout with every step after it — see the note above.
       - name: Archive
         id: archive
+        timeout-minutes: 20
         run: |
           set -o pipefail
           xcodebuild archive \
@@ -129,18 +150,36 @@ jobs:
             CURRENT_PROJECT_VERSION="$(( GITHUB_RUN_NUMBER + 100 ))" \
             2>&1 | tee "$RUNNER_TEMP/archive.log"
 
-      # Turns the failure into error annotations, which are shown at the top
-      # of the run page and readable without logging in. Secrets are masked
-      # by the runner in these too.
+      # always(), not failure(): a step that hits ITS OWN timeout-minutes
+      # is reported by GitHub as cancelled, not failed, and failure()
+      # returns false for a cancelled step — exactly what let the export
+      # hang on 2026-09-21 produce zero custom diagnostics, only GitHub's
+      # own generic "The operation was canceled." This runs unconditionally
+      # and is a no-op (via the [ -f ] check) whenever archive.log was
+      # never written, i.e. Archive actually succeeded.
       - name: Show archive errors
-        if: failure() && steps.archive.outcome == 'failure'
+        if: always()
         run: |
           LOG="$RUNNER_TEMP/archive.log"
+          [ -f "$LOG" ] || exit 0
+          [ "${{ steps.archive.outcome }}" = "success" ] && exit 0
           grep -E "error:|error \(|\*\* ARCHIVE FAILED|requires a development team|No profiles|provisioning profile|Unable to|cannot find|Missing" "$LOG" \
             | sort -u | head -8 \
             | while IFS= read -r line; do echo "::error title=Archive::${line:0:600}"; done
           echo "::error title=Archive (last lines)::$(tail -14 "$LOG" | cut -c1-260 | awk 'BEGIN{ORS="%0A"}{print}')"
+          if [ "${{ steps.archive.outcome }}" = "cancelled" ]; then
+            echo "::error title=Archive::This step hit its own 20-minute timeout (not the job's 60-minute one) and was killed. The lines above are whatever it had printed up to that point, not a real error message — see the last line it printed for where it actually stalled."
+          fi
 
+      # destination=export (not "upload") on purpose: this only signs and
+      # packages a local .ipa, with no network call to Apple at all. On
+      # 2026-09-21 the combined sign-AND-upload step hung for the full
+      # 60-minute job timeout with only one line ever printed, which left
+      # no way to tell whether the hang was in signing or in the network
+      # upload. Splitting it in two turns that unknown into a fact: if
+      # THIS step is what times out, the problem is local/signing; if it
+      # sails through and the separate upload step below is what hangs,
+      # the problem is squarely on the network path to Apple.
       - name: Write export options
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
@@ -149,7 +188,7 @@ jobs:
           <plist version="1.0">
           <dict>
             <key>method</key><string>app-store-connect</string>
-            <key>destination</key><string>upload</string>
+            <key>destination</key><string>export</string>
             <key>teamID</key><string>${APPLE_TEAM_ID}</string>
             <key>signingStyle</key><string>automatic</string>
             <key>uploadSymbols</key><true/>
@@ -157,10 +196,9 @@ jobs:
           </plist>
           PLIST
 
-      # destination=upload sends the build straight to App Store Connect,
-      # so there is no .ipa to keep and no separate upload tool to install.
-      - name: Export and upload to TestFlight
+      - name: Export IPA
         id: export
+        timeout-minutes: 15
         run: |
           set -o pipefail
           xcodebuild -exportArchive \
@@ -174,13 +212,71 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/export.log"
 
       - name: Show export errors
-        if: failure() && steps.export.outcome == 'failure'
+        if: always()
         run: |
           LOG="$RUNNER_TEMP/export.log"
+          [ -f "$LOG" ] || exit 0
+          [ "${{ steps.export.outcome }}" = "success" ] && exit 0
           grep -E "error:|error \(|\*\* EXPORT FAILED|requires a development team|No profiles|provisioning profile|Unable to|cannot find|Missing|Authentication|Forbidden|denied" "$LOG" \
             | sort -u | head -8 \
             | while IFS= read -r line; do echo "::error title=Export::${line:0:600}"; done
           echo "::error title=Export (last lines)::$(tail -14 "$LOG" | cut -c1-260 | awk 'BEGIN{ORS="%0A"}{print}')"
+          if [ "${{ steps.export.outcome }}" = "cancelled" ]; then
+            echo "::error title=Export::This step hit its own 15-minute timeout and was killed. This step never touches Apple's upload servers, only local signing/packaging, so a hang HERE points at a local/signing problem, not a network one."
+          fi
+
+      # A dedicated upload step, deliberately separate from Export above —
+      # see the comment on "Write export options" for why. altool is used
+      # here rather than folding upload back into xcodebuild, specifically
+      # because it prints incremental progress (upload percentage, byte
+      # counts) rather than staying silent until the whole transfer either
+      # finishes or hangs, which is what makes it possible to tell "still
+      # genuinely uploading" apart from "stuck" without waiting for a
+      # timeout either way. It reads the same key file already installed
+      # above (same --apiKey/--apiIssuer convention as xcodebuild's
+      # -authenticationKeyID/-authenticationKeyIssuerID).
+      - name: Upload to TestFlight
+        id: upload
+        if: steps.export.outcome == 'success'
+        timeout-minutes: 20
+        run: |
+          set -o pipefail
+          # altool is an older tool, and this workflow always builds with
+          # whatever the newest Xcode on the runner happens to be — not
+          # confirmed to still exist in every future version. Checked
+          # explicitly rather than assumed, so a missing tool produces one
+          # clear line instead of a confusing failure three commands down.
+          if ! xcrun altool --version >/dev/null 2>&1; then
+            echo "::error title=Upload::xcrun altool isn't available on this Xcode version. This step needs rewriting to use whatever Apple's current upload tool is on this runner image."
+            exit 1
+          fi
+          IPA="$(find "$RUNNER_TEMP/export" -maxdepth 1 -name '*.ipa' | head -1)"
+          if [ -z "$IPA" ]; then
+            echo "::error title=Upload::Export reported success but no .ipa was found in $RUNNER_TEMP/export"
+            exit 1
+          fi
+          echo "Uploading: $IPA ($(du -h "$IPA" | cut -f1))"
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID" \
+            --verbose \
+            2>&1 | tee "$RUNNER_TEMP/upload.log"
+
+      - name: Show upload errors
+        if: always()
+        run: |
+          LOG="$RUNNER_TEMP/upload.log"
+          [ -f "$LOG" ] || exit 0
+          [ "${{ steps.upload.outcome }}" = "success" ] && exit 0
+          grep -iE "error|failed|invalid|denied|forbidden|rejected|reason|unable to" "$LOG" \
+            | sort -u | head -8 \
+            | while IFS= read -r line; do echo "::error title=Upload::${line:0:600}"; done
+          echo "::error title=Upload (last lines)::$(tail -20 "$LOG" | cut -c1-260 | awk 'BEGIN{ORS="%0A"}{print}')"
+          if [ "${{ steps.upload.outcome }}" = "cancelled" ]; then
+            echo "::error title=Upload::This step hit its own 20-minute timeout and was killed while actually talking to Apple's servers — this is the network-upload half specifically, confirming the hang is not in local signing. The most likely causes are outside this repo: an Apple-side processing slowdown, or a network stall between this specific GitHub runner and Apple. Retrying is reasonable; if it hangs again the same way, uploading the exported .ipa from a real Mac (or the Transporter app) would tell us whether it is this pipeline or the Apple account/App Store Connect record itself."
+          fi
 
       - name: Remove API key
         if: always()
