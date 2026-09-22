@@ -4,6 +4,23 @@ import type { Database } from "@/lib/supabase/database.types";
 export type CrewMember = Database["public"]["Tables"]["crew_members"]["Row"];
 export type CrewMemberRole = CrewMember["role"];
 
+/** Looks up one crew_members row by its own id — needed before approving
+ * a join request, since approveJoinRequest itself only takes the id and
+ * returns nothing, but the caller needs the row's user_id to push a
+ * notification to the right person. */
+export async function getCrewMemberById(
+  supabase: SupabaseClient<Database>,
+  crewMemberId: string,
+): Promise<CrewMember | null> {
+  const { data, error } = await supabase
+    .from("crew_members")
+    .select("*")
+    .eq("id", crewMemberId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 /** Instant join for a public crew — status 'approved' from the start.
  * RLS ("users self-join public crews...", 0064) rejects this outright if
  * the crew is actually private, so there's no need to check visibility

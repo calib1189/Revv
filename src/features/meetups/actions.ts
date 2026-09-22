@@ -22,6 +22,7 @@ import {
 import { getMeetupViewCountsForMeetups } from "@/lib/db/meetup-views";
 import { createAuditLog } from "@/lib/db/audit-logs";
 import { validateMeetup } from "@/lib/validation/meetup";
+import { sendPushToUser } from "@/lib/push/send";
 
 export async function deleteMeetupAction(meetupId: string): Promise<void> {
   const { supabase } = await requireUser();
@@ -192,6 +193,9 @@ export async function getMyMeetupsAction(): Promise<MyMeetupsResponse> {
 
 export async function approveMeetupAction(meetupId: string): Promise<void> {
   const { supabase, userId } = await requireAdmin();
+  // Fetched before the update so the push below has the host and title
+  // to work with — updateMeetupStatus itself returns nothing.
+  const meetup = await getMeetupById(supabase, meetupId);
   await updateMeetupStatus(supabase, meetupId, "active");
   await createAuditLog(supabase, {
     actorId: userId,
@@ -201,10 +205,18 @@ export async function approveMeetupAction(meetupId: string): Promise<void> {
   });
   revalidatePath("/admin/meetups");
   revalidatePath("/discover");
+  if (meetup) {
+    await sendPushToUser(meetup.host_id, {
+      title: "SORZA",
+      body: `Your meet "${meetup.title}" was approved — it's live in Discover`,
+      url: `/discover/${meetupId}`,
+    });
+  }
 }
 
 export async function rejectMeetupAction(meetupId: string): Promise<void> {
   const { supabase, userId } = await requireAdmin();
+  const meetup = await getMeetupById(supabase, meetupId);
   await updateMeetupStatus(supabase, meetupId, "rejected");
   await createAuditLog(supabase, {
     actorId: userId,
@@ -213,4 +225,14 @@ export async function rejectMeetupAction(meetupId: string): Promise<void> {
     targetId: meetupId,
   });
   revalidatePath("/admin/meetups");
+  if (meetup) {
+    // RLS still lets a host read their own meetup regardless of status
+    // (0043), so this link keeps working even though it's no longer
+    // publicly listed.
+    await sendPushToUser(meetup.host_id, {
+      title: "SORZA",
+      body: `Your meet "${meetup.title}" wasn't approved`,
+      url: `/discover/${meetupId}`,
+    });
+  }
 }

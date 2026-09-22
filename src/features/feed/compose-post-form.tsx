@@ -17,6 +17,7 @@ import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { validateCaption, validatePhotoCount } from "@/lib/validation/post";
 import { clampSoundStartMs } from "@/lib/validation/sound";
 import { trackEvent } from "@/lib/analytics/track";
+import { notifyCrewPostAction } from "@/features/crews/actions";
 import { moderateMediaAction } from "@/features/moderation/actions";
 import { captureVideoFrame } from "@/features/moderation/capture-video-frame";
 import { Callout } from "@/components/ui/callout";
@@ -438,6 +439,11 @@ export function ComposePostForm({
         post_id: post.id,
         post_type: mode!,
       });
+
+      // Fire-and-forget, deliberately not awaited: this is a notification
+      // to OTHER crew members, not something the poster needs to wait on
+      // — the post itself already published successfully above.
+      if (crewId) void notifyCrewPostAction(crewId, post.id);
 
       router.push(`/p/${post.id}`);
     } catch {

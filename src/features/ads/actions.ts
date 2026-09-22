@@ -5,6 +5,7 @@ import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirme
 import { requireAdmin } from "@/lib/auth/require-admin";
 import { isAdBillingConfigured } from "@/lib/billing/config";
 import { createAdCheckoutSession } from "@/lib/billing/stripe";
+import { sendPushToUser } from "@/lib/push/send";
 import {
   createAdCampaign,
   getAdCampaignById,
@@ -129,6 +130,15 @@ export async function approveAdCampaignAction(campaignId: string): Promise<void>
     targetId: campaignId,
   });
   revalidatePath("/admin/ads");
+  // No dedicated "my ads" page exists yet for the advertiser to check
+  // on this themselves — /feed is at least where the now-live ad could
+  // plausibly turn up, unlike routing to an admin-only page they can't
+  // open.
+  await sendPushToUser(campaign.advertiser_id, {
+    title: "SORZA",
+    body: `Your ad "${campaign.headline}" was approved — it's live`,
+    url: "/feed",
+  });
 }
 
 export async function rejectAdCampaignAction(campaignId: string): Promise<void> {

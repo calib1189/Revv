@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
 import { validateCrewForm } from "@/lib/validation/crew";
 import { isCrewCategory } from "@/lib/crews/category";
@@ -15,12 +16,17 @@ import {
   updateMemberRole,
   removeMember,
   getCrewMemberRole,
+  getCrewMemberById,
+  listCrewMembers,
   type CrewMemberRole,
 } from "@/lib/db/crew-members";
 import { trackEvent } from "@/lib/analytics/track";
 import { getStoreItem, type StoreCategory } from "@/lib/store/catalog";
 import { listOwnedItemIds } from "@/lib/db/points";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { sendPushToUser } from "@/lib/push/send";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/database.types";
 import type { CrewInsert } from "@/lib/db/crews";
 
 export interface CrewFormState {
@@ -104,8 +110,71 @@ export async function joinCrewAction(crewId: string): Promise<void> {
     await joinCrew(supabase, crewId, user.id);
   } else {
     await requestToJoinCrew(supabase, crewId, user.id);
+    after(() => notifyCrewLeadersOfJoinRequest(supabase, crewId, crew.name, user.id));
   }
   revalidatePath(`/crews/${crewId}`);
+}
+
+/** Fire-and-forget push to every leader/admin of a crew when someone
+ * requests to join it — the push counterpart to
+ * handle_new_crew_join_request (0065), which already creates the in-app
+ * row for the same set of people. */
+async function notifyCrewLeadersOfJoinRequest(
+  supabase: SupabaseClient<Database>,
+  crewId: string,
+  crewName: string,
+  actorId: string,
+): Promise<void> {
+  try {
+    const members = await listCrewMembers(supabase, crewId);
+    const leaders = members.filter(
+      (m) => (m.role === "leader" || m.role === "admin") && m.user_id !== actorId,
+    );
+    if (leaders.length === 0) return;
+    const actor = await getProfileByUserId(supabase, actorId);
+    await Promise.all(
+      leaders.map((l) =>
+        sendPushToUser(l.user_id, {
+          title: "SORZA",
+          body: `@${actor?.username ?? "Someone"} requested to join ${crewName}`,
+          url: `/crews/${crewId}/requests`,
+        }),
+      ),
+    );
+  } catch {
+    // best-effort only
+  }
+}
+
+/** Fire-and-forget push to every OTHER approved member of a crew when
+ * someone posts to it — the push counterpart to handle_new_crew_post
+ * (0065). Called directly by the client after a crew-tagged post is
+ * created there (compose-post-form.tsx creates the post row itself, not
+ * through a Server Action — see that file's own comment on why), rather
+ * than through a database trigger, since only application code can call
+ * a push provider. */
+export async function notifyCrewPostAction(crewId: string, postId: string): Promise<void> {
+  const { supabase, user } = await requireConfirmedUser();
+  try {
+    const [members, actor] = await Promise.all([
+      listCrewMembers(supabase, crewId),
+      getProfileByUserId(supabase, user.id),
+    ]);
+    await Promise.all(
+      members
+        .filter((m) => m.user_id !== user.id)
+        .map((m) =>
+          sendPushToUser(m.user_id, {
+            title: "SORZA",
+            body: `@${actor?.username ?? "Someone"} posted in a crew you're in`,
+            url: `/p/${postId}`,
+          }),
+        ),
+    );
+  } catch {
+    // best-effort only — never surfaced to the poster, who has already
+    // seen their post publish successfully regardless of this.
+  }
 }
 
 /** Also doubles as "cancel my pending request" — both are just deleting
@@ -126,9 +195,32 @@ export async function leaveCrewAction(crewId: string): Promise<void> {
 
 export async function approveJoinRequestAction(crewMemberId: string, crewId: string): Promise<void> {
   const { supabase } = await requireConfirmedUser();
+  // Fetched before approving — the id alone isn't enough to push to the
+  // right person once the row itself no longer distinguishes "pending".
+  const member = await getCrewMemberById(supabase, crewMemberId);
   await approveJoinRequest(supabase, crewMemberId);
   revalidatePath(`/crews/${crewId}/requests`);
   revalidatePath(`/crews/${crewId}`);
+  if (member) {
+    after(() => notifyApprovedCrewMember(supabase, member.user_id, crewId));
+  }
+}
+
+async function notifyApprovedCrewMember(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  crewId: string,
+): Promise<void> {
+  try {
+    const crew = await getCrewById(supabase, crewId);
+    await sendPushToUser(userId, {
+      title: "SORZA",
+      body: `You're in — your request to join ${crew?.name ?? "the crew"} was approved`,
+      url: `/crews/${crewId}`,
+    });
+  } catch {
+    // best-effort only
+  }
 }
 
 export async function rejectJoinRequestAction(crewMemberId: string, crewId: string): Promise<void> {

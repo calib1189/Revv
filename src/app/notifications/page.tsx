@@ -11,16 +11,35 @@ import { MarkAllReadButton } from "@/features/notifications/mark-all-read-button
 import { InboxTabs } from "@/features/shell/inbox-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionTitle } from "@/components/ui/grouped-list";
-import { BellIcon, CommentIcon, HeartIcon, PersonIcon, UsersIcon } from "@/components/ui/icons";
+import {
+  BellIcon,
+  CommentIcon,
+  HeartIcon,
+  PersonIcon,
+  UsersIcon,
+  CheckIcon,
+  CloseIcon,
+  GemIcon,
+} from "@/components/ui/icons";
 import { relativeTime } from "@/lib/format/relative-time";
 
 const KIND_VERB: Record<string, string> = {
   like: "liked your post",
   comment: "commented on your post",
+  comment_reply: "replied to your comment",
   follow: "started following you",
   crew_join_request: "requested to join your crew",
   crew_join_approved: "approved your request to join",
   crew_post: "posted in a crew you're in",
+  // These four have no actor — an admin decision or an automated check,
+  // never a specific person to attribute it to (see the triggers in
+  // 0092_more_notification_kinds.sql, every one inserts actor_id: null).
+  // Rendered with username "SORZA" (the page's existing fallback for a
+  // null actor_id), so the sentence needs to read naturally after that.
+  meetup_approved: "approved your meet — it's live",
+  meetup_rejected: "didn't approve your meet",
+  ad_approved: "approved your ad — it's live",
+  vehicle_verified: "verified your vehicle",
 };
 
 /** The small badge on each avatar that says what kind of activity it
@@ -28,10 +47,15 @@ const KIND_VERB: Record<string, string> = {
 const KIND_BADGE: Record<string, { icon: ReactNode; color: string }> = {
   like: { icon: <HeartIcon className="h-2.5 w-2.5" />, color: "#ff375f" },
   comment: { icon: <CommentIcon className="h-2.5 w-2.5" />, color: "#0a84ff" },
+  comment_reply: { icon: <CommentIcon className="h-2.5 w-2.5" />, color: "#0a84ff" },
   follow: { icon: <PersonIcon className="h-2.5 w-2.5" />, color: "#30d158" },
   crew_join_request: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
   crew_join_approved: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
   crew_post: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
+  meetup_approved: { icon: <CheckIcon className="h-2.5 w-2.5" />, color: "#30d158" },
+  meetup_rejected: { icon: <CloseIcon className="h-2.5 w-2.5" />, color: "#8e8e93" },
+  ad_approved: { icon: <CheckIcon className="h-2.5 w-2.5" />, color: "#30d158" },
+  vehicle_verified: { icon: <GemIcon className="h-2.5 w-2.5" />, color: "#f0cd6e" },
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -123,7 +147,16 @@ export default async function NotificationsPage() {
                             : `/crews/${n.target_id}`
                           : n.target_type === "post" && n.target_id
                             ? `/p/${n.target_id}`
-                            : "#";
+                            : n.target_type === "meetup" && n.target_id
+                              ? `/discover/${n.target_id}`
+                              : n.target_type === "vehicle" && n.target_id
+                                ? `/garage/${n.target_id}`
+                                : n.target_type === "ad_campaign"
+                                  ? // No dedicated page for an advertiser to view their
+                                    // own campaign yet — this at least lands somewhere
+                                    // the now-live ad could plausibly be seen.
+                                    "/feed"
+                                  : "#";
 
                     return (
                       <li key={n.id} className="relative">

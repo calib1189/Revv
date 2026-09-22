@@ -11,7 +11,7 @@ import { savePost, unsavePost } from "@/lib/db/saves";
 import { recordPostView } from "@/lib/db/post-views";
 import { recordPostViewCompletion } from "@/lib/db/post-view-completions";
 import { recordPostShare } from "@/lib/db/post-shares";
-import { createComment, deleteComment, listCommentsByPost } from "@/lib/db/comments";
+import { createComment, deleteComment, getCommentById, listCommentsByPost } from "@/lib/db/comments";
 import { deletePost, getPostById, updatePostCaption } from "@/lib/db/posts";
 import { listRankedFeedPosts } from "@/lib/ranking/ranked-feed";
 import { createReport } from "@/lib/db/reports";
@@ -246,8 +246,42 @@ export async function createCommentAction(
     return { error: "Couldn't post that comment. Try again in a bit." };
   }
   after(() => notifyPostAuthor(supabase, postId, user.id, "commented on your post"));
+  if (parentId) {
+    after(() => notifyParentCommentAuthor(supabase, postId, parentId, user.id));
+  }
   revalidatePath(`/p/${postId}`);
   return { error: null };
+}
+
+/** Fire-and-forget push to the comment being replied to — separate from
+ * notifyPostAuthor above, which already covers every comment (reply or
+ * not) as "commented on your post". Two guards keep this from ever
+ * duplicating that one or notifying yourself: skipped when the reply is
+ * to your own comment, and skipped when the parent comment's author is
+ * the same person notifyPostAuthor already reached (the in-app version
+ * of this same rule lives in handle_new_comment_reply, 0092). */
+async function notifyParentCommentAuthor(
+  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
+  postId: string,
+  parentId: string,
+  actorId: string,
+): Promise<void> {
+  try {
+    const [parent, post] = await Promise.all([
+      getCommentById(supabase, parentId),
+      getPostById(supabase, postId),
+    ]);
+    if (!parent || parent.author_id === actorId) return;
+    if (post && post.author_id === parent.author_id) return;
+    const actor = await getProfileByUserId(supabase, actorId);
+    await sendPushToUser(parent.author_id, {
+      title: "SORZA",
+      body: `@${actor?.username ?? "Someone"} replied to your comment`,
+      url: `/p/${postId}`,
+    });
+  } catch {
+    // best-effort only
+  }
 }
 
 export async function deleteCommentAction(

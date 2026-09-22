@@ -9,6 +9,7 @@ import { deleteVehicle, updateVehicle } from "@/lib/db/vehicles";
 import { setUserBanned, setUserVerified, setUserFounder } from "@/lib/db/profiles";
 import { updateBusinessProfile } from "@/lib/db/business-profiles";
 import { createAuditLog } from "@/lib/db/audit-logs";
+import { sendPushToUser } from "@/lib/push/send";
 
 export async function dismissReportAction(reportId: string): Promise<void> {
   const { supabase, userId } = await requireAdmin();
@@ -116,7 +117,9 @@ export async function setOwnershipVerificationStatusAction(
   status: "approved" | "rejected",
 ): Promise<void> {
   const { supabase, userId } = await requireAdmin();
-  await updateVehicle(supabase, vehicleId, { ownership_verification_status: status });
+  // updateVehicle returns the full row, so no separate fetch is needed
+  // to get owner_id/nickname/make/model for the push below.
+  const vehicle = await updateVehicle(supabase, vehicleId, { ownership_verification_status: status });
   await createAuditLog(supabase, {
     actorId: userId,
     action: status === "approved" ? "vehicle.verification_approved" : "vehicle.verification_rejected",
@@ -125,6 +128,14 @@ export async function setOwnershipVerificationStatusAction(
   });
   revalidatePath("/admin/verifications");
   revalidatePath("/leaderboard");
+  if (status === "approved") {
+    const name = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
+    await sendPushToUser(vehicle.owner_id, {
+      title: "SORZA",
+      body: `${name} is now verified — its build is eligible for the leaderboard`,
+      url: `/garage/${vehicleId}`,
+    });
+  }
 }
 
 export async function setBusinessVerificationStatusAction(
