@@ -3,9 +3,17 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // SORZA is a server-rendered Next.js app (Server Components, Server
 // Actions, middleware-based auth) — none of that survives a static
 // export, so this isn't a bundled-webDir Capacitor app. Instead the
-// native shell just points its WebView at the real deployed site. webDir
-// still has to point at *something* on disk (Capacitor's CLI requires
-// it to exist), so it's a placeholder that's never actually served.
+// native shell just points its WebView at the real deployed site.
+//
+// webDir still has to point at *something* real on disk (Capacitor's
+// CLI requires it to exist) even though nothing in it is ever served.
+// It used to point at this project's own public/, which IS a real
+// folder — but that meant every `cap sync ios` also copied that
+// folder's actual ~37MB of contents (a ffmpeg WebAssembly binary, a
+// video, image assets meant for the live website) into the native
+// archive, bloating every build and every upload to Apple for zero
+// benefit. ios-shell-www/ is a few hundred bytes and exists for exactly
+// this one purpose.
 const config: CapacitorConfig = {
   // "com.revv.app" was already taken — bundle IDs are globally unique
   // across every Apple developer account, not just this one. Verify
@@ -14,7 +22,7 @@ const config: CapacitorConfig = {
   // swap this string for another candidate before that step.
   appId: "com.sorza.app",
   appName: "SORZA",
-  webDir: "public",
+  webDir: "ios-shell-www",
   // Without this, the WKWebView's own background defaults to white — every
   // overscroll/rubber-band bounce flashes white underneath the dark UI,
   // which is exactly what makes a native app feel like a browser instead.

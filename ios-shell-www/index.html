@@ -1,0 +1,31 @@
+<!doctype html>
+<!--
+  Capacitor's CLI requires webDir to point at a real folder on disk, even
+  though this app never actually serves it — capacitor.config.ts points
+  the WebView straight at https://sorza.net instead (see server.url
+  there). This file is never shown in normal use; the WebView navigates
+  to sorza.net before a person would ever see it.
+
+  It used to point at the Next.js app's own public/ folder, which is a
+  real folder that exists — but pointing at it meant Capacitor also
+  copied that folder's actual contents (a 32MB ffmpeg WebAssembly binary,
+  a 5MB video, image assets meant for the live website) into every
+  native archive uploaded to Apple, for no reason: none of it is ever
+  read by the app. This tiny folder replaces that: it satisfies the
+  same requirement in a few hundred bytes instead of 37MB.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>SORZA</title>
+    <style>
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: #0a0a0b;
+      }
+    </style>
+  </head>
+  <body></body>
+</html>
