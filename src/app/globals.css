@@ -295,6 +295,31 @@ html.native-app body::-webkit-scrollbar {
   display: none;
 }
 
+/* Same "reads as app, not a website" reasoning as the scrollbar rule
+   above, for a different iOS/WebKit default: without this, holding a
+   finger on any text pops the native selection loupe + Copy/Look Up
+   bubble, and holding on an image (or a video frame) pops the
+   Open/Copy/Save-to-Photos callout — both fire on top of, and can
+   swallow, this app's own long-press handling (the feed's post-options
+   menu). Scoped to .native-app so the regular website keeps normal,
+   expected text selection. Inputs/textareas/contenteditable opt back in
+   — a caption or bio field with unselectable text would be a real
+   regression, not a native-feeling one. */
+html.native-app,
+html.native-app body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+html.native-app input,
+html.native-app textarea,
+html.native-app [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 /* The big center heart on a double-tap-to-like — pops in, holds, fades.
    Remounted via a changing `key` each time so it restarts on every tap
    rather than needing to be reset mid-animation. */
