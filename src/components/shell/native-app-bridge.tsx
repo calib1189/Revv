@@ -13,6 +13,7 @@ export function NativeAppBridge() {
     let cancelled = false;
     let listenerHandle: { remove: () => void } | undefined;
     let tapHandle: { remove: () => void } | undefined;
+    let resumeListenerHandle: { remove: () => void } | undefined;
 
     (async () => {
       const { Capacitor } = await import("@capacitor/core");
@@ -75,12 +76,47 @@ export function NativeAppBridge() {
       // prompts for permission — see refreshNativePushRegistration.
       void refreshNativePushRegistration().catch(() => {});
 
+      // WKWebView has a known, widely reported bug: a page with heavy
+      // video/canvas content (the Feed's swipeable video list is exactly
+      // this) can come back from the background with its GPU compositing
+      // layers frozen — visually a black screen — until something forces
+      // WebKit to recompute them. Scrolling is the most common thing
+      // that does, which is exactly the manual "scroll down, then back
+      // up" workaround. This listener does the same forcing automatically
+      // on every resume, before anyone has to notice the black screen at
+      // all: a one-frame, imperceptible opacity nudge on the whole
+      // document forces WebKit to recomposite everything under it,
+      // without depending on knowing which element is actually
+      // scrollable on whatever page happens to be showing.
+      const resumeHandle = await App.addListener("resume", () => {
+        const root = document.documentElement;
+        root.style.opacity = "0.999";
+        // Cleared by whichever fires first, not requestAnimationFrame
+        // alone — confirmed directly (not assumed) that rAF can go
+        // unfired for a stretch in exactly the kind of just-foregrounded
+        // moment this runs in, which would otherwise leave the opacity
+        // stuck at 0.999 instead of invisible-and-reset. The 50ms
+        // fallback is comfortably below anything a person would notice
+        // as "the app looks slightly washed out," and the reset is
+        // idempotent, so both paths firing is harmless.
+        let done = false;
+        const reset = () => {
+          if (done) return;
+          done = true;
+          root.style.opacity = "";
+        };
+        requestAnimationFrame(reset);
+        setTimeout(reset, 50);
+      });
+
       if (cancelled) {
         listener.remove();
         taps?.remove();
+        resumeHandle.remove();
       } else {
         listenerHandle = listener;
         tapHandle = taps ?? undefined;
+        resumeListenerHandle = resumeHandle;
       }
     })();
 
@@ -88,6 +124,7 @@ export function NativeAppBridge() {
       cancelled = true;
       listenerHandle?.remove();
       tapHandle?.remove();
+      resumeListenerHandle?.remove();
     };
   }, []);
 
