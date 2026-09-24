@@ -11,36 +11,34 @@ import WebKit
 ///   correct, standard iOS scroll cue in general, but reads as "browser
 ///   scrollbar" specifically in this always-full-height single-page layout.
 ///
-/// Also retries a failed initial load — see loadFailed(_:) below. Since
-/// capacitor.config.ts points this app at a real remote URL rather than
-/// bundling its own pages, EVERY launch is a real network request before
-/// anything at all can appear, unlike a normal native app that already
-/// has its UI on disk. A cold launch racing against the network not
-/// being ready yet (radio still waking up, a Wi-Fi/cellular handoff
-/// mid-flight) is a real, reported condition here — "can't connect"
-/// right at launch — and stock Capacitor has no retry of its own for it;
-/// a failed load just sits there.
+/// Also retries a stalled initial load — see scheduleStallCheck() below.
+/// Since capacitor.config.ts points this app at a real remote URL rather
+/// than bundling its own pages, EVERY launch is a real network request
+/// before anything at all can appear, unlike a normal native app that
+/// already has its UI on disk. A cold launch racing against the network
+/// not being ready yet (radio still waking up, a Wi-Fi/cellular handoff
+/// mid-flight) is a real, reported condition here — "can't connect" right
+/// at launch — and stock Capacitor has no retry of its own for it; a
+/// failed or stuck load just sits there.
+///
+/// This deliberately does NOT hook WKNavigationDelegate. An earlier version
+/// tried overriding webView(_:didFailProvisionalNavigation:withError:) etc.
+/// on this class, on the assumption CAPBridgeViewController implements
+/// those as overridable methods — it does not (Capacitor conforms to
+/// WKNavigationDelegate some other way; the compiler rejected `override`
+/// outright and `webView` here resolves to the WKWebView? property, not a
+/// method). Reaching further to make this class the navigationDelegate
+/// itself would risk swallowing whatever Capacitor's own delegate does to
+/// run its JS bridge — wrong in a way that fails silently at runtime
+/// instead of at compile time, and worse than the bug being fixed. Polling
+/// the public, KVO-free `isLoading` property instead is fully additive: it
+/// cannot change what Capacitor itself observes or does with the webview.
 class MainViewController: CAPBridgeViewController {
-    // Only genuinely transient conditions retry — a real server error or
-    // a malformed URL retrying in a loop would just be a slower way to
-    // stay broken. NSURLErrorDomain's own names for "not ready yet" vs.
-    // "actually wrong" are what draw that line here.
-    private static let transientErrorCodes: Set<Int> = [
-        NSURLErrorNotConnectedToInternet,
-        NSURLErrorTimedOut,
-        NSURLErrorNetworkConnectionLost,
-        NSURLErrorCannotConnectToHost,
-        NSURLErrorCannotFindHost,
-        NSURLErrorDNSLookupFailed,
-        NSURLErrorInternationalRoamingOff,
-        NSURLErrorDataNotAllowed,
-        NSURLErrorSecureConnectionFailed,
-    ]
-    private static let maxRetries = 4
     private static let retryURL = URL(string: "https://sorza.net")
-
-    private var retryCount = 0
-    private var retryWorkItem: DispatchWorkItem?
+    // Checked at 4s, 8s, 12s: long enough that a real but slow load isn't
+    // punished on the first check, short enough that a genuinely stuck
+    // launch doesn't leave someone staring at a blank screen for long.
+    private static let stallCheckDelaysSeconds: [Double] = [4, 8, 12]
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -49,54 +47,26 @@ class MainViewController: CAPBridgeViewController {
         webView?.scrollView.alwaysBounceHorizontal = false
         webView?.scrollView.showsVerticalScrollIndicator = false
         webView?.scrollView.showsHorizontalScrollIndicator = false
+        scheduleStallChecks()
     }
 
-    // Both delegate methods route through the same handler: Capacitor's
-    // own request can fail before committing to a response
-    // (didFailProvisionalNavigation, the common case for "no network
-    // yet") or after
-    // (didFail, e.g. a connection that drops mid-transfer) — the retry
-    // logic itself doesn't care which.
-    override func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        super.webView(webView, didFailProvisionalNavigation: navigation, withError: error)
-        loadFailed(error)
-    }
-
-    override func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        super.webView(webView, didFail: navigation, withError: error)
-        loadFailed(error)
-    }
-
-    override func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        super.webView(webView, didFinish: navigation)
-        // A real page made it all the way in — the counter is for THIS
-        // outage, not a lifetime cap, so a later failure (say, the phone
-        // loses signal again an hour into using the app) gets its own
-        // full set of retries rather than inheriting an exhausted one.
-        retryCount = 0
-        retryWorkItem?.cancel()
-    }
-
-    private func loadFailed(_ error: Error) {
-        let nsError = error as NSError
-        guard nsError.domain == NSURLErrorDomain,
-              Self.transientErrorCodes.contains(nsError.code),
-              retryCount < Self.maxRetries,
-              let url = Self.retryURL else {
-            return
+    private func scheduleStallChecks() {
+        for delay in Self.stallCheckDelaysSeconds {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.retryIfStillStuck()
+            }
         }
+    }
 
-        retryCount += 1
-        // Linear backoff (1.5s, 3s, 4.5s, 6s) rather than retrying
-        // instantly in a tight loop against a network that just isn't
-        // back yet, and rather than a long fixed wait that makes a
-        // connection that recovers quickly feel slower than it needs to.
-        let delay = Double(retryCount) * 1.5
-        retryWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.webView?.load(URLRequest(url: url))
-        }
-        retryWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    /// isLoading stays true for the whole span of a request that's still
+    /// in flight, success or failure alike, and goes false the moment one
+    /// finishes either way — so "still true after the deadline" is a safe
+    /// stand-in for "stuck," without needing to know why. If a load
+    /// already finished (successfully or not) by the time this fires,
+    /// isLoading is false and this does nothing — a fast, successful
+    /// launch is never touched.
+    private func retryIfStillStuck() {
+        guard let webView = webView, webView.isLoading, let url = Self.retryURL else { return }
+        webView.load(URLRequest(url: url))
     }
 }
