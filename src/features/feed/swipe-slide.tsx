@@ -102,6 +102,17 @@ function VideoMedia({
   const [isPaused, setIsPaused] = useState(false);
   const [heartPop, setHeartPop] = useState(0);
   const hasRecordedCompletion = useRef(false);
+  // Mirrors PhotoMedia's own attached-sound fallback below: WebKit refuses
+  // to autoplay *unmuted* media until the page has had a real user
+  // gesture, so the very first video on a fresh launch had nothing to
+  // play with sound and just sat black forever (play() rejected, so no
+  // frame was ever decoded) — a plain tap fixed it only because that tap
+  // is the gesture WebKit was waiting for, unlocking autoplay for the
+  // rest of the session. Falling back to muted keeps the video actually
+  // visible and playing from the first frame; the tap-to-unmute affordance
+  // gives sound back the moment a real gesture is available.
+  const [isMuted, setIsMuted] = useState(false);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -111,8 +122,16 @@ function VideoMedia({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
-          el.play().catch(() => {});
-          setIsPaused(false);
+          el.play()
+            .then(() => setIsPaused(false))
+            .catch(() => {
+              el.muted = true;
+              setIsMuted(true);
+              setAutoplayBlocked(true);
+              el.play()
+                .then(() => setIsPaused(false))
+                .catch(() => setIsPaused(true));
+            });
         } else {
           el.pause();
         }
@@ -152,6 +171,19 @@ function VideoMedia({
     }
   }
 
+  function toggleMute(e: React.MouseEvent) {
+    e.stopPropagation();
+    const el = videoRef.current;
+    setAutoplayBlocked(false);
+    setIsMuted(false);
+    if (!el) return;
+    el.muted = false;
+    // Same reasoning as PhotoMedia's toggleMute: this runs inside a real
+    // click handler, so audible playback is allowed here even though the
+    // automatic attempt that first muted it was refused.
+    el.play().catch(() => {});
+  }
+
   const handleTap = useDoubleTap(togglePlayPause, () => {
     setHeartPop((n) => n + 1);
     onDoubleTapLike();
@@ -163,6 +195,7 @@ function VideoMedia({
         ref={videoRef}
         src={shouldLoad ? url : undefined}
         loop
+        muted={isMuted}
         playsInline
         preload="metadata"
         className="h-full w-full object-cover"
@@ -171,6 +204,16 @@ function VideoMedia({
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <PlayIcon className="h-16 w-16 text-white/85 drop-shadow-[0_2px_10px_rgb(0_0_0_/_0.6)]" />
         </div>
+      )}
+      {autoplayBlocked && (
+        <button
+          type="button"
+          onClick={toggleMute}
+          aria-label="Unmute"
+          className="pointer-events-auto absolute left-3 top-3 flex h-8 w-8 animate-pulse items-center justify-center rounded-full bg-black/50 text-white"
+        >
+          <VolumeIcon muted className="h-4 w-4" />
+        </button>
       )}
       {heartPop > 0 && (
         <div key={heartPop} className="pointer-events-none absolute inset-0 flex items-center justify-center">
