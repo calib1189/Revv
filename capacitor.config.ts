@@ -32,7 +32,27 @@ const config: CapacitorConfig = {
     // Lets links that leave the app domain (e.g. an OAuth provider's own
     // login page) still open inside the app instead of erroring — the
     // WebView otherwise refuses to navigate off the configured origin.
-    allowNavigation: ["*.supabase.co", "accounts.google.com", "appleid.apple.com"],
+    //
+    // hcaptcha.com/*.hcaptcha.com are here for a different reason than
+    // the OAuth ones: hCaptcha's own script (js.hcaptcha.com) loads fine
+    // as a plain <script> tag, but the actual interactive challenge it
+    // renders runs inside an IFRAME served from hCaptcha's other
+    // domains — a frame navigation, which WKWebView blocks the same way
+    // it blocks a top-level one if the destination isn't allow-listed.
+    // Without this, the widget visibly renders (its images load) but
+    // never completes — a submitted solution and a load-time timeout
+    // look identical from the outside, and both present as "the
+    // challenge never responds." This is what Apple's review flagged as
+    // a bug (2026-09-24, "verifying human wasn't responding") and it
+    // would have blocked every real user on iOS from logging in at all,
+    // not just the reviewer.
+    allowNavigation: [
+      "*.supabase.co",
+      "accounts.google.com",
+      "appleid.apple.com",
+      "hcaptcha.com",
+      "*.hcaptcha.com",
+    ],
   },
   ios: {
     // The web app already insets itself around the notch/home-indicator
