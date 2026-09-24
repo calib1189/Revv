@@ -153,7 +153,7 @@ export function SwipeFeed({
               {ad && category === null && index === AD_INJECTION_INDEX && (
                 <SponsoredSlide data={ad} slideHeight={feedHeight} />
               )}
-              <SwipeSlide data={post} slideHeight={feedHeight} extraTopInset="3rem" />
+              <SwipeSlide data={post} slideHeight={feedHeight} />
             </div>
           ))}
           {hasMore && <div ref={sentinelRef} className="h-1" />}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import Link from "next/link";
 import { SaveButton } from "@/features/feed/save-button";
-import { PostOptionsSheet } from "@/features/feed/post-options-sheet";
+import { PostContextMenu } from "@/features/feed/post-context-menu";
 import { FollowBadge } from "@/features/feed/follow-badge";
 import { CommentSheet } from "@/features/feed/comment-sheet";
 import { Avatar } from "@/features/feed/avatar";
@@ -12,11 +12,11 @@ import { CaptionText } from "@/features/feed/caption-text";
 import { recordViewAction, recordViewCompletionAction, recordShareAction } from "@/features/feed/actions";
 import { usePostLike } from "@/features/feed/use-post-like";
 import { useDoubleTap } from "@/features/feed/use-double-tap";
+import { useLongPress } from "@/features/feed/use-long-press";
 import { useSoundSegment } from "@/features/feed/use-sound-segment";
 import { CommentIcon, EyeIcon, HeartIcon, MusicIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon, VolumeIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { SITE_URL } from "@/lib/site-url";
-import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 import type { PostCardData } from "@/features/feed/post-card";
 
 function ShareButton({ postId }: { postId: string }) {
@@ -73,13 +73,12 @@ function ShareButton({ postId }: { postId: string }) {
 // `timeupdate` tick before looping.
 const COMPLETION_THRESHOLD = 0.9;
 
-function VideoMedia({
-  url,
-  shouldLoad,
-  postId,
-  trackCompletion,
-  onDoubleTapLike,
-}: {
+export interface VideoMediaHandle {
+  toggleMute: () => void;
+  resumeAfterMenuClose: () => void;
+}
+
+const VideoMedia = forwardRef<VideoMediaHandle, {
   url: string;
   /** False until this slide has scrolled near the viewport — until then
    * `src` isn't set at all, so no request goes out. Every slide loaded
@@ -96,23 +95,56 @@ function VideoMedia({
    * place for someone with no engagement history to feed. */
   trackCompletion: boolean;
   onDoubleTapLike: () => void;
-}) {
+  onLongPress: () => void;
+  /** Mirrors the local `isMuted` state up to the parent purely so
+   * PostContextMenu (rendered by SwipeSlide, not this component) can
+   * show the right label/icon — the actual mute lives here since only
+   * this component holds the video element and can flip `.muted`
+   * synchronously inside a real click handler (see toggleMute below). */
+  onMutedChange: (muted: boolean) => void;
+}>(function VideoMedia(
+  { url, shouldLoad, postId, trackCompletion, onDoubleTapLike, onLongPress, onMutedChange },
+  ref,
+) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [heartPop, setHeartPop] = useState(0);
   const hasRecordedCompletion = useRef(false);
-  // Mirrors PhotoMedia's own attached-sound fallback below: WebKit refuses
-  // to autoplay *unmuted* media until the page has had a real user
-  // gesture, so the very first video on a fresh launch had nothing to
-  // play with sound and just sat black forever (play() rejected, so no
-  // frame was ever decoded) — a plain tap fixed it only because that tap
-  // is the gesture WebKit was waiting for, unlocking autoplay for the
-  // rest of the session. Falling back to muted keeps the video actually
-  // visible and playing from the first frame; the tap-to-unmute affordance
-  // gives sound back the moment a real gesture is available.
+  const isIntersectingRef = useRef(false);
+  // WebKit (and Chrome) refuse to autoplay *unmuted* media until the page
+  // has had a real user gesture, so the very first video on a fresh
+  // launch had nothing to play with sound and just sat black forever
+  // (play() rejected, so no frame was ever decoded) — a plain tap fixed
+  // it only because that tap is the gesture the browser was waiting for,
+  // unlocking autoplay for the rest of the session. Falling back to
+  // muted keeps the video actually visible and playing from the first
+  // frame; Mute/Unmute in the long-press menu gives sound back the
+  // moment a real gesture is available.
   const [isMuted, setIsMuted] = useState(false);
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    toggleMute() {
+      const el = videoRef.current;
+      const next = !isMuted;
+      setIsMuted(next);
+      onMutedChange(next);
+      if (!el) return;
+      el.muted = next;
+      // This runs inside the menu row's own click handler, so — unlike
+      // the observer below — starting audible playback here is allowed
+      // even if the earlier automatic attempt was refused.
+      if (!next) el.play().catch(() => {});
+    },
+    resumeAfterMenuClose() {
+      const el = videoRef.current;
+      // Only resume if this slide is still the one on screen — the menu
+      // can still be animating closed after the viewer has already
+      // scrolled to the next post.
+      if (!el || !isIntersectingRef.current) return;
+      el.play().then(() => setIsPaused(false)).catch(() => {});
+    },
+  }), [isMuted, onMutedChange]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -121,13 +153,14 @@ function VideoMedia({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+        isIntersectingRef.current = entry.isIntersecting && entry.intersectionRatio > 0.6;
+        if (isIntersectingRef.current) {
           el.play()
             .then(() => setIsPaused(false))
             .catch(() => {
               el.muted = true;
               setIsMuted(true);
-              setAutoplayBlocked(true);
+              onMutedChange(true);
               el.play()
                 .then(() => setIsPaused(false))
                 .catch(() => setIsPaused(true));
@@ -140,6 +173,7 @@ function VideoMedia({
     );
     observer.observe(container);
     return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onMutedChange is the parent's setState, stable enough that re-subscribing the observer on identity churn would be pure overhead
   }, []);
 
   useEffect(() => {
@@ -171,26 +205,35 @@ function VideoMedia({
     }
   }
 
-  function toggleMute(e: React.MouseEvent) {
-    e.stopPropagation();
-    const el = videoRef.current;
-    setAutoplayBlocked(false);
-    setIsMuted(false);
-    if (!el) return;
-    el.muted = false;
-    // Same reasoning as PhotoMedia's toggleMute: this runs inside a real
-    // click handler, so audible playback is allowed here even though the
-    // automatic attempt that first muted it was refused.
-    el.play().catch(() => {});
-  }
-
   const handleTap = useDoubleTap(togglePlayPause, () => {
     setHeartPop((n) => n + 1);
     onDoubleTapLike();
   });
 
+  const { firedRef: longPressFiredRef, handlers: longPressHandlers } = useLongPress(() => {
+    videoRef.current?.pause();
+    setIsPaused(true);
+    onLongPress();
+  });
+
+  function handleClick() {
+    // The press-and-release that just completed a long press also
+    // dispatches this click right after — without this guard, opening
+    // the menu would also toggle play/pause underneath it.
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
+      return;
+    }
+    handleTap();
+  }
+
   return (
-    <div ref={containerRef} className="absolute inset-0" onClick={handleTap}>
+    <div
+      ref={containerRef}
+      className="absolute inset-0"
+      onClick={handleClick}
+      {...longPressHandlers}
+    >
       <video
         ref={videoRef}
         src={shouldLoad ? url : undefined}
@@ -205,16 +248,6 @@ function VideoMedia({
           <PlayIcon className="h-16 w-16 text-white/85 drop-shadow-[0_2px_10px_rgb(0_0_0_/_0.6)]" />
         </div>
       )}
-      {autoplayBlocked && (
-        <button
-          type="button"
-          onClick={toggleMute}
-          aria-label="Unmute"
-          className="pointer-events-auto absolute left-3 top-3 flex h-8 w-8 animate-pulse items-center justify-center rounded-full bg-black/50 text-white"
-        >
-          <VolumeIcon muted className="h-4 w-4" />
-        </button>
-      )}
       {heartPop > 0 && (
         <div key={heartPop} className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <HeartIcon
@@ -225,7 +258,7 @@ function VideoMedia({
       )}
     </div>
   );
-}
+});
 
 /** A photo post has no native audio track of its own, unlike a video — so
  * an attached sound actually plays here (looped, synced to on-screen
@@ -248,6 +281,7 @@ function PhotoMedia({
   shouldLoad,
   soundUrl,
   soundStartMs,
+  onLongPress,
 }: {
   urls: string[];
   shouldLoad: boolean;
@@ -255,6 +289,7 @@ function PhotoMedia({
   /** Where in the attached sound to start — the part the poster picked
    * in the composer's trim sheet, not necessarily the top of the file. */
   soundStartMs: number;
+  onLongPress: () => void;
 }) {
   const [index, setIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -315,8 +350,10 @@ function PhotoMedia({
     if (!next) audio.play().catch(() => {});
   }
 
+  const { handlers: longPressHandlers } = useLongPress(onLongPress);
+
   return (
-    <div className="absolute inset-0">
+    <div className="absolute inset-0" {...longPressHandlers}>
       {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} muted={isMuted} />}
       <div
         ref={containerRef}
@@ -358,19 +395,19 @@ function PhotoMedia({
 export function SwipeSlide({
   data,
   slideHeight = "h-[calc(100dvh-56px-64px)]",
-  extraTopInset = "0px",
 }: {
   data: PostCardData;
   slideHeight?: string;
-  /** Extra space to clear below the real header before the "..." menu
-   * starts — the main FYP passes its category-filter-bar's height here
-   * (swipe-feed.tsx) since that floats in the same top strip; the
-   * profile reel view (no filter bar) just uses the default. */
-  extraTopInset?: string;
 }) {
   const isVideo = data.media[0]?.kind === "video";
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoMediaRef = useRef<VideoMediaHandle>(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Mirror of VideoMedia's own mute state, just for PostContextMenu's
+  // label/icon — see VideoMediaHandle's doc comment for why the mute
+  // itself has to happen inside VideoMedia rather than here.
+  const [isMuted, setIsMuted] = useState(false);
   const [shouldLoadMedia, setShouldLoadMedia] = useState(false);
   // Local override so an edited caption shows immediately — `data` is a
   // snapshot from whichever server fetch produced this slide, and
@@ -383,6 +420,11 @@ export function SwipeSlide({
     data.isLiked,
     data.likeCount,
   );
+
+  function closeMenu() {
+    setMenuOpen(false);
+    videoMediaRef.current?.resumeAfterMenuClose();
+  }
 
   useEffect(() => {
     // Every post the feed has fetched (initial batch, every infinite-
@@ -440,11 +482,14 @@ export function SwipeSlide({
       {data.media.length > 0 &&
         (isVideo ? (
           <VideoMedia
+            ref={videoMediaRef}
             url={data.media[0].url}
             shouldLoad={shouldLoadMedia}
             postId={data.post.id}
             trackCompletion={data.isAuthenticated}
             onDoubleTapLike={like}
+            onLongPress={() => setMenuOpen(true)}
+            onMutedChange={setIsMuted}
           />
         ) : (
           <PhotoMedia
@@ -452,21 +497,22 @@ export function SwipeSlide({
             shouldLoad={shouldLoadMedia}
             soundUrl={data.soundUrl}
             soundStartMs={data.soundStartMs}
+            onLongPress={() => setMenuOpen(true)}
           />
         ))}
 
-      {data.isOwnPost && (
-        <div
-          className="pointer-events-auto absolute right-3 z-10"
-          style={{ top: `calc(${HEADER_HEIGHT} + ${extraTopInset} + 0.5rem)` }}
-        >
-          <PostOptionsSheet
-            postId={data.post.id}
-            caption={displayedCaption}
-            onCaptionUpdated={setCaptionOverride}
-          />
-        </div>
-      )}
+      <PostContextMenu
+        open={menuOpen}
+        onClose={closeMenu}
+        postId={data.post.id}
+        caption={displayedCaption}
+        onCaptionUpdated={setCaptionOverride}
+        isOwnPost={data.isOwnPost}
+        canReport={data.isAuthenticated && !data.isOwnPost}
+        showMuteToggle={isVideo}
+        isMuted={isMuted}
+        onToggleMute={() => videoMediaRef.current?.toggleMute()}
+      />
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 pb-6">
         <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.5rem)] text-white">

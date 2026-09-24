@@ -37,11 +37,17 @@ const initialState: ReportFormState = { error: null, success: false };
 export function ReportButton({
   targetType,
   targetId,
+  defaultOpen = false,
 }: {
   targetType: "post" | "comment" | "vehicle" | "profile";
   targetId: string;
+  /** Skips straight to the reason form — for embedding inside a menu
+   * that already required its own deliberate "Report" tap to get here,
+   * where showing this component's own "Report" link first would just
+   * be a second, redundant click to reach the same form. */
+  defaultOpen?: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const action = createReportAction.bind(null, targetType, targetId);
   const [state, formAction, isPending] = useActionState(action, initialState);
   const reasons =
