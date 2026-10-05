@@ -58,7 +58,7 @@ export function OAuthButtons() {
         onClick={() => handleOAuth("apple")}
         className="pressable flex h-12 items-center justify-center gap-2.5 rounded-full bg-black px-4 text-[0.9375rem] font-semibold text-white ring-1 ring-inset ring-white/15 hover:opacity-90 disabled:opacity-60"
       >
-        <AppleIcon className="h-[18px] w-[18px]" />
+        <AppleIcon className="h-[19px] w-[15px] -translate-y-px" />
         {pending === "apple" ? "Redirecting…" : "Continue with Apple"}
       </button>
 
