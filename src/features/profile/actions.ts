@@ -49,6 +49,7 @@ export async function toggleBlockAction(
     await blockUser(supabase, user.id, targetUserId);
   }
   revalidatePath(`/u/${targetUsername}`);
+  revalidatePath("/settings/blocked");
 }
 
 export interface UpdateBioState {

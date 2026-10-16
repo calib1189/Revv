@@ -14,6 +14,7 @@ import {
   HeartIcon,
   EyeIcon,
   BellIcon,
+  BlockIcon,
   GemIcon,
   ShoppingBagIcon,
   InfoIcon,
@@ -95,6 +96,11 @@ export default async function SettingsPage() {
               href="/settings/notifications"
               label="Notifications"
               icon={<RowIcon color="#ff453a"><BellIcon /></RowIcon>}
+            />
+            <GroupedRow
+              href="/settings/blocked"
+              label="Blocked accounts"
+              icon={<RowIcon color="#8e8e93"><BlockIcon /></RowIcon>}
             />
           </GroupedList>
         </section>
