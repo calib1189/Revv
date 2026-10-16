@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleIcon, AppleIcon } from "@/components/ui/icons";
 
-export function OAuthButtons() {
+export function OAuthButtons({ disabled = false }: { disabled?: boolean }) {
   const [pending, setPending] = useState<"google" | "apple" | null>(null);
 
   async function handleOAuth(provider: "google" | "apple") {
@@ -45,7 +45,7 @@ export function OAuthButtons() {
     <div className="flex flex-col gap-3">
       <button
         type="button"
-        disabled={pending !== null}
+        disabled={pending !== null || disabled}
         onClick={() => handleOAuth("google")}
         className="pressable flex h-12 items-center justify-center gap-2.5 rounded-full border border-black/10 bg-white px-4 text-[0.9375rem] font-semibold text-[#1f1f1f] hover:opacity-90 disabled:opacity-60"
       >
@@ -54,7 +54,7 @@ export function OAuthButtons() {
       </button>
       <button
         type="button"
-        disabled={pending !== null}
+        disabled={pending !== null || disabled}
         onClick={() => handleOAuth("apple")}
         className="pressable flex h-12 items-center justify-center gap-2.5 rounded-full bg-black px-4 text-[0.9375rem] font-semibold text-white ring-1 ring-inset ring-white/15 hover:opacity-90 disabled:opacity-60"
       >

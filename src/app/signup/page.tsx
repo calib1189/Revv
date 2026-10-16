@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { AuthBackground } from "@/features/auth/auth-background";
 import { SignUpForm } from "@/features/auth/sign-up-form";
-import { TermsNotice } from "@/features/auth/terms-notice";
 import { SupabaseNotConfigured } from "@/components/ui/supabase-not-configured";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
@@ -18,8 +17,6 @@ export default function SignUpPage() {
         <p className="mb-7 mt-1 text-center text-[0.9375rem] text-muted">Log your build. Get it rated.</p>
 
         {isSupabaseConfigured() ? <SignUpForm /> : <SupabaseNotConfigured />}
-
-        <TermsNotice action="create an account" />
       </div>
     </div>
   );

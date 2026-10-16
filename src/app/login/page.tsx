@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { AuthBackground } from "@/features/auth/auth-background";
 import { SignInForm } from "@/features/auth/sign-in-form";
-import { TermsNotice } from "@/features/auth/terms-notice";
 import { SupabaseNotConfigured } from "@/components/ui/supabase-not-configured";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
@@ -28,8 +27,6 @@ export default async function LoginPage({
         ) : (
           <SupabaseNotConfigured />
         )}
-
-        <TermsNotice action="log in" />
       </div>
     </div>
   );

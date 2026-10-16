@@ -41,6 +41,10 @@ export async function signUp(
     return { error: "Something went wrong. Try again." };
   }
 
+  if (!formData.get("acceptTerms")) {
+    return { error: "Please agree to the Terms of Use to continue." };
+  }
+
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const username = String(formData.get("username") ?? "").trim();
@@ -85,6 +89,10 @@ export async function signIn(
   _prevState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
+  if (!formData.get("acceptTerms")) {
+    return { error: "Please agree to the Terms of Use to continue." };
+  }
+
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/feed");
