@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AuthBackground } from "@/features/auth/auth-background";
 import { SignUpForm } from "@/features/auth/sign-up-form";
+import { TermsNotice } from "@/features/auth/terms-notice";
 import { SupabaseNotConfigured } from "@/components/ui/supabase-not-configured";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
@@ -18,17 +19,7 @@ export default function SignUpPage() {
 
         {isSupabaseConfigured() ? <SignUpForm /> : <SupabaseNotConfigured />}
 
-        <p className="mt-6 text-center text-[0.75rem] leading-relaxed text-muted">
-          By creating an account you agree to SORZA&apos;s{" "}
-          <Link href="/legal/terms" className="font-medium text-accent">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/legal/privacy" className="font-medium text-accent">
-            Privacy Policy
-          </Link>
-          .
-        </p>
+        <TermsNotice action="create an account" />
       </div>
     </div>
   );

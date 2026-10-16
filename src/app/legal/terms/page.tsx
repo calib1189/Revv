@@ -7,7 +7,7 @@ export default function TermsPage() {
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-5 pb-16 pt-8 sm:px-6 sm:pt-12">
       <h1 className="mb-2 text-balance text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">Terms of Service</h1>
-      <p className="mb-1 text-[0.875rem] text-muted">Last updated: August 31, 2026.</p>
+      <p className="mb-1 text-[0.875rem] text-muted">Last updated: October 16, 2026.</p>
       <LegalDisclaimer />
 
       <div className="prose-doc">
@@ -83,6 +83,7 @@ export default function TermsPage() {
           <h2 className="mb-2 text-base font-semibold">7. Prohibited conduct</h2>
           <p>Do not use SORZA to:</p>
           <ul className="ml-5 mt-2 list-disc space-y-1">
+            <li>Post objectionable content — including hateful, sexually explicit, graphically violent, or otherwise abusive material</li>
             <li>Harass, threaten, or impersonate another person</li>
             <li>Post illegal content, or content depicting reckless or illegal driving</li>
             <li>Post spam, scams, or misleading commercial content</li>
@@ -95,6 +96,18 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold">8. Moderation</h2>
           <p>
+            There is no tolerance on SORZA for objectionable content or abusive users. Content
+            that breaks these terms is removed, and accounts that post it or abuse other people
+            are suspended or permanently removed.
+          </p>
+          <p className="mt-2">
+            You can report any post, comment, vehicle, or profile from the app (press and hold a
+            post, or use the Report option on a profile) and block any user (press and hold a
+            post, or use Block on their profile). Blocking removes that person&apos;s content from
+            your feed immediately and flags the content that prompted it for our review. We review
+            reports and act on confirmed violations promptly, typically within 24 hours.
+          </p>
+          <p className="mt-2">
             We may remove content, suspend, or terminate accounts that violate these terms or our{" "}
             <a href="/legal/guidelines" className="text-accent hover:underline">
               Community Guidelines

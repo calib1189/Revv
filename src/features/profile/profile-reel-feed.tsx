@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { SwipeSlide } from "@/features/feed/swipe-slide";
 import { BackIcon } from "@/components/ui/icons";
 import type { PostCardData } from "@/features/feed/post-card";
@@ -14,7 +14,7 @@ import type { PostCardData } from "@/features/feed/post-card";
  * page's title/artist/"Use this sound" bar, with nothing rendered here by
  * default so the plain profile-reel caller is unchanged. */
 export function ProfileReelFeed({
-  posts,
+  posts: initialPosts,
   isAuthenticated,
   backHref,
   headerContent,
@@ -24,6 +24,7 @@ export function ProfileReelFeed({
   backHref: string;
   headerContent?: ReactNode;
 }) {
+  const [posts, setPosts] = useState(initialPosts);
   // The top bar's real height isn't just its 56px of content — it also
   // has pt-[env(safe-area-inset-top)] for the notch/Dynamic Island
   // (top-tab-bar.tsx), and the bottom nav (fixed, so out of normal
@@ -42,7 +43,12 @@ export function ProfileReelFeed({
     <div className="relative">
       <div className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}>
         {posts.map((post) => (
-          <SwipeSlide key={post.post.id} data={post} slideHeight={feedHeight} />
+          <SwipeSlide
+            key={post.post.id}
+            data={post}
+            slideHeight={feedHeight}
+            onBlocked={(authorId) => setPosts((prev) => prev.filter((p) => p.authorId !== authorId))}
+          />
         ))}
       </div>
 

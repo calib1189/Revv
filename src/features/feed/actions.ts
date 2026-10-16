@@ -15,6 +15,7 @@ import { createComment, deleteComment, getCommentById, listCommentsByPost } from
 import { deletePost, getPostById, updatePostCaption } from "@/lib/db/posts";
 import { listRankedFeedPosts } from "@/lib/ranking/ranked-feed";
 import { createReport } from "@/lib/db/reports";
+import { blockUser } from "@/lib/db/blocks";
 import { getProfileByUserId, getProfilesByIds } from "@/lib/db/profiles";
 import { listVehicleIdsByCategory } from "@/lib/db/vehicles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
@@ -358,4 +359,42 @@ export async function createReportAction(
   }
 
   return { error: null, success: true };
+}
+
+/** Block from the feed. App Store guideline 1.2 asks that blocking an
+ * abusive user also tell the developer about the content that prompted
+ * it, so this files a report against the post alongside the block — it
+ * lands in the same admin queue as any other report. The report is
+ * best-effort: a failure there must never undo or block the block itself,
+ * which is the part that protects the viewer. */
+export async function blockAuthorFromPostAction(
+  authorId: string,
+  authorUsername: string,
+  postId: string,
+): Promise<{ error: string | null }> {
+  const { supabase, user } = await requireUser();
+  if (authorId === user.id) return { error: "You can't block yourself." };
+
+  try {
+    await blockUser(supabase, user.id, authorId);
+  } catch (err) {
+    // 23505 = already blocked, which is the end state this wanted anyway.
+    if ((err as { code?: string }).code !== "23505") {
+      return { error: "Couldn't block that account. Try again in a bit." };
+    }
+  }
+
+  try {
+    await createReport(supabase, {
+      reporter_id: user.id,
+      target_type: "post",
+      target_id: postId,
+      reason: "user_blocked",
+    });
+  } catch {
+    // best-effort only
+  }
+
+  revalidatePath(`/u/${authorUsername}`);
+  return { error: null };
 }

@@ -395,9 +395,13 @@ function PhotoMedia({
 export function SwipeSlide({
   data,
   slideHeight = "h-[calc(100dvh-56px-64px)]",
+  onBlocked,
 }: {
   data: PostCardData;
   slideHeight?: string;
+  /** Lets the surrounding list drop the blocked author's posts the moment
+   * the block succeeds — see PostContextMenu. */
+  onBlocked?: (authorId: string) => void;
 }) {
   const isVideo = data.media[0]?.kind === "video";
   const containerRef = useRef<HTMLDivElement>(null);
@@ -505,8 +509,11 @@ export function SwipeSlide({
         open={menuOpen}
         onClose={closeMenu}
         postId={data.post.id}
+        authorId={data.authorId}
+        authorUsername={data.authorUsername}
         caption={displayedCaption}
         onCaptionUpdated={setCaptionOverride}
+        onBlocked={onBlocked}
         isOwnPost={data.isOwnPost}
         canReport={data.isAuthenticated && !data.isOwnPost}
         showMuteToggle={isVideo}

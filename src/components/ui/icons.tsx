@@ -221,6 +221,15 @@ export function UsersIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function BlockIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M6 6l12 12" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function FlagIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

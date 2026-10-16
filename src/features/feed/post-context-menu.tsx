@@ -2,7 +2,11 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deletePostAction, updateCaptionAction } from "@/features/feed/actions";
+import {
+  blockAuthorFromPostAction,
+  deletePostAction,
+  updateCaptionAction,
+} from "@/features/feed/actions";
 import { ReportButton } from "@/features/feed/report-button";
 import { SITE_URL } from "@/lib/site-url";
 import {
@@ -15,6 +19,7 @@ import {
   CheckIcon,
   VolumeIcon,
   FlagIcon,
+  BlockIcon,
 } from "@/components/ui/icons";
 
 const MAX_CAPTION_LENGTH = 2200;
@@ -23,7 +28,7 @@ const MAX_CAPTION_LENGTH = 2200;
  * threshold comment-sheet.tsx uses. */
 const CLOSE_THRESHOLD = 0.3;
 
-type View = "menu" | "editCaption" | "confirmDelete" | "report";
+type View = "menu" | "editCaption" | "confirmDelete" | "report" | "confirmBlock";
 
 /** The single bottom sheet for everything you can do to a post from the
  * feed — opened by a long press on its media (swipe-slide.tsx), not a
@@ -36,8 +41,11 @@ export function PostContextMenu({
   open,
   onClose,
   postId,
+  authorId,
+  authorUsername,
   caption,
   onCaptionUpdated,
+  onBlocked,
   isOwnPost,
   canReport,
   showMuteToggle,
@@ -47,12 +55,17 @@ export function PostContextMenu({
   open: boolean;
   onClose: () => void;
   postId: string;
+  authorId: string;
+  authorUsername: string;
   caption: string | null;
   onCaptionUpdated: (caption: string | null) => void;
+  /** Called once the block has actually gone through, so the feed can
+   * drop that author's posts immediately instead of on the next load. */
+  onBlocked?: (authorId: string) => void;
   isOwnPost: boolean;
-  /** Reporting your own post isn't a real option, and it's hidden for a
-   * logged-out viewer rather than sending them into a report flow that
-   * would just fail server-side. */
+  /** Reporting or blocking your own post isn't a real option, and both
+   * are hidden for a logged-out viewer rather than sending them into a
+   * flow that would just fail server-side. */
   canReport: boolean;
   /** Only a video post has its own native audio track to mute — a photo
    * post's attached background sound has its own separate, already-
@@ -65,6 +78,7 @@ export function PostContextMenu({
   const [view, setView] = useState<View>("menu");
   const [draft, setDraft] = useState(caption ?? "");
   const [captionError, setCaptionError] = useState<string | null>(null);
+  const [blockError, setBlockError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [isPending, startTransition] = useTransition();
   const [dragY, setDragY] = useState(0);
@@ -76,6 +90,7 @@ export function PostContextMenu({
     onClose();
     setView("menu");
     setCaptionError(null);
+    setBlockError(null);
     setCopyStatus("idle");
   }
 
@@ -133,6 +148,19 @@ export function PostContextMenu({
   function handleGoToPost() {
     close();
     router.push(`/p/${postId}`);
+  }
+
+  function handleBlock() {
+    setBlockError(null);
+    startTransition(async () => {
+      const result = await blockAuthorFromPostAction(authorId, authorUsername, postId);
+      if (result.error) {
+        setBlockError(result.error);
+        return;
+      }
+      onBlocked?.(authorId);
+      close();
+    });
   }
 
   function handleSaveCaption() {
@@ -202,6 +230,14 @@ export function PostContextMenu({
             {canReport && (
               <SheetRow icon={FlagIcon} label="Report" onClick={() => setView("report")} />
             )}
+            {canReport && (
+              <SheetRow
+                icon={BlockIcon}
+                label={`Block @${authorUsername}`}
+                tone="danger"
+                onClick={() => setView("confirmBlock")}
+              />
+            )}
             {(showMuteToggle || canReport) && <div className="my-1 h-px bg-white/10" />}
             <SheetRow icon={ExternalLinkIcon} label="Go to post" onClick={handleGoToPost} />
             <SheetRow
@@ -242,6 +278,35 @@ export function PostContextMenu({
               <span className="w-9" />
             </div>
             <ReportButton targetType="post" targetId={postId} defaultOpen />
+          </div>
+        )}
+
+        {view === "confirmBlock" && (
+          <div className="flex flex-col gap-3 px-5 pb-3 pt-1">
+            <p className="text-center text-sm text-white/80">
+              Block @{authorUsername}? Their posts disappear from your feed right away, and
+              neither of you can follow or message the other. We&apos;ll also flag this post for
+              review. You can unblock from their profile.
+            </p>
+            {blockError && <p className="text-center text-sm text-danger">{blockError}</p>}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => setView("menu")}
+                className="flex-1 rounded-full bg-white/10 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={handleBlock}
+                className="flex-1 rounded-full bg-danger py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {isPending ? "Blocking…" : "Block"}
+              </button>
+            </div>
           </div>
         )}
 

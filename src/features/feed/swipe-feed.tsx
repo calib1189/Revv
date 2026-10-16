@@ -82,6 +82,13 @@ export function SwipeFeed({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, hasMore, category]);
 
+  // Every post by the blocked author, not just the one the menu was
+  // opened on — blocking has to take effect in the feed immediately (App
+  // Store guideline 1.2), not on the next fetch.
+  function handleBlocked(authorId: string) {
+    setPosts((prev) => prev.filter((p) => p.authorId !== authorId));
+  }
+
   function handleCategoryChange(next: VehicleCategory | null) {
     if (next === category) return;
     setCategory(next);
@@ -153,7 +160,7 @@ export function SwipeFeed({
               {ad && category === null && index === AD_INJECTION_INDEX && (
                 <SponsoredSlide data={ad} slideHeight={feedHeight} />
               )}
-              <SwipeSlide data={post} slideHeight={feedHeight} />
+              <SwipeSlide data={post} slideHeight={feedHeight} onBlocked={handleBlocked} />
             </div>
           ))}
           {hasMore && <div ref={sentinelRef} className="h-1" />}
