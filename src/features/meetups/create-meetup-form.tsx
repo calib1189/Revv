@@ -281,7 +281,7 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
           <input
             ref={photoInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/*"
             multiple
             className="hidden"
             onChange={(e) => {

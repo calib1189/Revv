@@ -121,7 +121,7 @@ export function AdCampaignForm({ userId }: { userId: string }) {
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/*"
             className="hidden"
             onChange={(e) => {
               const selected = e.target.files?.[0];

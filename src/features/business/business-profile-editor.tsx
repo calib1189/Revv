@@ -212,7 +212,7 @@ export function BusinessProfileEditor({
               ref={logoInputRef}
               id="business-logo"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -263,7 +263,7 @@ export function BusinessProfileEditor({
         <input
           ref={galleryInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/*"
           multiple
           className="hidden"
           onChange={(e) => {
@@ -344,7 +344,7 @@ export function BusinessProfileEditor({
             <input
               ref={verifyInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
