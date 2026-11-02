@@ -44,10 +44,10 @@ const subscribeNothing = () => () => {};
 const RING_MASK =
   "radial-gradient(closest-side, transparent 47%, #000 57%, #000 82%, transparent 100%)";
 
-/** The security-print rosette behind a verified profile's avatar — the
- * one thing a verified profile has that no other profile does, drawn in
- * the verified blue so it reads as part of the seal, not as a cosmetic.
- * Decorative only (aria-hidden, no pointer events).
+/** The security-print rosette behind the large seal in the verified
+ * sheet (verified-credential.tsx), drawn in the verified blue so it reads
+ * as part of the seal, not as a cosmetic. Decorative only (aria-hidden,
+ * no pointer events).
  *
  * Client-only on purpose: a few thousand points of path data would bloat
  * the server HTML, and Math.sin isn't guaranteed bit-identical between

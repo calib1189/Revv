@@ -32,7 +32,6 @@ import { getPointsBalance } from "@/lib/db/points";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SettingsIcon, GemIcon, StarIcon } from "@/components/ui/icons";
-import { GuillocheRosette } from "@/features/profile/guilloche-rosette";
 import { VerifiedChip, VerifiedSeal } from "@/features/profile/verified-credential";
 
 export default async function ProfilePage({
@@ -235,40 +234,29 @@ export default async function ProfilePage({
             Emerald–Ruby, starfield for Cosmic), so the profile photo
             reads as the same rank everywhere. Unrated profiles get a
             plain hairline. */}
-        {/* A verified profile's avatar sits inside an engraved guilloche
-            rosette — the one mark no other profile has, so a verified
-            account is recognisable from across the room, not only by the
-            seal beside its name. */}
-        <div className="relative flex items-center justify-center">
-          {profile.is_verified && (
-            <GuillocheRosette className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2" />
-          )}
-          <div className="relative">
-            {bestRatingScore != null ? (
-              <RankFrame
-                score={bestRatingScore}
-                hideBadge
-                className="h-[124px] w-[124px] rounded-full"
-              >
-                <Avatar
-                  username={profile.username}
-                  avatarUrl={avatarUrl}
-                  className="h-full w-full text-4xl"
-                  priority
-                />
-              </RankFrame>
-            ) : (
-              <div className={`rounded-full p-[3px] ring-1 ${profile.is_verified ? "ring-verified/40" : "ring-border"}`}>
-                <Avatar
-                  username={profile.username}
-                  avatarUrl={avatarUrl}
-                  className="h-[118px] w-[118px] text-4xl"
-                  priority
-                />
-              </div>
-            )}
+        {bestRatingScore != null ? (
+          <RankFrame
+            score={bestRatingScore}
+            hideBadge
+            className="h-[124px] w-[124px] rounded-full"
+          >
+            <Avatar
+              username={profile.username}
+              avatarUrl={avatarUrl}
+              className="h-full w-full text-4xl"
+              priority
+            />
+          </RankFrame>
+        ) : (
+          <div className="rounded-full p-[3px] ring-1 ring-border">
+            <Avatar
+              username={profile.username}
+              avatarUrl={avatarUrl}
+              className="h-[118px] w-[118px] text-4xl"
+              priority
+            />
           </div>
-        </div>
+        )}
 
         <h1 className="mt-4 flex max-w-full items-center justify-center gap-1.5 text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">
           {nameIsGradient ? (

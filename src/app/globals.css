@@ -750,11 +750,11 @@ html.native-app [contenteditable="true"] {
 }
 
 /* ---- Verified ------------------------------------------------------
-   A verified profile arrives like a document being stamped: the guilloche
-   rosette behind the avatar engraves itself in, then a band of light
-   crosses the seal beside the name, once. After that everything is still
-   except the rosette's two bands, turning in opposite directions slowly
-   enough to read as a moiré shimmer rather than motion. */
+   A band of light crosses the seal beside a verified name once, when the
+   profile arrives. The verified sheet stamps its large seal in over a
+   guilloche rosette that engraves itself, then only the rosette's two
+   bands move, turning in opposite directions slowly enough to read as a
+   moiré shimmer rather than motion. */
 
 /* The sheen band inside the seal (an SVG rect, so px are viewBox units). */
 @keyframes verified-sheen {
