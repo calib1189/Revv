@@ -17,6 +17,7 @@ import { clampSoundStartMs } from "@/lib/validation/sound";
 import { Avatar } from "@/features/feed/avatar";
 import { CaptionText } from "@/features/feed/caption-text";
 import { EyeIcon, MusicIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { VideoPlayer } from "@/features/feed/video-player";
 import { PostPhotoView } from "@/features/feed/post-photo-view";
@@ -98,6 +99,7 @@ export default async function PostPage({
       authorAvatarUrl: authorProfile?.avatar_media_id
         ? (commentAvatarUrlByMediaId.get(authorProfile.avatar_media_id) ?? null)
         : null,
+      authorIsVerified: authorProfile?.is_verified ?? false,
       authorRatingScore: commentAuthorScores.get(c.author_id) ?? null,
     };
   });
@@ -165,9 +167,10 @@ export default async function PostPage({
           <div className="min-w-0 flex-1">
             <Link
               href={`/u/${author?.username ?? "unknown"}`}
-              className="block truncate text-[0.9375rem] font-semibold"
+              className="flex items-center gap-1 text-[0.9375rem] font-semibold"
             >
-              {author?.display_name || author?.username || "unknown"}
+              <span className="truncate">{author?.display_name || author?.username || "unknown"}</span>
+              {author?.is_verified && <VerifiedBadge className="h-4 w-4" />}
             </Link>
             {vehicleTitle && (
               <Link
@@ -232,7 +235,8 @@ export default async function PostPage({
 
         {post.caption && (
           <div className="px-4 pb-4 pt-2 text-[0.9375rem] leading-relaxed">
-            <span className="font-semibold">{author?.username}</span>{" "}
+            <span className="font-semibold">{author?.username}</span>
+            {author?.is_verified && <VerifiedBadge className="ml-1 h-3.5 w-3.5 align-[-0.15em]" />}{" "}
             <CaptionText text={post.caption} className="inline" />
           </div>
         )}

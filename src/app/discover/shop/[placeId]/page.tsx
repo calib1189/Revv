@@ -14,7 +14,8 @@ import { DirectionsButton, GetAQuoteButton, WebsiteLink } from "@/features/shops
 import { PromoteThisShop } from "@/features/shops/promote-this-shop";
 import { ShopAnalyticsSection } from "@/features/shops/shop-analytics-section";
 import { PhotoCarousel } from "@/features/feed/photo-carousel";
-import { StarIcon, PinIcon, GemIcon, WrenchIcon, VerifiedBadgeIcon, GlobeIcon } from "@/components/ui/icons";
+import { StarIcon, PinIcon, GemIcon, WrenchIcon, GlobeIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { Callout } from "@/components/ui/callout";
 
 const TIER_METAL_COLORS: Record<ShopPromotionTier, string> = {
@@ -113,7 +114,7 @@ export default async function ShopDetailPage({
           <h1 className="flex items-center gap-1.5 text-[1.5rem] font-bold leading-tight tracking-[-0.02em]">
             <span className="min-w-0">{shop.name}</span>
             {isVerifiedBusiness && (
-              <VerifiedBadgeIcon className="h-5 w-5 flex-shrink-0 text-accent" aria-label="Verified business" />
+              <VerifiedBadge className="h-5 w-5" label="Verified business" />
             )}
           </h1>
           {category && <p className="mt-0.5 text-[0.9375rem] text-muted">{category.label}</p>}

@@ -11,6 +11,7 @@ import { MarkAllReadButton } from "@/features/notifications/mark-all-read-button
 import { InboxTabs } from "@/features/shell/inbox-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionTitle } from "@/components/ui/grouped-list";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import {
   BellIcon,
   CommentIcon,
@@ -78,6 +79,7 @@ export default async function NotificationsPage() {
     (a): a is NonNullable<typeof a> => Boolean(a),
   );
   const usernameByActorId = new Map(actors.map((a) => [a.id, a.username]));
+  const verifiedActorIds = new Set(actors.filter((a) => a.is_verified).map((a) => a.id));
   // Best-effort: a missing avatar just falls back to the initial.
   const avatarMedia = await getMediaByIds(
     supabase,
@@ -185,7 +187,10 @@ export default async function NotificationsPage() {
                             )}
                           </span>
                           <span className="min-w-0 flex-1 text-[0.9375rem] leading-snug">
-                            <span className="font-semibold">{username}</span>{" "}
+                            <span className="font-semibold">{username}</span>
+                            {n.actor_id && verifiedActorIds.has(n.actor_id) && (
+                              <VerifiedBadge className="ml-1 h-3.5 w-3.5 align-[-0.15em]" />
+                            )}{" "}
                             <span className={n.read_at ? "text-muted" : ""}>{verb}</span>
                           </span>
                           <span className="flex-shrink-0 self-start pt-0.5 text-[0.8125rem] text-muted" suppressHydrationWarning>

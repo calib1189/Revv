@@ -6,6 +6,7 @@ import { LikeButton } from "@/features/feed/like-button";
 import { SaveButton } from "@/features/feed/save-button";
 import { CaptionText } from "@/features/feed/caption-text";
 import { CommentIcon, EyeIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { relativeTime } from "@/lib/format/relative-time";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import type { Post } from "@/lib/db/posts";
@@ -80,9 +81,10 @@ export function PostCard({ data }: { data: PostCardData }) {
         <div className="min-w-0 flex-1">
           <Link
             href={`/u/${authorUsername}?from=${post.id}`}
-            className="truncate text-sm font-medium hover:underline"
+            className="flex items-center gap-1 text-sm font-medium hover:underline"
           >
-            @{authorUsername}
+            <span className="truncate">@{authorUsername}</span>
+            {data.authorIsVerified && <VerifiedBadge className="h-3.5 w-3.5" />}
           </Link>
           {vehicleTitle && post.vehicle_id && (
             <Link

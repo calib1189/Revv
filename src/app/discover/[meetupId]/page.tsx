@@ -11,6 +11,7 @@ import { getMeetupViewCount, recordMeetupView } from "@/lib/db/meetup-views";
 import { PhotoCarousel } from "@/features/feed/photo-carousel";
 import { Avatar } from "@/features/feed/avatar";
 import { PinIcon, EyeIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { MeetupDetailDeleteButton } from "@/features/meetups/meetup-detail-delete-button";
 import { Callout } from "@/components/ui/callout";
 import { formatDateTime } from "@/lib/format/date";
@@ -107,7 +108,12 @@ export default async function MeetupDetailPage({
           />
           <GroupedRow
             href={`/u/${host?.username ?? "unknown"}`}
-            label={host?.display_name || host?.username || "unknown"}
+            label={
+              <span className="flex items-center gap-1">
+                <span className="truncate">{host?.display_name || host?.username || "unknown"}</span>
+                {host?.is_verified && <VerifiedBadge className="h-[15px] w-[15px]" />}
+              </span>
+            }
             detail="Host"
             icon={<Avatar username={host?.username ?? "unknown"} avatarUrl={hostAvatarUrl} className="h-[30px] w-[30px] text-xs" />}
           />

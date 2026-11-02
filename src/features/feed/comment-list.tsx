@@ -9,6 +9,7 @@ import { DeleteCommentButton } from "@/features/feed/delete-comment-button";
 import { CommentForm } from "@/features/feed/comment-form";
 import { ReportButton } from "@/features/feed/report-button";
 import { CommentIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { relativeTime } from "@/lib/format/relative-time";
 import type { Comment } from "@/lib/db/comments";
 
@@ -17,6 +18,7 @@ export interface CommentWithAuthor extends Comment {
   /** Null when they haven't set one — falls back to @username. */
   authorDisplayName: string | null;
   authorAvatarUrl: string | null;
+  authorIsVerified: boolean;
   /** Highest ai_rating_score across the commenter's own vehicles' active
    * builds (see lib/rating/best-build-scores.ts) — null if they have no
    * rated build, in which case no ring is drawn. */
@@ -178,9 +180,13 @@ function CommentRow({
         )}
       </Link>
       <div className="min-w-0 flex-1">
-        <p className="flex items-baseline gap-1.5 text-[0.8125rem]">
-          <Link href={`/u/${comment.authorUsername}`} className="truncate font-semibold text-muted hover:text-foreground">
-            {comment.authorDisplayName || comment.authorUsername}
+        <p className="flex items-center gap-1.5 text-[0.8125rem]">
+          <Link
+            href={`/u/${comment.authorUsername}`}
+            className="flex min-w-0 items-center gap-1 font-semibold text-muted hover:text-foreground"
+          >
+            <span className="truncate">{comment.authorDisplayName || comment.authorUsername}</span>
+            {comment.authorIsVerified && <VerifiedBadge className="h-[13px] w-[13px]" />}
           </Link>
           <span className="flex-shrink-0 text-muted/70" suppressHydrationWarning>
             {relativeTime(comment.created_at)}

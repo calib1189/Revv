@@ -21,10 +21,10 @@ import {
   MusicIcon,
   PlayIcon,
   ShareIcon,
-  VerifiedBadgeIcon,
   VolumeIcon,
   WheelIcon,
 } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { relativeTime } from "@/lib/format/relative-time";
 import { SITE_URL } from "@/lib/site-url";
@@ -837,9 +837,7 @@ export function SwipeSlide({
             >
               {data.authorUsername}
             </Link>
-            {data.authorIsVerified && (
-              <VerifiedBadgeIcon className="h-4 w-4 flex-shrink-0 text-accent" />
-            )}
+            {data.authorIsVerified && <VerifiedBadge onMedia className="h-[17px] w-[17px]" />}
             <span className="flex-shrink-0 text-[0.8125rem] text-white/60" suppressHydrationWarning>
               · {relativeTime(data.post.created_at)}
             </span>

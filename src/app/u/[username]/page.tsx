@@ -31,7 +31,9 @@ import { getStoreItem } from "@/lib/store/catalog";
 import { getPointsBalance } from "@/lib/db/points";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { SettingsIcon, VerifiedBadgeIcon, GemIcon } from "@/components/ui/icons";
+import { SettingsIcon, GemIcon, StarIcon } from "@/components/ui/icons";
+import { GuillocheRosette } from "@/features/profile/guilloche-rosette";
+import { VerifiedChip, VerifiedSeal } from "@/features/profile/verified-credential";
 
 export default async function ProfilePage({
   params,
@@ -186,6 +188,11 @@ export default async function ProfilePage({
   const BestTierIcon = bestTier ? RANK_MATERIAL_ICONS[bestTier] : null;
 
   const actionButtonClass = "h-10 w-full px-3 py-0 text-[0.9375rem] font-semibold";
+  const credential = {
+    username: profile.username,
+    isFounder: profile.is_founder,
+    isOwnProfile,
+  };
 
   return (
     <div className="relative w-full flex-1 overflow-x-clip">
@@ -228,29 +235,40 @@ export default async function ProfilePage({
             Emerald–Ruby, starfield for Cosmic), so the profile photo
             reads as the same rank everywhere. Unrated profiles get a
             plain hairline. */}
-        {bestRatingScore != null ? (
-          <RankFrame
-            score={bestRatingScore}
-            hideBadge
-            className="h-[124px] w-[124px] rounded-full"
-          >
-            <Avatar
-              username={profile.username}
-              avatarUrl={avatarUrl}
-              className="h-full w-full text-4xl"
-              priority
-            />
-          </RankFrame>
-        ) : (
-          <div className="rounded-full p-[3px] ring-1 ring-border">
-            <Avatar
-              username={profile.username}
-              avatarUrl={avatarUrl}
-              className="h-[118px] w-[118px] text-4xl"
-              priority
-            />
+        {/* A verified profile's avatar sits inside an engraved guilloche
+            rosette — the one mark no other profile has, so a verified
+            account is recognisable from across the room, not only by the
+            seal beside its name. */}
+        <div className="relative flex items-center justify-center">
+          {profile.is_verified && (
+            <GuillocheRosette className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2" />
+          )}
+          <div className="relative">
+            {bestRatingScore != null ? (
+              <RankFrame
+                score={bestRatingScore}
+                hideBadge
+                className="h-[124px] w-[124px] rounded-full"
+              >
+                <Avatar
+                  username={profile.username}
+                  avatarUrl={avatarUrl}
+                  className="h-full w-full text-4xl"
+                  priority
+                />
+              </RankFrame>
+            ) : (
+              <div className={`rounded-full p-[3px] ring-1 ${profile.is_verified ? "ring-verified/40" : "ring-border"}`}>
+                <Avatar
+                  username={profile.username}
+                  avatarUrl={avatarUrl}
+                  className="h-[118px] w-[118px] text-4xl"
+                  priority
+                />
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         <h1 className="mt-4 flex max-w-full items-center justify-center gap-1.5 text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">
           {nameIsGradient ? (
@@ -268,18 +286,23 @@ export default async function ProfilePage({
               {displayName}
             </span>
           )}
-          {profile.is_verified && (
-            <VerifiedBadgeIcon className="h-[22px] w-[22px] flex-shrink-0 text-accent" />
-          )}
+          {profile.is_verified && <VerifiedSeal {...credential} className="h-6 w-6" />}
         </h1>
         {profile.display_name && (
           <p className="mt-0.5 max-w-full truncate text-[0.9375rem] text-muted">@{profile.username}</p>
         )}
 
-        {(profile.is_founder || bestTier) && (
+        {(profile.is_verified || profile.is_founder || bestTier) && (
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            {profile.is_verified && <VerifiedChip {...credential} />}
+            {profile.is_founder && (
+              <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-accent/12 pl-2.5 pr-3 text-[0.75rem] font-semibold text-accent">
+                <StarIcon className="h-3.5 w-3.5" />
+                Founder &amp; Owner
+              </span>
+            )}
             {bestTier && BestTierIcon && bestRatingScore != null && (
-              <span className="glass inline-flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-3">
+              <span className="glass inline-flex h-7 items-center gap-1.5 rounded-full pl-1.5 pr-3">
                 <BestTierIcon className="h-5 w-5" />
                 <span className="micro-label" style={{ color: tierColorVar(bestTier) }}>
                   {RANK_LABELS[bestTier]}
@@ -287,11 +310,6 @@ export default async function ProfilePage({
                 <span className="numeral text-[0.8125rem] leading-none">
                   {bestRatingScore.toFixed(2)}
                 </span>
-              </span>
-            )}
-            {profile.is_founder && (
-              <span className="inline-flex items-center rounded-full bg-accent/12 px-3 py-1 text-[0.75rem] font-semibold text-accent">
-                Founder &amp; Owner
               </span>
             )}
           </div>

@@ -96,6 +96,7 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
       member,
       username: profile?.username ?? "unknown",
       avatarUrl: profile?.avatar_media_id ? (avatarUrlById.get(profile.avatar_media_id) ?? null) : null,
+      isVerified: profile?.is_verified ?? false,
       bestScore: bestScoreByOwner.get(member.user_id) ?? null,
     };
   });

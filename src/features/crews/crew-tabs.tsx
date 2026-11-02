@@ -19,6 +19,7 @@ export interface CrewTabMember {
   member: CrewMember;
   username: string;
   avatarUrl: string | null;
+  isVerified: boolean;
   bestScore: number | null;
 }
 
@@ -94,13 +95,14 @@ export function CrewTabs({
           <EmptyPanel icon={<UsersIcon className="h-5 w-5" />} text="No members yet." />
         ) : (
           <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[4.75rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
-            {members.map(({ member, username, avatarUrl, bestScore }) => (
+            {members.map(({ member, username, avatarUrl, isVerified, bestScore }) => (
               <MemberRow
                 key={member.id}
                 crewId={crewId}
                 member={member}
                 username={username}
                 avatarUrl={avatarUrl}
+                isVerified={isVerified}
                 bestScore={bestScore}
                 canManage={canManageMembers}
                 viewerRole={viewerRole}

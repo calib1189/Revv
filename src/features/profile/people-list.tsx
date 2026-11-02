@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Avatar } from "@/features/feed/avatar";
 import { ChevronRightIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import type { Profile } from "@/lib/db/profiles";
 
 /** A grouped list of people — avatar, name over @handle, chevron. Used
@@ -29,8 +30,9 @@ export function PeopleList({
               className="h-11 w-11 text-base"
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[0.9375rem] font-semibold">
-                {profile.display_name || profile.username}
+              <p className="flex items-center gap-1 text-[0.9375rem] font-semibold">
+                <span className="truncate">{profile.display_name || profile.username}</span>
+                {profile.is_verified && <VerifiedBadge className="h-[15px] w-[15px]" />}
               </p>
               <p className="truncate text-[0.8125rem] text-muted">
                 @{profile.username}

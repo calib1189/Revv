@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronRightIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
@@ -68,7 +69,10 @@ export function LeaderboardHeroCard({ entry }: { entry: LeaderboardEntry }) {
             <h3 className="mt-1.5 line-clamp-2 text-[1.75rem] font-bold leading-[1.08] tracking-[-0.025em] text-white sm:text-[2.5rem]">
               {entry.vehicleTitle}
             </h3>
-            <p className="mt-1 text-[0.875rem] text-white/70">@{entry.ownerUsername}</p>
+            <p className="mt-1 flex items-center gap-1 text-[0.875rem] text-white/70">
+              @{entry.ownerUsername}
+              {entry.ownerIsVerified && <VerifiedBadge onMedia className="h-3.5 w-3.5" />}
+            </p>
           </div>
         </div>
 
@@ -128,7 +132,10 @@ export function LeaderboardRunnerUpCard({ rank, entry }: { rank: number; entry: 
           <p className="truncate text-[0.9375rem] font-bold tracking-[-0.01em] text-white">
             {entry.vehicleTitle}
           </p>
-          <p className="truncate text-[0.75rem] text-white/65">@{entry.ownerUsername}</p>
+          <p className="flex items-center gap-1 text-[0.75rem] text-white/65">
+            <span className="truncate">@{entry.ownerUsername}</span>
+            {entry.ownerIsVerified && <VerifiedBadge onMedia className="h-3 w-3" />}
+          </p>
         </div>
       </div>
 

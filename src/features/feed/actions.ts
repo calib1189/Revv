@@ -209,6 +209,7 @@ export async function listCommentsForSheetAction(postId: string): Promise<Commen
         authorAvatarUrl: author?.avatar_media_id
           ? (avatarUrlByMediaId.get(author.avatar_media_id) ?? null)
           : null,
+        authorIsVerified: author?.is_verified ?? false,
         authorRatingScore: authorScores.get(c.author_id) ?? null,
       };
     }),

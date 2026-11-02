@@ -15,6 +15,7 @@ export interface LeaderboardEntry {
   score: number;
   ownerUsername: string;
   ownerAvatarUrl: string | null;
+  ownerIsVerified: boolean;
 }
 
 /** Resolves rated builds into leaderboard rows — vehicle title/photo and
@@ -68,6 +69,7 @@ export async function composeLeaderboard(
         ownerAvatarUrl: owner?.avatar_media_id
           ? (urlByMediaId.get(owner.avatar_media_id) ?? null)
           : null,
+        ownerIsVerified: owner?.is_verified ?? false,
       };
     })
     .filter((entry): entry is LeaderboardEntry => entry !== null);

@@ -3,6 +3,7 @@ import { Avatar } from "@/features/feed/avatar";
 import { FollowButton } from "@/features/profile/follow-button";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { SectionTitle } from "@/components/ui/grouped-list";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
 import type { SuggestedFollow } from "@/lib/ranking/suggested-follows";
 
@@ -28,8 +29,9 @@ export function SuggestedFollowsRow({ suggestions }: { suggestions: SuggestedFol
                 <ProgressRing value={bestScore / 100} size={76} stroke={4} color={tierColorVar(tier)}>
                   <Avatar username={profile.username} avatarUrl={avatarUrl} className="h-[62px] w-[62px] text-xl" />
                 </ProgressRing>
-                <p className="mt-2.5 w-full truncate text-[0.875rem] font-semibold">
-                  {profile.display_name || profile.username}
+                <p className="mt-2.5 flex w-full items-center justify-center gap-1 text-[0.875rem] font-semibold">
+                  <span className="truncate">{profile.display_name || profile.username}</span>
+                  {profile.is_verified && <VerifiedBadge className="h-3.5 w-3.5" />}
                 </p>
               </Link>
               <p className="mt-0.5 w-full truncate text-[0.75rem] font-medium" style={{ color: tierColorVar(tier) }}>

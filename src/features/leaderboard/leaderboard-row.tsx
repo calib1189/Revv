@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
 import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import type { LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
 
 /** One row of the board below the podium — a GroupedList-style row:
@@ -55,6 +56,7 @@ export function LeaderboardRow({
         </p>
         <p className="mt-0.5 truncate text-[0.8125rem] text-muted">
           @{entry.ownerUsername}
+          {entry.ownerIsVerified && <VerifiedBadge className="ml-1 h-3 w-3 align-[-0.1em]" />}
           {showCategory && ` · ${VEHICLE_CATEGORY_LABELS[entry.category]}`}
         </p>
       </div>

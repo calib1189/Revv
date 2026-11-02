@@ -32,6 +32,7 @@ import { RateBuildPanel } from "@/features/garage/rate-build-panel";
 import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
 import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/grouped-list";
 import { EditIcon, WheelIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
 import { listMaintenanceForVehicle } from "@/lib/db/maintenance";
@@ -243,9 +244,12 @@ export default async function VehiclePage({
             {owner && (
               <Link
                 href={`/u/${owner.username}`}
-                className="mt-3 inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-[0.8125rem] font-medium text-white backdrop-blur-md transition-colors hover:bg-white/25"
+                className={`mt-3 inline-flex items-center gap-1 rounded-full bg-white/15 py-1 text-[0.8125rem] font-medium text-white backdrop-blur-md transition-colors hover:bg-white/25 ${
+                  owner.is_verified ? "pl-3 pr-1.5" : "px-3"
+                }`}
               >
                 @{owner.username}
+                {owner.is_verified && <VerifiedBadge className="h-4 w-4" />}
               </Link>
             )}
           </div>

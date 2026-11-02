@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { setUserVerifiedAction, setUserFounderAction } from "@/features/admin/actions";
 import { BanUserButton } from "@/features/admin/ban-user-button";
-import { VerifiedBadgeIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 
 export interface UserRowData {
   userId: string;
@@ -28,7 +28,7 @@ export function UserRow({ data }: { data: UserRowData }) {
           className="flex items-center gap-1.5 text-sm font-medium hover:underline"
         >
           @{data.username}
-          {isVerified && <VerifiedBadgeIcon className="h-4 w-4 flex-shrink-0 text-accent" />}
+          {isVerified && <VerifiedBadge className="h-4 w-4" />}
         </Link>
         <p className="text-xs text-muted">
           {isFounder && "Founder & Owner"}

@@ -11,6 +11,7 @@ import { MarkReadOnView } from "@/features/messages/mark-read-on-view";
 import { relativeTime } from "@/lib/format/relative-time";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { BackIcon, ChevronRightIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 
 export default async function ConversationPage({
   params,
@@ -67,8 +68,9 @@ export default async function ConversationPage({
         </Link>
         <Link href={`/u/${username}`} className="flex flex-col items-center gap-1">
           <Avatar username={username} avatarUrl={avatarUrl} className="h-10 w-10 text-sm" />
-          <span className="flex max-w-full items-center gap-0.5 truncate text-[0.75rem] font-medium">
-            {otherProfile?.display_name || username}
+          <span className="flex max-w-full items-center gap-0.5 text-[0.75rem] font-medium">
+            <span className="truncate">{otherProfile?.display_name || username}</span>
+            {otherProfile?.is_verified && <VerifiedBadge className="ml-0.5 h-3 w-3" />}
             <ChevronRightIcon className="h-3 w-3 flex-shrink-0 text-muted" />
           </span>
         </Link>
@@ -79,7 +81,10 @@ export default async function ConversationPage({
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
             <Avatar username={username} avatarUrl={avatarUrl} className="h-20 w-20 text-3xl" />
-            <p className="mt-3 text-[1.0625rem] font-semibold">{otherProfile?.display_name || username}</p>
+            <p className="mt-3 flex items-center gap-1 text-[1.0625rem] font-semibold">
+              {otherProfile?.display_name || username}
+              {otherProfile?.is_verified && <VerifiedBadge className="h-[17px] w-[17px]" />}
+            </p>
             <p className="mt-1 text-[0.875rem] text-muted">Say hi to start the conversation.</p>
           </div>
         ) : (

@@ -10,6 +10,7 @@ import { Avatar } from "@/features/feed/avatar";
 import { InboxTabs } from "@/features/shell/inbox-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ChevronRightIcon, CommentIcon } from "@/components/ui/icons";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { relativeTime } from "@/lib/format/relative-time";
 
 export default async function MessagesInboxPage() {
@@ -81,8 +82,9 @@ export default async function MessagesInboxPage() {
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
-                      <p className="min-w-0 flex-1 truncate text-[1rem] font-semibold">
-                        {profile?.display_name || profile?.username || "unknown"}
+                      <p className="flex min-w-0 flex-1 items-center gap-1 text-[1rem] font-semibold">
+                        <span className="truncate">{profile?.display_name || profile?.username || "unknown"}</span>
+                        {profile?.is_verified && <VerifiedBadge className="h-4 w-4" />}
                       </p>
                       {lastMessage && (
                         <span className="flex flex-shrink-0 items-center gap-0.5 text-[0.8125rem] text-muted" suppressHydrationWarning>

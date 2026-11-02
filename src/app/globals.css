@@ -12,6 +12,14 @@
   --danger: #ef4444;
   --success: #22c55e;
 
+  /* The verified-account seal. A semantic colour like --success, not the
+     brand accent: red already means like, follow and record in this app,
+     so a red seal read as decoration rather than a credential. Blue is
+     the colour people already read as "verified" everywhere else. The
+     check is always white — it sits on the blue, never on the page. */
+  --verified: #3d9bff;
+  --verified-ink: #ffffff;
+
   --glass-tint: 255 255 255;
   --glass-bg: rgb(var(--glass-tint) / 0.035);
   --glass-bg-raised: rgb(var(--glass-tint) / 0.045);
@@ -74,6 +82,7 @@
   --accent-foreground: #ffffff;
   --danger: #dc2626;
   --success: #16a34a;
+  --verified: #0a6fe5;
 
   --glass-tint: 10 10 11;
   --glass-bg: rgb(var(--glass-tint) / 0.035);
@@ -115,6 +124,7 @@
     --accent-foreground: #ffffff;
     --danger: #dc2626;
     --success: #16a34a;
+    --verified: #0a6fe5;
 
     --glass-tint: 10 10 11;
     --glass-bg: rgb(var(--glass-tint) / 0.035);
@@ -154,6 +164,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-danger: var(--danger);
   --color-success: var(--success);
+  --color-verified: var(--verified);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -738,6 +749,91 @@ html.native-app [contenteditable="true"] {
   animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
 
+/* ---- Verified ------------------------------------------------------
+   A verified profile arrives like a document being stamped: the guilloche
+   rosette behind the avatar engraves itself in, then a band of light
+   crosses the seal beside the name, once. After that everything is still
+   except the rosette's two bands, turning in opposite directions slowly
+   enough to read as a moiré shimmer rather than motion. */
+
+/* The sheen band inside the seal (an SVG rect, so px are viewBox units). */
+@keyframes verified-sheen {
+  from {
+    transform: translateX(-30px) skewX(-20deg);
+  }
+  to {
+    transform: translateX(30px) skewX(-20deg);
+  }
+}
+
+.animate-verified-sheen {
+  animation: verified-sheen 1.15s var(--ease-ios) 0.9s both;
+}
+
+/* The check stroke drawing itself in (path has pathLength="1"). */
+@keyframes seal-check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-seal-check {
+  stroke-dasharray: 1;
+  animation: seal-check-draw 560ms var(--ease-ios) 320ms both;
+}
+
+/* The large seal in the verified sheet landing like a stamp. */
+@keyframes seal-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(0.55) rotate(-28deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.06) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.animate-seal-stamp {
+  animation: seal-stamp 640ms var(--ease-ios) 80ms both;
+}
+
+/* Each guilloche curve engraving along its own length (pathLength="1"). */
+@keyframes rosette-engrave {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-rosette-engrave {
+  stroke-dasharray: 1;
+  animation: rosette-engrave 2.2s var(--ease-ios) both;
+}
+
+@keyframes rosette-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-rosette-turn {
+  animation: rosette-turn 260s linear infinite;
+}
+
+.animate-rosette-turn-reverse {
+  animation: rosette-turn 340s linear infinite reverse;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-panel-up,
   .animate-rise-in,
@@ -746,8 +842,17 @@ html.native-app [contenteditable="true"] {
   .animate-like-ring,
   .animate-eq-bar,
   .animate-marquee,
-  .animate-skeleton {
+  .animate-skeleton,
+  .animate-verified-sheen,
+  .animate-seal-check,
+  .animate-seal-stamp,
+  .animate-rosette-engrave,
+  .animate-rosette-turn,
+  .animate-rosette-turn-reverse {
     animation: none;
+  }
+  .animate-verified-sheen {
+    opacity: 0;
   }
   .animate-heart-float {
     animation-duration: 1ms;

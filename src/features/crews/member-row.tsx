@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Avatar } from "@/features/feed/avatar";
 import { ProgressRing } from "@/components/ui/progress-ring";
+import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { rankForScore, tierColorVar } from "@/lib/rating/rank";
 import { updateMemberRoleAction, removeMemberAction } from "@/features/crews/actions";
 import type { CrewMember, CrewMemberRole } from "@/lib/db/crew-members";
@@ -47,6 +48,7 @@ export function MemberRow({
   member,
   username,
   avatarUrl,
+  isVerified,
   bestScore,
   canManage,
   viewerRole,
@@ -56,6 +58,7 @@ export function MemberRow({
   member: CrewMember;
   username: string;
   avatarUrl: string | null;
+  isVerified: boolean;
   bestScore: number | null;
   canManage: boolean;
   viewerRole: CrewMemberRole | null;
@@ -113,8 +116,9 @@ export function MemberRow({
         )}
       </Link>
       <div className="min-w-0 flex-1">
-        <Link href={`/u/${username}`} className="block truncate text-[0.9375rem] font-semibold">
-          {username}
+        <Link href={`/u/${username}`} className="flex items-center gap-1 text-[0.9375rem] font-semibold">
+          <span className="truncate">{username}</span>
+          {isVerified && <VerifiedBadge className="h-[15px] w-[15px]" />}
         </Link>
         <div className="mt-0.5">
           <RoleBadge role={role} />
