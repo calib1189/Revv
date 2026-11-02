@@ -331,6 +331,15 @@ html.native-app [contenteditable="true"] {
   -webkit-touch-callout: default;
 }
 
+/* Prices and plan details for things that can only be bought on the
+   website (see createWebHandoffAction) — the app explains what's on
+   offer but never shows a purchase flow of its own. A class rather than
+   a useIsNative() branch so the website renders them on the server with
+   no pop-in. */
+html.native-app .web-only {
+  display: none !important;
+}
+
 /* The big center heart on a double-tap-to-like — pops in, holds, fades.
    Remounted via a changing `key` each time so it restarts on every tap
    rather than needing to be reset mid-animation. */

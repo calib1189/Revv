@@ -18,6 +18,7 @@ const PROTECTED_EXACT = [
   "/messages",
   "/friends",
   "/advertise",
+  "/advertise/new",
 ];
 const PROTECTED_PATTERNS = [
   /^\/garage\/[^/]+\/edit$/,
