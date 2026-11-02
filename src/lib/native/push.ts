@@ -1,5 +1,6 @@
 "use client";
 
+import type { PushNotificationsPlugin } from "@capacitor/push-notifications";
 import {
   registerDeviceTokenAction,
   unregisterDeviceTokenAction,
@@ -33,11 +34,21 @@ function storePushToken(token: string | null) {
   }
 }
 
-async function loadPlugin() {
+// Returns the plugin INSIDE a plain object, never bare. A Capacitor plugin
+// is a Proxy that answers every property lookup with a method that calls
+// into native code — including `then`. An async function that returns the
+// plugin itself makes JavaScript treat it as a thenable and call its
+// `then`, which asks iOS for a method literally named "then", gets
+// nothing back, and never resolves — so `await loadPlugin()` hung forever
+// on a real device (and only there: on the web this returns null). That
+// silently froze every call below, the settings switch included, and
+// anything awaiting them at startup. Wrapping it in `{ plugin }` keeps it
+// out of the promise machinery.
+async function loadPlugin(): Promise<{ plugin: PushNotificationsPlugin } | null> {
   const { Capacitor } = await import("@capacitor/core");
   if (!Capacitor.isNativePlatform()) return null;
   const { PushNotifications } = await import("@capacitor/push-notifications");
-  return PushNotifications;
+  return { plugin: PushNotifications };
 }
 
 export async function isNativeApp(): Promise<boolean> {
@@ -46,8 +57,9 @@ export async function isNativeApp(): Promise<boolean> {
 }
 
 export async function getNativePushPermission(): Promise<NativePushPermission> {
-  const plugin = await loadPlugin();
-  if (!plugin) return "denied";
+  const loaded = await loadPlugin();
+  if (!loaded) return "denied";
+  const { plugin } = loaded;
   const { receive } = await plugin.checkPermissions();
   if (receive === "granted") return "granted";
   if (receive === "denied") return "denied";
@@ -60,8 +72,9 @@ export async function getNativePushPermission(): Promise<NativePushPermission> {
 export async function enableNativePush(): Promise<
   { ok: true } | { ok: false; reason: "denied" | "failed" }
 > {
-  const plugin = await loadPlugin();
-  if (!plugin) return { ok: false, reason: "failed" };
+  const loaded = await loadPlugin();
+  if (!loaded) return { ok: false, reason: "failed" };
+  const { plugin } = loaded;
 
   const permission = await plugin.requestPermissions();
   if (permission.receive !== "granted") return { ok: false, reason: "denied" };
@@ -98,10 +111,10 @@ export async function disableNativePush(): Promise<void> {
   const token = readStoredPushToken();
   if (token) await unregisterDeviceTokenAction(token);
   storePushToken(null);
-  const plugin = await loadPlugin();
+  const loaded = await loadPlugin();
   // Stops the device receiving remote notifications for this app.
   // iOS permission itself can't be revoked from code — only from Settings.
-  await plugin?.unregister().catch(() => {});
+  await loaded?.plugin.unregister().catch(() => {});
 }
 
 /** The first-open "Allow notifications?" prompt. Only fires while the
@@ -114,9 +127,9 @@ export async function disableNativePush(): Promise<void> {
  * Notifications settings screen is still there to turn it on. */
 export async function promptForNativePushIfNeverAsked(): Promise<void> {
   try {
-    const plugin = await loadPlugin();
-    if (!plugin) return;
-    const { receive } = await plugin.checkPermissions();
+    const loaded = await loadPlugin();
+    if (!loaded) return;
+    const { receive } = await loaded.plugin.checkPermissions();
     if (receive !== "prompt") return;
     await enableNativePush();
   } catch {
@@ -133,8 +146,9 @@ export async function promptForNativePushIfNeverAsked(): Promise<void> {
  * promptForNativePushIfNeverAsked, and the Notifications settings screen
  * remains the way to turn it on after an earlier refusal. */
 export async function refreshNativePushRegistration(): Promise<void> {
-  const plugin = await loadPlugin();
-  if (!plugin) return;
+  const loaded = await loadPlugin();
+  if (!loaded) return;
+  const { plugin } = loaded;
   const { receive } = await plugin.checkPermissions();
   if (receive !== "granted") return;
 
@@ -152,8 +166,9 @@ export async function listenForNotificationTaps(
   open: (path: string) => void,
   isSafePath: (value: unknown) => value is string,
 ): Promise<{ remove: () => void } | null> {
-  const plugin = await loadPlugin();
-  if (!plugin) return null;
+  const loaded = await loadPlugin();
+  if (!loaded) return null;
+  const { plugin } = loaded;
   const handle = await plugin.addListener("pushNotificationActionPerformed", (action) => {
     const url = (action.notification.data as { url?: unknown } | undefined)?.url;
     if (isSafePath(url)) open(url);

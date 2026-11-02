@@ -79,10 +79,21 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
       // is validated on the device as well as built safely on the server:
       // a full-page navigation to an attacker-supplied URL from a
       // notification would be an open redirect with the app's name on it.
-      const taps = await listenForNotificationTaps((path) => {
+      //
+      // Deliberately NOT awaited: everything below used to sit behind this
+      // call, so when it hung (see loadPlugin in lib/native/push.ts) the
+      // push-token refresh and the resume fix further down silently never
+      // ran at all. Nothing here should be able to hold up the rest.
+      void listenForNotificationTaps((path) => {
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.href = `${window.location.origin}${path}`;
-      }, isSafeAppPath);
+      }, isSafeAppPath)
+        .then((handle) => {
+          if (!handle) return;
+          if (cancelled) handle.remove();
+          else tapHandle = handle;
+        })
+        .catch(() => {});
 
       // Keeps the server's copy of this device's push token current. Never
       // prompts for permission — see refreshNativePushRegistration.
@@ -123,11 +134,9 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
 
       if (cancelled) {
         listener.remove();
-        taps?.remove();
         resumeHandle.remove();
       } else {
         listenerHandle = listener;
-        tapHandle = taps ?? undefined;
         resumeListenerHandle = resumeHandle;
       }
     })();
