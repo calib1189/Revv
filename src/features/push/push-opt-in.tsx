@@ -5,6 +5,8 @@ import {
   subscribeToPushAction,
   unsubscribeFromPushAction,
   hasDeviceTokenAction,
+  sendTestPushAction,
+  type TestPushResult,
 } from "@/features/push/push-actions";
 import {
   isNativeApp,
@@ -16,6 +18,7 @@ import {
 import { Toggle } from "@/components/ui/toggle";
 import { Spinner } from "@/components/ui/spinner";
 import { Callout } from "@/components/ui/callout";
+import { Button } from "@/components/ui/button";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 
@@ -33,6 +36,33 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 type Status = "loading" | "unsupported" | "ios-needs-install" | "denied" | "off" | "on";
 
 const NATIVE_CHECK_TIMEOUT_MS = 8_000;
+
+function describeTestResult(result: TestPushResult): { tone: "muted" | "danger"; text: string } {
+  switch (result.status) {
+    case "sent":
+      return {
+        tone: "muted",
+        text: "Sent. It should arrive in a few seconds. iOS hides banners while the app is open, so switch to another app or lock the phone first.",
+      };
+    case "not-configured":
+      return {
+        tone: "danger",
+        text: "Notifications aren't set up on the server yet: the Apple push key hasn't been added to the app's settings.",
+      };
+    case "no-device":
+      return {
+        tone: "danger",
+        text: "This phone isn't registered with the server. Turn the switch off, then on again.",
+      };
+    case "rejected":
+      return {
+        tone: "danger",
+        text: `Apple refused it: ${result.reasons.join(", ")}.`,
+      };
+    case "error":
+      return { tone: "danger", text: `Couldn't send: ${result.detail}` };
+  }
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -67,6 +97,8 @@ export function PushOptIn() {
   const [status, setStatus] = useState<Status>("loading");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<TestPushResult | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
   // The App Store build is a WKWebView, which has no Web Push at all —
   // there the toggle drives APNs through the native plugin instead.
   const [isNative, setIsNative] = useState(false);
@@ -165,6 +197,18 @@ export function PushOptIn() {
     }
   }
 
+  async function handleSendTest() {
+    setTestResult(null);
+    setIsTesting(true);
+    try {
+      setTestResult(await sendTestPushAction());
+    } catch {
+      setTestResult({ status: "error", detail: "no response from the server" });
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
   async function handleDisable() {
     setError(null);
     setIsPending(true);
@@ -224,6 +268,18 @@ export function PushOptIn() {
       {error && (
         <div className="mt-3">
           <Callout tone="danger">{error}</Callout>
+        </div>
+      )}
+      {isNative && status === "on" && (
+        <div className="mt-4 flex flex-col gap-3">
+          <Button type="button" variant="secondary" disabled={isTesting} onClick={handleSendTest}>
+            {isTesting ? "Sending…" : "Send a test notification"}
+          </Button>
+          {testResult && (
+            <Callout tone={describeTestResult(testResult).tone}>
+              {describeTestResult(testResult).text}
+            </Callout>
+          )}
         </div>
       )}
     </div>

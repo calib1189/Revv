@@ -6,6 +6,11 @@ export interface NativePushResult {
    * proof of a dead token (bad server config, a rate limit) must never
    * end up in this list. */
   invalidTokens: string[];
+  /** Why the push service refused anything it refused (its own reason
+   * codes, e.g. "InvalidProviderToken" or "TopicDisallowed") — never a
+   * token or notification text. Lets the settings screen's test button
+   * say what is actually wrong instead of "it didn't arrive". */
+  failureReasons: string[];
 }
 
 /** Delivers a notification to native-app device tokens. Sits behind an

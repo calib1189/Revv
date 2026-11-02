@@ -5,8 +5,12 @@ import { saveSubscription, deleteSubscription } from "@/lib/db/push-subscription
 import {
   registerDevicePushToken,
   deleteDevicePushToken,
+  deleteDevicePushTokens,
   hasDevicePushToken,
+  listDevicePushTokensForUser,
 } from "@/lib/db/device-push-tokens";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { getNativePushProvider } from "@/lib/providers/get-native-push-provider";
 import { isValidDeviceToken } from "@/lib/push/validation";
 
 export async function subscribeToPushAction(subscription: {
@@ -68,5 +72,45 @@ export async function hasDeviceTokenAction(token: string): Promise<boolean> {
     return await hasDevicePushToken(supabase, user.id, token);
   } catch {
     return false;
+  }
+}
+
+export type TestPushResult =
+  | { status: "not-configured" }
+  | { status: "no-device" }
+  | { status: "sent" }
+  | { status: "rejected"; reasons: string[] }
+  | { status: "error"; detail: string };
+
+/** Sends one notification to the signed-in person's own devices and says
+ * which step failed if it can't. Push fails silently by design everywhere
+ * else (a like must never fail because a notification did), which makes
+ * "I never got one" impossible to diagnose from outside — this is the one
+ * place that reports what actually happened. Only ever targets the
+ * caller's own account, with fixed text. */
+export async function sendTestPushAction(): Promise<TestPushResult> {
+  try {
+    const { user } = await requireConfirmedUser();
+
+    const provider = getNativePushProvider();
+    if (provider.isMock) return { status: "not-configured" };
+
+    const service = createServiceRoleClient();
+    const tokens = await listDevicePushTokensForUser(service, user.id);
+    if (tokens.length === 0) return { status: "no-device" };
+
+    const { invalidTokens, failureReasons } = await provider.send(tokens, {
+      title: "SORZA",
+      body: "Notifications are working.",
+      url: "/settings/notifications",
+    });
+    await deleteDevicePushTokens(service, invalidTokens);
+
+    if (failureReasons.length > 0) return { status: "rejected", reasons: failureReasons };
+    return { status: "sent" };
+  } catch (err) {
+    // e.g. the APNs key can't be parsed — the Node message names the
+    // problem (key format) and contains nothing secret.
+    return { status: "error", detail: err instanceof Error ? err.message.slice(0, 120) : "unknown" };
   }
 }

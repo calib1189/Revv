@@ -16,6 +16,6 @@ export class MockNativePushProvider implements NativePushProvider {
         `[mock native push] not sent — APNs isn't configured. Would have notified ${tokens.length} device(s): "${payload.title}"`,
       );
     }
-    return { invalidTokens: [] };
+    return { invalidTokens: [], failureReasons: [] };
   }
 }

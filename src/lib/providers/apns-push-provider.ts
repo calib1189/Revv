@@ -65,7 +65,7 @@ export class ApnsPushProvider implements NativePushProvider {
     // The path is built from this value, so a row that somehow isn't
     // plain hex is dropped here rather than interpolated into a request.
     const valid = tokens.filter(isValidDeviceToken);
-    if (valid.length === 0) return { invalidTokens: [] };
+    if (valid.length === 0) return { invalidTokens: [], failureReasons: [] };
 
     const jwt = this.providerToken();
     const body = buildApnsPayload(payload);
@@ -94,6 +94,11 @@ export class ApnsPushProvider implements NativePushProvider {
 
       return {
         invalidTokens: results.filter((r) => r.outcome === "invalid-token").map((r) => r.token),
+        failureReasons: [
+          ...new Set(
+            results.filter((r) => r.outcome !== "sent").map((r) => r.reason ?? "no response"),
+          ),
+        ],
       };
     } finally {
       session.close();
