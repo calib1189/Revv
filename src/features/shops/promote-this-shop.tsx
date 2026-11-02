@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { createShopPromotionAction } from "@/features/shops/actions";
-import { createWebHandoffAction } from "@/features/auth/actions";
-import { openExternalBrowser } from "@/lib/native/open-external";
+import { WebHandoffButton } from "@/features/auth/web-handoff-button";
+import { useIsNative } from "@/lib/native/use-is-native";
+import { SITE_URL } from "@/lib/site-url";
 import {
   SHOP_PROMOTION_TIERS,
   SHOP_PROMOTION_TIER_RANK,
@@ -14,6 +15,7 @@ import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
 import { Callout } from "@/components/ui/callout";
 import { Button } from "@/components/ui/button";
 
+const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
 const TIER_ORDER: ShopPromotionTier[] = ["standard", "featured", "diamond"];
 const TIER_METALS: Record<ShopPromotionTier, TierMetal> = {
   standard: "silver",
@@ -58,7 +60,7 @@ export function PromoteThisShop({
   );
   const [isPromoting, setIsPromoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sentToWeb, setSentToWeb] = useState(false);
+  const isNative = useIsNative();
 
   if (currentTier === "diamond") {
     return (
@@ -68,32 +70,38 @@ export function PromoteThisShop({
     );
   }
 
+  // Waits for the platform check rather than flashing the priced web
+  // version inside the app. This sits at the bottom of the page, so
+  // appearing a moment late goes unseen.
+  if (isNative === null) return null;
+
+  // See createWebHandoffAction's doc comment — native never shows plans,
+  // prices or a checkout. It sends the person to this same shop's page
+  // on the website, signed in and scrolled to this card (the page wraps
+  // it in #promote), where they pick a plan and pay.
+  if (isNative) {
+    return (
+      <div className="glass-raised elev-1 flex flex-col gap-4 rounded-[22px] p-5">
+        <div>
+          <h2 className="text-sm font-semibold">Promote {placeName}</h2>
+          <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted">
+            Promoted shops sort above the rest when people browse Shops.
+          </p>
+        </div>
+        <WebHandoffButton
+          nextPath={`/discover/shop/${encodeURIComponent(placeId)}${category ? `?category=${encodeURIComponent(category)}` : ""}#promote`}
+          label="Promote on the website"
+          note={`Opens this shop on ${SITE_HOST}, already signed in.`}
+          prepareWhen="visible"
+        />
+      </div>
+    );
+  }
+
   async function handlePromote() {
     setError(null);
     setIsPromoting(true);
     try {
-      const { Capacitor } = await import("@capacitor/core");
-      const isNative = Capacitor.isNativePlatform();
-
-      // See createWebHandoffAction's doc comment — this never creates a
-      // checkout on native. It hands the whole flow to the website
-      // instead, in the real external browser, so nothing resembling a
-      // purchase is ever presented from inside the app.
-      if (isNative) {
-        const handoff = await createWebHandoffAction(
-          `/discover/shop/${placeId}`,
-        );
-        if (handoff.error || !handoff.url) {
-          setError(
-            handoff.error ?? "Couldn't open that on the web. Try again.",
-          );
-          return;
-        }
-        openExternalBrowser(handoff.url);
-        setSentToWeb(true);
-        return;
-      }
-
       const result = await createShopPromotionAction({
         placeId,
         placeName,
@@ -110,15 +118,6 @@ export function PromoteThisShop({
     } finally {
       setIsPromoting(false);
     }
-  }
-
-  if (sentToWeb) {
-    return (
-      <p className="glass-raised elev-1 rounded-[22px] p-4 text-center text-[0.875rem] text-muted">
-        Opened in your browser, already signed in — pick a plan and pay there to
-        finish promoting {placeName}.
-      </p>
-    );
   }
 
   return (

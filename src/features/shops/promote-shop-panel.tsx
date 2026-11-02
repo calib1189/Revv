@@ -6,8 +6,9 @@ import {
   searchShopsByQueryAction,
   createShopPromotionAction,
 } from "@/features/shops/actions";
-import { createWebHandoffAction } from "@/features/auth/actions";
-import { openExternalBrowser } from "@/lib/native/open-external";
+import { WebHandoffButton } from "@/features/auth/web-handoff-button";
+import { useIsNative } from "@/lib/native/use-is-native";
+import { SITE_URL } from "@/lib/site-url";
 import {
   SHOP_PROMOTION_TIERS,
   SHOP_PROMOTION_TIER_RANK,
@@ -21,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import type { ShopResult } from "@/features/shops/actions";
 
+const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
 const TIER_ORDER: ShopPromotionTier[] = ["standard", "featured", "diamond"];
 const TIER_METALS: Record<ShopPromotionTier, TierMetal> = {
   standard: "silver",
@@ -61,7 +63,7 @@ export function PromoteShopPanel({
   const [tier, setTier] = useState<ShopPromotionTier>("standard");
   const [isPromoting, setIsPromoting] = useState(false);
   const [promoteError, setPromoteError] = useState<string | null>(null);
-  const [sentToWeb, setSentToWeb] = useState(false);
+  const isNative = useIsNative();
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -115,27 +117,6 @@ export function PromoteShopPanel({
     setPromoteError(null);
     setIsPromoting(true);
     try {
-      const { Capacitor } = await import("@capacitor/core");
-      const isNative = Capacitor.isNativePlatform();
-
-      // See createWebHandoffAction's doc comment — native never creates
-      // a checkout itself, it hands the whole flow to the website in
-      // the real external browser instead.
-      if (isNative) {
-        const handoff = await createWebHandoffAction(
-          `/discover/shop/${selected.placeId}`,
-        );
-        if (handoff.error || !handoff.url) {
-          setPromoteError(
-            handoff.error ?? "Couldn't open that on the web. Try again.",
-          );
-          return;
-        }
-        openExternalBrowser(handoff.url);
-        setSentToWeb(true);
-        return;
-      }
-
       const result = await createShopPromotionAction({
         placeId: selected.placeId,
         placeName: selected.name,
@@ -234,15 +215,20 @@ export function PromoteShopPanel({
           <div className="flex flex-col gap-3 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
             {promoteError && <Callout tone="danger">{promoteError}</Callout>}
 
-            {sentToWeb ? (
-              <p className="text-center text-sm text-muted">
-                Opened in your browser, already signed in — pick a plan and pay
-                there to finish promoting {selected.name}.
-              </p>
-            ) : selected.promotionTier === "diamond" ? (
+            {selected.promotionTier === "diamond" ? (
               <p className="text-center text-sm text-muted">
                 {selected.name} already has the top Diamond spot.
               </p>
+            ) : isNative ? (
+              // See createWebHandoffAction's doc comment — native never
+              // shows plans, prices or a checkout. Picking the shop here is
+              // the part worth keeping: the browser opens straight on that
+              // shop's own page, scrolled to its Promote card.
+              <WebHandoffButton
+                nextPath={`/discover/shop/${encodeURIComponent(selected.placeId)}#promote`}
+                label="Promote on the website"
+                note={`Opens ${selected.name} on ${SITE_HOST}, already signed in.`}
+              />
             ) : (
               <>
                 <TierPicker

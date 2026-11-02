@@ -12,7 +12,6 @@ import {
   recordSignupAttempt,
 } from "@/lib/auth/signup-rate-limit";
 import { getClientIp } from "@/lib/http/get-client-ip";
-import { SITE_URL } from "@/lib/site-url";
 import { deleteDevicePushToken } from "@/lib/db/device-push-tokens";
 import { isValidDeviceToken } from "@/lib/push/validation";
 
@@ -193,7 +192,7 @@ export async function deleteAccount(): Promise<void> {
 }
 
 export interface WebHandoffResult {
-  url?: string;
+  tokenHash?: string;
   error?: string;
 }
 
@@ -205,19 +204,23 @@ export interface WebHandoffResult {
  * digital content. Rather than build a second, parallel StoreKit
  * billing path (the "TikTok" approach — real engineering cost, plus
  * Apple's cut on every sale), the native app instead hands the
- * purchase off to the website entirely: this mints a one-time Supabase
- * magic link for the signed-in user and sends them to it in the
- * external system browser, never the app's own WebView, so nothing
- * resembling a purchase flow is ever presented from inside the app —
- * the same pattern Netflix and Spotify use for subscriptions. The
- * checkout itself is never created here; the equivalent web page
- * creates its own draft/session when the person completes the flow
- * there, so a handoff nobody finishes doesn't leave an orphaned
- * pending-payment row behind.
+ * purchase off to the website entirely: this mints a one-time sign-in
+ * token for the signed-in user, and WebHandoffButton opens
+ * webHandoffUrl(token, path) in the external system browser, never the
+ * app's own WebView, so nothing resembling a purchase flow is ever
+ * presented from inside the app — the same pattern Netflix and Spotify
+ * use for subscriptions. The checkout itself is never created here; the
+ * equivalent web page creates its own draft/session when the person
+ * completes the flow there, so a handoff nobody finishes doesn't leave
+ * an orphaned pending-payment row behind.
+ *
+ * The token isn't tied to a page — webHandoffUrl adds that — so one
+ * token serves every handoff button on screen. Minting a new one voids
+ * the last (and any password-reset email still outstanding, which shares
+ * the same slot), which is why WebHandoffButton only mints once someone
+ * is actually looking at one.
  */
-export async function createWebHandoffAction(
-  nextPath: string,
-): Promise<WebHandoffResult> {
+export async function createWebHandoffAction(): Promise<WebHandoffResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -229,16 +232,15 @@ export async function createWebHandoffAction(
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email: user.email,
-    // Routed through /auth/callback, not straight to nextPath — that's
-    // what actually exchanges the code for a session (see that route);
-    // landing directly on nextPath with an un-exchanged code in the URL
-    // would leave the browser just as logged-out as before the link was
-    // clicked.
-    options: { redirectTo: `${SITE_URL}/auth/callback?next=${encodeURIComponent(nextPath)}` },
   });
-  if (error || !data.properties?.action_link) {
-    return { error: "Couldn't open that on the web. Try again." };
+  // Only the hashed token is used, never data.properties.action_link: that
+  // link goes through Supabase's own verify page, which hands the session
+  // back in the URL's #fragment — out of reach of /auth/callback on the
+  // server, so the browser landed signed out. /auth/callback redeems the
+  // token itself instead (see webHandoffUrl).
+  if (error || !data.properties?.hashed_token) {
+    return { error: "Couldn't reach the website. Try again." };
   }
 
-  return { url: data.properties.action_link };
+  return { tokenHash: data.properties.hashed_token };
 }

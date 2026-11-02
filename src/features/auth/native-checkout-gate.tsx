@@ -1,12 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { createWebHandoffAction } from "@/features/auth/actions";
 import { useIsNative } from "@/lib/native/use-is-native";
-import { openExternalBrowser } from "@/lib/native/open-external";
+import { WebHandoffButton } from "@/features/auth/web-handoff-button";
 import { SITE_URL } from "@/lib/site-url";
-import { Button } from "@/components/ui/button";
-import { Callout } from "@/components/ui/callout";
 
 const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
 
@@ -34,45 +30,18 @@ export function NativeCheckoutGate({
   children?: React.ReactNode;
 }) {
   const isNative = useIsNative();
-  const [error, setError] = useState<string | null>(null);
-  const [sentToWeb, setSentToWeb] = useState(false);
-
-  async function handleContinue() {
-    setError(null);
-    const handoff = await createWebHandoffAction(nextPath);
-    if (handoff.error || !handoff.url) {
-      setError(handoff.error ?? "Couldn't open that on the web. Try again.");
-      return;
-    }
-    openExternalBrowser(handoff.url);
-    setSentToWeb(true);
-  }
 
   if (isNative === null) return null;
   if (!isNative) return <>{children ?? null}</>;
 
   return (
-    <div className="glass-raised elev-1 flex flex-col items-center gap-3 rounded-[22px] p-6 text-center">
-      {error && <Callout tone="danger">{error}</Callout>}
-      {sentToWeb ? (
-        <p className="text-sm text-muted">
-          Opened in your browser, already signed in — finish there.
-        </p>
-      ) : (
-        <>
-          <p className="text-sm font-medium">{what} happens on the web</p>
-          <p className="max-w-xs text-xs text-muted">
-            Tap below to continue on {SITE_HOST} — you&apos;ll already be signed in.
-          </p>
-          <Button
-            type="button"
-            onClick={handleContinue}
-            className="px-5 py-2.5 text-sm"
-          >
-            Continue on the web
-          </Button>
-        </>
-      )}
+    <div className="glass-raised elev-1 flex flex-col items-center gap-4 rounded-[22px] p-6 text-center">
+      <p className="text-sm font-medium">{what} happens on the web</p>
+      <WebHandoffButton
+        nextPath={nextPath}
+        label={`Continue on ${SITE_HOST}`}
+        className="w-full max-w-xs"
+      />
     </div>
   );
 }

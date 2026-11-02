@@ -10,6 +10,10 @@
  * "_blank"-target open is what Capacitor's runtime hands off to the
  * OS to open externally — the standard mechanism for this, not a
  * Capacitor-specific API.
+ *
+ * iOS only honours this inside the tap itself: called after an await it
+ * is quietly ignored, and it returns null either way, so nothing here can
+ * tell whether it worked. WebHandoffButton avoids depending on it.
  */
 export function openExternalBrowser(url: string): void {
   window.open(url, "_blank");

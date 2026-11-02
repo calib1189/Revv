@@ -214,7 +214,10 @@ export default async function ShopDetailPage({
         <ShopAnalyticsSection placeId={shop.placeId} />
       </div>
 
-      <div className="mt-6">
+      {/* #promote is where the iOS app's Promote button lands someone on
+          the website (see PromoteThisShop), so it's here in the server
+          HTML even before that card renders. */}
+      <div id="promote" className="mt-6 scroll-mt-20">
         <PromoteThisShop
           placeId={shop.placeId}
           placeName={shop.name}
