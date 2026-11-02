@@ -50,6 +50,9 @@ export function installEdgeSwipeBack(): () => void {
     if (e.touches.length !== 1) return;
     const t = e.touches[0];
     if (t.clientX > EDGE_PX || window.history.length <= 1) return;
+    // Screens where a stray swipe from the edge would throw away work in
+    // progress (the camera mid-recording, an editor) opt out.
+    if (e.target instanceof Element && e.target.closest("[data-no-edge-swipe]")) return;
     tracking = true;
     horizontal = false;
     startX = t.clientX;

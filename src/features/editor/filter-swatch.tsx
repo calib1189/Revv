@@ -41,15 +41,22 @@ export function FilterSwatch({
   }, [preset, previewSource]);
 
   return (
-    <button type="button" onClick={onClick} className="flex flex-shrink-0 flex-col items-center gap-1.5">
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className="pressable flex flex-shrink-0 flex-col items-center gap-1.5"
+    >
       <span
-        className={`block h-16 w-12 overflow-hidden rounded-xl bg-white/10 ${
+        className={`block h-[76px] w-14 overflow-hidden rounded-[14px] bg-white/[0.08] transition-shadow duration-200 ${
           selected ? "ring-2 ring-white ring-offset-2 ring-offset-black" : ""
         }`}
       >
         {previewSource && <canvas ref={canvasRef} className="h-full w-full object-cover" />}
       </span>
-      <span className="text-xs text-white/80">{preset.label}</span>
+      <span className={`text-[0.6875rem] ${selected ? "font-semibold text-white" : "font-medium text-white/60"}`}>
+        {preset.label}
+      </span>
     </button>
   );
 }

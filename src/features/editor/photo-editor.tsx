@@ -2,60 +2,55 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { drawFrame } from "@/features/editor/draw-frame";
-import { FILTER_PRESETS, FILTER_CATEGORIES, type FilterCategoryId } from "@/features/editor/filters";
-import { FilterSwatch } from "@/features/editor/filter-swatch";
 import { capturePreviewSource } from "@/features/editor/capture-preview-source";
 import { aspectNeedsPan } from "@/features/editor/crop";
-import { STICKER_EMOJIS } from "@/features/editor/stickers";
 import {
-  TEXT_FONTS,
   type AspectRatioId,
   type Rotation,
   type TextLayer,
   type DrawStroke,
+  type TextFontId,
 } from "@/features/editor/types";
 import {
   CropIcon,
   TextToolIcon,
   FilterIcon,
-  TrashIcon,
-  PlusIcon,
   StickerIcon,
-  RotateIcon,
   BrushIcon,
+  ChevronRightIcon,
 } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 import {
   StudioHeader,
   StudioAction,
   StudioStage,
+  StudioDeck,
   StudioPanel,
-  StudioChip,
-  StudioIconButton,
-  StudioSlider,
   StudioRail,
 } from "@/features/editor/studio-ui";
+import {
+  LayerHandles,
+  TextComposer,
+  StickerSheet,
+  StickerControls,
+  CropControls,
+  FilterControls,
+  DrawControls,
+  TEXT_COLORS,
+  DRAW_WIDTHS,
+} from "@/features/editor/editor-tools";
 
-type Tool = "crop" | "filter" | "text" | "sticker" | "draw" | null;
+type Tool = "crop" | "filter" | "sticker" | "draw" | null;
+type RailTool = "text" | "stickers" | "filter" | "draw" | "crop";
 
-const ASPECTS: { id: AspectRatioId; label: string }[] = [
-  { id: "9:16", label: "9:16" },
-  { id: "4:5", label: "4:5" },
-  { id: "1:1", label: "1:1" },
-  { id: "original", label: "Original" },
-];
-
-const TEXT_COLORS = ["#ffffff", "#ff4433", "#ffd166", "#06d6a0", "#4cc9f0", "#000000"];
-const DRAW_WIDTHS = [6, 12, 22];
 const ROTATION_STEPS: Rotation[] = [0, 90, 180, 270];
 
-const TOOLS: { id: Exclude<Tool, null>; label: string; icon: typeof CropIcon }[] = [
-  { id: "crop", label: "Crop", icon: CropIcon },
-  { id: "filter", label: "Filters", icon: FilterIcon },
-  { id: "text", label: "Text", icon: TextToolIcon },
-  { id: "sticker", label: "Stickers", icon: StickerIcon },
-  { id: "draw", label: "Draw", icon: BrushIcon },
-];
+const TOOL_TITLES: Record<Exclude<Tool, null>, string> = {
+  crop: "Crop",
+  filter: "Filters",
+  sticker: "Sticker",
+  draw: "Draw",
+};
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -99,10 +94,11 @@ export function PhotoEditor({
     drawStrokes: [],
   });
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
-  const [newTextDraft, setNewTextDraft] = useState("");
-  const [drawColor, setDrawColor] = useState(TEXT_COLORS[1]);
+  const [textComposer, setTextComposer] = useState<{ layerId: string | null } | null>(null);
+  const [stickerSheetOpen, setStickerSheetOpen] = useState(false);
+  const [isDraggingLayer, setIsDraggingLayer] = useState(false);
+  const [drawColor, setDrawColor] = useState(TEXT_COLORS[2]);
   const [drawWidth, setDrawWidth] = useState(DRAW_WIDTHS[1]);
-  const [filterCategory, setFilterCategory] = useState<FilterCategoryId>(FILTER_CATEGORIES[0].id);
   const [filterPreviewSource, setFilterPreviewSource] = useState<ImageData | null>(null);
   const hasCapturedFilterPreviewRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,21 +181,22 @@ export function PhotoEditor({
     });
   }
 
-  function addTextLayer() {
-    if (!newTextDraft.trim()) return;
-    const layer: TextLayer = {
-      id: crypto.randomUUID(),
-      text: newTextDraft.trim().slice(0, 80),
-      x: 0.5,
-      y: 0.5,
-      color: "#ffffff",
-      fontSize: 64,
-      fontId: "sans",
-      isSticker: false,
-    };
-    setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
-    setNewTextDraft("");
-    setSelectedTextId(layer.id);
+  function commitText(value: { text: string; color: string; fontId: TextFontId; fontSize: number }) {
+    const editingId = textComposer?.layerId ?? null;
+    if (editingId) {
+      updateTextLayer(editingId, value);
+    } else {
+      const layer: TextLayer = {
+        id: crypto.randomUUID(),
+        x: 0.5,
+        y: 0.42,
+        isSticker: false,
+        ...value,
+      };
+      setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
+    }
+    setTextComposer(null);
+    setSelectedTextId(null);
   }
 
   function addStickerLayer(emoji: string) {
@@ -215,6 +212,8 @@ export function PhotoEditor({
     };
     setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
     setSelectedTextId(layer.id);
+    setStickerSheetOpen(false);
+    setTool("sticker");
   }
 
   function updateTextLayer(id: string, patch: Partial<TextLayer>) {
@@ -277,10 +276,17 @@ export function PhotoEditor({
       return;
     }
 
-    const dragTextId = tool === "text" || tool === "sticker" ? selectedTextId : null;
+    // Text and stickers are dragged by their own handles (LayerHandles);
+    // a press on the bare picture just lets go of whatever was selected.
     const cropPanEnabled =
       tool === "crop" && aspectNeedsPan(state.aspect, imgDims.width, imgDims.height, state.rotation);
-    if (!dragTextId && !cropPanEnabled) return;
+    if (!cropPanEnabled) {
+      if (tool === "sticker" || tool === null) {
+        setSelectedTextId(null);
+        if (tool === "sticker") setTool(null);
+      }
+      return;
+    }
 
     e.preventDefault();
     const imgAspect = imgDims.width / Math.max(1, imgDims.height);
@@ -299,11 +305,7 @@ export function PhotoEditor({
     function move(ev: PointerEvent) {
       const fracX = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
       const fracY = clamp((ev.clientY - rect.top) / rect.height, 0, 1);
-      if (dragTextId) {
-        updateTextLayer(dragTextId, { x: fracX, y: fracY });
-      } else if (cropPanEnabled) {
-        updateState({ panOffset: panAxisIsX ? fracX : fracY });
-      }
+      updateState({ panOffset: panAxisIsX ? fracX : fracY });
     }
     function up() {
       window.removeEventListener("pointermove", move);
@@ -333,343 +335,190 @@ export function PhotoEditor({
   }
 
   const selectedLayer = state.textLayers.find((l) => l.id === selectedTextId) ?? null;
+  const editingLayer = textComposer?.layerId
+    ? (state.textLayers.find((l) => l.id === textComposer.layerId) ?? null)
+    : null;
+
+  const railTools: { id: RailTool; label: string; icon: typeof CropIcon; badge?: boolean }[] = [
+    { id: "text", label: "Text", icon: TextToolIcon, badge: state.textLayers.some((l) => !l.isSticker) },
+    { id: "stickers", label: "Stickers", icon: StickerIcon, badge: state.textLayers.some((l) => l.isSticker) },
+    { id: "filter", label: "Filters", icon: FilterIcon, badge: state.filterId !== "original" },
+    { id: "draw", label: "Draw", icon: BrushIcon, badge: state.drawStrokes.length > 0 },
+    { id: "crop", label: "Crop", icon: CropIcon, badge: state.aspect !== "original" || state.rotation !== 0 },
+  ];
+
+  function selectRailTool(id: RailTool) {
+    setSelectedTextId(null);
+    if (id === "text") {
+      setTool(null);
+      setTextComposer({ layerId: null });
+    } else if (id === "stickers") {
+      setTool(null);
+      setStickerSheetOpen(true);
+    } else {
+      setTool((t) => (t === id ? null : id));
+    }
+  }
+
+  function handleLayerTap(layer: TextLayer) {
+    if (layer.isSticker) {
+      setSelectedTextId(layer.id);
+      setTool("sticker");
+    } else {
+      setTool(null);
+      setTextComposer({ layerId: layer.id });
+    }
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+    <div data-no-edge-swipe className="fixed inset-0 z-50 flex flex-col bg-black">
       {/* eslint-disable-next-line @next/next/no-img-element -- source decode element, not a display asset */}
       <img ref={imgRef} src={sourceUrl} alt="" className="sr-only" />
 
-      <StudioHeader
-        eyebrow="Edit photo"
-        onCancel={onCancel}
-        action={
-          <StudioAction onClick={handleDone} disabled={!ready || isExporting} busy={isExporting}>
-            {isExporting ? "Saving…" : "Next"}
-          </StudioAction>
-        }
-      />
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <StudioStage ratio={canvasSize.width / canvasSize.height}>
+          <div
+            ref={previewRef}
+            onPointerDown={handlePreviewPointerDown}
+            className="relative h-full w-full touch-none overflow-hidden rounded-[22px] bg-[#111113]"
+          >
+            <canvas ref={canvasRef} className="h-full w-full" />
+            {!ready && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/55">
+                <span className="h-7 w-7 animate-spin rounded-full border-2 border-white/15 border-t-white/70" />
+                <span className="text-[0.8125rem] font-medium">Loading photo</span>
+              </div>
+            )}
+            <LayerHandles
+              layers={state.textLayers}
+              selectedId={selectedTextId}
+              previewRef={previewRef}
+              interactive={tool === null || tool === "sticker"}
+              onMove={(id, x, y) => updateTextLayer(id, { x, y })}
+              onTap={handleLayerTap}
+              onDelete={(id) => {
+                removeTextLayer(id);
+                if (tool === "sticker") setTool(null);
+              }}
+              onDragStateChange={setIsDraggingLayer}
+            />
+          </div>
+        </StudioStage>
 
-      {error && (
-        <div className="px-4 pt-3">
-          <Callout tone="danger">{error}</Callout>
-        </div>
-      )}
+        <StudioHeader onBack={onCancel} backLabel="Back to camera" />
 
-      <StudioStage>
-        <div
-          ref={previewRef}
-          onPointerDown={handlePreviewPointerDown}
-          className="relative max-h-full max-w-full touch-none overflow-hidden rounded-[20px] bg-black shadow-[0_28px_70px_-24px_rgb(0_0_0/0.95)] ring-1 ring-white/10"
-          style={{ aspectRatio: `${canvasSize.width} / ${canvasSize.height}` }}
-        >
-          <canvas ref={canvasRef} className="h-full w-full" />
-          {!ready && (
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-white/60">
-              Loading…
-            </div>
-          )}
-          {(tool === "text" || tool === "sticker") &&
-            state.textLayers
-              .filter((l) => l.isSticker === (tool === "sticker"))
-              .map((layer) => (
-                <button
-                  key={layer.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedTextId(layer.id);
-                  }}
-                  className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${
-                    selectedTextId === layer.id ? "border-[#ffd60a]" : "border-transparent"
-                  }`}
-                  style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%` }}
-                  aria-label={`Select "${layer.text}"`}
-                />
-              ))}
-        </div>
-      </StudioStage>
+        <StudioRail
+          tools={railTools}
+          active={tool === "filter" || tool === "draw" || tool === "crop" ? tool : null}
+          onSelect={selectRailTool}
+          hidden={tool !== null || isDraggingLayer}
+        />
 
-      <div className="flex-shrink-0 bg-black pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+        {error && (
+          <div className="animate-rise-in absolute inset-x-3 top-[calc(4.25rem+env(safe-area-inset-top))] z-30">
+            <Callout tone="danger">{error}</Callout>
+          </div>
+        )}
+      </div>
+
+      <StudioDeck>
         {tool === "crop" && (
-          <StudioPanel>
-            <div className="flex items-center justify-center gap-2 px-4 py-4">
-              {ASPECTS.map((a) => (
-                <StudioChip
-                  key={a.id}
-                  active={state.aspect === a.id}
-                  onClick={() => updateState({ aspect: a.id, panOffset: 0.5 })}
-                >
-                  {a.label}
-                </StudioChip>
-              ))}
-              <StudioIconButton onClick={rotateClockwise} label="Rotate 90 degrees">
-                <RotateIcon className="h-4 w-4" />
-              </StudioIconButton>
-            </div>
+          <StudioPanel title={TOOL_TITLES.crop} onDone={() => setTool(null)}>
+            <CropControls
+              aspect={state.aspect}
+              onAspect={(aspect) => updateState({ aspect, panOffset: 0.5 })}
+              onRotate={rotateClockwise}
+              canPan={aspectNeedsPan(state.aspect, imgDims.width, imgDims.height, state.rotation)}
+            />
           </StudioPanel>
         )}
 
         {tool === "filter" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-3 py-4">
-              <div className="no-scrollbar fade-edge-r flex gap-2 overflow-x-auto px-4">
-                {FILTER_CATEGORIES.map((c) => (
-                  <StudioChip
-                    key={c.id}
-                    active={filterCategory === c.id}
-                    onClick={() => setFilterCategory(c.id)}
-                  >
-                    {c.label}
-                  </StudioChip>
-                ))}
-              </div>
-
-              <div className="no-scrollbar fade-edge-r flex gap-3 overflow-x-auto px-4">
-                {FILTER_PRESETS.filter((f) => f.id === "original" || f.category === filterCategory).map((f) => (
-                  <FilterSwatch
-                    key={f.id}
-                    preset={f}
-                    previewSource={filterPreviewSource}
-                    selected={state.filterId === f.id}
-                    onClick={() => updateState({ filterId: f.id, filterIntensity: 1 })}
-                  />
-                ))}
-              </div>
-
-              {state.filterId !== "original" && (
-                <div className="px-4">
-                  <StudioSlider
-                    label="Intensity"
-                    value={state.filterIntensity}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    onChange={(filterIntensity) => updateState({ filterIntensity })}
-                    display={`${Math.round(state.filterIntensity * 100)}%`}
-                  />
-                </div>
-              )}
-            </div>
-          </StudioPanel>
-        )}
-
-        {tool === "text" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-3 px-4 py-4">
-              <div className="flex gap-2">
-                <input
-                  value={newTextDraft}
-                  onChange={(e) => setNewTextDraft(e.target.value)}
-                  placeholder="Add text…"
-                  maxLength={80}
-                  className="h-11 min-w-0 flex-1 rounded-[14px] bg-white/10 px-4 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
-                />
-                <button
-                  type="button"
-                  onClick={addTextLayer}
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#ffd60a] text-black"
-                  aria-label="Add text layer"
-                >
-                  <PlusIcon className="h-5 w-5" />
-                </button>
-              </div>
-
-              {selectedLayer && !selectedLayer.isSticker && (
-                <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      {TEXT_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => updateTextLayer(selectedLayer.id, { color: c })}
-                          className={`h-6 w-6 rounded-full border-2 ${
-                            selectedLayer.color === c ? "border-white ring-2 ring-white/40" : "border-white/20"
-                          }`}
-                          style={{ backgroundColor: c }}
-                          aria-label={`Text color ${c}`}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeTextLayer(selectedLayer.id)}
-                      aria-label="Delete text"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-white/60">Size</span>
-                    <input
-                      type="range"
-                      min={24}
-                      max={160}
-                      step={2}
-                      value={selectedLayer.fontSize}
-                      onChange={(e) =>
-                        updateTextLayer(selectedLayer.id, { fontSize: Number(e.target.value) })
-                      }
-                      className="flex-1"
-                    />
-                  </div>
-
-                  <div className="no-scrollbar flex gap-2 overflow-x-auto">
-                    {TEXT_FONTS.map((f) => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => updateTextLayer(selectedLayer.id, { fontId: f.id })}
-                        className={`flex-shrink-0 rounded-lg border px-3 py-1.5 text-sm ${
-                          selectedLayer.fontId === f.id
-                            ? "border-white bg-white text-black"
-                            : "border-white/15 text-white/70"
-                        }`}
-                        style={{ fontFamily: f.stack }}
-                      >
-                        Aa
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {!selectedLayer && state.textLayers.filter((l) => !l.isSticker).length > 0 && (
-                <p className="text-center text-[0.8125rem] text-white/50">
-                  Tap a dot on the preview to drag or restyle it.
-                </p>
-              )}
-            </div>
-          </StudioPanel>
-        )}
-
-        {tool === "sticker" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-3 px-4 py-4">
-              <div className="no-scrollbar grid grid-cols-8 gap-2 overflow-x-auto">
-                {STICKER_EMOJIS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => addStickerLayer(emoji)}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-xl"
-                    aria-label={`Add ${emoji} sticker`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-
-              {selectedLayer && selectedLayer.isSticker && (
-                <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs text-white/60">Selected: {selectedLayer.text}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeTextLayer(selectedLayer.id)}
-                      aria-label="Delete sticker"
-                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-white/60">Size</span>
-                    <input
-                      type="range"
-                      min={40}
-                      max={220}
-                      step={4}
-                      value={selectedLayer.fontSize}
-                      onChange={(e) =>
-                        updateTextLayer(selectedLayer.id, { fontSize: Number(e.target.value) })
-                      }
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-              )}
-              {!selectedLayer && state.textLayers.filter((l) => l.isSticker).length > 0 && (
-                <p className="text-center text-[0.8125rem] text-white/50">
-                  Tap a sticker on the preview to drag or resize it.
-                </p>
-              )}
-            </div>
+          <StudioPanel title={TOOL_TITLES.filter} onDone={() => setTool(null)}>
+            <FilterControls
+              filterId={state.filterId}
+              intensity={state.filterIntensity}
+              previewSource={filterPreviewSource}
+              onFilter={(filterId) => updateState({ filterId, filterIntensity: 1 })}
+              onIntensity={(filterIntensity) => updateState({ filterIntensity })}
+            />
           </StudioPanel>
         )}
 
         {tool === "draw" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-3 px-4 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  {TEXT_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setDrawColor(c)}
-                      className={`h-6 w-6 rounded-full border-2 ${
-                        drawColor === c ? "border-white ring-2 ring-white/40" : "border-white/20"
-                      }`}
-                      style={{ backgroundColor: c }}
-                      aria-label={`Draw color ${c}`}
-                    />
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={undoDrawStroke}
-                    disabled={state.drawStrokes.length === 0}
-                    className="text-xs text-white/70 disabled:opacity-40"
-                  >
-                    Undo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearDrawStrokes}
-                    disabled={state.drawStrokes.length === 0}
-                    aria-label="Clear drawing"
-                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70 disabled:opacity-40"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {DRAW_WIDTHS.map((w) => (
-                  <button
-                    key={w}
-                    type="button"
-                    onClick={() => setDrawWidth(w)}
-                    aria-label={`Brush size ${w}`}
-                    className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                      drawWidth === w ? "bg-white" : "bg-white/10"
-                    }`}
-                  >
-                    <span
-                      className="rounded-full"
-                      style={{
-                        width: Math.round(w / 2),
-                        height: Math.round(w / 2),
-                        backgroundColor: drawWidth === w ? "black" : "white",
-                      }}
-                    />
-                  </button>
-                ))}
-                <span className="text-xs text-white/50">Draw right on the preview</span>
-              </div>
-            </div>
+          <StudioPanel title={TOOL_TITLES.draw} onDone={() => setTool(null)}>
+            <DrawControls
+              color={drawColor}
+              width={drawWidth}
+              canUndo={state.drawStrokes.length > 0}
+              onColor={setDrawColor}
+              onWidth={setDrawWidth}
+              onUndo={undoDrawStroke}
+              onClear={clearDrawStrokes}
+            />
           </StudioPanel>
         )}
 
-        <StudioRail
-          tools={TOOLS}
-          active={tool}
-          onSelect={(id) => setTool((t) => (t === id ? null : id))}
+        {tool === "sticker" && selectedLayer?.isSticker && (
+          <StudioPanel title={TOOL_TITLES.sticker} onDone={() => {
+            setSelectedTextId(null);
+            setTool(null);
+          }}>
+            <StickerControls
+              layer={selectedLayer}
+              onResize={(fontSize) => updateTextLayer(selectedLayer.id, { fontSize })}
+              onDelete={() => {
+                removeTextLayer(selectedLayer.id);
+                setTool(null);
+              }}
+            />
+          </StudioPanel>
+        )}
+
+        {(tool === null || (tool === "sticker" && !selectedLayer?.isSticker)) && (
+          <div className="px-4">
+            <StudioAction onClick={handleDone} disabled={!ready || isExporting} busy={isExporting}>
+              {isExporting ? (
+                "Saving…"
+              ) : (
+                <>
+                  Next
+                  <ChevronRightIcon className="h-[18px] w-[18px]" strokeWidth={2.5} />
+                </>
+              )}
+            </StudioAction>
+          </div>
+        )}
+      </StudioDeck>
+
+      {textComposer && (
+        <TextComposer
+          initial={
+            editingLayer
+              ? {
+                  text: editingLayer.text,
+                  color: editingLayer.color,
+                  fontId: editingLayer.fontId,
+                  fontSize: editingLayer.fontSize,
+                }
+              : null
+          }
+          onDone={commitText}
+          onCancel={() => setTextComposer(null)}
+          onDelete={
+            editingLayer
+              ? () => {
+                  removeTextLayer(editingLayer.id);
+                  setTextComposer(null);
+                }
+              : undefined
+          }
         />
-      </div>
+      )}
+
+      {stickerSheetOpen && (
+        <StickerSheet onPick={addStickerLayer} onClose={() => setStickerSheetOpen(false)} />
+      )}
     </div>
   );
 }

@@ -528,6 +528,232 @@ html.native-app [contenteditable="true"] {
   animation: fade-in 280ms ease-out both;
 }
 
+/* A tool's panel rising into the editor's bottom deck — a short lift and
+   fade rather than a full sheet travel, since it replaces what was
+   already there instead of covering the screen. */
+@keyframes panel-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-panel-up {
+  animation: panel-up 320ms var(--ease-ios) both;
+}
+
+/* Anything that should slide up from below and settle — a published
+   post's toast, a list row arriving. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-rise-in {
+  animation: rise-in 360ms var(--ease-ios) both;
+}
+
+/* The posting flow's sliders: a thin track filled up to the thumb in
+   white, with a plain white thumb — iOS's own slider, on the always-dark
+   studio surface. --range-fill is set inline from the value. */
+.studio-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+.studio-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    #fff 0%,
+    #fff var(--range-fill, 0%),
+    rgb(255 255 255 / 0.18) var(--range-fill, 0%),
+    rgb(255 255 255 / 0.18) 100%
+  );
+}
+.studio-range::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.18);
+}
+.studio-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 9999px;
+  background: #fff;
+}
+.studio-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -10px;
+  height: 24px;
+  width: 24px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+}
+.studio-range::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
+  border: 0;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+}
+
+/* The music disc in the feed's action rail turns while its post plays,
+   the way a record does. Paused (not removed) when the post is, so it
+   picks up where it stopped. */
+@keyframes disc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-disc-spin {
+  animation: disc-spin 5s linear infinite;
+}
+
+/* The like button's own beat: a quick overshoot when a heart fills. */
+@keyframes like-beat {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.28);
+  }
+  55% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-like-beat {
+  animation: like-beat 420ms var(--ease-ios);
+}
+
+/* A ring that bursts outward from the like button as the heart fills. */
+@keyframes like-ring {
+  from {
+    opacity: 0.75;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+.animate-like-ring {
+  animation: like-ring 520ms ease-out forwards;
+}
+
+/* The double-tap heart: lands where the finger did, at a slight random
+   tilt (--heart-tilt, set inline), punches in, floats up and fades. */
+@keyframes heart-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--heart-tilt, 0deg)) scale(0.2);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--heart-tilt, 0deg)) scale(1.18);
+  }
+  28% {
+    transform: translate(-50%, -50%) rotate(var(--heart-tilt, 0deg)) scale(0.96);
+  }
+  42% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--heart-tilt, 0deg)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -160%) rotate(var(--heart-tilt, 0deg)) scale(1.25);
+  }
+}
+
+.animate-heart-float {
+  animation: heart-float 950ms var(--ease-ios) forwards;
+}
+
+/* Equalizer bars on a sound row that's previewing. Each bar runs the
+   same keyframes at its own delay. */
+@keyframes eq-bar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-eq-bar {
+  animation: eq-bar 900ms ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+/* A long sound title drifting sideways under the feed caption, so the
+   whole name reads without truncation. The text is doubled in the DOM so
+   a -50% shift loops seamlessly. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 9s linear infinite;
+}
+
+/* Loading placeholders. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-panel-up,
+  .animate-rise-in,
+  .animate-disc-spin,
+  .animate-like-beat,
+  .animate-like-ring,
+  .animate-eq-bar,
+  .animate-marquee,
+  .animate-skeleton {
+    animation: none;
+  }
+  .animate-heart-float {
+    animation-duration: 1ms;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-sheet-up,
   .animate-fade-in,

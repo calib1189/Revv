@@ -21,11 +21,14 @@ import { notifyCrewPostAction } from "@/features/crews/actions";
 import { moderateMediaAction } from "@/features/moderation/actions";
 import { captureVideoFrame } from "@/features/moderation/capture-video-frame";
 import { Callout } from "@/components/ui/callout";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
+import { publicSoundUrl } from "@/lib/db/sounds";
+import { SoundPickerSheet } from "@/features/sounds/sound-picker-sheet";
 import { VideoEditor } from "@/features/editor/video-editor";
 import { PhotoEditor } from "@/features/editor/photo-editor";
 import { CameraRecorder } from "@/features/editor/camera-recorder";
 import { ClipCombiner } from "@/features/editor/clip-combiner";
-import { PostComposer, parseHashtags } from "@/features/feed/post-composer";
+import { PostComposer, type PublishState } from "@/features/feed/post-composer";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Crew } from "@/lib/db/crews";
 import type { Sound } from "@/lib/db/sounds";
@@ -138,16 +141,24 @@ function readVideoDurationSeconds(file: File): Promise<number> {
 
 export function ComposePostForm({
   userId,
+  username,
   vehicles,
   crews,
   initialSound = null,
+  initialSoundUrl = null,
 }: {
   userId: string;
+  /** Where the finished post opens — the author's own full-screen reel,
+   * starting on the post that was just published. */
+  username: string | null;
   vehicles: Vehicle[];
   crews: Crew[];
   /** Pre-attached when arriving via a sound's own "Use this sound" button
    * (/feed/new?soundId=X) — skips the picker, shows the chip immediately. */
   initialSound?: Sound | null;
+  /** Resolved on the server alongside initialSound, so the camera can
+   * play it from the first frame without building a client during render. */
+  initialSoundUrl?: string | null;
 }) {
   const [step, setStep] = useState<Step>("camera");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
@@ -156,14 +167,17 @@ export function ComposePostForm({
   const [photoEditorSource, setPhotoEditorSource] = useState<File | null>(null);
   const [multiClipSources, setMultiClipSources] = useState<File[] | null>(null);
   const [caption, setCaption] = useState("");
-  const [hashtags, setHashtags] = useState("");
   const [vehicleId, setVehicleId] = useState("");
   const [crewId, setCrewId] = useState("");
   const [sound, setSound] = useState<Sound | null>(initialSound);
   const [soundStartMs, setSoundStartMs] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [publish, setPublish] = useState<PublishState | null>(null);
+  const [cameraSoundPickerOpen, setCameraSoundPickerOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const addPhotosInputRef = useRef<HTMLInputElement>(null);
+  // Resolved once per sound rather than on every render of the camera.
+  const [soundUrl, setSoundUrl] = useState<string | null>(initialSoundUrl);
   const router = useRouter();
 
   const mode: "photo" | "video" | null = video ? "video" : photos.length > 0 ? "photo" : null;
@@ -190,6 +204,7 @@ export function ComposePostForm({
   function handleSoundChange(next: Sound | null) {
     setSound(next);
     setSoundStartMs(0);
+    setSoundUrl(next ? publicSoundUrl(createBrowserClient(), next.storage_path) : null);
   }
 
   function clearVideo() {
@@ -304,6 +319,7 @@ export function ComposePostForm({
     // row to credit the post to.
     setSound(editorSound);
     setSoundStartMs(editorSound ? editorSoundStartMs : 0);
+    setSoundUrl(editorSound ? publicSoundUrl(createBrowserClient(), editorSound.storage_path) : null);
     const fileError = validateVideoFile(file);
     if (fileError) return setError(fileError);
 
@@ -356,13 +372,11 @@ export function ComposePostForm({
     } else if (!mode) {
       return setError("Record or import a photo or video first.");
     }
-    const finalCaption = [caption.trim(), parseHashtags(hashtags).join(" ")]
-      .filter(Boolean)
-      .join("\n\n");
+    const finalCaption = caption.trim();
     const captionError = validateCaption(finalCaption);
     if (captionError) return setError(captionError);
 
-    setIsSubmitting(true);
+    setPublish({ stage: "checking", done: 0, total: mode === "photo" ? photos.length : 1 });
     try {
       // Screened before anything gets written — a flagged photo or video
       // never creates a post/media row at all, so there's nothing to roll
@@ -372,7 +386,7 @@ export function ComposePostForm({
           const check = await checkMedia(photo.file);
           if (!check.allowed) {
             setError(check.reason ?? "This photo doesn't meet our content guidelines.");
-            setIsSubmitting(false);
+            setPublish(null);
             return;
           }
         }
@@ -381,7 +395,7 @@ export function ComposePostForm({
         const check = await checkMedia(frame);
         if (!check.allowed) {
           setError(check.reason ?? "This video doesn't meet our content guidelines.");
-          setIsSubmitting(false);
+          setPublish(null);
           return;
         }
       }
@@ -396,6 +410,8 @@ export function ComposePostForm({
       // the author to finish it. An upload that fails now leaves only
       // orphaned media rows, which nothing renders.
       const mediaIds: string[] = [];
+      const total = mode === "photo" ? photos.length : 1;
+      setPublish({ stage: "uploading", done: 0, total });
       if (mode === "photo") {
         for (const photo of photos) {
           const uploaded = await uploadImage(supabase, userId, photo.file);
@@ -407,6 +423,7 @@ export function ComposePostForm({
             height: uploaded.height,
           });
           mediaIds.push(media.id);
+          setPublish({ stage: "uploading", done: mediaIds.length, total });
         }
       } else if (video) {
         const uploaded = await uploadVideo(supabase, userId, video.file);
@@ -421,6 +438,7 @@ export function ComposePostForm({
         mediaIds.push(media.id);
       }
 
+      setPublish({ stage: "publishing", done: total, total });
       const post = await createPost(supabase, {
         author_id: userId,
         vehicle_id: vehicleId || null,
@@ -445,15 +463,23 @@ export function ComposePostForm({
       // — the post itself already published successfully above.
       if (crewId) void notifyCrewPostAction(crewId, post.id);
 
-      router.push(`/p/${post.id}`);
+      setPublish({ stage: "done", done: total, total });
+      // A beat on the finished state so "Posted" actually registers, then
+      // straight into the post itself. replace, not push: Back from the
+      // new post shouldn't land on an empty composer.
+      await new Promise((resolve) => setTimeout(resolve, 650));
+      router.replace(username ? `/u/${username}/reel/${post.id}` : `/p/${post.id}`);
     } catch {
-      setError("Couldn't publish that post. Try again.");
-      setIsSubmitting(false);
+      setError("Couldn't publish that post. Check your connection and try again.");
+      setPublish(null);
     }
   }
 
   return (
-    <>
+    // One fixed layer for the whole flow, above every bit of app chrome,
+    // and opted out of the edge swipe-back: a stray swipe from the edge
+    // mid-recording shouldn't throw the clip away.
+    <div data-no-edge-swipe className="fixed inset-0 z-[60] bg-black">
       <input
         ref={importInputRef}
         type="file"
@@ -465,6 +491,17 @@ export function ComposePostForm({
           e.target.value = "";
         }}
       />
+      <input
+        ref={addPhotosInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) void handleSelectPhotos(e.target.files);
+          e.target.value = "";
+        }}
+      />
 
       {step === "camera" && (
         <>
@@ -472,11 +509,24 @@ export function ComposePostForm({
             onClose={() => router.back()}
             onCaptured={handleCameraCaptured}
             onImportRequested={() => importInputRef.current?.click()}
+            soundTitle={sound?.title ?? null}
+            soundUrl={soundUrl}
+            onSoundRequested={() => setCameraSoundPickerOpen(true)}
+            onSoundCleared={() => handleSoundChange(null)}
           />
           {error && (
-            <div className="fixed inset-x-4 z-[60] top-[calc(4.5rem+env(safe-area-inset-top))]">
+            <div className="animate-rise-in fixed inset-x-4 top-[calc(4.5rem+env(safe-area-inset-top))] z-[65]">
               <Callout tone="danger">{error}</Callout>
             </div>
+          )}
+          {cameraSoundPickerOpen && (
+            <SoundPickerSheet
+              onSelect={(picked) => {
+                handleSoundChange(picked);
+                setCameraSoundPickerOpen(false);
+              }}
+              onClose={() => setCameraSoundPickerOpen(false)}
+            />
           )}
         </>
       )}
@@ -490,8 +540,6 @@ export function ComposePostForm({
           crews={crews}
           caption={caption}
           onCaptionChange={setCaption}
-          hashtags={hashtags}
-          onHashtagsChange={setHashtags}
           vehicleId={vehicleId}
           onVehicleIdChange={setVehicleId}
           crewId={crewId}
@@ -502,8 +550,9 @@ export function ComposePostForm({
           onSoundStartMsChange={setSoundStartMs}
           onBack={() => setStep("camera")}
           onRemovePhoto={removePhoto}
+          onAddPhotos={mode === "photo" ? () => addPhotosInputRef.current?.click() : undefined}
           onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
+          publish={publish}
           error={error}
         />
       )}
@@ -511,7 +560,7 @@ export function ComposePostForm({
       {videoEditorSource && (
         <VideoEditor
           source={videoEditorSource}
-          initialSound={initialSound}
+          initialSound={sound}
           onCancel={() => setVideoEditorSource(null)}
           onExported={handleVideoEditorExported}
         />
@@ -535,6 +584,6 @@ export function ComposePostForm({
           }}
         />
       )}
-    </>
+    </div>
   );
 }

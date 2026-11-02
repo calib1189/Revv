@@ -81,7 +81,7 @@ export function SoundUploadForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center">
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60 sm:items-center">
       <form
         onSubmit={handleSubmit}
         className="glass-raised relative flex w-full max-w-md flex-col gap-4 rounded-t-[2rem] p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:rounded-2xl"

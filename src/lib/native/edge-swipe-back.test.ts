@@ -71,6 +71,23 @@ describe("installEdgeSwipeBack", () => {
     expect(back).not.toHaveBeenCalled();
   });
 
+  it("ignores a swipe that starts inside an opted-out screen", () => {
+    const screen = document.createElement("div");
+    screen.setAttribute("data-no-edge-swipe", "");
+    const inner = document.createElement("button");
+    screen.appendChild(inner);
+    document.body.appendChild(screen);
+    const start = new Event("touchstart", { bubbles: true, cancelable: true }) as Event & {
+      touches: { clientX: number; clientY: number }[];
+    };
+    start.touches = [{ clientX: 4, clientY: 400 }];
+    inner.dispatchEvent(start);
+    touch("touchmove", 70, 400);
+    touch("touchmove", 140, 400);
+    touch("touchend", 140, 400);
+    expect(back).not.toHaveBeenCalled();
+  });
+
   it("stops listening once removed", () => {
     remove();
     swipe([4, 400], [140, 400]);

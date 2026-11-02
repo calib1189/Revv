@@ -1,25 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BackIcon,
-  HashtagIcon,
   CloseIcon,
-  VolumeIcon,
+  HashtagIcon,
   MusicIcon,
   WheelIcon,
   UsersIcon,
   ChevronRightIcon,
+  PlayIcon,
+  ShareIcon,
+  CheckIcon,
+  PlusIcon,
+  VolumeIcon,
 } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
-import { RowIcon } from "@/components/ui/grouped-list";
 import { SoundPickerSheet } from "@/features/sounds/sound-picker-sheet";
 import { SoundTrimSheet } from "@/features/sounds/sound-trim-sheet";
+import { SoundCover } from "@/features/sounds/sound-cover";
+import { addHashtag, captionTags, removeHashtag } from "@/features/feed/caption-tags";
 import { SOUND_CLIP_MS } from "@/lib/validation/sound";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Crew } from "@/lib/db/crews";
 import type { Sound } from "@/lib/db/sounds";
+
+const MAX_CAPTION_LENGTH = 2200;
+
+/** One-tap tags under the caption. A starting point, not a taxonomy — the
+ * caption takes any tag typed into it. */
+const SUGGESTED_TAGS = [
+  "carsofsorza",
+  "projectcar",
+  "jdm",
+  "euro",
+  "musclecar",
+  "stance",
+  "turbo",
+  "offroad",
+  "trackday",
+  "carmeet",
+  "builtnotbought",
+];
 
 function formatClock(ms: number): string {
   const totalSeconds = Math.round(ms / 1000);
@@ -28,34 +50,26 @@ function formatClock(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-interface SelectedPhoto {
+interface SelectedMedia {
   file: File;
   previewUrl: string;
 }
 
-interface SelectedVideo {
-  file: File;
-  previewUrl: string;
+export interface PublishState {
+  stage: "checking" | "uploading" | "publishing" | "done";
+  /** Files uploaded so far, during "uploading". */
+  done: number;
+  total: number;
 }
 
-export function parseHashtags(raw: string): string[] {
-  return raw
-    .split(/[\s,]+/)
-    .map((t) => t.trim().replace(/^#+/, ""))
-    .filter(Boolean)
-    .map((t) => `#${t}`);
+function vehicleName(vehicle: Vehicle): string {
+  return vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
 }
 
-/** Post composer: the screen you land on right after recording/importing
- * and (for a video) finishing the editor.
- *
- * The media is shown twice — once blown up and blurred as the screen's
- * own backdrop, and once contained at its true aspect ratio in front of
- * it. The backdrop means every post is composed against its own colour
- * rather than against flat black, and containing the preview is the part
- * that actually matters: the old full-bleed `object-cover` cropped the
- * preview to the phone's shape, so a 9:16 clip or a 4:5 photo was
- * composed against a frame that wasn't the one being posted. */
+/** The post screen — the last stop after shooting and editing, laid out
+ * the way TikTok's is: the caption first and biggest, the post itself as
+ * a cover beside it, then the few things worth attaching (sound, car,
+ * crew), and one Post button pinned in thumb reach. */
 export function PostComposer({
   mode,
   photos,
@@ -64,8 +78,6 @@ export function PostComposer({
   crews,
   caption,
   onCaptionChange,
-  hashtags,
-  onHashtagsChange,
   vehicleId,
   onVehicleIdChange,
   crewId,
@@ -76,19 +88,18 @@ export function PostComposer({
   onSoundStartMsChange,
   onBack,
   onRemovePhoto,
+  onAddPhotos,
   onSubmit,
-  isSubmitting,
+  publish,
   error,
 }: {
   mode: "photo" | "video";
-  photos: SelectedPhoto[];
-  video: SelectedVideo | null;
+  photos: SelectedMedia[];
+  video: SelectedMedia | null;
   vehicles: Vehicle[];
   crews: Crew[];
   caption: string;
   onCaptionChange: (value: string) => void;
-  hashtags: string;
-  onHashtagsChange: (value: string) => void;
   vehicleId: string;
   onVehicleIdChange: (value: string) => void;
   crewId: string;
@@ -103,248 +114,238 @@ export function PostComposer({
   onSoundStartMsChange: (startMs: number) => void;
   onBack: () => void;
   onRemovePhoto: (index: number) => void;
+  /** Opens the library to add more photos to a photo post. */
+  onAddPhotos?: () => void;
   onSubmit: (e: React.FormEvent) => void;
-  isSubmitting: boolean;
+  publish: PublishState | null;
   error: string | null;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [trimOpen, setTrimOpen] = useState(false);
-  const hashtagChips = parseHashtags(hashtags);
-  // Starts muted so the backdrop can autoplay the instant this screen
-  // mounts — unmuted autoplay without a fresh tap gets blocked on iOS.
-  const [isMuted, setIsMuted] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const captionRef = useRef<HTMLTextAreaElement>(null);
+  const tags = captionTags(caption);
+  const isPublishing = publish !== null;
 
-  const firstPreview = mode === "photo" ? photos[0]?.previewUrl : video?.previewUrl;
-  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
-  const selectedCrew = crews.find((c) => c.id === crewId);
-  const captionCount = caption.trim().length;
+  const cover = mode === "photo" ? photos[0]?.previewUrl : video?.previewUrl;
+
+  function insertHashSign() {
+    const el = captionRef.current;
+    const next = caption.replace(/\s+$/, "") + (caption.trim() ? " #" : "#");
+    onCaptionChange(next);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(next.length, next.length);
+    });
+  }
+
+  function toggleTag(tag: string) {
+    onCaptionChange(tags.has(tag) ? removeHashtag(caption, tag) : addHashtag(caption, tag));
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-black">
-      {/* Ambient backdrop: the media itself, blown past the edges and
-          blurred to a wash of its own colour. */}
-      <div aria-hidden className="absolute inset-0 overflow-hidden">
-        {firstPreview &&
-          (mode === "video" ? (
-            <video
-              src={firstPreview}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="h-full w-full scale-[1.3] object-cover opacity-55 blur-3xl"
-            />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset
-            <img
-              src={firstPreview}
-              alt=""
-              className="h-full w-full scale-[1.3] object-cover opacity-55 blur-3xl"
-            />
-          ))}
-        <div className="absolute inset-0 bg-black/45" />
-      </div>
-
-      <div className="relative z-10 grid grid-cols-[2.5rem_1fr_2.5rem] items-center px-4 pb-1 pt-[calc(0.75rem+env(safe-area-inset-top))]">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#0c0c0d] text-white">
+      <div className="grid flex-shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))]">
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back to camera"
-          className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-xl"
+          disabled={isPublishing}
+          aria-label="Back to editing"
+          className="pressable flex h-11 w-11 items-center justify-center rounded-full text-white disabled:opacity-40"
         >
-          <BackIcon className="h-5 w-5" />
+          <BackIcon className="h-[22px] w-[22px]" />
         </button>
-        <p className="micro-label text-center text-white/70">
-          {mode === "video" ? "New clip" : photos.length > 1 ? `${photos.length} photos` : "New photo"}
-        </p>
-        {mode === "video" ? (
-          <button
-            type="button"
-            onClick={() => setIsMuted((m) => !m)}
-            aria-label={isMuted ? "Unmute preview" : "Mute preview"}
-            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-xl"
-          >
-            <VolumeIcon muted={isMuted} className="h-[18px] w-[18px]" />
-          </button>
-        ) : (
-          <span />
-        )}
+        <h1 className="text-center text-[1.0625rem] font-semibold tracking-[-0.01em]">New post</h1>
+        <span />
       </div>
 
-      {/* The post as it will actually be framed. */}
-      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-8 py-3">
-        {/* The frame goes on the media element itself, not a wrapper: a
-            wrapper stretches to the flex line's width and letterboxes the
-            media inside it, so the rounded edge stops tracing the post
-            and starts tracing a box around it. */}
-        {firstPreview &&
-          (mode === "video" ? (
-            <video
-              src={firstPreview}
-              autoPlay
-              loop
-              muted={isMuted}
-              playsInline
-              className="max-h-full w-auto max-w-full rounded-[18px] object-contain shadow-[0_24px_60px_-20px_rgb(0_0_0/0.85)] ring-1 ring-white/12"
-            />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset
-            <img
-              src={firstPreview}
-              alt=""
-              className="max-h-full w-auto max-w-full rounded-[18px] object-contain shadow-[0_24px_60px_-20px_rgb(0_0_0/0.85)] ring-1 ring-white/12"
-            />
-          ))}
-      </div>
-
-      {mode === "photo" && photos.length > 1 && (
-        <div className="no-scrollbar relative z-10 flex gap-2 px-4 pb-1 overflow-x-auto">
-          {photos.map((photo, i) => (
-            <div
-              key={photo.previewUrl}
-              className="relative h-[60px] w-[60px] shrink-0 overflow-hidden rounded-[13px] ring-1 ring-white/25"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset */}
-              <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
-              <span className="numeral absolute bottom-0.5 left-1 text-[0.625rem] text-white drop-shadow">
-                {i + 1}
-              </span>
-              <button
-                type="button"
-                onClick={() => onRemovePhoto(i)}
-                aria-label={`Remove photo ${i + 1}`}
-                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md"
-              >
-                <CloseIcon className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <form
-        onSubmit={onSubmit}
-        className="animate-sheet-up glass-raised relative z-10 flex max-h-[72vh] flex-col rounded-t-[28px]"
-      >
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-2.5">
-          <div className="mx-auto h-[5px] w-9 shrink-0 rounded-full bg-foreground/20" />
-
-          {error && <Callout tone="danger">{error}</Callout>}
-
-          <div>
+      <form id="post-form" onSubmit={onSubmit} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {/* Caption beside its cover — what you're saying, next to what
+            you're saying it about. */}
+        <div className="flex gap-3 px-4 pt-2">
+          <div className="min-w-0 flex-1">
             <textarea
+              ref={captionRef}
               id="caption"
-              rows={3}
+              rows={5}
               value={caption}
               onChange={(e) => onCaptionChange(e.target.value)}
-              placeholder="Say something about this build…"
+              maxLength={MAX_CAPTION_LENGTH}
+              placeholder="Describe your post. What's done, what's next?"
               aria-label="Caption"
-              className="w-full resize-none bg-transparent text-[1.0625rem] leading-relaxed text-foreground placeholder:text-muted/70 focus:outline-none"
+              className="h-[8.5rem] w-full resize-none bg-transparent text-[1.0625rem] leading-relaxed text-white placeholder:text-white/35 focus:outline-none"
             />
-            {hashtagChips.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pb-1">
-                {hashtagChips.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-accent/12 px-2.5 py-1 text-[0.75rem] font-semibold text-accent"
-                  >
-                    {tag}
-                  </span>
-                ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            aria-label="Preview your post"
+            className="pressable relative h-[8.5rem] w-24 flex-shrink-0 overflow-hidden rounded-[14px] bg-white/[0.06] ring-1 ring-white/10"
+          >
+            {cover &&
+              (mode === "video" ? (
+                <video src={cover} autoPlay loop muted playsInline className="h-full w-full object-cover" />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset
+                <img src={cover} alt="" className="h-full w-full object-cover" />
+              ))}
+            <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2 pb-1.5 pt-5 text-[0.6875rem] font-semibold">
+              Preview
+            </span>
+            {mode === "photo" && photos.length > 1 && (
+              <span className="numeral absolute right-1.5 top-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[0.625rem] font-semibold backdrop-blur-md">
+                1/{photos.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between px-4 pb-1 pt-2">
+          <button
+            type="button"
+            onClick={insertHashSign}
+            className="pressable flex h-8 items-center gap-1.5 rounded-full bg-white/[0.08] px-3 text-[0.8125rem] font-semibold text-white"
+          >
+            <HashtagIcon className="h-3.5 w-3.5" />
+            Hashtags
+          </button>
+          <span className="numeral text-[0.75rem] text-white/35">
+            {caption.length}/{MAX_CAPTION_LENGTH}
+          </span>
+        </div>
+
+        <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1 pt-2">
+          {SUGGESTED_TAGS.map((tag) => {
+            const on = tags.has(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleTag(tag)}
+                aria-pressed={on}
+                className={`pressable h-8 flex-shrink-0 rounded-full px-3 text-[0.8125rem] font-medium transition-colors duration-200 ${
+                  on ? "bg-accent/15 text-accent ring-1 ring-accent/40" : "bg-white/[0.05] text-white/65"
+                }`}
+              >
+                #{tag}
+              </button>
+            );
+          })}
+        </div>
+
+        {mode === "photo" && (photos.length > 1 || onAddPhotos) && (
+          <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto px-4">
+            {photos.map((photo, i) => (
+              <div
+                key={photo.previewUrl}
+                className="animate-rise-in relative h-[76px] w-[60px] flex-shrink-0 overflow-hidden rounded-[12px] ring-1 ring-white/12"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset */}
+                <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
+                <span className="numeral absolute bottom-1 left-1.5 text-[0.625rem] font-semibold text-white drop-shadow">
+                  {i + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRemovePhoto(i)}
+                  aria-label={`Remove photo ${i + 1}`}
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md"
+                >
+                  <CloseIcon className="h-3 w-3" />
+                </button>
               </div>
+            ))}
+            {onAddPhotos && photos.length < 10 && (
+              <button
+                type="button"
+                onClick={onAddPhotos}
+                aria-label="Add more photos"
+                className="pressable flex h-[76px] w-[60px] flex-shrink-0 items-center justify-center rounded-[12px] border border-dashed border-white/25 text-white/60"
+              >
+                <PlusIcon className="h-5 w-5" />
+              </button>
             )}
           </div>
+        )}
 
-          <div className="glass-inset overflow-hidden rounded-[18px] [&>*+*]:before:absolute [&>*+*]:before:left-[3.625rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
-            <label htmlFor="hashtags" className="relative flex min-h-[52px] items-center gap-3 px-4">
-              <RowIcon color="#0a84ff">
-                <HashtagIcon />
-              </RowIcon>
-              <input
-                id="hashtags"
-                value={hashtags}
-                onChange={(e) => onHashtagsChange(e.target.value)}
-                placeholder="turbo jdm track"
-                className="min-w-0 flex-1 bg-transparent py-3 text-[0.9375rem] text-foreground placeholder:text-muted focus:outline-none"
-              />
-            </label>
+        <div className="mx-4 mt-5 h-px bg-white/[0.07]" />
 
-            {vehicles.length > 0 && (
-              <label htmlFor="vehicle" className="relative flex min-h-[52px] items-center gap-3 px-4">
-                <RowIcon color="#ff9f0a">
-                  <WheelIcon />
-                </RowIcon>
-                <span className="flex-shrink-0 text-[0.9375rem]">Vehicle</span>
-                <span className="min-w-0 flex-1 truncate text-right text-[0.9375rem] text-muted">
-                  {selectedVehicle
-                    ? selectedVehicle.nickname ||
-                      `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`
-                    : "None"}
-                </span>
-                <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
-                {/* The native select sits invisibly over the row so the
-                    OS picker opens on tap, while the row shows the value. */}
-                <select
-                  id="vehicle"
-                  value={vehicleId}
-                  onChange={(e) => onVehicleIdChange(e.target.value)}
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                >
-                  <option value="">None</option>
-                  {vehicles.map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+        <div className="flex flex-col py-2">
+          <SoundRow
+            mode={mode}
+            sound={sound}
+            soundStartMs={soundStartMs}
+            onOpenPicker={() => setPickerOpen(true)}
+            onOpenTrim={() => setTrimOpen(true)}
+            onRemove={() => onSoundChange(null)}
+          />
 
-            {crews.length > 0 && (
-              <label htmlFor="crew" className="relative flex min-h-[52px] items-center gap-3 px-4">
-                <RowIcon color="#bf5af2">
-                  <UsersIcon />
-                </RowIcon>
-                <span className="flex-shrink-0 text-[0.9375rem]">Crew</span>
-                <span className="min-w-0 flex-1 truncate text-right text-[0.9375rem] text-muted">
-                  {selectedCrew ? selectedCrew.name : "None"}
-                </span>
-                <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
-                <select
-                  id="crew"
-                  value={crewId}
-                  onChange={(e) => onCrewIdChange(e.target.value)}
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                >
-                  <option value="">None</option>
-                  {crews.map((crew) => (
-                    <option key={crew.id} value={crew.id}>
-                      {crew.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
+          {vehicles.length > 0 && (
+            <ChipSection icon={<WheelIcon className="h-[18px] w-[18px]" />} label="Tag your car">
+              <Chip active={vehicleId === ""} onClick={() => onVehicleIdChange("")}>
+                None
+              </Chip>
+              {vehicles.map((v) => (
+                <Chip key={v.id} active={vehicleId === v.id} onClick={() => onVehicleIdChange(v.id)}>
+                  {vehicleName(v)}
+                </Chip>
+              ))}
+            </ChipSection>
+          )}
 
-            <SoundRow
-              mode={mode}
-              sound={sound}
-              soundStartMs={soundStartMs}
-              onOpenPicker={() => setPickerOpen(true)}
-              onOpenTrim={() => setTrimOpen(true)}
-              onRemove={() => onSoundChange(null)}
-            />
+          {crews.length > 0 && (
+            <ChipSection icon={<UsersIcon className="h-[18px] w-[18px]" />} label="Share to a crew">
+              <Chip active={crewId === ""} onClick={() => onCrewIdChange("")}>
+                None
+              </Chip>
+              {crews.map((c) => (
+                <Chip key={c.id} active={crewId === c.id} onClick={() => onCrewIdChange(c.id)}>
+                  {c.name}
+                </Chip>
+              ))}
+            </ChipSection>
+          )}
+        </div>
+
+        {error && (
+          <div className="animate-rise-in px-4 pb-4">
+            <Callout tone="danger">{error}</Callout>
           </div>
-        </div>
-
-        {/* Share stays pinned under the scrolling options, in thumb
-            reach, however long the sheet gets. */}
-        <div className="border-t border-border px-4 pb-[calc(0.875rem+env(safe-area-inset-bottom))] pt-3">
-          <Button type="submit" disabled={isSubmitting} className="h-[52px] w-full text-[1.0625rem] font-semibold">
-            {isSubmitting ? "Publishing…" : captionCount > 0 ? "Share post" : "Share"}
-          </Button>
-        </div>
+        )}
       </form>
+
+      <div className="flex flex-shrink-0 gap-2.5 border-t border-white/[0.06] bg-[#0c0c0d] px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3">
+        <button
+          type="button"
+          onClick={() => setPreviewOpen(true)}
+          disabled={isPublishing}
+          className="pressable flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-white/[0.08] text-[1rem] font-semibold text-white disabled:opacity-40"
+        >
+          <PlayIcon className="h-4 w-4" />
+          Preview
+        </button>
+        <button
+          type="submit"
+          form="post-form"
+          disabled={isPublishing}
+          className="pressable flex h-[52px] flex-[2] items-center justify-center gap-2 rounded-full bg-accent text-[1rem] font-semibold text-white shadow-[0_12px_28px_-14px_rgb(255_68_51/0.9)] disabled:opacity-60"
+        >
+          <ShareIcon className="h-[18px] w-[18px] -rotate-12" />
+          Post
+        </button>
+      </div>
+
+      {previewOpen && cover && (
+        <PostPreview
+          mode={mode}
+          photos={photos}
+          video={video}
+          caption={caption}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
+
+      {publish && <PublishOverlay publish={publish} cover={cover ?? null} mode={mode} />}
 
       {pickerOpen && (
         <SoundPickerSheet
@@ -352,8 +353,8 @@ export function PostComposer({
             onSoundChange(selected);
             setPickerOpen(false);
             // Straight into picking the part — no reason to make someone
-            // find their way back to a "choose this part" affordance
-            // right after they just chose a sound.
+            // find their way back to "choose this part" right after they
+            // just chose a sound.
             setTrimOpen(true);
           }}
           onClose={() => setPickerOpen(false)}
@@ -372,6 +373,50 @@ export function PostComposer({
         />
       )}
     </div>
+  );
+}
+
+function ChipSection({
+  icon,
+  label,
+  children,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="py-3">
+      <p className="flex items-center gap-2.5 px-4 pb-2.5 text-[0.9375rem] font-medium text-white">
+        <span className="text-white/60">{icon}</span>
+        {label}
+      </p>
+      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4">{children}</div>
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`pressable flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[0.8125rem] font-semibold transition-colors duration-200 ${
+        active ? "bg-white text-black" : "bg-white/[0.07] text-white/75"
+      }`}
+    >
+      {active && <CheckIcon className="h-3.5 w-3.5" strokeWidth={2.5} />}
+      {children}
+    </button>
   );
 }
 
@@ -395,37 +440,43 @@ function SoundRow({
 }) {
   if (mode === "video") {
     return (
-      <div className="relative flex min-h-[52px] items-center gap-3 px-4">
-        <RowIcon color="#ff375f">
-          <MusicIcon />
-        </RowIcon>
-        <span className="flex-shrink-0 text-[0.9375rem]">Sound</span>
-        <span className="min-w-0 flex-1 truncate text-right text-[0.9375rem] text-muted">
-          {sound ? sound.title : "Add one in the editor"}
-        </span>
+      <div className="flex min-h-[60px] items-center gap-3 px-4 py-2">
+        {sound ? (
+          <SoundCover seed={sound.id} size="sm" />
+        ) : (
+          <span className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-white/[0.06] text-white/60">
+            <VolumeIcon className="h-[18px] w-[18px]" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[0.9375rem] font-medium">{sound ? sound.title : "Original sound"}</p>
+          <p className="truncate text-[0.8125rem] text-white/45">
+            {sound ? "Mixed into your clip in the editor" : "Add a sound from the editor"}
+          </p>
+        </div>
       </div>
     );
   }
 
   if (sound) {
     return (
-      <div className="relative flex min-h-[52px] items-center gap-3 px-4 py-2">
-        <RowIcon color="#ff375f">
-          <MusicIcon />
-        </RowIcon>
-        <button type="button" onClick={onOpenTrim} className="min-w-0 flex-1 text-left">
-          <p className="truncate text-[0.9375rem] font-medium">{sound.title}</p>
-          <p className="numeral truncate text-[0.8125rem] text-muted">
-            {sound.artist_name ? `${sound.artist_name} · ` : ""}
-            {formatClock(soundStartMs)}–
-            {formatClock(Math.min(sound.duration_ms, soundStartMs + SOUND_CLIP_MS))}
-          </p>
+      <div className="flex min-h-[60px] items-center gap-3 px-4 py-2">
+        <button type="button" onClick={onOpenTrim} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <SoundCover seed={sound.id} size="sm" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[0.9375rem] font-medium">{sound.title}</span>
+            <span className="block tabular-nums truncate text-[0.8125rem] text-white/45">
+              {sound.artist_name ? `${sound.artist_name} · ` : ""}
+              {formatClock(soundStartMs)}–{formatClock(Math.min(sound.duration_ms, soundStartMs + SOUND_CLIP_MS))}
+            </span>
+          </span>
+          <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-white/35" />
         </button>
         <button
           type="button"
           onClick={onRemove}
           aria-label="Remove sound"
-          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-foreground/10 text-muted"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/70"
         >
           <CloseIcon className="h-3.5 w-3.5" />
         </button>
@@ -438,13 +489,165 @@ function SoundRow({
       id="sound-picker-launcher"
       type="button"
       onClick={onOpenPicker}
-      className="relative flex min-h-[52px] w-full items-center gap-3 px-4 text-left active:bg-foreground/[0.06]"
+      className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2 text-left active:bg-white/[0.04]"
     >
-      <RowIcon color="#ff375f">
-        <MusicIcon />
-      </RowIcon>
-      <span className="min-w-0 flex-1 text-[0.9375rem]">Add sound</span>
-      <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
+      <span className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-white/[0.06] text-white/70">
+        <MusicIcon className="h-[18px] w-[18px]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[0.9375rem] font-medium">Add sound</span>
+        <span className="block text-[0.8125rem] text-white/45">Plays while people view your photos</span>
+      </span>
+      <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-white/35" />
     </button>
+  );
+}
+
+/** Full-screen look at the post before it goes out — the media the way it
+ * fills a phone in the feed, with the caption over it. */
+function PostPreview({
+  mode,
+  photos,
+  video,
+  caption,
+  onClose,
+}: {
+  mode: "photo" | "video";
+  photos: SelectedMedia[];
+  video: SelectedMedia | null;
+  caption: string;
+  onClose: () => void;
+}) {
+  const [index, setIndex] = useState(0);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="animate-fade-in fixed inset-0 z-[70] bg-black">
+      {mode === "video" && video ? (
+        <video src={video.previewUrl} autoPlay loop playsInline className="h-full w-full object-cover" />
+      ) : (
+        <div
+          ref={scrollerRef}
+          onScroll={() => {
+            const el = scrollerRef.current;
+            if (el && el.clientWidth) setIndex(Math.round(el.scrollLeft / el.clientWidth));
+          }}
+          className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto"
+        >
+          {photos.map((p) => (
+            // eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset
+            <img key={p.previewUrl} src={p.previewUrl} alt="" className="h-full w-full flex-shrink-0 snap-center object-cover" />
+          ))}
+        </div>
+      )}
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-24">
+        {caption.trim() && (
+          <p className="line-clamp-4 max-w-[85%] whitespace-pre-line text-[0.9375rem] leading-snug text-white">
+            {caption}
+          </p>
+        )}
+        {mode === "photo" && photos.length > 1 && (
+          <div className="mt-3 flex gap-1.5">
+            {photos.map((p, i) => (
+              <span
+                key={p.previewUrl}
+                className={`h-1.5 rounded-full transition-all duration-300 ${i === index ? "w-4 bg-white" : "w-1.5 bg-white/40"}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close preview"
+        className="pressable absolute left-3 top-[calc(0.75rem+env(safe-area-inset-top))] flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-xl"
+      >
+        <CloseIcon className="h-5 w-5" />
+      </button>
+    </div>
+  );
+}
+
+/** What publishing is doing, step by step, over the cover — moderation,
+ * then each upload, then the post itself — so a slow connection reads as
+ * progress rather than a frozen button. */
+function PublishOverlay({
+  publish,
+  cover,
+  mode,
+}: {
+  publish: PublishState;
+  cover: string | null;
+  mode: "photo" | "video";
+}) {
+  const fraction =
+    publish.stage === "checking"
+      ? 0.08
+      : publish.stage === "uploading"
+        ? 0.12 + 0.76 * (publish.total ? publish.done / publish.total : 0)
+        : publish.stage === "publishing"
+          ? 0.94
+          : 1;
+  const radius = 34;
+  const circumference = 2 * Math.PI * radius;
+  const label =
+    publish.stage === "checking"
+      ? "Checking your post"
+      : publish.stage === "uploading"
+        ? publish.total > 1
+          ? `Uploading ${Math.min(publish.done + 1, publish.total)} of ${publish.total}`
+          : "Uploading"
+        : publish.stage === "publishing"
+          ? "Publishing"
+          : "Posted";
+
+  return (
+    <div className="animate-fade-in fixed inset-0 z-[70] flex flex-col items-center justify-center gap-6 bg-black/80 backdrop-blur-md">
+      <div className="relative h-[13.5rem] w-[9.5rem] overflow-hidden rounded-[20px] ring-1 ring-white/15">
+        {cover &&
+          (mode === "video" ? (
+            <video src={cover} autoPlay loop muted playsInline className="h-full w-full object-cover" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset
+            <img src={cover} alt="" className="h-full w-full object-cover" />
+          ))}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+          <svg width="84" height="84" viewBox="0 0 84 84" className="-rotate-90" aria-hidden>
+            <circle cx="42" cy="42" r={radius} fill="none" stroke="rgb(255 255 255 / 0.2)" strokeWidth="5" />
+            <circle
+              cx="42"
+              cy="42"
+              r={radius}
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={circumference * (1 - fraction)}
+              style={{ transition: "stroke-dashoffset 500ms var(--ease-ios)" }}
+            />
+          </svg>
+          {publish.stage === "done" && (
+            <span className="animate-like-beat absolute flex h-12 w-12 items-center justify-center rounded-full bg-white text-black">
+              <CheckIcon className="h-6 w-6" strokeWidth={3} />
+            </span>
+          )}
+        </div>
+      </div>
+      <p key={label} className="animate-rise-in text-[1rem] font-semibold text-white" aria-live="polite">
+        {label}
+      </p>
+    </div>
   );
 }

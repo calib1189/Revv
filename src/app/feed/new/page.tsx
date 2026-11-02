@@ -5,7 +5,7 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { getCrewsByIds } from "@/lib/db/crews";
 import { listCrewIdsForUser } from "@/lib/db/crew-members";
-import { getSoundById } from "@/lib/db/sounds";
+import { getSoundById, publicSoundUrl } from "@/lib/db/sounds";
 import { ComposePostForm } from "@/features/feed/compose-post-form";
 
 export default async function NewPostPage({
@@ -47,9 +47,11 @@ export default async function NewPostPage({
   return (
     <ComposePostForm
       userId={user.id}
+      username={profile?.username ?? null}
       vehicles={vehicles}
       crews={crews}
       initialSound={initialSound}
+      initialSoundUrl={initialSound ? publicSoundUrl(supabase, initialSound.storage_path) : null}
     />
   );
 }

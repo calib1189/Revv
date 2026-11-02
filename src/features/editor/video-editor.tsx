@@ -1,26 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { drawFrame } from "@/features/editor/draw-frame";
 import { useVideoExport } from "@/features/editor/use-video-export";
 import { compressVideo } from "@/features/editor/compress-video";
 import { TrimScrubber } from "@/features/editor/trim-scrubber";
-import { FILTER_PRESETS, FILTER_CATEGORIES, type FilterCategoryId } from "@/features/editor/filters";
-import { FilterSwatch } from "@/features/editor/filter-swatch";
 import { capturePreviewSource } from "@/features/editor/capture-preview-source";
 import { aspectNeedsPan } from "@/features/editor/crop";
-import { STICKER_EMOJIS } from "@/features/editor/stickers";
 import { pickAudioRecorderMimeType } from "@/features/editor/audio-recording";
 import { MAX_VIDEO_BYTES } from "@/lib/validation/media";
 import {
   DEFAULT_EDIT_STATE,
-  TEXT_FONTS,
   SPEED_PRESETS,
   type EditState,
-  type AspectRatioId,
   type Rotation,
   type TextLayer,
   type DrawStroke,
+  type TextFontId,
 } from "@/features/editor/types";
 import {
   ScissorsIcon,
@@ -29,65 +25,66 @@ import {
   MusicIcon,
   FilterIcon,
   TrashIcon,
-  PlusIcon,
   BrushIcon,
   SpeedIcon,
   StickerIcon,
-  RotateIcon,
   MicIcon,
+  CloseIcon,
+  PlayIcon,
+  ChevronRightIcon,
 } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 import {
   StudioHeader,
   StudioAction,
   StudioStage,
+  StudioDeck,
   StudioPanel,
   StudioChip,
   StudioIconButton,
   StudioSlider,
   StudioRail,
 } from "@/features/editor/studio-ui";
+import {
+  LayerHandles,
+  TextComposer,
+  StickerSheet,
+  StickerControls,
+  CropControls,
+  FilterControls,
+  DrawControls,
+  TEXT_COLORS,
+  DRAW_WIDTHS,
+} from "@/features/editor/editor-tools";
 import { SoundPickerSheet } from "@/features/sounds/sound-picker-sheet";
+import { SoundCover } from "@/features/sounds/sound-cover";
+import { useWaveformPeaks, WaveformTrimmer } from "@/features/sounds/sound-waveform";
 import { fetchSoundFile } from "@/features/sounds/fetch-sound-file";
 import type { Sound } from "@/lib/db/sounds";
 
-type Tool = "trim" | "crop" | "filter" | "text" | "sticker" | "draw" | "speed" | "music" | "voice" | null;
+type Tool = "trim" | "crop" | "filter" | "sticker" | "draw" | "speed" | "music" | "voice" | null;
+type RailTool = "text" | "stickers" | "filter" | "draw" | "trim" | "speed" | "crop" | "voice";
 
 const ROTATION_STEPS: Rotation[] = [0, 90, 180, 270];
 
-const ASPECTS: { id: AspectRatioId; label: string }[] = [
-  { id: "9:16", label: "9:16" },
-  { id: "4:5", label: "4:5" },
-  { id: "1:1", label: "1:1" },
-  { id: "original", label: "Original" },
-];
-
-const TEXT_COLORS = ["#ffffff", "#ff4433", "#ffd166", "#06d6a0", "#4cc9f0", "#000000"];
-const DRAW_WIDTHS = [6, 12, 22];
-
-const TOOLS: { id: Exclude<Tool, null>; label: string; icon: typeof ScissorsIcon }[] = [
-  { id: "trim", label: "Trim", icon: ScissorsIcon },
-  { id: "crop", label: "Crop", icon: CropIcon },
-  { id: "speed", label: "Speed", icon: SpeedIcon },
-  { id: "filter", label: "Filters", icon: FilterIcon },
-  { id: "text", label: "Text", icon: TextToolIcon },
-  { id: "sticker", label: "Stickers", icon: StickerIcon },
-  { id: "draw", label: "Draw", icon: BrushIcon },
-  { id: "voice", label: "Voice", icon: MicIcon },
-  { id: "music", label: "Music", icon: MusicIcon },
-];
+const TOOL_TITLES: Record<Exclude<Tool, null>, string> = {
+  trim: "Trim",
+  crop: "Crop",
+  filter: "Filters",
+  sticker: "Sticker",
+  draw: "Draw",
+  speed: "Speed",
+  music: "Sound",
+  voice: "Voiceover",
+};
 
 const MAX_VOICEOVER_SECONDS = 180;
+/** Matches validateVideoDuration — a clip can be kept whole up to the
+ * longest a post may be, rather than silently cut to a shorter default. */
+const MAX_CLIP_SECONDS = 180;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
-}
-
-function formatClock(ms: number): string {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  const m = Math.floor(totalSeconds / 60);
-  const sec = totalSeconds % 60;
-  return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
 /** Re-points an already-mounted <video> element at a new source and
@@ -150,10 +147,14 @@ export function VideoEditor({
     trimEnd: 0,
   });
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
-  const [newTextDraft, setNewTextDraft] = useState("");
-  const [drawColor, setDrawColor] = useState(TEXT_COLORS[1]);
+  // Open text composer: null when closed, { layerId: null } for a new
+  // layer, or the id of the layer being edited.
+  const [textComposer, setTextComposer] = useState<{ layerId: string | null } | null>(null);
+  const [stickerSheetOpen, setStickerSheetOpen] = useState(false);
+  const [isDraggingLayer, setIsDraggingLayer] = useState(false);
+  const [musicDurationMs, setMusicDurationMs] = useState(0);
+  const [drawColor, setDrawColor] = useState(TEXT_COLORS[2]);
   const [drawWidth, setDrawWidth] = useState(DRAW_WIDTHS[1]);
-  const [filterCategory, setFilterCategory] = useState<FilterCategoryId>(FILTER_CATEGORIES[0].id);
   const [filterPreviewSource, setFilterPreviewSource] = useState<ImageData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [compressionStage, setCompressionStage] = useState<"idle" | "loading" | "compressing">("idle");
@@ -188,6 +189,30 @@ export function VideoEditor({
 
   const { exportVideo, isExporting, progress } = useVideoExport();
 
+  const musicKey = librarySound
+    ? `sound:${librarySound.id}`
+    : state.musicFile
+      ? `file:${state.musicFile.name}:${state.musicFile.size}`
+      : null;
+  const musicPeaks = useWaveformPeaks(state.musicFile, musicKey);
+  const getMusicPlaybackMs = useCallback(() => {
+    const audio = musicAudioRef.current;
+    return audio && !audio.paused && Number.isFinite(audio.currentTime) ? audio.currentTime * 1000 : null;
+  }, []);
+  const getPreviewTime = useCallback(() => videoRef.current?.currentTime ?? 0, []);
+
+  // A track picked off the device has no catalog duration, so it is read
+  // from the preview element once its metadata arrives.
+  useEffect(() => {
+    const audio = musicAudioRef.current;
+    if (!audio) return;
+    function onMetadata() {
+      if (audio && Number.isFinite(audio.duration)) setMusicDurationMs(Math.round(audio.duration * 1000));
+    }
+    audio.addEventListener("loadedmetadata", onMetadata);
+    return () => audio.removeEventListener("loadedmetadata", onMetadata);
+  }, []);
+
   useEffect(() => {
     return () => URL.revokeObjectURL(sourceUrl);
   }, [sourceUrl]);
@@ -208,7 +233,7 @@ export function VideoEditor({
       setVideoDims({ width: el.videoWidth, height: el.videoHeight });
       setDuration(d);
       setState((s) => {
-        const next = { ...s, trimStart: 0, trimEnd: Math.min(d, 60) };
+        const next = { ...s, trimStart: 0, trimEnd: Math.min(d, MAX_CLIP_SECONDS) };
         baselineStateRef.current = next;
         return next;
       });
@@ -463,21 +488,22 @@ export function VideoEditor({
     });
   }
 
-  function addTextLayer() {
-    if (!newTextDraft.trim()) return;
-    const layer: TextLayer = {
-      id: crypto.randomUUID(),
-      text: newTextDraft.trim().slice(0, 80),
-      x: 0.5,
-      y: 0.5,
-      color: "#ffffff",
-      fontSize: 64,
-      fontId: "sans",
-      isSticker: false,
-    };
-    setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
-    setNewTextDraft("");
-    setSelectedTextId(layer.id);
+  function commitText(value: { text: string; color: string; fontId: TextFontId; fontSize: number }) {
+    const editingId = textComposer?.layerId ?? null;
+    if (editingId) {
+      updateTextLayer(editingId, value);
+    } else {
+      const layer: TextLayer = {
+        id: crypto.randomUUID(),
+        x: 0.5,
+        y: 0.42,
+        isSticker: false,
+        ...value,
+      };
+      setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
+    }
+    setTextComposer(null);
+    setSelectedTextId(null);
   }
 
   function addStickerLayer(emoji: string) {
@@ -493,6 +519,8 @@ export function VideoEditor({
     };
     setState((s) => ({ ...s, textLayers: [...s.textLayers, layer] }));
     setSelectedTextId(layer.id);
+    setStickerSheetOpen(false);
+    setTool("sticker");
   }
 
   async function startVoiceoverRecording() {
@@ -597,14 +625,17 @@ export function VideoEditor({
       return;
     }
 
-    // Gated on the active tool, not just whether a text layer happens to
-    // be selected — otherwise switching to another tool (crop, say) while
-    // a text layer was still selected would keep dragging that text
-    // instead of doing whatever the newly-selected tool is for.
-    const dragTextId = tool === "text" || tool === "sticker" ? selectedTextId : null;
+    // Text and stickers are dragged by their own handles (LayerHandles);
+    // a press on the bare picture just lets go of whatever was selected.
     const cropPanEnabled =
       tool === "crop" && aspectNeedsPan(state.aspect, videoDims.width, videoDims.height, state.rotation);
-    if (!dragTextId && !cropPanEnabled) return;
+    if (!cropPanEnabled) {
+      if (tool === "sticker" || tool === null) {
+        setSelectedTextId(null);
+        if (tool === "sticker") setTool(null);
+      }
+      return;
+    }
 
     e.preventDefault();
     const videoAspect = videoDims.width / Math.max(1, videoDims.height);
@@ -623,11 +654,7 @@ export function VideoEditor({
     function move(ev: PointerEvent) {
       const fracX = clamp((ev.clientX - rect.left) / rect.width, 0, 1);
       const fracY = clamp((ev.clientY - rect.top) / rect.height, 0, 1);
-      if (dragTextId) {
-        updateTextLayer(dragTextId, { x: fracX, y: fracY });
-      } else if (cropPanEnabled) {
-        updateState({ panOffset: panAxisIsX ? fracX : fracY });
-      }
+      updateState({ panOffset: panAxisIsX ? fracX : fracY });
     }
     function up() {
       window.removeEventListener("pointermove", move);
@@ -747,133 +774,165 @@ export function VideoEditor({
   }
 
   const selectedLayer = state.textLayers.find((l) => l.id === selectedTextId) ?? null;
+  const editingLayer = textComposer?.layerId
+    ? (state.textLayers.find((l) => l.id === textComposer.layerId) ?? null)
+    : null;
   // How much of a sound this clip can actually use — the trimmed length,
   // sped up or slowed down by the chosen rate.
   const clipDurationMs = Math.max(
     500,
     ((state.trimEnd - state.trimStart) / Math.max(state.playbackRate, 0.1)) * 1000,
   );
+  const isBusy = isExporting || compressionStage !== "idle";
+  const baseline = baselineStateRef.current;
+  const isTrimmed =
+    baseline !== null && (state.trimStart !== baseline.trimStart || state.trimEnd !== baseline.trimEnd);
+  const effectiveMusicDurationMs = librarySound?.duration_ms ?? musicDurationMs;
+  const soundLabel = librarySound ? librarySound.title : state.musicFile ? "Your sound" : null;
+
+  const railTools: { id: RailTool; label: string; icon: typeof ScissorsIcon; badge?: boolean }[] = [
+    { id: "text", label: "Text", icon: TextToolIcon, badge: state.textLayers.some((l) => !l.isSticker) },
+    { id: "stickers", label: "Stickers", icon: StickerIcon, badge: state.textLayers.some((l) => l.isSticker) },
+    { id: "filter", label: "Filters", icon: FilterIcon, badge: state.filterId !== "original" },
+    { id: "draw", label: "Draw", icon: BrushIcon, badge: state.drawStrokes.length > 0 },
+    { id: "trim", label: "Trim", icon: ScissorsIcon, badge: isTrimmed },
+    { id: "speed", label: "Speed", icon: SpeedIcon, badge: state.playbackRate !== 1 },
+    { id: "crop", label: "Crop", icon: CropIcon, badge: state.aspect !== "9:16" || state.rotation !== 0 },
+    { id: "voice", label: "Voice", icon: MicIcon, badge: !!state.voiceoverFile },
+  ];
+
+  function selectRailTool(id: RailTool) {
+    setSelectedTextId(null);
+    if (id === "text") {
+      setTool(null);
+      setTextComposer({ layerId: null });
+    } else if (id === "stickers") {
+      setTool(null);
+      setStickerSheetOpen(true);
+    } else {
+      setTool((t) => (t === id ? null : id));
+    }
+  }
+
+  function handleLayerTap(layer: TextLayer) {
+    if (layer.isSticker) {
+      setSelectedTextId(layer.id);
+      setTool("sticker");
+    } else {
+      setTool(null);
+      setTextComposer({ layerId: layer.id });
+    }
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
-      {/* No `loop` attribute: the edit preview effect below already resets
+    <div data-no-edge-swipe className="fixed inset-0 z-50 flex flex-col bg-black">
+      {/* No `loop` attribute: the edit preview effect already resets
           currentTime itself once playback reaches trimEnd. The native
-          attribute doing the exact same thing independently is what
-          actually broke export — trimEnd equals the clip's true end for
-          any clip under 60s, so the browser's own auto-restart-on-end
-          fired ahead of export's own "did we reach trimEnd" check, which
-          could never observe the clip finishing. */}
-      {/* Real (if off-screen) size on purpose, not `sr-only` — `sr-only`
-          clips an element to 0 visible pixels (clip: rect(0,0,0,0)), and
-          WebKit/iOS Safari is known to throttle or fully stall video
-          decoding for a <video> with effectively zero visible area. That's
-          the likely reason export could still hang short of the finish
-          line on an actual iPhone even after the two fixes above: currentTime
-          would creep up and stall just under trimEnd because playback
-          itself stalled, not because of a loop race. Positioning off-
-          screen with a real, unclipped size keeps decoding fully live
-          while staying invisible to the user. */}
+          attribute doing the same thing independently is what broke
+          export — the browser's own auto-restart-on-end fired ahead of
+          export's "did we reach trimEnd" check.
+
+          Real (if off-screen) size on purpose, not `sr-only` — WebKit
+          throttles or stalls decoding for a <video> with effectively zero
+          visible area, which left export hanging short of the finish line
+          on a real iPhone. */}
       <video ref={videoRef} src={sourceUrl} playsInline className="fixed left-[-9999px] top-0 h-40 w-40" />
 
-      <StudioHeader
-        eyebrow="Edit clip"
-        onCancel={onCancel}
-        action={
-          <StudioAction
-            onClick={handleDone}
-            disabled={!ready || isExporting || compressionStage !== "idle"}
-            busy={isExporting || compressionStage !== "idle"}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <StudioStage ratio={canvasSize.width / canvasSize.height}>
+          <div
+            ref={previewRef}
+            onPointerDown={handlePreviewPointerDown}
+            className="relative h-full w-full touch-none overflow-hidden rounded-[22px] bg-[#111113]"
           >
-            {compressionStage === "loading"
-              ? "Preparing…"
-              : compressionStage === "compressing"
-                ? `Compressing ${Math.round(compressionProgress * 100)}%`
-                : isExporting
-                  ? progress >= 1
-                    ? "Finishing…"
-                    : `Exporting ${Math.round(progress * 100)}%`
-                  : "Next"}
-          </StudioAction>
-        }
-      />
+            <canvas ref={canvasRef} className="h-full w-full" />
+            {!ready && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/55">
+                <span className="h-7 w-7 animate-spin rounded-full border-2 border-white/15 border-t-white/70" />
+                <span className="text-[0.8125rem] font-medium">Loading clip</span>
+              </div>
+            )}
+            <LayerHandles
+              layers={state.textLayers}
+              selectedId={selectedTextId}
+              previewRef={previewRef}
+              interactive={tool === null || tool === "sticker"}
+              onMove={(id, x, y) => updateTextLayer(id, { x, y })}
+              onTap={handleLayerTap}
+              onDelete={(id) => {
+                removeTextLayer(id);
+                if (tool === "sticker") setTool(null);
+              }}
+              onDragStateChange={setIsDraggingLayer}
+            />
+          </div>
+        </StudioStage>
 
-      {error && (
-        <div className="px-4 pt-3">
-          <Callout tone="danger">{error}</Callout>
-        </div>
-      )}
+        <StudioHeader
+          onBack={onCancel}
+          backLabel="Back to camera"
+          center={
+            !isDraggingLayer && (
+              <button
+                type="button"
+                onClick={() => (state.musicFile ? setTool("music") : setSoundPickerOpen(true))}
+                disabled={isLoadingSound}
+                className="pressable flex min-w-0 max-w-full items-center gap-2 rounded-full bg-black/40 px-3.5 py-2 text-[0.875rem] font-semibold text-white backdrop-blur-xl disabled:opacity-70"
+              >
+                <MusicIcon className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">
+                  {isLoadingSound ? "Adding sound…" : (soundLabel ?? "Add sound")}
+                </span>
+              </button>
+            )
+          }
+        />
 
-      <StudioStage>
-        <div
-          ref={previewRef}
-          onPointerDown={handlePreviewPointerDown}
-          className="relative max-h-full max-w-full touch-none overflow-hidden rounded-[20px] bg-black shadow-[0_28px_70px_-24px_rgb(0_0_0/0.95)] ring-1 ring-white/10"
-          style={{ aspectRatio: `${canvasSize.width} / ${canvasSize.height}` }}
-        >
-          <canvas ref={canvasRef} className="h-full w-full" />
-          {!ready && (
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-white/60">
-              Loading…
-            </div>
-          )}
-          {(tool === "text" || tool === "sticker") &&
-            state.textLayers
-              .filter((l) => l.isSticker === (tool === "sticker"))
-              .map((layer) => (
-                <button
-                  key={layer.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedTextId(layer.id);
-                  }}
-                  className={`absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${
-                    selectedTextId === layer.id ? "border-[#ffd60a]" : "border-transparent"
-                  }`}
-                  style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%` }}
-                  aria-label={`Select "${layer.text}"`}
-                />
-              ))}
-        </div>
-      </StudioStage>
+        <StudioRail
+          tools={railTools}
+          active={tool === "filter" || tool === "draw" || tool === "trim" || tool === "speed" || tool === "crop" || tool === "voice" ? tool : null}
+          onSelect={selectRailTool}
+          hidden={tool !== null || isDraggingLayer}
+        />
+
+        {error && (
+          <div className="animate-rise-in absolute inset-x-3 top-[calc(4.25rem+env(safe-area-inset-top))] z-30">
+            <Callout tone="danger">{error}</Callout>
+          </div>
+        )}
+      </div>
 
       <audio ref={musicAudioRef} className="hidden" />
       <audio ref={voiceoverAudioRef} className="hidden" />
 
-      <div className="flex-shrink-0 bg-black pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+      <StudioDeck>
         {tool === "trim" && (
-          <StudioPanel>
+          <StudioPanel title={TOOL_TITLES.trim} onDone={() => setTool(null)}>
             <TrimScrubber
               duration={duration}
               trimStart={state.trimStart}
               trimEnd={state.trimEnd}
               onChange={(trimStart, trimEnd) => updateState({ trimStart, trimEnd })}
+              source={source}
+              getCurrentTime={getPreviewTime}
             />
           </StudioPanel>
         )}
 
         {tool === "crop" && (
-          <StudioPanel>
-            <div className="flex items-center justify-center gap-2 px-4 py-4">
-              {ASPECTS.map((a) => (
-                <StudioChip
-                  key={a.id}
-                  active={state.aspect === a.id}
-                  onClick={() => updateState({ aspect: a.id, panOffset: 0.5 })}
-                >
-                  {a.label}
-                </StudioChip>
-              ))}
-              <StudioIconButton onClick={rotateClockwise} label="Rotate 90 degrees">
-                <RotateIcon className="h-4 w-4" />
-              </StudioIconButton>
-            </div>
+          <StudioPanel title={TOOL_TITLES.crop} onDone={() => setTool(null)}>
+            <CropControls
+              aspect={state.aspect}
+              onAspect={(aspect) => updateState({ aspect, panOffset: 0.5 })}
+              onRotate={rotateClockwise}
+              canPan={aspectNeedsPan(state.aspect, videoDims.width, videoDims.height, state.rotation)}
+            />
           </StudioPanel>
         )}
 
         {tool === "speed" && (
-          <StudioPanel>
-            <div className="no-scrollbar flex items-center justify-center gap-2 overflow-x-auto px-4 py-4">
+          <StudioPanel title={TOOL_TITLES.speed} onDone={() => setTool(null)}>
+            <div className="no-scrollbar flex items-center justify-center gap-2 overflow-x-auto px-4 pb-2 pt-3">
               {SPEED_PRESETS.map((p) => (
                 <StudioChip
                   key={p.value}
@@ -888,450 +947,258 @@ export function VideoEditor({
         )}
 
         {tool === "filter" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-3 py-4">
-              <div className="no-scrollbar fade-edge-r flex gap-2 overflow-x-auto px-4">
-                {FILTER_CATEGORIES.map((c) => (
-                  <StudioChip
-                    key={c.id}
-                    active={filterCategory === c.id}
-                    onClick={() => setFilterCategory(c.id)}
-                  >
-                    {c.label}
-                  </StudioChip>
-                ))}
-              </div>
-
-              <div className="no-scrollbar fade-edge-r flex gap-3 overflow-x-auto px-4">
-                {FILTER_PRESETS.filter((f) => f.id === "original" || f.category === filterCategory).map((f) => (
-                  <FilterSwatch
-                    key={f.id}
-                    preset={f}
-                    previewSource={filterPreviewSource}
-                    selected={state.filterId === f.id}
-                    onClick={() => updateState({ filterId: f.id, filterIntensity: 1 })}
-                  />
-                ))}
-              </div>
-
-              {state.filterId !== "original" && (
-                <div className="px-4">
-                  <StudioSlider
-                    label="Intensity"
-                    value={state.filterIntensity}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    onChange={(filterIntensity) => updateState({ filterIntensity })}
-                    display={`${Math.round(state.filterIntensity * 100)}%`}
-                  />
-                </div>
-              )}
-            </div>
-          </StudioPanel>
-        )}
-
-        {tool === "text" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-3 px-4 py-4">
-              <div className="flex gap-2">
-                <input
-                  value={newTextDraft}
-                  onChange={(e) => setNewTextDraft(e.target.value)}
-                  placeholder="Add text…"
-                  maxLength={80}
-                  className="h-11 min-w-0 flex-1 rounded-[14px] bg-white/10 px-4 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
-                />
-                <button
-                  type="button"
-                  onClick={addTextLayer}
-                  className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-[#ffd60a] text-black"
-                  aria-label="Add text layer"
-                >
-                  <PlusIcon className="h-5 w-5" />
-                </button>
-              </div>
-
-              {selectedLayer && !selectedLayer.isSticker && (
-                <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      {TEXT_COLORS.map((c) => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => updateTextLayer(selectedLayer.id, { color: c })}
-                          className={`h-6 w-6 rounded-full border-2 ${
-                            selectedLayer.color === c ? "border-white ring-2 ring-white/40" : "border-white/20"
-                          }`}
-                          style={{ backgroundColor: c }}
-                          aria-label={`Text color ${c}`}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeTextLayer(selectedLayer.id)}
-                      aria-label="Delete text"
-                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-white/60">Size</span>
-                    <input
-                      type="range"
-                      min={24}
-                      max={160}
-                      step={2}
-                      value={selectedLayer.fontSize}
-                      onChange={(e) =>
-                        updateTextLayer(selectedLayer.id, { fontSize: Number(e.target.value) })
-                      }
-                      className="flex-1"
-                    />
-                  </div>
-
-                  <div className="no-scrollbar flex gap-2 overflow-x-auto">
-                    {TEXT_FONTS.map((f) => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => updateTextLayer(selectedLayer.id, { fontId: f.id })}
-                        style={{ fontFamily: f.stack }}
-                        className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-sm ${
-                          selectedLayer.fontId === f.id
-                            ? "bg-white font-semibold text-black"
-                            : "bg-white/10 text-white/80"
-                        }`}
-                      >
-                        Aa
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {!selectedLayer && state.textLayers.filter((l) => !l.isSticker).length > 0 && (
-                <p className="text-center text-[0.8125rem] text-white/50">
-                  Tap a dot on the preview to drag or restyle it.
-                </p>
-              )}
-            </div>
-          </StudioPanel>
-        )}
-
-        {tool === "sticker" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-3 px-4 py-4">
-              <div className="no-scrollbar grid grid-cols-8 gap-2 overflow-x-auto">
-                {STICKER_EMOJIS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => addStickerLayer(emoji)}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-xl"
-                    aria-label={`Add ${emoji} sticker`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-
-              {selectedLayer && selectedLayer.isSticker && (
-                <div className="flex flex-col gap-3 rounded-xl bg-white/5 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs text-white/60">Selected: {selectedLayer.text}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeTextLayer(selectedLayer.id)}
-                      aria-label="Delete sticker"
-                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-white/60">Size</span>
-                    <input
-                      type="range"
-                      min={40}
-                      max={220}
-                      step={4}
-                      value={selectedLayer.fontSize}
-                      onChange={(e) =>
-                        updateTextLayer(selectedLayer.id, { fontSize: Number(e.target.value) })
-                      }
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-              )}
-              {!selectedLayer && state.textLayers.filter((l) => l.isSticker).length > 0 && (
-                <p className="text-center text-[0.8125rem] text-white/50">
-                  Tap a sticker on the preview to drag or resize it.
-                </p>
-              )}
-            </div>
+          <StudioPanel title={TOOL_TITLES.filter} onDone={() => setTool(null)}>
+            <FilterControls
+              filterId={state.filterId}
+              intensity={state.filterIntensity}
+              previewSource={filterPreviewSource}
+              onFilter={(filterId) => updateState({ filterId, filterIntensity: 1 })}
+              onIntensity={(filterIntensity) => updateState({ filterIntensity })}
+            />
           </StudioPanel>
         )}
 
         {tool === "draw" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-3 px-4 py-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  {TEXT_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setDrawColor(c)}
-                      className={`h-6 w-6 rounded-full border-2 ${
-                        drawColor === c ? "border-white ring-2 ring-white/40" : "border-white/20"
-                      }`}
-                      style={{ backgroundColor: c }}
-                      aria-label={`Draw color ${c}`}
-                    />
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={undoDrawStroke}
-                    disabled={state.drawStrokes.length === 0}
-                    className="text-xs text-white/70 disabled:opacity-40"
-                  >
-                    Undo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearDrawStrokes}
-                    disabled={state.drawStrokes.length === 0}
-                    aria-label="Clear drawing"
-                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/10 text-white/70 disabled:opacity-40"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                {DRAW_WIDTHS.map((w) => (
-                  <button
-                    key={w}
-                    type="button"
-                    onClick={() => setDrawWidth(w)}
-                    aria-label={`Brush size ${w}`}
-                    className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                      drawWidth === w ? "bg-white" : "bg-white/10"
-                    }`}
-                  >
-                    <span
-                      className="rounded-full"
-                      style={{
-                        width: Math.round(w / 2),
-                        height: Math.round(w / 2),
-                        backgroundColor: drawWidth === w ? "black" : "white",
-                      }}
-                    />
-                  </button>
-                ))}
-                <span className="text-xs text-white/50">Draw right on the preview</span>
-              </div>
-            </div>
+          <StudioPanel title={TOOL_TITLES.draw} onDone={() => setTool(null)}>
+            <DrawControls
+              color={drawColor}
+              width={drawWidth}
+              canUndo={state.drawStrokes.length > 0}
+              onColor={setDrawColor}
+              onWidth={setDrawWidth}
+              onUndo={undoDrawStroke}
+              onClear={clearDrawStrokes}
+            />
+          </StudioPanel>
+        )}
+
+        {tool === "sticker" && selectedLayer?.isSticker && (
+          <StudioPanel title={TOOL_TITLES.sticker} onDone={() => {
+            setSelectedTextId(null);
+            setTool(null);
+          }}>
+            <StickerControls
+              layer={selectedLayer}
+              onResize={(fontSize) => updateTextLayer(selectedLayer.id, { fontSize })}
+              onDelete={() => {
+                removeTextLayer(selectedLayer.id);
+                setTool(null);
+              }}
+            />
           </StudioPanel>
         )}
 
         {tool === "voice" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-4 px-4 py-4">
-              <div className="flex items-center justify-center">
+          <StudioPanel title={TOOL_TITLES.voice} onDone={() => {
+            if (isRecordingVoiceover) stopVoiceoverRecording();
+            setTool(null);
+          }}>
+            <div className="flex items-center gap-4 px-4 pb-1 pt-3">
+              <button
+                type="button"
+                onClick={isRecordingVoiceover ? stopVoiceoverRecording : startVoiceoverRecording}
+                aria-label={isRecordingVoiceover ? "Stop recording" : "Record voiceover"}
+                className={`pressable flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
+                  isRecordingVoiceover ? "bg-accent text-white" : "bg-white text-black"
+                }`}
+              >
+                {isRecordingVoiceover ? (
+                  <span className="h-5 w-5 rounded-[5px] bg-white" />
+                ) : (
+                  <MicIcon className="h-6 w-6" />
+                )}
+              </button>
+              <div className="min-w-0 flex-1">
+                <p className="text-[0.9375rem] font-semibold text-white">
+                  {isRecordingVoiceover
+                    ? "Recording…"
+                    : state.voiceoverFile
+                      ? "Voiceover added"
+                      : "Talk over your clip"}
+                </p>
+                <p className="text-[0.8125rem] text-white/50">
+                  {isRecordingVoiceover
+                    ? "Tap the button to stop"
+                    : "Plays from the start of your trim"}
+                </p>
+              </div>
+              {state.voiceoverFile && !isRecordingVoiceover && (
+                <div className="flex gap-2">
+                  <StudioIconButton
+                    onClick={() => voiceoverAudioRef.current?.play().catch(() => {})}
+                    label="Play voiceover"
+                  >
+                    <PlayIcon className="h-4 w-4" />
+                  </StudioIconButton>
+                  <StudioIconButton
+                    onClick={() => updateState({ voiceoverFile: null })}
+                    label="Remove voiceover"
+                    tone="danger"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </StudioIconButton>
+                </div>
+              )}
+            </div>
+            {state.voiceoverFile && !isRecordingVoiceover && (
+              <div className="px-4 pt-3">
+                <StudioSlider
+                  label="Voiceover volume"
+                  value={state.voiceoverVolume}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onChange={(voiceoverVolume) => updateState({ voiceoverVolume })}
+                  display={`${Math.round(state.voiceoverVolume * 100)}%`}
+                />
+              </div>
+            )}
+          </StudioPanel>
+        )}
+
+        {tool === "music" && state.musicFile && (
+          <StudioPanel title={TOOL_TITLES.music} onDone={() => setTool(null)}>
+            <div className="flex flex-col gap-4 px-4 pb-1 pt-2">
+              <div className="flex items-center gap-3">
+                <SoundCover seed={librarySound?.id ?? state.musicFile.name} playing size="md" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[0.9375rem] font-semibold text-white">
+                    {librarySound ? librarySound.title : state.musicFile.name}
+                  </p>
+                  <p className="truncate text-[0.8125rem] text-white/50">
+                    {librarySound
+                      ? librarySound.artist_name || "SORZA sound"
+                      : "From this device"}
+                  </p>
+                </div>
                 <button
                   type="button"
-                  onClick={isRecordingVoiceover ? stopVoiceoverRecording : startVoiceoverRecording}
-                  className={`flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold ${
-                    isRecordingVoiceover
-                      ? "bg-[#ff3b30] text-white"
-                      : "bg-white font-semibold text-black"
-                  }`}
+                  onClick={() => setSoundPickerOpen(true)}
+                  className="pressable h-9 rounded-full bg-white/[0.1] px-3.5 text-[0.8125rem] font-semibold text-white"
                 >
-                  <MicIcon className="h-4 w-4" />
-                  {isRecordingVoiceover ? "Stop recording" : "Record voiceover"}
+                  Change
                 </button>
+                <StudioIconButton onClick={() => {
+                  removeMusic();
+                  setTool(null);
+                }} label="Remove sound" tone="danger">
+                  <CloseIcon className="h-4 w-4" />
+                </StudioIconButton>
               </div>
-              {isRecordingVoiceover && (
-                <p className="text-center text-xs text-white/50">
-                  Recording — plays back over the clip from the start of your trim.
-                </p>
+
+              {/* Which part of the track plays. The window is the clip's
+                  own trimmed length rather than a fixed slice, so what the
+                  waveform promises is exactly what the post carries. */}
+              {effectiveMusicDurationMs > clipDurationMs + 250 && (
+                <WaveformTrimmer
+                  peaks={musicPeaks}
+                  durationMs={effectiveMusicDurationMs}
+                  windowMs={clipDurationMs}
+                  startMs={state.musicStartMs}
+                  onChange={(musicStartMs) => updateState({ musicStartMs })}
+                  getPlaybackMs={getMusicPlaybackMs}
+                />
               )}
-              {!isRecordingVoiceover && state.voiceoverFile && (
-                <>
-                  <div className="flex items-center gap-3 text-sm text-white/80">
-                    <span className="w-20 flex-shrink-0">Voiceover</span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={state.voiceoverVolume}
-                      onChange={(e) => updateState({ voiceoverVolume: Number(e.target.value) })}
-                      className="flex-1"
-                    />
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <button
-                      type="button"
-                      onClick={() => voiceoverAudioRef.current?.play().catch(() => {})}
-                      className="text-xs text-white/70 hover:text-white"
-                    >
-                      Play back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateState({ voiceoverFile: null })}
-                      className="text-[0.8125rem] font-medium text-[#ff453a]"
-                    >
-                      Remove voiceover
-                    </button>
-                  </div>
-                </>
-              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <StudioSlider
+                  label="Added sound"
+                  value={state.musicVolume}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onChange={(musicVolume) => updateState({ musicVolume })}
+                  display={`${Math.round(state.musicVolume * 100)}%`}
+                />
+                <StudioSlider
+                  label="Original sound"
+                  value={state.originalVolume}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onChange={(originalVolume) => updateState({ originalVolume })}
+                  display={`${Math.round(state.originalVolume * 100)}%`}
+                />
+              </div>
             </div>
           </StudioPanel>
         )}
 
-        {tool === "music" && (
-          <StudioPanel>
-            <div className="flex flex-col gap-4 px-4 py-4">
-              {!state.musicFile ? (
-                <div className="flex flex-col gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setSoundPickerOpen(true)}
-                    disabled={isLoadingSound}
-                    className="pressable flex items-center gap-3 rounded-[16px] bg-white px-4 py-3 text-left text-black disabled:opacity-60"
-                  >
-                    <MusicIcon className="h-5 w-5 flex-shrink-0" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[0.9375rem] font-semibold">
-                        {isLoadingSound ? "Adding sound…" : "SORZA sounds"}
-                      </span>
-                      <span className="block text-[0.75rem] text-black/55">
-                        Trending tracks, credited on your post
-                      </span>
-                    </span>
-                  </button>
-                  <label className="pressable flex items-center gap-3 rounded-[16px] bg-white/10 px-4 py-3 text-white/85">
-                    <PlusIcon className="h-5 w-5 flex-shrink-0" />
-                    <span className="text-[0.9375rem] font-medium">Use a file from this device</span>
-                    <input
-                      type="file"
-                      accept="audio/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setLibrarySound(null);
-                          updateState({ musicFile: file, musicStartMs: 0, originalVolume: 0 });
-                        }
-                        e.target.value = "";
-                      }}
-                    />
-                  </label>
-                </div>
+        {(tool === null || (tool === "sticker" && !selectedLayer?.isSticker) || (tool === "music" && !state.musicFile)) && (
+          <div className="px-4">
+            <StudioAction
+              onClick={handleDone}
+              disabled={!ready || isBusy}
+              busy={isBusy}
+              progress={
+                compressionStage === "compressing"
+                  ? compressionProgress
+                  : isExporting
+                    ? progress
+                    : compressionStage === "loading"
+                      ? 0
+                      : undefined
+              }
+            >
+              {compressionStage === "loading" ? (
+                "Preparing…"
+              ) : compressionStage === "compressing" ? (
+                `Compressing ${Math.round(compressionProgress * 100)}%`
+              ) : isExporting ? (
+                progress >= 1 ? "Finishing…" : `Saving edits ${Math.round(progress * 100)}%`
               ) : (
                 <>
-                  <div className="flex items-center gap-3 rounded-[16px] bg-white/10 px-3.5 py-2.5">
-                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#ff375f] text-white">
-                      <MusicIcon className="h-4 w-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[0.9375rem] font-semibold text-white">
-                        {librarySound ? librarySound.title : state.musicFile.name}
-                      </p>
-                      <p className="truncate text-[0.75rem] text-white/55">
-                        {librarySound?.artist_name
-                          ? librarySound.artist_name
-                          : librarySound
-                            ? "SORZA sound"
-                            : "From this device"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={removeMusic}
-                      aria-label="Remove sound"
-                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/15 text-white/80"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  {/* Which part of the track plays. The window is the clip's
-                      own trimmed length rather than a fixed slice, so what
-                      the slider promises is exactly what the finished post
-                      carries. */}
-                  {librarySound && librarySound.duration_ms > clipDurationMs && (
-                    <div>
-                      <div className="mb-1.5 flex items-center justify-between text-[0.75rem] text-white/55">
-                        <span className="font-semibold uppercase tracking-[0.08em]">Starts at</span>
-                        <span className="numeral text-white/80">
-                          {formatClock(state.musicStartMs)} –{" "}
-                          {formatClock(Math.min(librarySound.duration_ms, state.musicStartMs + clipDurationMs))}
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min={0}
-                        max={Math.max(0, librarySound.duration_ms - clipDurationMs)}
-                        step={250}
-                        value={state.musicStartMs}
-                        onChange={(e) => updateState({ musicStartMs: Number(e.target.value) })}
-                        aria-label="Starting point in the sound"
-                        className="w-full accent-[#ffd60a]"
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-3 text-sm text-white/80">
-                    <span className="w-20 flex-shrink-0">Sound</span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={state.musicVolume}
-                      onChange={(e) => updateState({ musicVolume: Number(e.target.value) })}
-                      className="flex-1 accent-[#ffd60a]"
-                    />
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-white/80">
-                    <span className="w-20 flex-shrink-0">Original</span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={state.originalVolume}
-                      onChange={(e) => updateState({ originalVolume: Number(e.target.value) })}
-                      className="flex-1 accent-[#ffd60a]"
-                    />
-                  </div>
+                  Next
+                  <ChevronRightIcon className="h-[18px] w-[18px]" strokeWidth={2.5} />
                 </>
               )}
-            </div>
-          </StudioPanel>
+            </StudioAction>
+          </div>
         )}
+      </StudioDeck>
 
-        <StudioRail
-          tools={TOOLS}
-          active={tool}
-          onSelect={(id) => setTool((t) => (t === id ? null : id))}
+      {textComposer && (
+        <TextComposer
+          initial={
+            editingLayer
+              ? {
+                  text: editingLayer.text,
+                  color: editingLayer.color,
+                  fontId: editingLayer.fontId,
+                  fontSize: editingLayer.fontSize,
+                }
+              : null
+          }
+          onDone={commitText}
+          onCancel={() => setTextComposer(null)}
+          onDelete={
+            editingLayer
+              ? () => {
+                  removeTextLayer(editingLayer.id);
+                  setTextComposer(null);
+                }
+              : undefined
+          }
         />
-      </div>
+      )}
+
+      {stickerSheetOpen && (
+        <StickerSheet onPick={addStickerLayer} onClose={() => setStickerSheetOpen(false)} />
+      )}
 
       {soundPickerOpen && (
-        <SoundPickerSheet onSelect={chooseLibrarySound} onClose={() => setSoundPickerOpen(false)} />
+        <SoundPickerSheet
+          onSelect={(sound) => {
+            void chooseLibrarySound(sound).then(() => setTool("music"));
+          }}
+          onClose={() => setSoundPickerOpen(false)}
+          onPickDeviceFile={(file) => {
+            setSoundPickerOpen(false);
+            setLibrarySound(null);
+            updateState({ musicFile: file, musicStartMs: 0, originalVolume: 0 });
+            setTool("music");
+          }}
+        />
       )}
     </div>
   );
