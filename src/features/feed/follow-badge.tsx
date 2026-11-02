@@ -2,13 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { toggleFollowAction } from "@/features/profile/actions";
-import { PlusIcon } from "@/components/ui/icons";
+import { CheckIcon, PlusIcon } from "@/components/ui/icons";
 
-/** Small circular "+" overlapping the bottom of an avatar — the compact
- * follow affordance TikTok-style vertical feeds use next to the author's
- * picture, instead of a full "Follow" pill. Disappears once followed,
- * same underlying toggleFollowAction the profile page's full FollowButton
- * uses, just a different shape for a tighter space. */
+/** The round "+" overlapping the bottom of the author's avatar in the
+ * feed — TikTok's follow affordance. On tap it turns into a check, holds
+ * a beat so the follow visibly registered, then folds away. Same
+ * toggleFollowAction the profile page's full FollowButton uses. */
 export function FollowBadge({
   authorId,
   authorUsername,
@@ -18,37 +17,47 @@ export function FollowBadge({
   authorUsername: string;
   initialIsFollowing: boolean;
 }) {
-  const [following, setFollowing] = useState(initialIsFollowing);
+  const [state, setState] = useState<"idle" | "confirming" | "gone">(
+    initialIsFollowing ? "gone" : "idle",
+  );
   const [, startTransition] = useTransition();
 
-  if (following) return null;
+  if (state === "gone") return null;
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    setFollowing(true);
+    if (state !== "idle") return;
+    setState("confirming");
+    setTimeout(() => setState((s) => (s === "confirming" ? "gone" : s)), 900);
     startTransition(async () => {
       try {
         await toggleFollowAction(authorId, authorUsername, false);
       } catch {
-        setFollowing(false);
+        setState("idle");
       }
     });
   }
+
+  const confirming = state === "confirming";
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      aria-label={`Follow @${authorUsername}`}
-      // z-10: RankFrame's ring is drawn via ::before/::after pseudo-elements
-      // pinned to z-index 5/6 (globals.css), and .rank-frame never sets its
-      // own z-index so it doesn't contain that inside a local stacking
-      // context — those values leak out and beat this badge's implicit
-      // z-index:auto, painting the ring in front of it. Needs to clear 6.
-      className="absolute -bottom-0.5 left-1/2 z-10 flex h-3 w-3 -translate-x-1/2 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-[0_0_0_1px_rgb(0_0_0_/_0.85),0_0_5px_0.5px_rgb(255_68_51_/_0.6)]"
+      aria-label={confirming ? `Following @${authorUsername}` : `Follow @${authorUsername}`}
+      // z-10: RankFrame's ring is drawn via pseudo-elements pinned to
+      // z-index 5/6 that leak out of it (it sets no z-index of its own),
+      // and would otherwise paint over this badge.
+      className={`absolute -bottom-2.5 left-1/2 z-10 flex h-[22px] w-[22px] -translate-x-1/2 items-center justify-center rounded-full shadow-[0_2px_6px_rgb(0_0_0/0.45)] transition-[background-color,color,transform] duration-300 ease-[var(--ease-ios)] ${
+        confirming ? "scale-110 bg-white text-accent" : "bg-accent text-white active:scale-90"
+      }`}
     >
-      <PlusIcon className="h-2 w-2" strokeWidth={3} />
+      {confirming ? (
+        <CheckIcon className="h-3 w-3" strokeWidth={3.5} />
+      ) : (
+        <PlusIcon className="h-3 w-3" strokeWidth={3.5} />
+      )}
     </button>
   );
 }

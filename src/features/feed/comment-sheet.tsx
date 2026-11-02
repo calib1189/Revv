@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CommentList } from "@/features/feed/comment-list";
+import { CommentList, type CommentWithAuthor } from "@/features/feed/comment-list";
 import { CommentForm } from "@/features/feed/comment-form";
 import { listCommentsForSheetAction, type CommentSheetData } from "@/features/feed/actions";
 import { CloseIcon } from "@/components/ui/icons";
 
 /** Fraction of the sheet's own height a drag has to cross before
  * releasing counts as "close it" rather than "snap back open". */
-const CLOSE_THRESHOLD = 0.3;
+const CLOSE_THRESHOLD = 0.25;
 
 export function CommentSheet({
   postId,
@@ -17,16 +17,21 @@ export function CommentSheet({
   onClose,
   isAuthenticated,
   initialCount,
+  onCountChange,
 }: {
   postId: string;
   isOpen: boolean;
   onClose: () => void;
   isAuthenticated: boolean;
   initialCount: number;
+  /** Keeps the count on the feed's comment button in step with what this
+   * sheet actually loaded and posted. */
+  onCountChange?: (count: number) => void;
 }) {
   const [data, setData] = useState<CommentSheetData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadState, setLoadState] = useState<"idle" | "loading" | "error">("idle");
   const [count, setCount] = useState(initialCount);
+  const [replyTarget, setReplyTarget] = useState<CommentWithAuthor | null>(null);
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -40,8 +45,7 @@ export function CommentSheet({
 
   function handleDragMove(e: React.PointerEvent<HTMLDivElement>) {
     if (dragStartYRef.current === null) return;
-    // Only drags downward move the sheet — dragging up just does nothing
-    // rather than letting it overshoot past fully open.
+    // Only downward drags move the sheet.
     setDragY(Math.max(0, e.clientY - dragStartYRef.current));
   }
 
@@ -56,20 +60,23 @@ export function CommentSheet({
   }
 
   async function refresh() {
-    setIsLoading(true);
+    if (data === null) setLoadState("loading");
     try {
       const next = await listCommentsForSheetAction(postId);
       setData(next);
       setCount(next.comments.length);
-    } finally {
-      setIsLoading(false);
+      onCountChange?.(next.comments.length);
+      setLoadState("idle");
+    } catch {
+      setLoadState("error");
     }
   }
 
   useEffect(() => {
     if (isOpen && data === null) {
-      Promise.resolve().then(() => refresh());
+      void Promise.resolve().then(() => refresh());
     }
+    if (!isOpen) void Promise.resolve().then(() => setReplyTarget(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -77,7 +84,7 @@ export function CommentSheet({
     <>
       <div
         aria-hidden="true"
-        className={`absolute inset-0 z-20 bg-black/60 transition-opacity duration-300 ${
+        className={`absolute inset-0 z-20 bg-black/35 transition-opacity duration-300 ${
           isOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={onClose}
@@ -87,64 +94,106 @@ export function CommentSheet({
         ref={sheetRef}
         role="dialog"
         aria-label="Comments"
+        aria-hidden={!isOpen}
         style={isDragging ? { transform: `translateY(${dragY}px)` } : undefined}
-        className={`absolute inset-x-0 bottom-0 z-30 flex h-[65%] flex-col rounded-t-2xl border-t border-white/10 bg-surface ${
-          isDragging ? "" : "transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+        className={`absolute inset-x-0 bottom-0 z-30 flex h-[72%] flex-col rounded-t-[22px] bg-surface shadow-[0_-12px_40px_-12px_rgb(0_0_0/0.6)] ${
+          isDragging ? "" : "transition-transform duration-[420ms] ease-[var(--ease-ios)]"
         } ${isOpen ? "translate-y-0" : "translate-y-full"}`}
       >
-        {/* Drag this header (handle bar + title row) down to close —
-            same gesture a native iOS sheet uses. Scoped to the header,
-            not the whole sheet, so it doesn't fight with the comment
-            list's own vertical scroll below it. */}
+        {/* Drag this header down to close — scoped to the header, not the
+            whole sheet, so it doesn't fight the list's own scroll. */}
         <div
           onPointerDown={handleDragStart}
           onPointerMove={handleDragMove}
           onPointerUp={handleDragEnd}
           onPointerCancel={handleDragEnd}
-          className="flex flex-shrink-0 touch-none flex-col items-center gap-2 pb-2 pt-2.5"
+          className="relative flex flex-shrink-0 touch-none flex-col items-center pb-3 pt-2"
         >
-          <span className="h-1 w-9 rounded-full bg-border" />
-          <div className="flex w-full items-center justify-between px-4">
-            <span className="text-sm font-semibold">
-              {count > 0 ? `${count} comment${count === 1 ? "" : "s"}` : "Comments"}
-            </span>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close comments"
-              className="text-muted hover:text-foreground"
-            >
-              <CloseIcon className="h-5 w-5" />
-            </button>
-          </div>
+          <span className="h-1 w-9 rounded-full bg-foreground/15" />
+          <p className="mt-3 text-[0.875rem] font-semibold">
+            {count > 0 ? (
+              <>
+                <span className="numeral">{count}</span> {count === 1 ? "comment" : "comments"}
+              </>
+            ) : (
+              "Comments"
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close comments"
+            className="absolute right-3 top-3.5 flex h-8 w-8 items-center justify-center rounded-full text-muted hover:text-foreground"
+          >
+            <CloseIcon className="h-[18px] w-[18px]" />
+          </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto border-t border-border px-4 py-4">
-          {isLoading && data === null ? (
-            <p className="text-sm text-muted">Loading…</p>
-          ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-1">
+          {data === null && loadState !== "error" && <CommentSkeleton />}
+          {loadState === "error" && data === null && (
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
+              <p className="text-[0.9375rem] font-semibold">Comments didn&apos;t load</p>
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                className="pressable h-9 rounded-full bg-foreground/[0.08] px-4 text-[0.875rem] font-semibold"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+          {data !== null && (
             <CommentList
-              comments={data?.comments ?? []}
+              comments={data.comments}
               postId={postId}
-              currentUserId={data?.currentUserId ?? null}
+              currentUserId={data.currentUserId}
               onCommentPosted={refresh}
+              onReplyRequested={(comment) => setReplyTarget(comment)}
             />
           )}
         </div>
 
-        <div className="flex-shrink-0 border-t border-border px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="flex-shrink-0 border-t border-border/60 bg-surface px-3 pb-[calc(0.625rem+env(safe-area-inset-bottom))] pt-2.5">
           {isAuthenticated ? (
-            <CommentForm postId={postId} onPosted={refresh} />
+            <CommentForm
+              key={replyTarget?.id ?? "root"}
+              postId={postId}
+              parentId={replyTarget?.id ?? null}
+              autoFocus={replyTarget !== null}
+              replyingTo={replyTarget?.authorUsername ?? null}
+              onCancelReply={() => setReplyTarget(null)}
+              onPosted={() => {
+                setReplyTarget(null);
+                void refresh();
+              }}
+            />
           ) : (
-            <p className="text-sm text-muted">
-              <Link href="/login" className="underline">
-                Log in
-              </Link>{" "}
-              to comment.
-            </p>
+            <Link
+              href="/login"
+              className="flex h-11 items-center rounded-full bg-foreground/[0.06] px-4 text-[0.9375rem] text-muted"
+            >
+              Log in to comment
+            </Link>
           )}
         </div>
       </div>
     </>
+  );
+}
+
+function CommentSkeleton() {
+  return (
+    <ul aria-hidden className="flex flex-col gap-6 pt-1">
+      {[0.7, 0.45, 0.85, 0.55].map((w, i) => (
+        <li key={i} className="flex items-start gap-3">
+          <span className="animate-skeleton h-9 w-9 flex-shrink-0 rounded-full bg-foreground/[0.08]" />
+          <span className="flex flex-1 flex-col gap-2 pt-0.5">
+            <span className="animate-skeleton h-3 w-24 rounded-full bg-foreground/[0.08]" />
+            <span className="animate-skeleton h-3.5 rounded-full bg-foreground/[0.06]" style={{ width: `${w * 100}%` }} />
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

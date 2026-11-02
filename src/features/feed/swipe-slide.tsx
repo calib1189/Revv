@@ -14,12 +14,32 @@ import { usePostLike } from "@/features/feed/use-post-like";
 import { useDoubleTap } from "@/features/feed/use-double-tap";
 import { useLongPress } from "@/features/feed/use-long-press";
 import { useSoundSegment } from "@/features/feed/use-sound-segment";
-import { CommentIcon, EyeIcon, HeartIcon, MusicIcon, PlayIcon, ShareIcon, VerifiedBadgeIcon, VolumeIcon } from "@/components/ui/icons";
+import {
+  CommentIcon,
+  EyeIcon,
+  HeartIcon,
+  MusicIcon,
+  PlayIcon,
+  ShareIcon,
+  VerifiedBadgeIcon,
+  VolumeIcon,
+  WheelIcon,
+} from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
+import { relativeTime } from "@/lib/format/relative-time";
 import { SITE_URL } from "@/lib/site-url";
 import type { PostCardData } from "@/features/feed/post-card";
 
-function ShareButton({ postId }: { postId: string }) {
+/** The shadow every white control on the video carries, so it stays
+ * legible over a bright frame without a box behind it. */
+const ON_VIDEO_SHADOW = "[filter:drop-shadow(0_1px_4px_rgb(0_0_0/0.55))]";
+
+function formatClock(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(total / 60)}:${(total % 60).toString().padStart(2, "0")}`;
+}
+
+function ShareAction({ postId }: { postId: string }) {
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   async function handleShare() {
@@ -27,14 +47,11 @@ function ShareButton({ postId }: { postId: string }) {
     if (navigator.share) {
       try {
         await navigator.share({ url });
-        // Only a completed share (not a dismissed sheet) counts as a
-        // real signal for the feed ranking algorithm — navigator.share
-        // resolving means the OS share sheet's own action actually went
-        // through, not just that it was opened.
+        // Only a completed share (not a dismissed sheet) counts as a real
+        // signal for the feed ranking algorithm.
         recordShareAction(postId);
       } catch {
-        // User dismissed the native share sheet — not an error, and not
-        // a share that should count toward this post's engagement.
+        // Dismissed — not an error, and not a share.
       }
       return;
     }
@@ -43,35 +60,182 @@ function ShareButton({ postId }: { postId: string }) {
       setStatus("copied");
       recordShareAction(postId);
     } catch {
-      // Clipboard access can be denied (browser settings, an insecure
-      // context) even when navigator.clipboard exists — silently doing
-      // nothing here would leave someone tapping Share with zero
-      // feedback and no way to know it didn't work.
+      // Clipboard access can be denied even when navigator.clipboard
+      // exists — silently doing nothing would leave someone tapping Share
+      // with no way to know it didn't work.
       setStatus("failed");
     }
-    setTimeout(() => setStatus("idle"), 1500);
+    setTimeout(() => setStatus("idle"), 1600);
   }
 
   return (
-    <button
-      type="button"
+    <RailAction
       onClick={handleShare}
-      className="flex flex-col items-center gap-1 text-white/90 hover:text-white"
+      label="Share"
+      caption={status === "copied" ? "Copied" : status === "failed" ? "Failed" : "Share"}
     >
-      <ShareIcon className="h-8 w-8" />
-      {status === "copied" && <span className="text-xs font-medium">Copied</span>}
-      {status === "failed" && <span className="text-xs font-medium text-danger">Couldn&apos;t copy</span>}
+      <ShareIcon className="h-[30px] w-[30px]" strokeWidth={1.9} />
+    </RailAction>
+  );
+}
+
+/** One control in the action rail: the icon, and its count (or name)
+ * underneath — the column every short-video app has taught people to
+ * read. */
+function RailAction({
+  onClick,
+  href,
+  label,
+  caption,
+  pressed,
+  children,
+}: {
+  onClick?: () => void;
+  href?: string;
+  label: string;
+  caption?: string | null;
+  pressed?: boolean;
+  children: React.ReactNode;
+}) {
+  const inner = (
+    <>
+      <span className="flex h-11 w-11 items-center justify-center">{children}</span>
+      {caption && <span className="numeral text-[0.75rem] leading-none">{caption}</span>}
+    </>
+  );
+  const className = `pressable flex flex-col items-center gap-1 text-white ${ON_VIDEO_SHADOW}`;
+  if (href) {
+    return (
+      <Link href={href} aria-label={label} className={className}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} aria-label={label} aria-pressed={pressed} className={className}>
+      {inner}
     </button>
   );
 }
 
-// A looping video (see the `loop` attribute below) never fires `ended`
-// — it seeks back to 0 instead — so "watched all the way through" has
-// to be detected via how far into the clip playback has gotten, not
-// waiting for a completion event that will never come. 0.9 rather than
-// 1.0 tolerates a video whose last handful of frames never quite get a
-// `timeupdate` tick before looping.
+/** The like button's own moment: the heart fills red with a quick beat
+ * and a ring that bursts out from it. Keyed so every new like replays it;
+ * un-liking just empties the heart without fanfare. */
+function LikeAction({
+  liked,
+  count,
+  onToggle,
+  isAuthenticated,
+  burstKey,
+}: {
+  liked: boolean;
+  count: number;
+  onToggle: () => void;
+  isAuthenticated: boolean;
+  burstKey: number;
+}) {
+  const heart = (
+    <span className="relative flex h-11 w-11 items-center justify-center">
+      {liked && burstKey > 0 && (
+        <span
+          key={`ring-${burstKey}`}
+          aria-hidden
+          className="animate-like-ring absolute inset-0 rounded-full border-2 border-accent"
+        />
+      )}
+      <HeartIcon
+        key={`heart-${burstKey}`}
+        filled={liked}
+        className={`h-[34px] w-[34px] transition-colors duration-150 ${liked ? "animate-like-beat text-accent" : "text-white"}`}
+      />
+    </span>
+  );
+  const caption = count > 0 ? formatCompactNumber(count) : null;
+  const className = `pressable flex flex-col items-center gap-1 text-white ${ON_VIDEO_SHADOW}`;
+
+  if (!isAuthenticated) {
+    return (
+      <Link href="/login" aria-label="Log in to like" className={className}>
+        {heart}
+        {caption && <span className="numeral text-[0.75rem] leading-none">{caption}</span>}
+      </Link>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={liked}
+      aria-label={liked ? "Unlike" : "Like"}
+      className={className}
+    >
+      {heart}
+      {caption && <span className="numeral text-[0.75rem] leading-none">{caption}</span>}
+    </button>
+  );
+}
+
+/** The record that turns at the bottom of the rail while a post with a
+ * sound plays — tap it to open that sound. Only ever shown for a post that
+ * really has one. */
+function SoundDisc({ soundId, avatarUrl, username, spinning }: {
+  soundId: string;
+  avatarUrl: string | null;
+  username: string;
+  spinning: boolean;
+}) {
+  return (
+    <Link
+      href={`/sounds/${soundId}`}
+      aria-label="Open this sound"
+      className={`pressable mt-1 flex h-11 w-11 items-center justify-center rounded-full bg-[#1a1a1c] ring-[7px] ring-inset ring-[#2a2a2d] ${ON_VIDEO_SHADOW} animate-disc-spin`}
+      style={{ animationPlayState: spinning ? "running" : "paused" }}
+    >
+      <Avatar username={username} avatarUrl={avatarUrl} className="h-5 w-5 text-[0.5rem]" />
+    </Link>
+  );
+}
+
+// A looping video never fires `ended`, so "watched all the way through"
+// is detected via how far into the clip playback has gotten. 0.9 rather
+// than 1.0 tolerates a video whose last frames never get a `timeupdate`
+// tick before looping.
 const COMPLETION_THRESHOLD = 0.9;
+
+interface FloatingHeart {
+  id: number;
+  x: number;
+  y: number;
+  tilt: number;
+}
+
+/** Hearts that land wherever the double-tap did, each at its own slight
+ * angle, then float up and fade — the TikTok gesture, including tapping
+ * a few in a row. */
+function useFloatingHearts() {
+  const [hearts, setHearts] = useState<FloatingHeart[]>([]);
+  const nextId = useRef(1);
+  function spawn(x: number, y: number) {
+    const id = nextId.current++;
+    const tilt = Math.round(Math.random() * 40 - 20);
+    setHearts((h) => [...h, { id, x, y, tilt }]);
+    setTimeout(() => setHearts((h) => h.filter((heart) => heart.id !== id)), 1000);
+  }
+  const layer = (
+    <>
+      {hearts.map((h) => (
+        <HeartIcon
+          key={h.id}
+          filled
+          aria-hidden
+          className="animate-heart-float pointer-events-none absolute h-24 w-24 text-accent drop-shadow-[0_4px_18px_rgb(0_0_0/0.45)]"
+          style={{ left: h.x, top: h.y, "--heart-tilt": `${h.tilt}deg` } as React.CSSProperties}
+        />
+      ))}
+    </>
+  );
+  return { spawn, layer };
+}
 
 export interface VideoMediaHandle {
   toggleMute: () => void;
@@ -81,46 +245,37 @@ export interface VideoMediaHandle {
 const VideoMedia = forwardRef<VideoMediaHandle, {
   url: string;
   /** False until this slide has scrolled near the viewport — until then
-   * `src` isn't set at all, so no request goes out. Every slide loaded
-   * into the feed (initial batch plus every infinite-scroll page) used
-   * to mount a real <video src> immediately regardless of whether it was
-   * ever actually scrolled to, which is exactly what blew up Supabase
-   * Storage egress: every post ever fetched issued a real network
-   * request the moment it was fetched, not when it was watched. */
+   * `src` isn't set at all, so no request goes out (Supabase Storage
+   * egress). */
   shouldLoad: boolean;
   postId: string;
-  /** Skips wiring up completion tracking at all for a logged-out viewer
-   * — recordViewCompletionAction would just no-op anyway, but there's
-   * no reason to attach the listener or make the call in the first
-   * place for someone with no engagement history to feed. */
+  /** Skips completion tracking for a logged-out viewer. */
   trackCompletion: boolean;
   onDoubleTapLike: () => void;
   onLongPress: () => void;
-  /** Mirrors the local `isMuted` state up to the parent purely so
-   * PostContextMenu (rendered by SwipeSlide, not this component) can
-   * show the right label/icon — the actual mute lives here since only
-   * this component holds the video element and can flip `.muted`
-   * synchronously inside a real click handler (see toggleMute below). */
+  /** Mirrors `isMuted` up to the parent so PostContextMenu can label its
+   * row — the mute itself lives here, since only this component holds
+   * the video element and can flip `.muted` inside a real click. */
   onMutedChange: (muted: boolean) => void;
+  onPlayingChange: (playing: boolean) => void;
 }>(function VideoMedia(
-  { url, shouldLoad, postId, trackCompletion, onDoubleTapLike, onLongPress, onMutedChange },
+  { url, shouldLoad, postId, trackCompletion, onDoubleTapLike, onLongPress, onMutedChange, onPlayingChange },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const progressFillRef = useRef<HTMLDivElement>(null);
+  const lastTapRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isPaused, setIsPaused] = useState(false);
-  const [heartPop, setHeartPop] = useState(0);
+  const [scrub, setScrub] = useState<{ time: number; duration: number } | null>(null);
   const hasRecordedCompletion = useRef(false);
   const isIntersectingRef = useRef(false);
+  const { spawn, layer: heartLayer } = useFloatingHearts();
   // WebKit (and Chrome) refuse to autoplay *unmuted* media until the page
-  // has had a real user gesture, so the very first video on a fresh
-  // launch had nothing to play with sound and just sat black forever
-  // (play() rejected, so no frame was ever decoded) — a plain tap fixed
-  // it only because that tap is the gesture the browser was waiting for,
-  // unlocking autoplay for the rest of the session. Falling back to
-  // muted keeps the video actually visible and playing from the first
-  // frame; Mute/Unmute in the long-press menu gives sound back the
-  // moment a real gesture is available.
+  // has had a real user gesture, so the first video on a fresh launch had
+  // nothing to play with sound and sat black. Falling back to muted keeps
+  // it playing from the first frame; the long-press menu brings sound
+  // back the moment a real gesture is available.
   const [isMuted, setIsMuted] = useState(false);
 
   useImperativeHandle(ref, () => ({
@@ -131,16 +286,13 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
       onMutedChange(next);
       if (!el) return;
       el.muted = next;
-      // This runs inside the menu row's own click handler, so — unlike
-      // the observer below — starting audible playback here is allowed
-      // even if the earlier automatic attempt was refused.
+      // Runs inside the menu row's own click handler, so starting audible
+      // playback is allowed here even if the automatic attempt wasn't.
       if (!next) el.play().catch(() => {});
     },
     resumeAfterMenuClose() {
       const el = videoRef.current;
-      // Only resume if this slide is still the one on screen — the menu
-      // can still be animating closed after the viewer has already
-      // scrolled to the next post.
+      // Only if this slide is still the one on screen.
       if (!el || !isIntersectingRef.current) return;
       el.play().then(() => setIsPaused(false)).catch(() => {});
     },
@@ -176,6 +328,39 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onMutedChange is the parent's setState, stable enough that re-subscribing the observer on identity churn would be pure overhead
   }, []);
 
+  // The progress line along the bottom. Driven from requestAnimationFrame
+  // only while this video is actually playing — every slide in the feed
+  // has one of these, and only one is ever on screen.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    let raf = 0;
+    function tick() {
+      const bar = progressFillRef.current;
+      if (bar && el!.duration && Number.isFinite(el!.duration)) {
+        bar.style.transform = `scaleX(${el!.currentTime / el!.duration})`;
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    function onPlay() {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(tick);
+      onPlayingChange(true);
+    }
+    function onPause() {
+      cancelAnimationFrame(raf);
+      onPlayingChange(false);
+    }
+    el.addEventListener("play", onPlay);
+    el.addEventListener("pause", onPause);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("play", onPlay);
+      el.removeEventListener("pause", onPause);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onPlayingChange is the parent's setState
+  }, []);
+
   useEffect(() => {
     if (!trackCompletion) return;
     const el = videoRef.current;
@@ -206,7 +391,7 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
   }
 
   const handleTap = useDoubleTap(togglePlayPause, () => {
-    setHeartPop((n) => n + 1);
+    spawn(lastTapRef.current.x, lastTapRef.current.y);
     onDoubleTapLike();
   });
 
@@ -216,24 +401,51 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
     onLongPress();
   });
 
-  function handleClick() {
-    // The press-and-release that just completed a long press also
-    // dispatches this click right after — without this guard, opening
-    // the menu would also toggle play/pause underneath it.
+  function handleClick(e: React.MouseEvent<HTMLDivElement>) {
+    // The press that completed a long press also dispatches this click —
+    // without this guard, opening the menu would toggle play underneath.
     if (longPressFiredRef.current) {
       longPressFiredRef.current = false;
       return;
     }
+    const rect = e.currentTarget.getBoundingClientRect();
+    lastTapRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     handleTap();
   }
 
+  function startScrub(e: React.PointerEvent<HTMLDivElement>) {
+    const el = videoRef.current;
+    if (!el || !el.duration || !Number.isFinite(el.duration)) return;
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const duration = el.duration;
+    const wasPaused = el.paused;
+    el.pause();
+
+    function seekTo(clientX: number) {
+      const fraction = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      el!.currentTime = fraction * duration;
+      if (progressFillRef.current) progressFillRef.current.style.transform = `scaleX(${fraction})`;
+      setScrub({ time: fraction * duration, duration });
+    }
+    seekTo(e.clientX);
+    function move(ev: PointerEvent) {
+      seekTo(ev.clientX);
+    }
+    function up() {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      setScrub(null);
+      if (!wasPaused) el!.play().catch(() => {});
+    }
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  }
+
   return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0"
-      onClick={handleClick}
-      {...longPressHandlers}
-    >
+    <div ref={containerRef} className="absolute inset-0" onClick={handleClick} {...longPressHandlers}>
       <video
         ref={videoRef}
         src={shouldLoad ? url : undefined}
@@ -243,64 +455,80 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
         preload="metadata"
         className="h-full w-full object-cover"
       />
-      {isPaused && (
+      {isPaused && !scrub && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <PlayIcon className="h-16 w-16 text-white/85 drop-shadow-[0_2px_10px_rgb(0_0_0_/_0.6)]" />
+          <span className="animate-rise-in flex h-[72px] w-[72px] items-center justify-center rounded-full bg-black/30 backdrop-blur-sm">
+            <PlayIcon className="ml-1 h-9 w-9 text-white/95" />
+          </span>
         </div>
       )}
-      {heartPop > 0 && (
-        <div key={heartPop} className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <HeartIcon
-            filled
-            className="h-28 w-28 animate-heart-pop text-white drop-shadow-[0_2px_14px_rgb(0_0_0_/_0.6)]"
-          />
+      {heartLayer}
+
+      {scrub && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-16 flex justify-center">
+          <span className="numeral rounded-full bg-black/45 px-3 py-1.5 text-[1rem] text-white backdrop-blur-xl">
+            {formatClock(scrub.time)} <span className="text-white/50">/ {formatClock(scrub.duration)}</span>
+          </span>
         </div>
       )}
+
+      {/* The scrub line. A tall invisible touch target over a thin
+          visible bar, which thickens while it's being dragged. */}
+      <div
+        onPointerDown={startScrub}
+        onClick={(e) => e.stopPropagation()}
+        className="absolute inset-x-0 bottom-0 z-[5] flex h-6 touch-none items-end"
+        role="slider"
+        aria-label="Seek"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={scrub ? Math.round((scrub.time / scrub.duration) * 100) : 0}
+      >
+        <div
+          className={`relative w-full overflow-hidden bg-white/20 transition-[height] duration-150 ${scrub ? "h-1.5" : "h-[2px]"}`}
+        >
+          <div ref={progressFillRef} className="h-full w-full origin-left scale-x-0 bg-white/90" />
+        </div>
+      </div>
     </div>
   );
 });
 
-/** A photo post has no native audio track of its own, unlike a video — so
- * an attached sound actually plays here (looped, synced to on-screen
- * visibility via the same 60%-visible threshold VideoMedia uses for
- * autoplay). A video post's attached sound is attribution/discovery only
- * (the chip in SwipeSlide below) — its own native audio keeps playing
- * unchanged, rather than layering a second audio source on top of it.
+/** A photo post has no audio track of its own, unlike a video — so an
+ * attached sound actually plays here (looped, synced to on-screen
+ * visibility via the same 60%-visible threshold VideoMedia uses). A video
+ * post's attached sound is attribution only — its own audio plays.
  *
- * Every major browser refuses to autoplay *audible* media from a non-
- * gesture context (this IntersectionObserver callback doesn't count) —
- * only muted autoplay is universally allowed. The old code just tried
- * `audio.play()` and swallowed the rejection, which on a first visit (no
- * prior site media engagement) meant the attached sound never made a
- * sound at all, with nothing on screen suggesting why. This now falls
- * back to muted playback the instant that happens, and surfaces a real
- * tap-to-unmute button — a genuine user gesture, which browsers do
- * honor — so there's always a way to actually hear it. */
+ * Browsers refuse to autoplay *audible* media from a non-gesture context,
+ * so this falls back to muted playback the instant that happens, and the
+ * caption's sound row carries a real tap-to-unmute. */
 function PhotoMedia({
   urls,
   shouldLoad,
   soundUrl,
   soundStartMs,
   onLongPress,
+  onDoubleTapLike,
+  audioRef,
+  onMutedChange,
 }: {
   urls: string[];
   shouldLoad: boolean;
   soundUrl: string | null;
-  /** Where in the attached sound to start — the part the poster picked
-   * in the composer's trim sheet, not necessarily the top of the file. */
+  /** Where in the attached sound to start — the part the poster picked. */
   soundStartMs: number;
   onLongPress: () => void;
+  onDoubleTapLike: () => void;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+  onMutedChange: (muted: boolean) => void;
 }) {
   const [index, setIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const lastTapRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const { spawn, layer: heartLayer } = useFloatingHearts();
 
-  // Loops just the chosen SOUND_CLIP_MS window, not the whole file — see
-  // use-sound-segment.ts. Requires the `loop` attribute to stay off the
-  // element itself (below), or the browser's own whole-file loop would
-  // fight this.
+  // Loops just the chosen window, not the whole file — see
+  // use-sound-segment.ts. The `loop` attribute stays off the element.
   useSoundSegment(audioRef, soundStartMs);
 
   function handleScroll() {
@@ -319,11 +547,9 @@ function PhotoMedia({
       ([entry]) => {
         if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
           audio.play().catch(() => {
-            // Audible autoplay was refused — muted autoplay never is, so
-            // fall back to that rather than staying silent with no
-            // recovery path.
-            setIsMuted(true);
-            setAutoplayBlocked(true);
+            // Audible autoplay was refused — muted autoplay never is.
+            audio.muted = true;
+            onMutedChange(true);
             audio.play().catch(() => {});
           });
         } else {
@@ -334,27 +560,33 @@ function PhotoMedia({
     );
     observer.observe(container);
     return () => observer.disconnect();
-  }, [soundUrl, shouldLoad]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onMutedChange is the parent's setState
+  }, [soundUrl, shouldLoad, audioRef]);
 
-  function toggleMute(e: React.MouseEvent) {
-    e.stopPropagation();
-    const audio = audioRef.current;
-    const next = !isMuted;
-    setIsMuted(next);
-    setAutoplayBlocked(false);
-    if (!audio) return;
-    audio.muted = next;
-    // This runs inside a real click handler, so — unlike the observer
-    // above — starting audible playback here is allowed even if the
-    // earlier automatic attempt was refused.
-    if (!next) audio.play().catch(() => {});
-  }
-
-  const { handlers: longPressHandlers } = useLongPress(onLongPress);
+  const handleTap = useDoubleTap(
+    () => {},
+    () => {
+      spawn(lastTapRef.current.x, lastTapRef.current.y);
+      onDoubleTapLike();
+    },
+  );
+  const { firedRef, handlers: longPressHandlers } = useLongPress(onLongPress);
 
   return (
-    <div className="absolute inset-0" {...longPressHandlers}>
-      {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} muted={isMuted} />}
+    <div
+      className="absolute inset-0"
+      onClick={(e) => {
+        if (firedRef.current) {
+          firedRef.current = false;
+          return;
+        }
+        const rect = e.currentTarget.getBoundingClientRect();
+        lastTapRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        handleTap();
+      }}
+      {...longPressHandlers}
+    >
+      {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} />}
       <div
         ref={containerRef}
         onScroll={handleScroll}
@@ -371,21 +603,64 @@ function PhotoMedia({
           />
         ))}
       </div>
+      {heartLayer}
       {urls.length > 1 && (
-        <div className="pointer-events-none absolute right-4 top-[calc(var(--slide-top-inset,0px)+1rem)] rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
-          {index + 1}/{urls.length}
+        <div
+          aria-label={`Photo ${index + 1} of ${urls.length}`}
+          className="pointer-events-none absolute inset-x-0 bottom-2.5 flex justify-center gap-1.5"
+        >
+          {urls.map((url, i) => (
+            <span
+              key={`${url}-${i}`}
+              className={`h-1.5 rounded-full shadow-[0_0_3px_rgb(0_0_0/0.5)] transition-all duration-300 ease-[var(--ease-ios)] ${
+                i === index ? "w-4 bg-white" : "w-1.5 bg-white/45"
+              }`}
+            />
+          ))}
         </div>
       )}
-      {soundUrl && shouldLoad && (
-        <button
-          type="button"
-          onClick={toggleMute}
-          aria-label={isMuted ? "Unmute sound" : "Mute sound"}
-          className={`pointer-events-auto absolute right-3 top-[calc(var(--slide-top-inset,0px)+3.5rem)] flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white ${
-            autoplayBlocked && isMuted ? "animate-pulse" : ""
-          }`}
-        >
-          <VolumeIcon muted={isMuted} className="h-4 w-4" />
+    </div>
+  );
+}
+
+/** Two lines of caption, with the rest a tap away — and the scrim behind
+ * it deepens when it opens so long text stays readable over any frame. */
+function Caption({ text, onExpandedChange }: { text: string; onExpandedChange: (open: boolean) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      if (!expanded) setOverflows(el.scrollHeight > el.clientHeight + 1);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [expanded, text]);
+
+  function toggle(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!overflows && !expanded) return;
+    const next = !expanded;
+    setExpanded(next);
+    onExpandedChange(next);
+  }
+
+  return (
+    <div onClick={toggle} className={overflows || expanded ? "cursor-pointer" : undefined}>
+      <div
+        ref={ref}
+        className={`text-[0.9375rem] leading-snug text-white ${
+          expanded ? "no-scrollbar max-h-[38vh] overflow-y-auto" : "line-clamp-2"
+        }`}
+      >
+        <CaptionText text={text} className="whitespace-pre-line" />
+      </div>
+      {(overflows || expanded) && (
+        <button type="button" onClick={toggle} className="mt-0.5 text-[0.875rem] font-semibold text-white/70">
+          {expanded ? "less" : "more"}
         </button>
       )}
     </div>
@@ -406,17 +681,21 @@ export function SwipeSlide({
   const isVideo = data.media[0]?.kind === "video";
   const containerRef = useRef<HTMLDivElement>(null);
   const videoMediaRef = useRef<VideoMediaHandle>(null);
+  const photoAudioRef = useRef<HTMLAudioElement>(null);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [commentCount, setCommentCount] = useState(data.commentCount);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [captionOpen, setCaptionOpen] = useState(false);
   // Mirror of VideoMedia's own mute state, just for PostContextMenu's
-  // label/icon — see VideoMediaHandle's doc comment for why the mute
-  // itself has to happen inside VideoMedia rather than here.
+  // label — see VideoMediaHandle.
   const [isMuted, setIsMuted] = useState(false);
+  const [photoSoundMuted, setPhotoSoundMuted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isOnScreen, setIsOnScreen] = useState(false);
   const [shouldLoadMedia, setShouldLoadMedia] = useState(false);
+  const [likeBurst, setLikeBurst] = useState(0);
   // Local override so an edited caption shows immediately — `data` is a
-  // snapshot from whichever server fetch produced this slide, and
-  // there's no cheap way to force that all the way back in sync after
-  // a caption edit without a full page reload.
+  // snapshot from whichever server fetch produced this slide.
   const [captionOverride, setCaptionOverride] = useState<string | null | undefined>(undefined);
   const displayedCaption = captionOverride === undefined ? data.post.caption : captionOverride;
   const { liked, count: likeCount, toggle: toggleLike, like } = usePostLike(
@@ -425,23 +704,39 @@ export function SwipeSlide({
     data.likeCount,
   );
 
+  function handleToggleLike() {
+    if (!liked) setLikeBurst((n) => n + 1);
+    toggleLike();
+  }
+
+  function handleDoubleTapLike() {
+    if (!liked) setLikeBurst((n) => n + 1);
+    like();
+  }
+
   function closeMenu() {
     setMenuOpen(false);
     videoMediaRef.current?.resumeAfterMenuClose();
   }
 
+  function togglePhotoSound(e: React.MouseEvent) {
+    e.stopPropagation();
+    const audio = photoAudioRef.current;
+    const next = !photoSoundMuted;
+    setPhotoSoundMuted(next);
+    if (!audio) return;
+    audio.muted = next;
+    // A real click, so audible playback is allowed here even if the
+    // automatic attempt was refused.
+    if (!next) audio.play().catch(() => {});
+  }
+
   useEffect(() => {
-    // Every post the feed has fetched (initial batch, every infinite-
-    // scroll page, every category switch) used to mount a real <video>/
-    // <img src> the instant it rendered, regardless of whether it was
-    // ever scrolled to — this is what actually drove Supabase Storage
-    // egress into the 300%+ range with only a handful of real users.
-    // A generous rootMargin starts the request a bit before the slide is
-    // actually on screen (so scrolling still feels instant) without
-    // loading every post in the whole list up front. Once true it stays
-    // true — the point is "don't fetch until needed," not "unload it
-    // again the moment it scrolls away," which would just force a
-    // re-fetch on scrolling back.
+    // Every post the feed has fetched used to mount a real <video>/<img
+    // src> the instant it rendered, regardless of whether it was ever
+    // scrolled to — that drove Supabase Storage egress past 300% with a
+    // handful of users. A generous rootMargin starts the request a bit
+    // before the slide is on screen. Once true it stays true.
     if (shouldLoadMedia) return;
     const el = containerRef.current;
     if (!el) return;
@@ -456,27 +751,25 @@ export function SwipeSlide({
   }, [shouldLoadMedia]);
 
   useEffect(() => {
-    if (!data.isAuthenticated) return;
     const el = containerRef.current;
     if (!el) return;
 
-    // Fires once per crossing into >60% visible — not continuously while
-    // it stays visible — so scrolling away and back (or a post the user
-    // returns to later) attempts a new view each time. The cooldown that
-    // actually prevents over-counting lives server-side now
-    // (recordPostView, lib/db/post-views.ts), since every rewatch is
-    // meant to count, just not unboundedly.
+    // Fires once per crossing into >60% visible, so scrolling away and
+    // back attempts a new view each time. The cooldown that prevents
+    // over-counting lives server-side (recordPostView).
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
-          recordViewAction(data.post.id);
-        }
+        const visible = entry.isIntersecting && entry.intersectionRatio > 0.6;
+        setIsOnScreen(visible);
+        if (visible && data.isAuthenticated) recordViewAction(data.post.id);
       },
       { threshold: [0, 0.6, 1] },
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, [data.isAuthenticated, data.post.id]);
+
+  const discSpinning = isVideo ? isPlaying : isOnScreen;
 
   return (
     <div
@@ -491,9 +784,10 @@ export function SwipeSlide({
             shouldLoad={shouldLoadMedia}
             postId={data.post.id}
             trackCompletion={data.isAuthenticated}
-            onDoubleTapLike={like}
+            onDoubleTapLike={handleDoubleTapLike}
             onLongPress={() => setMenuOpen(true)}
             onMutedChange={setIsMuted}
+            onPlayingChange={setIsPlaying}
           />
         ) : (
           <PhotoMedia
@@ -502,8 +796,20 @@ export function SwipeSlide({
             soundUrl={data.soundUrl}
             soundStartMs={data.soundStartMs}
             onLongPress={() => setMenuOpen(true)}
+            onDoubleTapLike={handleDoubleTapLike}
+            audioRef={photoAudioRef}
+            onMutedChange={setPhotoSoundMuted}
           />
         ))}
+
+      {/* Scrims: a light one under the floating top bar, and one along
+          the bottom under the caption that deepens when it opens. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/40 to-transparent" />
+      <div
+        className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t transition-[height,opacity] duration-300 ${
+          captionOpen ? "h-[70%] from-black/85 via-black/55 to-transparent" : "h-[45%] from-black/70 via-black/20 to-transparent"
+        }`}
+      />
 
       <PostContextMenu
         open={menuOpen}
@@ -521,72 +827,80 @@ export function SwipeSlide({
         onToggleMute={() => videoMediaRef.current?.toggleMute()}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 pb-6">
-        <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.5rem)] text-white">
-          <Link
-            href={`/u/${data.authorUsername}?from=${data.post.id}`}
-            className="flex items-center gap-1.5 text-base font-bold hover:underline"
-          >
-            @{data.authorUsername}
+      {/* Who, what car, what they said, what's playing. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-5">
+        <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.75rem)] text-white [text-shadow:0_1px_3px_rgb(0_0_0/0.5)]">
+          <div className="flex items-center gap-1.5">
+            <Link
+              href={`/u/${data.authorUsername}?from=${data.post.id}`}
+              className="truncate text-[1.0625rem] font-bold tracking-[-0.01em]"
+            >
+              {data.authorUsername}
+            </Link>
             {data.authorIsVerified && (
-              <VerifiedBadgeIcon className="h-4.5 w-4.5 flex-shrink-0 text-accent" />
+              <VerifiedBadgeIcon className="h-4 w-4 flex-shrink-0 text-accent" />
             )}
-          </Link>
+            <span className="flex-shrink-0 text-[0.8125rem] text-white/60" suppressHydrationWarning>
+              · {relativeTime(data.post.created_at)}
+            </span>
+          </div>
+
           {data.vehicleTitle && data.post.vehicle_id && (
             <Link
               href={`/garage/${data.post.vehicle_id}?from=${data.post.id}`}
-              className="block text-xs text-white/70 hover:text-white"
+              className="pressable mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 py-1 pl-2 pr-2.5 text-[0.8125rem] font-semibold backdrop-blur-md [text-shadow:none]"
             >
-              • {data.vehicleTitle}
+              <WheelIcon className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="truncate">{data.vehicleTitle}</span>
             </Link>
           )}
-          {data.soundTitle && data.soundId && (
-            <Link
-              href={`/sounds/${data.soundId}`}
-              className="mt-1 flex items-center gap-1 text-xs text-white/80 hover:text-white"
-            >
-              <MusicIcon className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">{data.soundTitle}</span>
-            </Link>
-          )}
+
           {displayedCaption && (
-            <CaptionText
-              text={displayedCaption}
-              className="mt-1.5 line-clamp-2 text-sm text-white/90"
-            />
+            <div className="mt-1.5">
+              <Caption text={displayedCaption} onExpandedChange={setCaptionOpen} />
+            </div>
           )}
-          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-white/60">
-            <EyeIcon className="h-3.5 w-3.5" />
-            <span className="numeral">{formatCompactNumber(data.viewCount)}</span>
-            view{data.viewCount === 1 ? "" : "s"}
-          </p>
+
+          <div className="mt-2 flex items-center gap-3 text-[0.8125rem] text-white/85">
+            {data.soundTitle && data.soundId ? (
+              <div className="flex min-w-0 items-center gap-1.5">
+                {!isVideo && data.soundUrl ? (
+                  <button
+                    type="button"
+                    onClick={togglePhotoSound}
+                    aria-label={photoSoundMuted ? "Turn sound on" : "Turn sound off"}
+                    className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-white/15 backdrop-blur-md"
+                  >
+                    <VolumeIcon muted={photoSoundMuted} className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <MusicIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                )}
+                <Link href={`/sounds/${data.soundId}`} className="min-w-0 max-w-[13rem] overflow-hidden">
+                  <span className={`flex w-max gap-8 whitespace-nowrap ${data.soundTitle.length > 24 ? "animate-marquee" : ""}`}>
+                    <span>{data.soundTitle}</span>
+                    {data.soundTitle.length > 24 && <span aria-hidden>{data.soundTitle}</span>}
+                  </span>
+                </Link>
+              </div>
+            ) : null}
+            <span className="flex flex-shrink-0 items-center gap-1 text-white/60">
+              <EyeIcon className="h-3.5 w-3.5" />
+              <span className="numeral">{formatCompactNumber(data.viewCount)}</span>
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="pointer-events-auto absolute bottom-6 right-3 flex flex-col items-center gap-6 text-white [&_svg]:drop-shadow-[0_1px_5px_rgb(0_0_0_/_0.7)]">
-        <div className="relative">
-          <Link href={`/u/${data.authorUsername}?from=${data.post.id}`}>
-            <RankFrame
-              score={data.authorBestRatingScore}
-              compact
-              hideBadge
-              // The fixed accent-red halo is only for an unranked
-              // author (RankFrame renders no ring at all when score is
-              // null, so without this the avatar reads flat against a
-              // busy video background) — applying it unconditionally
-              // used to layer a constant red glow behind every ranked
-              // tier's own ring too, which looked like a second Ruby
-              // ring bleeding through non-red tiers (Cosmic especially).
-              className={`rounded-full ${
-                data.authorBestRatingScore == null
-                  ? "shadow-[0_0_0_2px_rgb(255_68_51_/_0.35),0_0_16px_2px_rgb(255_68_51_/_0.35)]"
-                  : ""
-              }`}
-            >
+      {/* The action rail. */}
+      <div className="absolute bottom-5 right-2 flex w-14 flex-col items-center gap-3.5">
+        <div className="relative mb-2">
+          <Link href={`/u/${data.authorUsername}?from=${data.post.id}`} aria-label={`@${data.authorUsername}'s profile`}>
+            <RankFrame score={data.authorBestRatingScore} compact hideBadge className="rounded-full">
               <Avatar
                 username={data.authorUsername}
                 avatarUrl={data.authorAvatarUrl}
-                className="h-14 w-14 border-2 border-white text-base"
+                className="h-12 w-12 border-[1.5px] border-white text-base"
               />
             </RankFrame>
           </Link>
@@ -599,52 +913,40 @@ export function SwipeSlide({
           )}
         </div>
 
-        {data.isAuthenticated ? (
-          <button
-            type="button"
-            onClick={toggleLike}
-            aria-pressed={liked}
-            aria-label={liked ? "Unlike" : "Like"}
-            className={`flex flex-col items-center gap-1.5 transition-colors ${
-              liked ? "text-accent" : "text-white hover:text-white/80"
-            }`}
-          >
-            <HeartIcon className="h-9 w-9" filled={liked} />
-            {likeCount > 0 && (
-              <span className="numeral text-sm">{formatCompactNumber(likeCount)}</span>
-            )}
-          </button>
-        ) : (
-          <Link href="/login" className="flex flex-col items-center gap-1.5 text-white">
-            <HeartIcon className="h-9 w-9" />
-            {likeCount > 0 && (
-              <span className="numeral text-sm">{formatCompactNumber(likeCount)}</span>
-            )}
-          </Link>
-        )}
+        <LikeAction
+          liked={liked}
+          count={likeCount}
+          onToggle={handleToggleLike}
+          isAuthenticated={data.isAuthenticated}
+          burstKey={likeBurst}
+        />
 
-        <button
-          type="button"
+        <RailAction
           onClick={() => setCommentsOpen(true)}
-          className="flex flex-col items-center gap-1.5 text-white/90 hover:text-white"
+          label="Comments"
+          caption={commentCount > 0 ? formatCompactNumber(commentCount) : null}
         >
-          <CommentIcon className="h-9 w-9" />
-          {data.commentCount > 0 && (
-            <span className="numeral text-sm">{formatCompactNumber(data.commentCount)}</span>
-          )}
-        </button>
+          <CommentIcon className="h-[31px] w-[31px]" strokeWidth={1.9} />
+        </RailAction>
 
         <SaveButton
           postId={data.post.id}
           initialSaved={data.isSaved}
           initialCount={data.saveCount}
           isAuthenticated={data.isAuthenticated}
-          iconClassName="h-9 w-9"
-          className="flex flex-col items-center gap-1.5"
-          countClassName="numeral text-sm"
+          variant="rail"
         />
 
-        <ShareButton postId={data.post.id} />
+        <ShareAction postId={data.post.id} />
+
+        {data.soundId && (
+          <SoundDisc
+            soundId={data.soundId}
+            avatarUrl={data.authorAvatarUrl}
+            username={data.authorUsername}
+            spinning={discSpinning}
+          />
+        )}
       </div>
 
       <CommentSheet
@@ -653,6 +955,7 @@ export function SwipeSlide({
         onClose={() => setCommentsOpen(false)}
         isAuthenticated={data.isAuthenticated}
         initialCount={data.commentCount}
+        onCountChange={setCommentCount}
       />
     </div>
   );

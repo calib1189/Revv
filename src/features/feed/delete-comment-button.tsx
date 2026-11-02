@@ -29,7 +29,7 @@ export function DeleteCommentButton({
       type="button"
       disabled={isPending}
       onClick={handleClick}
-      className="text-xs text-muted hover:text-danger disabled:opacity-60"
+      className="font-semibold text-muted hover:text-danger disabled:opacity-60"
     >
       {isPending ? "Deleting…" : "Delete"}
     </button>
