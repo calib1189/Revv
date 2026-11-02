@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { isSafeAppPath } from "@/lib/push/validation";
+import { installEdgeSwipeBack } from "@/lib/native/edge-swipe-back";
 import {
   listenForNotificationTaps,
   promptForNativePushIfNeverAsked,
@@ -26,6 +27,7 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
     let listenerHandle: { remove: () => void } | undefined;
     let tapHandle: { remove: () => void } | undefined;
     let resumeListenerHandle: { remove: () => void } | undefined;
+    let removeEdgeSwipe: (() => void) | undefined;
 
     (async () => {
       const { Capacitor } = await import("@capacitor/core");
@@ -34,6 +36,8 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
       // Scopes the scrollbar-hiding CSS below to the native app only — a
       // regular desktop browser should keep its normal scrollbar.
       document.documentElement.classList.add("native-app");
+
+      if (!cancelled) removeEdgeSwipe = installEdgeSwipeBack();
 
       const [{ StatusBar, Style }, { SplashScreen }, { App }, { Browser }] = await Promise.all([
         import("@capacitor/status-bar"),
@@ -143,6 +147,7 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
 
     return () => {
       cancelled = true;
+      removeEdgeSwipe?.();
       listenerHandle?.remove();
       tapHandle?.remove();
       resumeListenerHandle?.remove();
