@@ -2,13 +2,25 @@
 
 import { useEffect } from "react";
 import { isSafeAppPath } from "@/lib/push/validation";
-import { listenForNotificationTaps, refreshNativePushRegistration } from "@/lib/native/push";
+import {
+  listenForNotificationTaps,
+  promptForNativePushIfNeverAsked,
+  refreshNativePushRegistration,
+} from "@/lib/native/push";
 
 /** No-ops entirely on the regular web/PWA — only does anything when this
  * page is running inside the Capacitor-wrapped native shell. Dynamically
  * imported so the Capacitor JS bridge is never pulled into the ordinary
  * web bundle. */
-export function NativeAppBridge() {
+export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
+  // Re-runs when someone signs in (the layout re-renders with the new
+  // value), so a first launch that starts logged out still gets asked
+  // right after they log in. No-ops on the web and once iOS has recorded
+  // an answer.
+  useEffect(() => {
+    if (isSignedIn) void promptForNativePushIfNeverAsked();
+  }, [isSignedIn]);
+
   useEffect(() => {
     let cancelled = false;
     let listenerHandle: { remove: () => void } | undefined;

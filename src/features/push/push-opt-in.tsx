@@ -32,6 +32,24 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 
 type Status = "loading" | "unsupported" | "ios-needs-install" | "denied" | "off" | "on";
 
+const NATIVE_CHECK_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("timed out")), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 function isIos(): boolean {
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
@@ -57,17 +75,35 @@ export function PushOptIn() {
     (async () => {
       if (await isNativeApp()) {
         setIsNative(true);
-        const permission = await getNativePushPermission();
-        if (permission === "denied") {
-          setStatus("denied");
-          return;
+        try {
+          // A bounded wait: this used to have no timeout and no catch, so
+          // anything that failed or never answered left the switch as a
+          // spinner forever with nothing to say why.
+          const permission = await withTimeout(getNativePushPermission(), NATIVE_CHECK_TIMEOUT_MS);
+          if (permission === "denied") {
+            setStatus("denied");
+            return;
+          }
+          // Ask the server, not localStorage: the remembered token
+          // survives a sign-out, so trusting it would show "on" for a
+          // different person who signed in on the same phone.
+          const token = readStoredPushToken();
+          const attached =
+            permission === "granted" && token
+              ? await withTimeout(hasDeviceTokenAction(token), NATIVE_CHECK_TIMEOUT_MS)
+              : false;
+          setStatus(attached ? "on" : "off");
+        } catch (err) {
+          // Show the switch anyway so it can be tried, and say what
+          // actually went wrong — the message is what lets this be
+          // diagnosed from a screenshot.
+          setStatus("off");
+          setError(
+            `Couldn't read this device's notification settings (${
+              err instanceof Error ? err.message : "no response"
+            }).`,
+          );
         }
-        // Ask the server, not localStorage: the remembered token
-        // survives a sign-out, so trusting it would show "on" for a
-        // different person who signed in on the same phone.
-        const token = readStoredPushToken();
-        const attached = permission === "granted" && token ? await hasDeviceTokenAction(token) : false;
-        setStatus(attached ? "on" : "off");
         return;
       }
       if (!VAPID_PUBLIC_KEY || !("serviceWorker" in navigator) || !("PushManager" in window)) {

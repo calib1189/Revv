@@ -104,15 +104,34 @@ export async function disableNativePush(): Promise<void> {
   await plugin?.unregister().catch(() => {});
 }
 
+/** The first-open "Allow notifications?" prompt. Only fires while the
+ * permission is still undecided — iOS reports "prompt" until the person
+ * has answered once, and never shows the system dialog a second time, so
+ * this can't nag. Called once someone is signed in rather than at the
+ * very first frame: the device token has to be attached to an account to
+ * be of any use, and a signed-out first launch would just get a token
+ * nothing could be sent to. Best-effort — a failure here only means the
+ * Notifications settings screen is still there to turn it on. */
+export async function promptForNativePushIfNeverAsked(): Promise<void> {
+  try {
+    const plugin = await loadPlugin();
+    if (!plugin) return;
+    const { receive } = await plugin.checkPermissions();
+    if (receive !== "prompt") return;
+    await enableNativePush();
+  } catch {
+    // intentionally silent
+  }
+}
+
 /** Called once per app launch. If notifications were already allowed,
  * re-registers so the server always holds the CURRENT token: APNs may
  * rotate it, an app reinstall issues a new one, and a phone that changed
  * hands needs its token reassigned to whoever is signed in now.
  *
- * Never prompts. Asking for notification permission the instant the app
- * opens, before anyone has any idea what it would be used for, is both a
- * poor experience and a common review complaint. Permission is only ever
- * requested from the Notifications settings screen. */
+ * Never prompts itself — the first-open prompt is
+ * promptForNativePushIfNeverAsked, and the Notifications settings screen
+ * remains the way to turn it on after an earlier refusal. */
 export async function refreshNativePushRegistration(): Promise<void> {
   const plugin = await loadPlugin();
   if (!plugin) return;

@@ -64,7 +64,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="flex min-h-full flex-col">
-        <NativeAppBridge />
+        <NativeAppBridge isSignedIn={Boolean(user)} />
         <TabPagerProvider>
           <Header />
           <div
