@@ -372,7 +372,7 @@ function PhotoMedia({
         ))}
       </div>
       {urls.length > 1 && (
-        <div className="pointer-events-none absolute right-4 top-4 rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
+        <div className="pointer-events-none absolute right-4 top-[calc(var(--slide-top-inset,0px)+1rem)] rounded-full bg-black/50 px-2.5 py-1 text-xs font-medium text-white">
           {index + 1}/{urls.length}
         </div>
       )}
@@ -381,7 +381,7 @@ function PhotoMedia({
           type="button"
           onClick={toggleMute}
           aria-label={isMuted ? "Unmute sound" : "Mute sound"}
-          className={`pointer-events-auto absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white ${
+          className={`pointer-events-auto absolute right-3 top-[calc(var(--slide-top-inset,0px)+3.5rem)] flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white ${
             autoplayBlocked && isMuted ? "animate-pulse" : ""
           }`}
         >

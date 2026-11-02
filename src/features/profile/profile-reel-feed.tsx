@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { SwipeSlide } from "@/features/feed/swipe-slide";
 import { BackIcon } from "@/components/ui/icons";
 import type { PostCardData } from "@/features/feed/post-card";
@@ -25,28 +25,31 @@ export function ProfileReelFeed({
   headerContent?: ReactNode;
 }) {
   const [posts, setPosts] = useState(initialPosts);
-  // The top bar's real height isn't just its 56px of content — it also
-  // has pt-[env(safe-area-inset-top)] for the notch/Dynamic Island
-  // (top-tab-bar.tsx), and the bottom nav (fixed, so out of normal
-  // document flow entirely) is 64px plus env(safe-area-inset-bottom) for
-  // the home-indicator area. The previous fix only added the bottom
-  // inset and missed the top one — on any notched iPhone that's another
-  // 44-59px this box was too tall by, which is exactly enough to still
-  // push the bottom of the video behind the fixed nav. Both insets are
-  // zero on a device with no notch and no home-indicator gesture area,
-  // so this doesn't change anything there.
-  const feedHeight = isAuthenticated
-    ? "h-[calc(100dvh-56px-env(safe-area-inset-top)-64px-env(safe-area-inset-bottom))]"
-    : "h-[calc(100dvh-56px-env(safe-area-inset-top))]";
+
+  // A fixed layer that sits over the site's top tab bar and footer, so the
+  // video runs from the very top of the screen (under the status bar) down
+  // to the bottom nav instead of being boxed in by chrome that has nothing
+  // to do with watching a post. The bottom nav is deliberately left
+  // showing for a signed-in viewer — the layer just stops above it — so
+  // the way back to the main tabs is never taken away. --slide-top-inset
+  // pushes the in-slide controls (photo counter, sound mute) clear of the
+  // notch; it's unset everywhere else, where the slide already starts
+  // below the top bar.
+  const bottomOffset = isAuthenticated
+    ? "bottom-[calc(4rem+env(safe-area-inset-bottom))]"
+    : "bottom-0";
 
   return (
-    <div className="relative">
-      <div className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}>
+    <div
+      className={`fixed inset-x-0 top-0 z-20 bg-black ${bottomOffset}`}
+      style={{ "--slide-top-inset": "env(safe-area-inset-top)" } as CSSProperties}
+    >
+      <div className="no-scrollbar h-full snap-y snap-mandatory overflow-y-auto">
         {posts.map((post) => (
           <SwipeSlide
             key={post.post.id}
             data={post}
-            slideHeight={feedHeight}
+            slideHeight="h-full"
             onBlocked={(authorId) => setPosts((prev) => prev.filter((p) => p.authorId !== authorId))}
           />
         ))}
@@ -55,13 +58,15 @@ export function ProfileReelFeed({
       <Link
         href={backHref}
         aria-label="Back"
-        className="absolute left-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white"
+        className="pressable absolute left-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm"
       >
         <BackIcon className="h-5 w-5" />
       </Link>
 
       {headerContent && (
-        <div className="absolute inset-x-16 top-4 z-10">{headerContent}</div>
+        <div className="absolute inset-x-16 top-[calc(env(safe-area-inset-top)+0.75rem)] z-10">
+          {headerContent}
+        </div>
       )}
     </div>
   );

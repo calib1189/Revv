@@ -47,6 +47,11 @@ class MainViewController: CAPBridgeViewController {
         webView?.scrollView.alwaysBounceHorizontal = false
         webView?.scrollView.showsVerticalScrollIndicator = false
         webView?.scrollView.showsHorizontalScrollIndicator = false
+        // Swiping in from the left edge goes back to the previous screen,
+        // like Safari and every native iOS app. Next.js navigations push
+        // real history entries, so WebKit's own back/forward gesture
+        // already knows where "back" is — it just ships switched off.
+        webView?.allowsBackForwardNavigationGestures = true
         scheduleStallChecks()
     }
 
