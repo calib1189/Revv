@@ -30,6 +30,14 @@ import {
   type ShopAnalyticsCounts,
 } from "@/lib/db/shop-promotion-events";
 import {
+  deleteShopPicture,
+  getShopPicture,
+  getShopPictureUrls,
+  insertShopPicture,
+  updateShopPictureMedia,
+} from "@/lib/db/shop-pictures";
+import { getMediaById } from "@/lib/db/media";
+import {
   buildPlacesCacheKey,
   buildPlacesTextLocationCacheKey,
   getCachedPlacesSearch,
@@ -45,6 +53,9 @@ import type { Database } from "@/lib/supabase/database.types";
 export interface ShopResult extends Shop {
   /** Null when this shop has no active promotion. */
   promotionTier: ShopPromotionTier | null;
+  /** The shop's profile picture — a verified business's logo, or one a
+   * promoter added (see getShopPictureUrls). Null when it has neither. */
+  pictureUrl: string | null;
 }
 
 export interface ShopSearchActionResponse {
@@ -71,13 +82,17 @@ async function withPromotionStatus(
 ): Promise<ShopSearchActionResponse> {
   if (shops.length === 0) return { shops: [], isMock, rateLimited: false };
 
-  const tiers = await getActivePromotionTiers(
-    supabase,
-    shops.map((s) => s.placeId),
+  const placeIds = shops.map((s) => s.placeId);
+  const tiers = await getActivePromotionTiers(supabase, placeIds);
+  // Pictures are decoration: a failed lookup (or 0093 not applied yet)
+  // shows the category icon, never an empty search.
+  const pictureUrls = await getShopPictureUrls(supabase, placeIds).catch(
+    () => new Map<string, string>(),
   );
   const withPromotion: ShopResult[] = shops.map((shop) => ({
     ...shop,
     promotionTier: tiers.get(shop.placeId) ?? null,
+    pictureUrl: pictureUrls.get(shop.placeId) ?? null,
   }));
   withPromotion.sort((a, b) => {
     const rankA = a.promotionTier ? SHOP_PROMOTION_TIER_RANK[a.promotionTier] : 0;
@@ -324,10 +339,14 @@ export async function createShopPromotionAction({
   placeName,
   tier,
   category,
+  pictureMediaId,
 }: {
   placeId: string;
   placeName: string;
   tier: string;
+  /** A photo the promoter just uploaded to become the shop's profile
+   * picture once this is paid for (see applyPromotionPicture). */
+  pictureMediaId?: string | null;
   /** Which category browse this promotion should guarantee visibility
    * in — see searchNearbyShopsAction's injectMissingPromotedShops. Null
    * when the promoter came from a context with no category to infer
@@ -353,6 +372,13 @@ export async function createShopPromotionAction({
   const { supabase, user } = await requireUser();
   if (!user.email) return { error: "Your account needs a confirmed email." };
 
+  if (pictureMediaId) {
+    const media = await getMediaById(supabase, pictureMediaId).catch(() => null);
+    if (!media || media.owner_id !== user.id || media.kind !== "image") {
+      return { error: "Couldn't use that picture. Choose it again." };
+    }
+  }
+
   let promotion;
   try {
     promotion = await createShopPromotion(supabase, {
@@ -362,6 +388,9 @@ export async function createShopPromotionAction({
       tier,
       category: category ?? null,
       price_cents: SHOP_PROMOTION_TIERS[tier].priceCents,
+      // Only sent when there is one, so promoting still works before
+      // 0093 (which adds the column) has been applied.
+      ...(pictureMediaId ? { picture_media_id: pictureMediaId } : {}),
     });
   } catch {
     return { error: "Couldn't start that promotion. Try again." };
@@ -369,10 +398,13 @@ export async function createShopPromotionAction({
 
   // Native never reaches this action at all anymore (see
   // createWebHandoffAction's doc comment) — checkout only ever runs on
-  // the web, so these are always plain web URLs.
+  // the web, so these are always plain web URLs. Both come back to the
+  // shop's own page: that's where its picture and analytics live.
   const origin = (await headers()).get("origin");
-  const successUrl = `${origin}/discover?success=1`;
-  const cancelUrl = `${origin}/discover`;
+  const shopPath = `/discover/shop/${encodeURIComponent(placeId)}`;
+  const categoryQuery = category ? `category=${encodeURIComponent(category)}&` : "";
+  const successUrl = `${origin}${shopPath}?${categoryQuery}promoted=1`;
+  const cancelUrl = `${origin}${shopPath}${category ? `?category=${encodeURIComponent(category)}` : ""}#promote`;
 
   let url: string | null;
   try {
@@ -541,6 +573,53 @@ export async function getShopAnalyticsAction(placeId: string): Promise<ShopAnaly
 
   const counts = await getShopAnalyticsCounts(supabase, placeId);
   return { counts, hasAccess: true, requiresAuth: false };
+}
+
+export interface ShopPictureResult {
+  error?: string;
+}
+
+/** Sets (or changes) a shop's profile picture from a photo the person
+ * just uploaded. RLS is the real gate (0093) — these checks are only so
+ * each refusal comes back with the actual reason. */
+export async function saveShopPictureAction({
+  placeId,
+  mediaId,
+}: {
+  placeId: string;
+  mediaId: string;
+}): Promise<ShopPictureResult> {
+  if (!placeId || !mediaId) return { error: "Choose a picture first." };
+  const { supabase, user } = await requireUser();
+
+  try {
+    const existing = await getShopPicture(supabase, placeId);
+    if (existing && existing.owner_id !== user.id) {
+      return { error: "Someone else has already added this shop's picture." };
+    }
+    if (existing) {
+      await updateShopPictureMedia(supabase, placeId, mediaId);
+      return {};
+    }
+    if (!(await hasPromotedShop(supabase, placeId))) {
+      return { error: "Promote this shop first to add its picture." };
+    }
+    await insertShopPicture(supabase, { placeId, ownerId: user.id, mediaId });
+    return {};
+  } catch {
+    return { error: "Couldn't save that picture. Try again." };
+  }
+}
+
+/** For the picture's owner, or an admin taking one down. */
+export async function removeShopPictureAction(placeId: string): Promise<ShopPictureResult> {
+  const { supabase } = await requireUser();
+  try {
+    const removed = await deleteShopPicture(supabase, placeId);
+    return removed ? {} : { error: "Only whoever added this picture can remove it." };
+  } catch {
+    return { error: "Couldn't remove that picture. Try again." };
+  }
 }
 
 const EMPTY_SHOP_ANALYTICS: ShopAnalyticsCounts = {

@@ -85,8 +85,13 @@ export function ShopCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
-          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-surface-raised text-accent">
-            <CategoryIcon className="h-4 w-4" />
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-raised text-accent">
+            {shop.pictureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- 36px avatar, next/image overhead isn't worth it here
+              <img src={shop.pictureUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <CategoryIcon className="h-4 w-4" />
+            )}
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2">

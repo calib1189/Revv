@@ -912,6 +912,7 @@ export interface Database {
           stripe_checkout_session_id: string | null;
           starts_at: string | null;
           ends_at: string | null;
+          picture_media_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -926,9 +927,26 @@ export interface Database {
           stripe_checkout_session_id?: string | null;
           starts_at?: string | null;
           ends_at?: string | null;
+          picture_media_id?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["shop_promotions"]["Insert"]>;
+        Relationships: never[];
+      };
+      shop_pictures: {
+        Row: {
+          place_id: string;
+          owner_id: string;
+          media_id: string;
+          created_at: string;
+        };
+        Insert: {
+          place_id: string;
+          owner_id: string;
+          media_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["shop_pictures"]["Insert"]>;
         Relationships: never[];
       };
       business_profiles: {

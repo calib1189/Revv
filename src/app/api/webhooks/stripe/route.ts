@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { verifyStripeSignature } from "@/lib/billing/stripe";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { SHOP_PROMOTION_DURATION_DAYS } from "@/lib/db/shop-promotions";
+import { applyPromotionPicture } from "@/lib/db/shop-pictures";
 
 interface StripeEvent {
   type: string;
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
       if (promotionId) {
         const now = new Date();
         const endsAt = new Date(now.getTime() + SHOP_PROMOTION_DURATION_DAYS * 24 * 60 * 60 * 1000);
-        const { error } = await supabase
+        const { data: promotion, error } = await supabase
           .from("shop_promotions")
           .update({
             status: "active",
@@ -85,9 +86,20 @@ export async function POST(request: NextRequest) {
             ends_at: endsAt.toISOString(),
             stripe_checkout_session_id: (session.id as string) ?? null,
           })
-          .eq("id", promotionId);
+          .eq("id", promotionId)
+          .select("*")
+          .maybeSingle();
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+        // Never fails the webhook: the paid promotion is what matters, and
+        // a picture that didn't land can still be added from the shop page.
+        if (promotion) {
+          try {
+            await applyPromotionPicture(supabase, promotion);
+          } catch (pictureError) {
+            console.error("Shop promotion picture not applied:", pictureError);
+          }
         }
       }
       return NextResponse.json({ received: true });

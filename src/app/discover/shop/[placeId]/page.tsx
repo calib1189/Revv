@@ -5,8 +5,17 @@ import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/
 import { createClient } from "@/lib/supabase/server";
 import { getShopDetailsAction, recordShopProfileVisitAction } from "@/features/shops/actions";
 import { getShopCategory, isShopCategoryId } from "@/lib/shops/categories";
-import { SHOP_PROMOTION_TIERS, type ShopPromotionTier } from "@/lib/db/shop-promotions";
+import {
+  SHOP_PROMOTION_DURATION_DAYS,
+  SHOP_PROMOTION_TIERS,
+  type ShopPromotionTier,
+} from "@/lib/db/shop-promotions";
 import { getBusinessProfileByPlaceId } from "@/lib/db/business-profiles";
+import { getShopPicture, type ShopPicture } from "@/lib/db/shop-pictures";
+import { hasPromotedShop } from "@/lib/db/shop-promotion-events";
+import { getProfileByUserId } from "@/lib/db/profiles";
+import { getCurrentUser } from "@/lib/auth/get-user";
+import { ShopPictureCard, type ShopPictureMode } from "@/features/shops/shop-picture-card";
 import { listBusinessProfileMedia } from "@/lib/db/business-profile-media";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
@@ -29,10 +38,10 @@ export default async function ShopDetailPage({
   searchParams,
 }: {
   params: Promise<{ placeId: string }>;
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; promoted?: string }>;
 }) {
   const { placeId } = await params;
-  const { category: categoryParam } = await searchParams;
+  const { category: categoryParam, promoted } = await searchParams;
 
   const response = await getShopDetailsAction(placeId);
 
@@ -90,6 +99,50 @@ export default async function ShopDetailPage({
   }
   const isVerifiedBusiness = businessProfile?.verification_status === "approved";
 
+  // The picture a promoter added (0093) — same try/catch reasoning as
+  // above: until that migration runs, the page just has no picture
+  // options rather than failing.
+  let shopPicture: ShopPicture | null = null;
+  let shopPictureUrl: string | null = null;
+  let picturesAvailable = true;
+  try {
+    shopPicture = await getShopPicture(supabase, shop.placeId);
+    const pictureMedia = shopPicture ? await getMediaById(supabase, shopPicture.media_id) : null;
+    shopPictureUrl = pictureMedia ? publicMediaUrl(supabase, pictureMedia.storage_path) : null;
+  } catch {
+    picturesAvailable = false;
+  }
+  // A verified business's own logo already fills this spot, so picture
+  // options only appear when there isn't one.
+  const headerPictureUrl = logoUrl ?? shopPictureUrl;
+  const pictureOpen = picturesAvailable && !logoUrl;
+
+  const viewer = pictureOpen ? await getCurrentUser() : null;
+  let viewerHasPromoted = false;
+  let viewerIsAdmin = false;
+  if (viewer) {
+    [viewerHasPromoted, viewerIsAdmin] = await Promise.all([
+      hasPromotedShop(supabase, shop.placeId),
+      getProfileByUserId(supabase, viewer.id)
+        .then((profile) => Boolean(profile?.is_admin))
+        .catch(() => false),
+    ]);
+  }
+  const pictureMode: ShopPictureMode | null = !viewer
+    ? null
+    : shopPicture
+      ? shopPicture.owner_id === viewer.id
+        ? "owner"
+        : viewerIsAdmin
+          ? "admin"
+          : null
+      : viewerHasPromoted
+        ? "add"
+        : null;
+  // A first-time promoter picks it in the Promote card; anyone who has
+  // promoted before can already add one from ShopPictureCard, no payment.
+  const offerPictureWithPromotion = viewer && !shopPicture && !viewerHasPromoted ? viewer.id : null;
+
   const categoryId = categoryParam && isShopCategoryId(categoryParam) ? categoryParam : null;
   const category = categoryId ? getShopCategory(categoryId) : null;
   const CategoryIcon = category?.icon ?? WrenchIcon;
@@ -99,13 +152,22 @@ export default async function ShopDetailPage({
     <PageShell width="2xl">
       <PageHeader back={{ href: "/discover", label: "Shops" }} className="mb-2" />
 
+      {promoted && (
+        <div className="mb-5">
+          <Callout tone="muted">
+            Payment received. {shop.name} is promoted for {SHOP_PROMOTION_DURATION_DAYS} days.
+            It can take a moment to show up here.
+          </Callout>
+        </div>
+      )}
+
       {/* App Store-style listing header: icon tile, name, category,
           then the two actions side by side. */}
       <div className="flex items-start gap-4">
         <span className="flex h-24 w-24 flex-shrink-0 items-center justify-center overflow-hidden rounded-[22px] bg-foreground/[0.06] text-accent elev-1">
-          {logoUrl ? (
+          {headerPictureUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- small fixed-size logo, next/image overhead isn't worth it here
-            <img src={logoUrl} alt="" className="h-full w-full object-cover" />
+            <img src={headerPictureUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <CategoryIcon className="h-9 w-9" />
           )}
@@ -210,6 +272,18 @@ export default async function ShopDetailPage({
         </section>
       )}
 
+      {pictureMode && viewer && (
+        <div className="mt-8">
+          <ShopPictureCard
+            placeId={shop.placeId}
+            placeName={shop.name}
+            userId={viewer.id}
+            pictureUrl={shopPictureUrl}
+            mode={pictureMode}
+          />
+        </div>
+      )}
+
       <div className="mt-8">
         <ShopAnalyticsSection placeId={shop.placeId} />
       </div>
@@ -223,6 +297,7 @@ export default async function ShopDetailPage({
           placeName={shop.name}
           currentTier={shop.promotionTier}
           category={categoryId}
+          pictureUploaderId={offerPictureWithPromotion}
         />
       </div>
     </PageShell>

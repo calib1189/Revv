@@ -1,21 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { CloseIcon, PinIcon, GemIcon } from "@/components/ui/icons";
-import {
-  searchShopsByQueryAction,
-  createShopPromotionAction,
-} from "@/features/shops/actions";
-import { WebHandoffButton } from "@/features/auth/web-handoff-button";
+import { searchShopsByQueryAction } from "@/features/shops/actions";
+import { HANDOFF_BUTTON_CLASS, WebHandoffButton } from "@/features/auth/web-handoff-button";
 import { useIsNative } from "@/lib/native/use-is-native";
 import { SITE_URL } from "@/lib/site-url";
-import {
-  SHOP_PROMOTION_TIERS,
-  SHOP_PROMOTION_TIER_RANK,
-  SHOP_PROMOTION_DURATION_DAYS,
-  type ShopPromotionTier,
-} from "@/lib/db/shop-promotions";
-import { TierPicker, type TierMetal } from "@/components/ui/tier-picker";
+import { SHOP_PROMOTION_TIERS, type ShopPromotionTier } from "@/lib/db/shop-promotions";
+import type { TierMetal } from "@/components/ui/tier-picker";
 import { RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { Callout } from "@/components/ui/callout";
 import { Input } from "@/components/ui/input";
@@ -23,31 +16,19 @@ import { Button } from "@/components/ui/button";
 import type { ShopResult } from "@/features/shops/actions";
 
 const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
-const TIER_ORDER: ShopPromotionTier[] = ["standard", "featured", "diamond"];
 const TIER_METALS: Record<ShopPromotionTier, TierMetal> = {
   standard: "silver",
   featured: "gold",
   diamond: "diamond",
 };
 
-function nextWorthwhileTier(
-  current: ShopPromotionTier | null,
-): ShopPromotionTier {
-  const currentRank = current ? SHOP_PROMOTION_TIER_RANK[current] : 0;
-  const next = TIER_ORDER.find(
-    (t) => SHOP_PROMOTION_TIER_RANK[t] > currentRank,
-  );
-  // Falls back to the top tier if somehow already there — the picker
-  // won't let anything be bought in that case anyway (see the "already
-  // has the top spot" branch below).
-  return next ?? "diamond";
-}
-
 /** "Promote your shop" — a free-text lookup instead of a Promote button
- * on every card. Someone finds their own business by name, picks it from
- * the results, and pays from right here — searchShopsByQueryAction hits
- * the same Places API Text Search as category browsing, just with
- * whatever they typed instead of a fixed category keyword. */
+ * on every card. Someone finds their own business by name and picks it
+ * from the results; searchShopsByQueryAction hits the same Places API
+ * Text Search as category browsing, just with whatever they typed
+ * instead of a fixed category keyword. The promoting itself (plan,
+ * profile picture, payment) happens on that shop's own page — see
+ * PromoteThisShop — so this only gets them there. */
 export function PromoteShopPanel({
   coords,
   onClose,
@@ -60,9 +41,6 @@ export function PromoteShopPanel({
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selected, setSelected] = useState<ShopResult | null>(null);
-  const [tier, setTier] = useState<ShopPromotionTier>("standard");
-  const [isPromoting, setIsPromoting] = useState(false);
-  const [promoteError, setPromoteError] = useState<string | null>(null);
   const isNative = useIsNative();
 
   async function handleSearch(e: React.FormEvent) {
@@ -101,36 +79,6 @@ export function PromoteShopPanel({
       setSearchError("Couldn't search. Try again.");
     } finally {
       setIsSearching(false);
-    }
-  }
-
-  function selectShop(shop: ShopResult) {
-    setSelected(shop);
-    // Defaults to whichever tier is actually worth buying next — no
-    // point defaulting to a tier the shop already has (or something
-    // below it).
-    setTier(nextWorthwhileTier(shop.promotionTier));
-  }
-
-  async function handlePromote() {
-    if (!selected) return;
-    setPromoteError(null);
-    setIsPromoting(true);
-    try {
-      const result = await createShopPromotionAction({
-        placeId: selected.placeId,
-        placeName: selected.name,
-        tier,
-      });
-      if (result.error || !result.url) {
-        setPromoteError(result.error ?? "Couldn't start checkout. Try again.");
-        return;
-      }
-      window.location.href = result.url;
-    } catch {
-      setPromoteError("Couldn't start checkout. Try again.");
-    } finally {
-      setIsPromoting(false);
     }
   }
 
@@ -176,7 +124,7 @@ export function PromoteShopPanel({
                 <button
                   key={shop.placeId}
                   type="button"
-                  onClick={() => selectShop(shop)}
+                  onClick={() => setSelected(shop)}
                   className={`flex flex-col gap-1 rounded-xl border px-3.5 py-3 text-left transition-colors ${
                     selected?.placeId === shop.placeId
                       ? "border-accent bg-accent/10"
@@ -213,8 +161,6 @@ export function PromoteShopPanel({
 
         {selected && (
           <div className="flex flex-col gap-3 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
-            {promoteError && <Callout tone="danger">{promoteError}</Callout>}
-
             {selected.promotionTier === "diamond" ? (
               <p className="text-center text-sm text-muted">
                 {selected.name} already has the top Diamond spot.
@@ -231,45 +177,15 @@ export function PromoteShopPanel({
               />
             ) : (
               <>
-                <TierPicker
-                  name="shop-promotion-tier"
-                  value={tier}
-                  onChange={(id) => setTier(id as ShopPromotionTier)}
-                  options={TIER_ORDER.map((t) => {
-                    const alreadyActive =
-                      !!selected.promotionTier &&
-                      SHOP_PROMOTION_TIER_RANK[t] <=
-                        SHOP_PROMOTION_TIER_RANK[selected.promotionTier];
-                    return {
-                      id: t,
-                      metal: TIER_METALS[t],
-                      priceCents: SHOP_PROMOTION_TIERS[t].priceCents,
-                      subtitle:
-                        t === "diamond"
-                          ? `Top-tier placement, ${SHOP_PROMOTION_DURATION_DAYS} days — sorts above every Gold and Silver listing`
-                          : t === "featured"
-                            ? `${SHOP_PROMOTION_DURATION_DAYS} days — sorts above Silver listings`
-                            : `${SHOP_PROMOTION_DURATION_DAYS} days — sorts above un-promoted shops`,
-                      disabled: alreadyActive,
-                      disabledReason: alreadyActive
-                        ? "Already active or below"
-                        : undefined,
-                    };
-                  })}
-                />
-                <Button
-                  type="button"
-                  onClick={handlePromote}
-                  disabled={isPromoting}
-                  className="w-full py-3"
+                <Link
+                  href={`/discover/shop/${encodeURIComponent(selected.placeId)}#promote`}
+                  className={`${HANDOFF_BUTTON_CLASS} w-full`}
                 >
-                  {isPromoting
-                    ? "Starting checkout…"
-                    : `Promote ${selected.name} for ${SHOP_PROMOTION_DURATION_DAYS} days · $${(SHOP_PROMOTION_TIERS[tier].priceCents / 100).toFixed(0)}`}
-                </Button>
+                  Continue
+                </Link>
                 <p className="text-center text-xs text-muted">
-                  Runs for {SHOP_PROMOTION_DURATION_DAYS} days from purchase,
-                  then stops automatically unless you promote again.
+                  Opens {selected.name}&apos;s page, where you pick a plan and can add its
+                  profile picture.
                 </p>
               </>
             )}
