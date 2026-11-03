@@ -85,6 +85,37 @@ export async function listSitemapProfiles(
   }));
 }
 
+export type AdminUserFilter = "all" | "verified" | "founder" | "banned" | "admins";
+export const ADMIN_USERS_PAGE_SIZE = 50;
+
+/** Every account, newest first, one page at a time, with the total — the
+ * admin Users page. Profiles are publicly readable (RLS), so this works
+ * for anyone; the admin layout is what keeps the page itself admin-only.
+ * The search term is cut down to characters a username or display name
+ * can hold before it goes into PostgREST's `or` filter, where a comma or
+ * parenthesis from the search box would otherwise break the query. */
+export async function listProfilesForAdmin(
+  supabase: SupabaseClient<Database>,
+  { query = "", filter = "all", page = 1 }: { query?: string; filter?: AdminUserFilter; page?: number },
+): Promise<{ profiles: Profile[]; total: number }> {
+  let request = supabase
+    .from("profiles")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false });
+
+  const term = query.replace(/[^\p{L}\p{N}_.\-\s]/gu, "").trim();
+  if (term) request = request.or(`username.ilike.%${term}%,display_name.ilike.%${term}%`);
+  if (filter === "verified") request = request.eq("is_verified", true);
+  if (filter === "founder") request = request.eq("is_founder", true);
+  if (filter === "banned") request = request.eq("is_banned", true);
+  if (filter === "admins") request = request.eq("is_admin", true);
+
+  const from = (Math.max(1, page) - 1) * ADMIN_USERS_PAGE_SIZE;
+  const { data, error, count } = await request.range(from, from + ADMIN_USERS_PAGE_SIZE - 1);
+  if (error) throw error;
+  return { profiles: data, total: count ?? data.length };
+}
+
 export async function searchProfilesByUsername(
   supabase: SupabaseClient<Database>,
   query: string,
