@@ -5,6 +5,7 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { EditAvatarForm } from "@/features/profile/edit-avatar-form";
 import { EditDisplayNameForm } from "@/features/profile/edit-display-name-form";
+import { EditUsernameForm } from "@/features/profile/edit-username-form";
 import { EditBioForm } from "@/features/profile/edit-bio-form";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 
@@ -36,6 +37,12 @@ export default async function EditProfilePage() {
       )}
 
       <div className="glass-raised elev-1 flex flex-col gap-6 rounded-[22px] p-5">
+        {profile && (
+          <>
+            <EditUsernameForm currentUsername={profile.username} />
+            <div className="h-px bg-border" />
+          </>
+        )}
         <EditDisplayNameForm initialDisplayName={profile?.display_name ?? null} />
         <div className="h-px bg-border" />
         <EditBioForm initialBio={profile?.bio ?? null} />

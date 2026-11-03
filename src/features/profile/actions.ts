@@ -9,6 +9,7 @@ import {
   updateProfileDisplayName,
   updateProfileUsername,
   getProfileByUserId,
+  getProfileByUsername,
 } from "@/lib/db/profiles";
 import { blockUser, unblockUser } from "@/lib/db/blocks";
 import { validateBio, validateDisplayName } from "@/lib/validation/profile";
@@ -99,6 +100,65 @@ export async function claimUsernameAction(
   }
   revalidatePath("/welcome");
   return { error: null };
+}
+
+export interface ChangeUsernameState {
+  error: string | null;
+  /** Set once a change has gone through — the new username. */
+  changedTo: string | null;
+}
+
+export interface UsernameAvailability {
+  /** null while the name itself isn't valid — see `error`. */
+  available: boolean | null;
+  error?: string;
+}
+
+/** The live "is this free?" check under the username field. The format
+ * rules come first, so a name that could never be saved isn't reported
+ * as available. Your own current name counts as yours, not taken. */
+export async function checkUsernameAvailabilityAction(raw: string): Promise<UsernameAvailability> {
+  const username = raw.trim();
+  const error = validateUsername(username);
+  if (error) return { available: null, error };
+
+  const { supabase, user } = await requireUser();
+  const existing = await getProfileByUsername(supabase, username);
+  return { available: !existing || existing.id === user.id };
+}
+
+/** Changes the signed-in person's @username from Settings → Edit Profile.
+ * Checked again here, not just trusted from the live check: someone else
+ * can take the name between the check and the tap. The unique constraint
+ * on profiles.username is the final word either way. */
+export async function changeUsernameAction(
+  _prevState: ChangeUsernameState,
+  formData: FormData,
+): Promise<ChangeUsernameState> {
+  const username = String(formData.get("username") ?? "").trim();
+  const error = validateUsername(username);
+  if (error) return { error, changedTo: null };
+
+  const { supabase, user } = await requireUser();
+  const current = await getProfileByUserId(supabase, user.id);
+  if (current?.username === username) return { error: "That's already your username.", changedTo: null };
+
+  const existing = await getProfileByUsername(supabase, username);
+  if (existing && existing.id !== user.id) return { error: "That username is taken.", changedTo: null };
+
+  try {
+    await updateProfileUsername(supabase, user.id, username);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String((err as { message?: string })?.message ?? "");
+    if (message.toLowerCase().includes("duplicate")) return { error: "That username is taken.", changedTo: null };
+    return { error: "Couldn't change your username. Try again.", changedTo: null };
+  }
+
+  if (current) revalidatePath(`/u/${current.username}`);
+  revalidatePath(`/u/${username}`);
+  revalidatePath("/settings/profile");
+  revalidatePath("/settings");
+  return { error: null, changedTo: username };
 }
 
 export interface UpdateDisplayNameState {

@@ -29,4 +29,14 @@ describe("validateUsername", () => {
   it("trims surrounding whitespace before validating", () => {
     expect(validateUsername("  turbo_dan  ")).toBeNull();
   });
+
+  it("keeps names that would pass for SORZA or its staff", () => {
+    expect(validateUsername("sorza")).toMatch(/reserved/i);
+    expect(validateUsername("support")).toMatch(/reserved/i);
+    expect(validateUsername("admin")).toMatch(/reserved/i);
+  });
+
+  it("still allows a name that only contains a reserved word", () => {
+    expect(validateUsername("sorza_fan_92")).toBeNull();
+  });
 });
