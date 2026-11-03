@@ -340,6 +340,17 @@ html.native-app .web-only {
   display: none !important;
 }
 
+/* The bottom tab bar steps aside while a sheet is up over the feed
+   (comments, a post's ⋯ menu), the way TikTok's does — see
+   useHideBottomNav. */
+[data-bottom-nav] {
+  transition: transform 320ms var(--ease-ios);
+}
+html[data-hide-bottom-nav] [data-bottom-nav] {
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
 /* The big center heart on a double-tap-to-like — pops in, holds, fades.
    Remounted via a changing `key` each time so it restarts on every tap
    rather than needing to be reset mid-animation. */

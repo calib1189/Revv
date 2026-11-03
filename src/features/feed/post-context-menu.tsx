@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useHideBottomNav } from "@/lib/ui/use-hide-bottom-nav";
 import {
   blockAuthorFromPostAction,
   deletePostAction,
@@ -85,6 +87,7 @@ export function PostContextMenu({
   const [isDragging, setIsDragging] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartYRef = useRef<number | null>(null);
+  useHideBottomNav(open);
 
   function close() {
     onClose();
@@ -100,6 +103,9 @@ export function PostContextMenu({
   }
 
   function handleDragStart(e: React.PointerEvent<HTMLDivElement>) {
+    // Same as comment-sheet.tsx: capturing a press that began on a button
+    // in this header retargets its click to the header.
+    if ((e.target as HTMLElement).closest("button")) return;
     dragStartYRef.current = e.clientY;
     setIsDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -178,8 +184,10 @@ export function PostContextMenu({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50">
+  // Portalled to <body>, same reason as the comment sheet: inside the feed
+  // slide it couldn't reach past the tab bar, which stayed showing under it.
+  return createPortal(
+    <div data-no-edge-swipe className="fixed inset-0 z-[75]">
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -374,7 +382,8 @@ export function PostContextMenu({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
