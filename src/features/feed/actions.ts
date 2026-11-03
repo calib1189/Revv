@@ -24,6 +24,7 @@ import { validateComment } from "@/lib/validation/comment";
 import { validateCaption } from "@/lib/validation/post";
 import { composePostCards } from "@/lib/feed/compose-post-cards";
 import { sendPushToUser } from "@/lib/push/send";
+import type { PushCategory } from "@/lib/db/notification-preferences";
 import { isVehicleCategory, type VehicleCategory } from "@/lib/vehicles/category";
 import type { PostCardData } from "@/features/feed/post-card";
 import type { CommentWithAuthor } from "@/features/feed/comment-list";
@@ -128,7 +129,7 @@ export async function toggleLikeAction(
     await unlikePost(supabase, user.id, postId);
   } else {
     await likePost(supabase, user.id, postId);
-    after(() => notifyPostAuthor(supabase, postId, user.id, "liked your post"));
+    after(() => notifyPostAuthor(supabase, postId, user.id, "liked your post", "likes"));
   }
   revalidatePath(`/p/${postId}`);
   revalidatePath("/feed");
@@ -142,6 +143,7 @@ async function notifyPostAuthor(
   postId: string,
   actorId: string,
   verb: string,
+  category: PushCategory,
 ): Promise<void> {
   try {
     const post = await getPostById(supabase, postId);
@@ -151,7 +153,7 @@ async function notifyPostAuthor(
       title: "SORZA",
       body: `@${actor?.username ?? "Someone"} ${verb}`,
       url: `/p/${postId}`,
-    });
+    }, category);
   } catch {
     // best-effort only
   }
@@ -247,7 +249,7 @@ export async function createCommentAction(
   } catch {
     return { error: "Couldn't post that comment. Try again in a bit." };
   }
-  after(() => notifyPostAuthor(supabase, postId, user.id, "commented on your post"));
+  after(() => notifyPostAuthor(supabase, postId, user.id, "commented on your post", "comments"));
   if (parentId) {
     after(() => notifyParentCommentAuthor(supabase, postId, parentId, user.id));
   }
@@ -280,7 +282,7 @@ async function notifyParentCommentAuthor(
       title: "SORZA",
       body: `@${actor?.username ?? "Someone"} replied to your comment`,
       url: `/p/${postId}`,
-    });
+    }, "comments");
   } catch {
     // best-effort only
   }

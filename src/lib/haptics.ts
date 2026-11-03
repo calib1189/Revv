@@ -1,5 +1,7 @@
 "use client";
 
+import { getDevicePreferences } from "@/lib/device-preferences";
+
 /** No-ops entirely outside the native app shell — same
  * dynamic-import-behind-a-platform-check pattern as
  * native-app-bridge.tsx, so the Capacitor bridge never reaches the
@@ -7,6 +9,8 @@
  * sound/visual cues, never something its absence (a failed import, an
  * unsupported platform) should break. */
 async function fireHaptic(run: (haptics: typeof import("@capacitor/haptics")) => Promise<void>) {
+  // Settings → Playback → Haptics.
+  if (!getDevicePreferences().haptics) return;
   try {
     const { Capacitor } = await import("@capacitor/core");
     if (!Capacitor.isNativePlatform()) return;

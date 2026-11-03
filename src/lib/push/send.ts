@@ -4,6 +4,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getNativePushProvider } from "@/lib/providers/get-native-push-provider";
 import { deleteDevicePushTokens, listDevicePushTokensForUser } from "@/lib/db/device-push-tokens";
+import { getNotificationPreferences, type PushCategory } from "@/lib/db/notification-preferences";
 import type { PushPayload } from "@/lib/push/payload";
 
 export type { PushPayload } from "@/lib/push/payload";
@@ -69,15 +70,37 @@ async function sendNativePush(
   await deleteDevicePushTokens(supabase, invalidTokens);
 }
 
+/** Whether `userId` still wants this kind of push (Settings →
+ * Notifications). Reads as "yes" when it can't tell — no preferences row
+ * yet, or 0094 not applied — so a lookup problem never silences anyone. */
+async function wantsPush(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  category: PushCategory,
+): Promise<boolean> {
+  try {
+    const preferences = await getNotificationPreferences(supabase, userId);
+    return preferences[category];
+  } catch {
+    return true;
+  }
+}
+
 /** Sends a push to every device `userId` has opted in on — browsers via
- * Web Push, the iOS app via APNs. Best-effort throughout: a channel that
- * is unconfigured, or one send failing (expired, revoked, offline), never
- * throws and never stops the other channel. Callers fire this from inside
- * the action that caused the notification (a like, a message), and a
- * notification failing to deliver must not fail the like. */
-export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
+ * Web Push, the iOS app via APNs — unless they've switched `category`
+ * off. Best-effort throughout: a channel that is unconfigured, or one
+ * send failing (expired, revoked, offline), never throws and never stops
+ * the other channel. Callers fire this from inside the action that
+ * caused the notification (a like, a message), and a notification
+ * failing to deliver must not fail the like. */
+export async function sendPushToUser(
+  userId: string,
+  payload: PushPayload,
+  category: PushCategory,
+): Promise<void> {
   try {
     const supabase = createServiceRoleClient();
+    if (!(await wantsPush(supabase, userId, category))) return;
     await Promise.allSettled([
       sendWebPush(supabase, userId, payload),
       sendNativePush(supabase, userId, payload),

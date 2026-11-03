@@ -28,6 +28,7 @@ import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { relativeTime } from "@/lib/format/relative-time";
 import { SITE_URL } from "@/lib/site-url";
+import { getDevicePreferences } from "@/lib/device-preferences";
 import type { PostCardData } from "@/features/feed/post-card";
 
 /** The shadow every white control on the video carries, so it stays
@@ -307,6 +308,19 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
       ([entry]) => {
         isIntersectingRef.current = entry.isIntersecting && entry.intersectionRatio > 0.6;
         if (isIntersectingRef.current) {
+          // Settings → Playback: with autoplay off the video waits on its
+          // play button for a tap; with sound off it starts muted (the
+          // long-press menu still turns it on).
+          const { autoplayVideos, videoSound } = getDevicePreferences();
+          if (!autoplayVideos) {
+            setIsPaused(true);
+            return;
+          }
+          if (!videoSound && !el.muted) {
+            el.muted = true;
+            setIsMuted(true);
+            onMutedChange(true);
+          }
           el.play()
             .then(() => setIsPaused(false))
             .catch(() => {
@@ -546,6 +560,11 @@ function PhotoMedia({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+          // Same Settings → Playback "start with sound" choice as videos.
+          if (!getDevicePreferences().videoSound && !audio.muted) {
+            audio.muted = true;
+            onMutedChange(true);
+          }
           audio.play().catch(() => {
             // Audible autoplay was refused — muted autoplay never is.
             audio.muted = true;

@@ -210,7 +210,7 @@ export async function approveMeetupAction(meetupId: string): Promise<void> {
       title: "SORZA",
       body: `Your meet "${meetup.title}" was approved — it's live in Discover`,
       url: `/discover/${meetupId}`,
-    });
+    }, "updates");
   }
 }
 
@@ -233,6 +233,6 @@ export async function rejectMeetupAction(meetupId: string): Promise<void> {
       title: "SORZA",
       body: `Your meet "${meetup.title}" wasn't approved`,
       url: `/discover/${meetupId}`,
-    });
+    }, "updates");
   }
 }

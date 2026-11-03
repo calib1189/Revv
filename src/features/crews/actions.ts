@@ -138,7 +138,7 @@ async function notifyCrewLeadersOfJoinRequest(
           title: "SORZA",
           body: `@${actor?.username ?? "Someone"} requested to join ${crewName}`,
           url: `/crews/${crewId}/requests`,
-        }),
+        }, "crews"),
       ),
     );
   } catch {
@@ -168,7 +168,7 @@ export async function notifyCrewPostAction(crewId: string, postId: string): Prom
             title: "SORZA",
             body: `@${actor?.username ?? "Someone"} posted in a crew you're in`,
             url: `/p/${postId}`,
-          }),
+          }, "crews"),
         ),
     );
   } catch {
@@ -217,7 +217,7 @@ async function notifyApprovedCrewMember(
       title: "SORZA",
       body: `You're in — your request to join ${crew?.name ?? "the crew"} was approved`,
       url: `/crews/${crewId}`,
-    });
+    }, "crews");
   } catch {
     // best-effort only
   }

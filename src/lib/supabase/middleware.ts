@@ -15,6 +15,8 @@ const PROTECTED_EXACT = [
   "/settings",
   "/settings/profile",
   "/settings/notifications",
+  "/settings/account",
+  "/settings/blocked",
   "/messages",
   "/friends",
   "/advertise",

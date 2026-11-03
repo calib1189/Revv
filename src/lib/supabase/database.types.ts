@@ -933,6 +933,30 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["shop_promotions"]["Insert"]>;
         Relationships: never[];
       };
+      notification_preferences: {
+        Row: {
+          user_id: string;
+          likes: boolean;
+          comments: boolean;
+          follows: boolean;
+          messages: boolean;
+          crews: boolean;
+          updates: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          likes?: boolean;
+          comments?: boolean;
+          follows?: boolean;
+          messages?: boolean;
+          crews?: boolean;
+          updates?: boolean;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["notification_preferences"]["Insert"]>;
+        Relationships: never[];
+      };
       shop_pictures: {
         Row: {
           place_id: string;

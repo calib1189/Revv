@@ -31,7 +31,7 @@ export async function toggleFollowAction(
         title: "SORZA",
         body: `@${actor?.username ?? "Someone"} started following you`,
         url: `/u/${actor?.username ?? ""}`,
-      });
+      }, "follows");
     });
   }
   revalidatePath(`/u/${followeeUsername}`);

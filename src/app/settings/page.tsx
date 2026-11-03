@@ -4,8 +4,10 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
+import { getAdminQueueCounts } from "@/lib/admin/queue-counts";
 import { Avatar } from "@/features/feed/avatar";
 import { ThemeToggle } from "@/features/settings/theme-toggle";
+import { PlaybackSettings } from "@/features/settings/playback-settings";
 import { SignOutButton } from "@/features/auth/sign-out-button";
 import { DeleteAccountButton } from "@/features/auth/delete-account-button";
 import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/grouped-list";
@@ -20,6 +22,9 @@ import {
   InfoIcon,
   LockIcon,
   ChevronRightIcon,
+  FlagIcon,
+  GlobeIcon,
+  PersonIcon,
 } from "@/components/ui/icons";
 
 export default async function SettingsPage() {
@@ -32,6 +37,13 @@ export default async function SettingsPage() {
     ? await getMediaById(supabase, profile.avatar_media_id).catch(() => null)
     : null;
   const avatarUrl = avatarMedia ? publicMediaUrl(supabase, avatarMedia.storage_path) : null;
+  // How much is waiting on an admin — shown on the Admin row so it's
+  // visible from here without opening the dashboard.
+  const pendingForAdmin = profile?.is_admin
+    ? await getAdminQueueCounts(supabase)
+        .then((counts) => counts.total)
+        .catch(() => 0)
+    : 0;
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
@@ -62,6 +74,58 @@ export default async function SettingsPage() {
           </Link>
         )}
 
+        {/* First for whoever runs the place, with what's waiting. */}
+        {profile?.is_admin && (
+          <GroupedList>
+            <GroupedRow
+              href="/admin"
+              label="Admin"
+              detail={pendingForAdmin > 0 ? `${pendingForAdmin} waiting on you` : "Everything's reviewed"}
+              icon={<RowIcon color="var(--accent)"><LockIcon /></RowIcon>}
+              value={
+                pendingForAdmin > 0 ? (
+                  <span className="numeral rounded-full bg-danger px-2 py-0.5 text-[0.75rem] font-semibold text-white">
+                    {pendingForAdmin}
+                  </span>
+                ) : undefined
+              }
+            />
+          </GroupedList>
+        )}
+
+        <section>
+          <SectionTitle>Account</SectionTitle>
+          <GroupedList>
+            <GroupedRow
+              href="/settings/account"
+              label="Email & password"
+              detail={user.email ?? undefined}
+              icon={<RowIcon color="#0a84ff"><PersonIcon /></RowIcon>}
+            />
+            <GroupedRow
+              href="/settings/notifications"
+              label="Notifications"
+              detail="Alerts and which kinds you get"
+              icon={<RowIcon color="#ff453a"><BellIcon /></RowIcon>}
+            />
+            <GroupedRow
+              href="/settings/blocked"
+              label="Blocked accounts"
+              icon={<RowIcon color="#8e8e93"><BlockIcon /></RowIcon>}
+            />
+          </GroupedList>
+        </section>
+
+        <section>
+          <SectionTitle>Playback</SectionTitle>
+          <PlaybackSettings />
+        </section>
+
+        <section>
+          <SectionTitle>Appearance</SectionTitle>
+          <ThemeToggle />
+        </section>
+
         <section>
           <SectionTitle>Your content</SectionTitle>
           <GroupedList>
@@ -85,27 +149,6 @@ export default async function SettingsPage() {
         </section>
 
         <section>
-          <SectionTitle>Appearance</SectionTitle>
-          <ThemeToggle />
-        </section>
-
-        <section>
-          <SectionTitle>Account</SectionTitle>
-          <GroupedList>
-            <GroupedRow
-              href="/settings/notifications"
-              label="Notifications"
-              icon={<RowIcon color="#ff453a"><BellIcon /></RowIcon>}
-            />
-            <GroupedRow
-              href="/settings/blocked"
-              label="Blocked accounts"
-              icon={<RowIcon color="#8e8e93"><BlockIcon /></RowIcon>}
-            />
-          </GroupedList>
-        </section>
-
-        <section>
           <SectionTitle>Business</SectionTitle>
           <GroupedList footer="Claim your shop to add photos to its Discover listing.">
             <GroupedRow
@@ -122,21 +165,29 @@ export default async function SettingsPage() {
         </section>
 
         <section>
-          <SectionTitle>Help</SectionTitle>
+          <SectionTitle>Help & about</SectionTitle>
           <GroupedList>
             <GroupedRow
               href="/legal/support"
               label="Support"
+              detail="Questions, problems, feedback"
               icon={<RowIcon color="#8e8e93"><InfoIcon /></RowIcon>}
             />
-            {profile?.is_admin && (
-              <GroupedRow
-                href="/admin/reports"
-                label="Admin"
-                detail="Reports, verifications, ads, audit log"
-                icon={<RowIcon color="var(--accent)"><LockIcon /></RowIcon>}
-              />
-            )}
+            <GroupedRow
+              href="/legal/guidelines"
+              label="Community guidelines"
+              icon={<RowIcon color="#ff9f0a"><FlagIcon /></RowIcon>}
+            />
+            <GroupedRow
+              href="/legal/terms"
+              label="Terms of use"
+              icon={<RowIcon color="#8e8e93"><GlobeIcon /></RowIcon>}
+            />
+            <GroupedRow
+              href="/legal/privacy"
+              label="Privacy policy"
+              icon={<RowIcon color="#8e8e93"><LockIcon /></RowIcon>}
+            />
           </GroupedList>
         </section>
 

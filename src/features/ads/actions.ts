@@ -138,7 +138,7 @@ export async function approveAdCampaignAction(campaignId: string): Promise<void>
     title: "SORZA",
     body: `Your ad "${campaign.headline}" was approved — it's live`,
     url: "/feed",
-  });
+  }, "updates");
 }
 
 export async function rejectAdCampaignAction(campaignId: string): Promise<void> {

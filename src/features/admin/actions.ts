@@ -134,7 +134,7 @@ export async function setOwnershipVerificationStatusAction(
       title: "SORZA",
       body: `${name} is now verified — its build is eligible for the leaderboard`,
       url: `/garage/${vehicleId}`,
-    });
+    }, "updates");
   }
 }
 

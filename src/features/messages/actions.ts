@@ -61,7 +61,7 @@ export async function sendMessageAction(
       title: "SORZA",
       body: `@${actor?.username ?? "Someone"} sent you a message`,
       url: `/messages/${conversationId}`,
-    });
+    }, "messages");
   });
 
   revalidatePath(`/messages/${conversationId}`);

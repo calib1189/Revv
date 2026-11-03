@@ -12,6 +12,7 @@ import {
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getNativePushProvider } from "@/lib/providers/get-native-push-provider";
 import { isValidDeviceToken } from "@/lib/push/validation";
+import { isPushCategory, setNotificationPreference } from "@/lib/db/notification-preferences";
 
 export async function subscribeToPushAction(subscription: {
   endpoint: string;
@@ -112,5 +113,21 @@ export async function sendTestPushAction(): Promise<TestPushResult> {
     // e.g. the APNs key can't be parsed — the Node message names the
     // problem (key format) and contains nothing secret.
     return { status: "error", detail: err instanceof Error ? err.message.slice(0, 120) : "unknown" };
+  }
+}
+
+/** Switches one kind of push notification on or off for the signed-in
+ * person (Settings → Notifications). RLS (0094) keeps it to their row. */
+export async function setNotificationPreferenceAction(
+  category: string,
+  enabled: boolean,
+): Promise<{ error?: string }> {
+  if (!isPushCategory(category)) return { error: "That isn't a notification type." };
+  try {
+    const { supabase, user } = await requireConfirmedUser();
+    await setNotificationPreference(supabase, user.id, category, enabled);
+    return {};
+  } catch {
+    return { error: "Couldn't save that. Try again." };
   }
 }
