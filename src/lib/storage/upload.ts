@@ -1,10 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
-import { moderateMediaAction } from "@/features/moderation/actions";
-import { ModerationRejectedError } from "@/lib/storage/upload-errors";
+import { checkImage } from "@/features/moderation/check-image";
+import { ModerationRejectedError, UploadFailedError } from "@/lib/storage/upload-errors";
 
 // Callers import these from here alongside uploadImage.
-export { ModerationRejectedError, uploadErrorMessage } from "@/lib/storage/upload-errors";
+export {
+  ModerationRejectedError,
+  UploadFailedError,
+  uploadErrorMessage,
+} from "@/lib/storage/upload-errors";
 
 // Supabase Storage's upload() defaults cache-control to 3600 (1 hour)
 // when not set explicitly. Every path here is a fresh
@@ -63,12 +67,21 @@ export async function uploadImage(
   options: UploadImageOptions = {},
 ): Promise<UploadedImage> {
   if (options.moderate) {
-    const formData = new FormData();
-    formData.append("file", file);
-    // Fails CLOSED: if the check itself errors, this throws and nothing
-    // is uploaded. See moderateMediaAction.
-    const check = await moderateMediaAction(formData);
+    // Fails CLOSED: if the check can't run, nothing is uploaded. See
+    // moderateMediaAction.
+    let check;
+    try {
+      check = await checkImage(file);
+    } catch (err) {
+      console.error("uploadImage: moderation request failed:", err);
+      throw new UploadFailedError(
+        "We couldn't check that photo just now. Check your connection and try again.",
+      );
+    }
     if (!check.allowed) {
+      if (check.unavailable) {
+        throw new UploadFailedError(check.reason ?? "We couldn't check that photo just now. Try again in a moment.");
+      }
       throw new ModerationRejectedError(
         check.reason ?? "That photo doesn't meet our community guidelines.",
       );
@@ -83,7 +96,10 @@ export async function uploadImage(
     .from("media")
     .upload(storagePath, file, { contentType: file.type, cacheControl: IMMUTABLE_CACHE_CONTROL });
 
-  if (error) throw error;
+  if (error) {
+    console.error("uploadImage: storage upload failed:", error);
+    throw new UploadFailedError("Couldn't upload that photo. Check your connection and try again.");
+  }
 
   return { storagePath, ...dimensions };
 }

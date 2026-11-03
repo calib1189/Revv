@@ -1,11 +1,22 @@
 import { describe, it, expect } from "vitest";
-import { ModerationRejectedError, uploadErrorMessage } from "@/lib/storage/upload-errors";
+import {
+  ModerationRejectedError,
+  UploadFailedError,
+  uploadErrorMessage,
+} from "@/lib/storage/upload-errors";
 
 describe("uploadErrorMessage", () => {
   it("shows the moderation reason itself, since retrying can never work", () => {
     const err = new ModerationRejectedError("This photo doesn't meet our community guidelines.");
     expect(uploadErrorMessage(err, "Couldn't upload that photo. Try again.")).toBe(
       "This photo doesn't meet our community guidelines.",
+    );
+  });
+
+  it("shows a named upload step's own message", () => {
+    const err = new UploadFailedError("We couldn't check that photo just now. Try again in a moment.");
+    expect(uploadErrorMessage(err, "fallback")).toBe(
+      "We couldn't check that photo just now. Try again in a moment.",
     );
   });
 

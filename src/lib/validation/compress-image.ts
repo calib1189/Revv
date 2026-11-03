@@ -139,3 +139,25 @@ export async function compressImageIfNeeded(file: File, maxBytes: number): Promi
   if (!mustConvert && best.size >= file.size) return file;
   return best;
 }
+
+const CHECK_COPY_DIMENSION = 1280;
+
+/** A small JPEG copy of a photo, for the moderation check to look at
+ * instead of the photo itself. The check only needs to see what's in the
+ * picture, and it's a request through a Vercel Function, which refuses
+ * any body over ~4.5MB (FUNCTION_PAYLOAD_TOO_LARGE, before any of our code
+ * runs). compressImageIfNeeded usually keeps a photo under that, but can
+ * hand back the original when re-encoding doesn't help — and the full
+ * photo would still be several times more than the check needs. ~1280px
+ * comes out a few hundred KB. Falls back to the photo itself if it can't
+ * be redrawn, which is no worse than sending it was before. */
+export async function checkCopyOf(file: File): Promise<File> {
+  try {
+    const img = await loadImage(file);
+    const encoded = await encode(img, CHECK_COPY_DIMENSION, 0.82);
+    if (encoded) return encoded;
+  } catch {
+    // Falls through to the photo itself.
+  }
+  return file;
+}

@@ -87,6 +87,7 @@ function ModificationRow({
   clickCount: number;
 }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
 
   if (isEditing) {
     return (
@@ -125,6 +126,7 @@ function ModificationRow({
             photoUrl={photoUrl}
             category={part.category}
             rawName={part.raw_name}
+            onError={setPhotoError}
           />
         ) : (
           <ModificationIcon photoUrl={photoUrl} category={part.category} rawName={part.raw_name} />
@@ -142,6 +144,11 @@ function ModificationRow({
               <span>· {formatDateOnly(part.installed_at)}</span>
             )}
           </div>
+          {photoError && (
+            <p role="alert" className="mt-1.5 text-[0.8125rem] leading-snug text-danger">
+              {photoError}
+            </p>
+          )}
           {part.notes && (
             <p className="mt-1.5 text-[0.8125rem] leading-snug text-muted">{part.notes}</p>
           )}

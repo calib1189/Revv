@@ -6,6 +6,9 @@ import { getModerationProvider } from "@/lib/providers/get-moderation-provider";
 export interface ModerationCheckResult {
   allowed: boolean;
   reason?: string;
+  /** The check itself couldn't run (the service errored or timed out) —
+   * the photo was never judged, so trying again can work. */
+  unavailable?: boolean;
 }
 
 /**
@@ -16,10 +19,15 @@ export interface ModerationCheckResult {
  * creates a post/media row that would need to be rolled back.
  *
  * Fails CLOSED: if the moderation call itself errors (network issue,
- * malformed response), this throws rather than letting the post
- * through unchecked — the caller shows a "try again" error. A
+ * malformed response), the photo isn't let through unchecked — a
  * moderation gate that quietly waves things through on its own failure
- * isn't a moderation gate.
+ * isn't a moderation gate. That comes back as `unavailable` rather than
+ * a throw: in production a thrown Server Action error reaches the
+ * browser as an opaque digest, so every upload failure used to read the
+ * same "try again" with the real cause nowhere. It's logged here instead,
+ * where Vercel's function logs keep it.
+ *
+ * Callers send a small copy of the photo (checkCopyOf), not the photo.
  */
 export async function moderateMediaAction(formData: FormData): Promise<ModerationCheckResult> {
   await requireUser();
@@ -30,7 +38,17 @@ export async function moderateMediaAction(formData: FormData): Promise<Moderatio
   }
 
   const bytes = await file.arrayBuffer();
-  const result = await getModerationProvider().moderateImage(bytes, file.type);
+  let result;
+  try {
+    result = await getModerationProvider().moderateImage(bytes, file.type);
+  } catch (err) {
+    console.error(`moderateMediaAction: check failed (${file.type}, ${file.size}B):`, err);
+    return {
+      allowed: false,
+      unavailable: true,
+      reason: "We couldn't check that photo just now. Try again in a moment.",
+    };
+  }
 
   if (result.flagged) {
     return { allowed: false, reason: result.reason ?? "This doesn't meet our content guidelines." };

@@ -4,11 +4,12 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { uploadImage, uploadErrorMessage } from "@/lib/storage/upload";
+import { uploadImage, uploadErrorMessage, UploadFailedError } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { getCategoryIcon } from "@/features/builds/category-icon";
+import { Spinner } from "@/components/ui/spinner";
 
 /** One photo per modification — same single-FK pattern as a vehicle's
  * cover photo (CoverPhotoUploader), not a gallery, since a mod only
@@ -28,47 +29,68 @@ export function ModificationPhotoUploader({
   photoUrl,
   category,
   rawName,
+  onError,
 }: {
   buildPartId: string;
   userId: string;
   photoUrl: string | null;
   category: string | null;
   rawName: string;
+  /** Errors are shown by the row (full width, under the mod's name)
+   * rather than squeezed under this 56px thumbnail. */
+  onError: (message: string | null) => void;
 }) {
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   async function handleFile(rawFile: File) {
-    const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
-    const validationError = validateImageFile(file);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setError(null);
+    onError(null);
     setIsUploading(true);
     try {
+      const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
+      const validationError = validateImageFile(file);
+      if (validationError) {
+        onError(validationError);
+        return;
+      }
+
       const supabase = createClient();
       const uploaded = await uploadImage(supabase, userId, file, { moderate: true });
-      const media = await createMedia(supabase, {
-        owner_id: userId,
-        storage_path: uploaded.storagePath,
-        kind: "image",
-        width: uploaded.width,
-        height: uploaded.height,
-      });
-      const { error: updateError } = await supabase
+
+      let mediaId: string;
+      try {
+        const media = await createMedia(supabase, {
+          owner_id: userId,
+          storage_path: uploaded.storagePath,
+          kind: "image",
+          width: uploaded.width,
+          height: uploaded.height,
+        });
+        mediaId = media.id;
+      } catch (err) {
+        console.error("ModificationPhotoUploader: media row failed:", err);
+        throw new UploadFailedError("The photo uploaded but couldn't be saved. Try again.");
+      }
+
+      // Read back: RLS filtering the row out isn't an error, it's just
+      // zero rows — which used to look exactly like success.
+      const { data: updated, error: updateError } = await supabase
         .from("build_parts")
-        .update({ media_id: media.id })
-        .eq("id", buildPartId);
-      if (updateError) throw updateError;
+        .update({ media_id: mediaId })
+        .eq("id", buildPartId)
+        .select("id");
+      if (updateError) {
+        console.error("ModificationPhotoUploader: attaching to the mod failed:", updateError);
+        throw new UploadFailedError("The photo uploaded but couldn't be added to this mod. Try again.");
+      }
+      if (!updated || updated.length === 0) {
+        throw new UploadFailedError("Couldn't add a photo to this mod — it isn't on a build you own.");
+      }
 
       router.refresh();
     } catch (err) {
-      setError(uploadErrorMessage(err, "Couldn't upload that photo. Try again."));
+      onError(uploadErrorMessage(err, "Couldn't upload that photo. Try again."));
     } finally {
       setIsUploading(false);
     }
@@ -101,8 +123,12 @@ export function ModificationPhotoUploader({
           // matching comment in modification-list.tsx's ModificationIcon.
           getCategoryIcon(category, rawName)({ className: "h-6 w-6" })
         )}
+        {isUploading && (
+          <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-white">
+            <Spinner className="h-5 w-5" />
+          </span>
+        )}
       </button>
-      {error && <p className="mt-1 max-w-[7rem] text-[11px] text-danger">{error}</p>}
     </div>
   );
 }

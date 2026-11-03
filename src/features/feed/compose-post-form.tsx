@@ -18,7 +18,7 @@ import { validateCaption, validatePhotoCount } from "@/lib/validation/post";
 import { clampSoundStartMs } from "@/lib/validation/sound";
 import { trackEvent } from "@/lib/analytics/track";
 import { notifyCrewPostAction } from "@/features/crews/actions";
-import { moderateMediaAction } from "@/features/moderation/actions";
+import { checkImage } from "@/features/moderation/check-image";
 import { captureVideoFrame } from "@/features/moderation/capture-video-frame";
 import { Callout } from "@/components/ui/callout";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
@@ -51,9 +51,7 @@ type Step = "camera" | "compose";
  * happen, so a flagged upload never leaves a post/media row that would
  * need to be cleaned up. */
 async function checkMedia(file: File): Promise<{ allowed: boolean; reason?: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
-  return moderateMediaAction(formData);
+  return checkImage(file);
 }
 
 // The durationchange fix-up below had no ceiling at all — if it never
