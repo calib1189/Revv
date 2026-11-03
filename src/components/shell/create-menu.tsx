@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { PlusIcon, WheelIcon, CameraIcon, TimerIcon, FlagIcon, CloseIcon } from "@/components/ui/icons";
 
@@ -39,8 +40,15 @@ export function CreateMenu() {
       </button>
       </div>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-30 flex items-end justify-center">
+      {/* Portalled to <body>: this button lives inside the bottom tab bar,
+          whose backdrop-filter makes it the containing block and stacking
+          context for anything "fixed" inside it. Rendered in place, the
+          sheet's backdrop only covered the tab bar's own strip and its z-30
+          only counted within the bar's z-10 — so the page stayed undimmed
+          and anything layered above the bar (the profile's Posts / Garage /
+          Awards tabs) drew straight through the sheet. */}
+      {isOpen && createPortal(
+        <div className="fixed inset-0 z-[80] flex items-end justify-center">
           <button
             type="button"
             aria-label="Close"
@@ -80,7 +88,8 @@ export function CreateMenu() {
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
