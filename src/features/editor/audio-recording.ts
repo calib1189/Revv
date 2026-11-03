@@ -1,3 +1,15 @@
+/** A Web Audio context, with Safari's prefixed constructor as the
+ * fallback. Browsers only let one run once the page has had a tap, so
+ * whoever needs it running should create (or resume) it inside the tap
+ * handler itself — one made later, after an await, can sit "suspended"
+ * and produce nothing but silence. */
+export function createAudioContext(): AudioContext {
+  const Ctor =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  return new Ctor();
+}
+
 /** Same "ask the browser what it actually supports, in priority order"
  * pattern as pickMimeType in use-video-export.ts, for an audio-only
  * MediaRecorder (used by the in-app voiceover recorder). */

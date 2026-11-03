@@ -3,6 +3,8 @@
 import { useCallback, useRef, useState } from "react";
 import { drawFrame } from "@/features/editor/draw-frame";
 import { cropRectForAspect } from "@/features/editor/crop";
+import { createAudioContext } from "@/features/editor/audio-recording";
+import { extractAudioTrack } from "@/features/editor/extract-audio";
 import type { EditState } from "@/features/editor/types";
 
 // 720p, not 1080p — the same trade-off already made for camera capture
@@ -111,14 +113,72 @@ function waitForSeek(video: HTMLVideoElement, time: number): Promise<void> {
   });
 }
 
+/** Whether the clip carries a sound track at all, where the browser says
+ * — Safari exposes audioTracks, Firefox mozHasAudio, Chrome a decoded
+ * byte count once it has played a little. Null when it can't tell. */
+function clipHasAudio(video: HTMLVideoElement): boolean | null {
+  const el = video as HTMLVideoElement & {
+    audioTracks?: { length: number };
+    mozHasAudio?: boolean;
+    webkitAudioDecodedByteCount?: number;
+  };
+  if (el.audioTracks) return el.audioTracks.length > 0;
+  if (typeof el.mozHasAudio === "boolean") return el.mozHasAudio;
+  if (typeof el.webkitAudioDecodedByteCount === "number" && el.currentTime > 0) {
+    return el.webkitAudioDecodedByteCount > 0;
+  }
+  return null;
+}
+
+/** True only where the browser reads it straight from the file's track
+ * list (Safari, Firefox) — not Chrome's byte count, which a preview that
+ * played muted can leave at zero. Lets a clip that simply has no sound
+ * skip the ffmpeg fallback below instead of downloading it for nothing. */
+function clipKnownSilent(video: HTMLVideoElement): boolean {
+  const el = video as HTMLVideoElement & { audioTracks?: { length: number }; mozHasAudio?: boolean };
+  if (el.audioTracks) return el.audioTracks.length === 0;
+  return el.mozHasAudio === false;
+}
+
+/** The clip's own sound as decoded samples. decodeAudioData doesn't read
+ * every video container in every browser, so a failure falls back to
+ * pulling the sound out with ffmpeg first (extract-audio.ts). Null means
+ * there's no sound to keep — or none that could be read, which the
+ * caller turns into an error when the clip clearly has one. */
+async function decodeClipAudio(audioCtx: AudioContext, source: File): Promise<AudioBuffer | null> {
+  try {
+    return await audioCtx.decodeAudioData(await source.arrayBuffer());
+  } catch {
+    // Falls through to the extraction below.
+  }
+  const extracted = await extractAudioTrack(source).catch(() => null);
+  if (!extracted) return null;
+  try {
+    return await audioCtx.decodeAudioData(await extracted.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
 export interface ExportResult {
   blob: Blob;
   extension: string;
 }
 
+export interface ExportOptions {
+  /** Created by the caller inside the tap that started the export, so the
+   * browser lets it run — see createAudioContext. Made here instead when
+   * absent; this function closes it either way. */
+  audioContext?: AudioContext | null;
+}
+
 export function useVideoExport() {
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState(0);
+  // "sound" while the clip's own audio is being read — the ffmpeg
+  // fallback in decodeClipAudio can take a while, and a progress bar
+  // sitting at 0% with no explanation looks frozen.
+  const [stage, setStage] = useState<"sound" | "recording" | null>(null);
   const cancelRef = useRef(false);
 
   const exportVideo = useCallback(
@@ -126,9 +186,11 @@ export function useVideoExport() {
       video: HTMLVideoElement,
       source: File,
       state: EditState,
+      options: ExportOptions = {},
     ): Promise<ExportResult> => {
       setIsExporting(true);
       setProgress(0);
+      setStage(null);
       cancelRef.current = false;
 
       const canvas = document.createElement("canvas");
@@ -150,7 +212,8 @@ export function useVideoExport() {
       }
 
       const wasLooping = video.loop;
-      let audioCtx: AudioContext | null = null;
+      const wasMuted = video.muted;
+      let audioCtx: AudioContext | null = options.audioContext ?? null;
       let canvasStream: MediaStream | null = null;
       let combinedStream: MediaStream | null = null;
       let originalNode: AudioBufferSourceNode | null = null;
@@ -169,19 +232,25 @@ export function useVideoExport() {
         // was applied at all), the single most common case. That race is
         // exactly what causes export to appear to loop forever.
         video.loop = false;
+        // The element only supplies pictures here — every bit of sound is
+        // mixed from decoded buffers below. Muted, it isn't also blaring
+        // out of the speaker during the save, and a browser that refuses
+        // audible playback without a fresh tap still lets it play.
+        video.muted = true;
 
         await waitForSeek(video, state.trimStart);
 
         let audioTracks: MediaStreamTrack[] = [];
-        const needsAudio = state.originalVolume > 0 || !!state.musicFile || !!state.voiceoverFile;
+        const keepOriginal = state.originalVolume > 0 && !clipKnownSilent(video);
+        const needsAudio = keepOriginal || !!state.musicFile || !!state.voiceoverFile;
         if (needsAudio) {
-          const AudioContextCtor =
-            window.AudioContext ||
-            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-          audioCtx = new AudioContextCtor();
+          audioCtx ??= createAudioContext();
+          // A context the browser hasn't let start yet records nothing but
+          // silence, with no error anywhere — the clip just posts mute.
+          if (audioCtx.state === "suspended") await audioCtx.resume().catch(() => {});
           const destination = audioCtx.createMediaStreamDestination();
 
-          if (state.originalVolume > 0) {
+          if (keepOriginal) {
             // The original clip's audio is decoded straight from the
             // source File's own bytes — not tapped from the playing
             // <video> element via captureStream() or
@@ -197,9 +266,9 @@ export function useVideoExport() {
             // any of that — it's the exact same technique already proven
             // reliable here for mixing in a separate music file, just
             // applied to the clip's own audio track instead.
-            try {
-              const arrayBuffer = await source.arrayBuffer();
-              const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            setStage("sound");
+            const audioBuffer = await decodeClipAudio(audioCtx, source);
+            if (audioBuffer) {
               originalNode = audioCtx.createBufferSource();
               originalNode.buffer = audioBuffer;
               // Keeps the original audio's pitch/speed matched to the
@@ -210,10 +279,11 @@ export function useVideoExport() {
               const gain = audioCtx.createGain();
               gain.gain.value = state.originalVolume;
               originalNode.connect(gain).connect(destination);
-            } catch {
-              // A clip with no audio track at all (or one this browser
-              // can't decode) just contributes silence — not fatal.
-              originalNode = null;
+            } else if (clipHasAudio(video)) {
+              // A clip with no sound at all just exports silent. One that
+              // has sound which couldn't be read used to as well — the
+              // post went up mute with no hint why. Better to stop here.
+              throw new Error("Couldn't read this video's sound, so it would have saved silent");
             }
           }
 
@@ -307,19 +377,9 @@ export function useVideoExport() {
         // suspenders with the stop-timeout fallback below: if `onstop`
         // never fires on some device, there's still real recorded data in
         // `chunks` to fall back to instead of an empty file.
+        setStage("recording");
         recorder.start(1000);
-        // Started in the same tick as video.play() below so the decoded
-        // original-audio buffer and the video frames stay in sync. The
-        // offset/duration args are in the *original* buffer's own time
-        // units (unaffected by playbackRate) — exactly the units
-        // trimStart/trimEnd are already expressed in everywhere else.
         const durationSeconds = Math.max(0.1, state.trimEnd - state.trimStart);
-        originalNode?.start(0, state.trimStart, durationSeconds);
-        // Second argument is the offset into the buffer, so the mix opens
-        // on the chosen part of the track rather than fading in from
-        // wherever the loop points happen to put it.
-        musicNode?.start(0, Math.min(state.musicStartMs / 1000, musicNode.buffer?.duration ?? 0));
-        voiceoverNode?.start(0);
         // currentTime still advances in source-time regardless of rate —
         // the trimEnd check below stays correct unchanged — but the
         // *wall-clock* time to get there scales inversely with it, which
@@ -327,6 +387,20 @@ export function useVideoExport() {
         // motion export gets cut off mid-clip by its own safety net.
         video.playbackRate = state.playbackRate;
         await video.play();
+        // Started once the picture is actually moving, from wherever it
+        // really is by then. Starting the sound first used to put it
+        // ahead by however long play() took to get going — visibly out of
+        // sync on a clip of someone talking. The offset/duration args are
+        // in the *original* buffer's own time units (unaffected by
+        // playbackRate) — exactly the units trimStart/trimEnd are already
+        // expressed in everywhere else.
+        const startedFrom = Math.max(state.trimStart, Math.min(video.currentTime, state.trimEnd));
+        originalNode?.start(0, startedFrom, Math.max(0.05, state.trimEnd - startedFrom));
+        // Second argument is the offset into the buffer, so the mix opens
+        // on the chosen part of the track rather than fading in from
+        // wherever the loop points happen to put it.
+        musicNode?.start(0, Math.min(state.musicStartMs / 1000, musicNode.buffer?.duration ?? 0));
+        voiceoverNode?.start(0);
 
         // Belt-and-suspenders: if playback ever stalls just short of
         // trimEnd for a reason this loop's own exit checks don't catch —
@@ -415,9 +489,11 @@ export function useVideoExport() {
         canvasStream?.getTracks().forEach((t) => t.stop());
         audioCtx?.close().catch(() => {});
         video.loop = wasLooping;
+        video.muted = wasMuted;
         video.playbackRate = 1;
         canvas.remove();
         setIsExporting(false);
+        setStage(null);
         setProgress(1);
       }
     },
@@ -428,7 +504,7 @@ export function useVideoExport() {
     cancelRef.current = true;
   }, []);
 
-  return { exportVideo, cancelExport, isExporting, progress };
+  return { exportVideo, cancelExport, isExporting, progress, stage };
 }
 
 export { cropRectForAspect };

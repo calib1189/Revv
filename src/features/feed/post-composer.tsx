@@ -532,7 +532,7 @@ function PostPreview({
   return (
     <div className="animate-fade-in fixed inset-0 z-[70] bg-black">
       {mode === "video" && video ? (
-        <video src={video.previewUrl} autoPlay loop playsInline className="h-full w-full object-cover" />
+        <PreviewVideo src={video.previewUrl} />
       ) : (
         <div
           ref={scrollerRef}
@@ -576,6 +576,51 @@ function PostPreview({
         <CloseIcon className="h-5 w-5" />
       </button>
     </div>
+  );
+}
+
+/** The finished clip, full screen, with its sound. The preview opens from
+ * a tap, but the video mounts after it, so a browser can still refuse to
+ * start it with sound — and a bare `autoPlay` refused that way just sat
+ * black. It plays muted instead, with a tap to bring the sound in. */
+function PreviewVideo({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [soundBlocked, setSoundBlocked] = useState(false);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    el.muted = false;
+    el.play().catch((err: unknown) => {
+      if (!(err instanceof DOMException && err.name === "NotAllowedError")) return;
+      el.muted = true;
+      setSoundBlocked(true);
+      el.play().catch(() => {});
+    });
+  }, [src]);
+
+  function enableSound() {
+    const el = videoRef.current;
+    setSoundBlocked(false);
+    if (!el) return;
+    el.muted = false;
+    el.play().catch(() => {});
+  }
+
+  return (
+    <>
+      <video ref={videoRef} src={src} loop playsInline className="h-full w-full object-cover" />
+      {soundBlocked && (
+        <button
+          type="button"
+          onClick={enableSound}
+          className="pressable absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top))] flex h-11 items-center gap-1.5 rounded-full bg-black/40 px-4 text-[0.875rem] font-semibold text-white backdrop-blur-xl"
+        >
+          <VolumeIcon muted className="h-4 w-4" />
+          Tap for sound
+        </button>
+      )}
+    </>
   );
 }
 

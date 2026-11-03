@@ -181,6 +181,7 @@ export function ComposePostForm({
   const router = useRouter();
 
   const mode: "photo" | "video" | null = video ? "video" : photos.length > 0 ? "photo" : null;
+  const editorOpen = Boolean(videoEditorSource || photoEditorSource || multiClipSources);
 
   // Every preview here is a blob: URL held open by the browser until it's
   // explicitly revoked. Backing out of the composer with media selected
@@ -506,6 +507,7 @@ export function ComposePostForm({
       {step === "camera" && (
         <>
           <CameraRecorder
+            suspended={editorOpen}
             onClose={() => router.back()}
             onCaptured={handleCameraCaptured}
             onImportRequested={() => importInputRef.current?.click()}

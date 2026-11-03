@@ -16,6 +16,7 @@ import {
   TrashIcon,
 } from "@/components/ui/icons";
 import { StudioAction, StudioSheet } from "@/features/editor/studio-ui";
+import { createAudioContext } from "@/features/editor/audio-recording";
 
 /** Exposure/white-balance/focus manual control and torch are all part of
  * the same still-non-standard, inconsistently-implemented MediaTrackConstraints
@@ -155,7 +156,13 @@ export function CameraRecorder({
   soundUrl = null,
   onSoundRequested,
   onSoundCleared,
+  suspended = false,
 }: {
+  /** True while an editor is open on top. The camera and microphone are
+   * released until it's false again: a live capture left running under
+   * the editor kept iOS in recording mode, where the clip being edited
+   * played quietly or not at all, and both fought over the decoder. */
+  suspended?: boolean;
   onCaptured: (file: File, kind: "photo" | "video") => void;
   onClose: () => void;
   /** Opens the device's own photo/video picker. Optional: a bare camera
@@ -281,6 +288,11 @@ export function CameraRecorder({
   }, [mode]);
 
   useEffect(() => {
+    // The previous run's cleanup has already stopped every track.
+    if (suspended) {
+      soundAudioRef.current?.pause();
+      return;
+    }
     let cancelled = false;
     hasDrawnFrameRef.current = false;
 
@@ -364,7 +376,7 @@ export function CameraRecorder({
       cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, [facingMode, resolution, fps, streamKey]);
+  }, [facingMode, resolution, fps, streamKey, suspended]);
 
   // Continuously draws the (zoom-cropped, mirrored) camera frame onto the
   // visible canvas — this is what the live preview shows AND what photo
@@ -372,6 +384,7 @@ export function CameraRecorder({
   // into the captured output instead of being a preview-only visual trick
   // that vanishes the moment you take the shot.
   useEffect(() => {
+    if (suspended) return;
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -420,7 +433,7 @@ export function CameraRecorder({
     }
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [facingMode, fps]);
+  }, [facingMode, fps, suspended]);
 
   useEffect(() => {
     return () => {
@@ -596,8 +609,10 @@ export function CameraRecorder({
     // Routing it through a real Web Audio graph first and recording
     // *that* destination's track instead is the standard workaround, and
     // the same technique use-video-export.ts relies on for its own mixing.
-    const audioCtx = new (window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    const audioCtx = createAudioContext();
+    // A recording started from a hold or a countdown timer isn't inside a
+    // tap, and a context the browser hasn't started records silence.
+    if (audioCtx.state === "suspended") audioCtx.resume().catch(() => {});
     const audioDestination = audioCtx.createMediaStreamDestination();
     audioCtx.createMediaStreamSource(stream).connect(audioDestination);
     audioCtxRef.current = audioCtx;

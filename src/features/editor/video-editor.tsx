@@ -7,7 +7,7 @@ import { compressVideo } from "@/features/editor/compress-video";
 import { TrimScrubber } from "@/features/editor/trim-scrubber";
 import { capturePreviewSource } from "@/features/editor/capture-preview-source";
 import { aspectNeedsPan } from "@/features/editor/crop";
-import { pickAudioRecorderMimeType } from "@/features/editor/audio-recording";
+import { createAudioContext, pickAudioRecorderMimeType } from "@/features/editor/audio-recording";
 import { MAX_VIDEO_BYTES } from "@/lib/validation/media";
 import {
   DEFAULT_EDIT_STATE,
@@ -32,6 +32,7 @@ import {
   CloseIcon,
   PlayIcon,
   ChevronRightIcon,
+  VolumeIcon,
 } from "@/components/ui/icons";
 import { Callout } from "@/components/ui/callout";
 import {
@@ -83,8 +84,24 @@ const MAX_VOICEOVER_SECONDS = 180;
  * longest a post may be, rather than silently cut to a shorter default. */
 const MAX_CLIP_SECONDS = 180;
 
+/** How long a clip gets to report its metadata before the editor says it
+ * can't open it, rather than showing "Loading clip" forever. */
+const LOAD_TIMEOUT_MS = 20_000;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function isAutoplayRefusal(err: unknown): boolean {
+  return err instanceof DOMException && err.name === "NotAllowedError";
+}
+
+/** What to tell someone whose clip the browser couldn't open. */
+function describeLoadError(error: MediaError | null): string {
+  if (error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED || error?.code === MediaError.MEDIA_ERR_DECODE) {
+    return "This video's format can't be played on this device. Try a different video, or record one here.";
+  }
+  return "Couldn't open this video. Go back and try choosing it again.";
 }
 
 /** Re-points an already-mounted <video> element at a new source and
@@ -137,6 +154,13 @@ export function VideoEditor({
   const musicUrl = useRef<string | null>(null);
 
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  // True once the browser has refused to play with sound before a tap.
+  // The preview then runs muted (a moving picture beats a frozen one) and
+  // offers "Tap for sound"; any tap at all in the editor brings it back.
+  const [soundBlocked, setSoundBlocked] = useState(false);
+  const soundBlockedRef = useRef(false);
+  const audioUnlockedRef = useRef(false);
   const [videoDims, setVideoDims] = useState({ width: 0, height: 0 });
   const [duration, setDuration] = useState(0);
   const [canvasSize, setCanvasSize] = useState({ width: 9, height: 16 });
@@ -187,7 +211,11 @@ export function VideoEditor({
   // addDrawStroke, etc.), which would be easy to under-track.
   const baselineStateRef = useRef<EditState | null>(null);
 
-  const { exportVideo, isExporting, progress } = useVideoExport();
+  const { exportVideo, isExporting, progress, stage: exportStage } = useVideoExport();
+  const isExportingRef = useRef(isExporting);
+  useEffect(() => {
+    isExportingRef.current = isExporting;
+  }, [isExporting]);
 
   const musicKey = librarySound
     ? `sound:${librarySound.id}`
@@ -227,8 +255,11 @@ export function VideoEditor({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    let settled = false;
 
     function finish(el: HTMLVideoElement) {
+      if (settled) return;
+      settled = true;
       const d = el.duration;
       setVideoDims({ width: el.videoWidth, height: el.videoHeight });
       setDuration(d);
@@ -254,8 +285,72 @@ export function VideoEditor({
       el.addEventListener("durationchange", onFixed);
       el.currentTime = 1e10;
     }
+
+    // A clip the browser can't decode (an unsupported codec, a damaged
+    // file) never reports metadata at all — this, or the timeout below,
+    // is what turns that into a message instead of an endless spinner.
+    function onError() {
+      if (settled) return;
+      settled = true;
+      setLoadError(describeLoadError(video!.error));
+    }
+
     video.addEventListener("loadedmetadata", onLoaded);
-    return () => video.removeEventListener("loadedmetadata", onLoaded);
+    video.addEventListener("error", onError);
+    // A small file can finish loading before this effect gets to attach
+    // its listener, and then loadedmetadata has already come and gone —
+    // the editor used to sit on "Loading clip" forever when that happened.
+    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) onLoaded();
+    else if (video.error) onError();
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      setLoadError(describeLoadError(video.error));
+    }, LOAD_TIMEOUT_MS);
+    return () => {
+      clearTimeout(timer);
+      video.removeEventListener("loadedmetadata", onLoaded);
+      video.removeEventListener("error", onError);
+    };
+  }, []);
+
+  /** Gives the editor its sound back, from inside a tap — the only place a
+   * browser that refused audible playback will allow it. Each media
+   * element is also played once here (and paused straight away if it has
+   * nothing to play yet): WebKit lets an element play later, unprompted,
+   * once it has been played from a tap, which is what a sound picked a
+   * moment from now (after its download) needs. */
+  const unlockAudio = useCallback(() => {
+    if (audioUnlockedRef.current && !soundBlockedRef.current) return;
+    audioUnlockedRef.current = true;
+    soundBlockedRef.current = false;
+    setSoundBlocked(false);
+
+    const s = stateRef.current;
+    const video = videoRef.current;
+    // Mid-save the export owns the element (muted, its own playback).
+    if (video && !isExportingRef.current) {
+      video.muted = s.originalVolume === 0;
+      // Played even when it's already running muted: that play() from a
+      // tap is what lets the preview restart with sound by itself later
+      // (it restarts after every save attempt).
+      if (video.readyState >= HTMLMediaElement.HAVE_METADATA) video.play().catch(() => {});
+    }
+    const music = musicAudioRef.current;
+    if (music) {
+      music.play().catch(() => {});
+      if (!s.musicFile) music.pause();
+    }
+    const voiceover = voiceoverAudioRef.current;
+    if (voiceover) {
+      voiceover.play().catch(() => {});
+      voiceover.pause();
+    }
+  }, []);
+
+  const markSoundBlocked = useCallback(() => {
+    soundBlockedRef.current = true;
+    setSoundBlocked(true);
   }, []);
 
   // Live edit preview: loops playback within the trim bounds, drawing every
@@ -278,8 +373,20 @@ export function VideoEditor({
     if (!ctx) return;
 
     video.currentTime = stateRef.current.trimStart;
+    // iOS ignores volume set from script (it always plays at 1), so 0% is
+    // done with `muted` as well — otherwise "Original sound" at 0% still
+    // played the clip's audio under an added sound.
+    video.muted = soundBlockedRef.current || stateRef.current.originalVolume === 0;
     video.volume = stateRef.current.originalVolume;
-    video.play().catch(() => {});
+    video.play().catch((err: unknown) => {
+      // Refused because there's been no tap to allow sound yet. Playing
+      // muted instead keeps the picture moving — refused outright, the
+      // canvas had no decoded frame to draw and the preview sat blank.
+      if (!isAutoplayRefusal(err) || video.muted) return;
+      markSoundBlocked();
+      video.muted = true;
+      video.play().catch(() => {});
+    });
 
     let raf: number;
     function loop() {
@@ -288,6 +395,7 @@ export function VideoEditor({
       if (el.currentTime >= s.trimEnd || el.ended) {
         el.currentTime = s.trimStart;
       }
+      el.muted = soundBlockedRef.current || s.originalVolume === 0;
       el.volume = s.originalVolume;
       el.playbackRate = s.playbackRate;
       drawFrame(ctx!, el, canvas!.width, canvas!.height, s);
@@ -317,7 +425,7 @@ export function VideoEditor({
       cancelAnimationFrame(raf);
       video.pause();
     };
-  }, [ready, isExporting]);
+  }, [ready, isExporting, markSoundBlocked]);
 
   // Preview canvas resolution follows the chosen aspect — modest size for
   // smooth live editing; the export pass renders at full target resolution
@@ -361,10 +469,16 @@ export function VideoEditor({
     }
     const url = URL.createObjectURL(state.musicFile);
     musicUrl.current = url;
-    if (musicAudioRef.current) {
-      musicAudioRef.current.src = url;
-      musicAudioRef.current.loop = true;
-      musicAudioRef.current.play().catch(() => {});
+    const audio = musicAudioRef.current;
+    if (audio) {
+      audio.src = url;
+      audio.loop = true;
+      // A library sound only arrives after its download, well after the
+      // tap that picked it, so this can be refused for lack of one. That
+      // used to fail silently — the sound was "added" but never heard.
+      audio.play().catch((err: unknown) => {
+        if (isAutoplayRefusal(err)) markSoundBlocked();
+      });
     }
     // Revoked only here, on the way out. Revoking at the top of the
     // effect body as well used to double-revoke the exact same URL on
@@ -373,10 +487,14 @@ export function VideoEditor({
       URL.revokeObjectURL(url);
       if (musicUrl.current === url) musicUrl.current = null;
     };
-  }, [state.musicFile]);
+  }, [state.musicFile, markSoundBlocked]);
 
   useEffect(() => {
-    if (musicAudioRef.current) musicAudioRef.current.volume = state.musicVolume;
+    const audio = musicAudioRef.current;
+    if (!audio) return;
+    audio.volume = state.musicVolume;
+    // Same iOS volume caveat as the clip's own sound above.
+    audio.muted = state.musicVolume === 0;
   }, [state.musicVolume]);
 
   // Keeps the preview on the part of the track that will actually be
@@ -424,7 +542,10 @@ export function VideoEditor({
   }, [state.voiceoverFile]);
 
   useEffect(() => {
-    if (voiceoverAudioRef.current) voiceoverAudioRef.current.volume = state.voiceoverVolume;
+    const audio = voiceoverAudioRef.current;
+    if (!audio) return;
+    audio.volume = state.voiceoverVolume;
+    audio.muted = state.voiceoverVolume === 0;
   }, [state.voiceoverVolume]);
 
   // Stop any in-flight recording and release the mic if the editor is
@@ -710,6 +831,24 @@ export function VideoEditor({
       return;
     }
 
+    // Created here, before the first await, while this tap still counts —
+    // the export's audio mix runs on it, and one created later can be
+    // left suspended by the browser, which saves the clip silent.
+    const needsAudio = state.originalVolume > 0 || !!state.musicFile || !!state.voiceoverFile;
+    let audioContext: AudioContext | null = null;
+    if (needsAudio && !isUnedited) {
+      try {
+        audioContext = createAudioContext();
+        audioContext.resume().catch(() => {});
+      } catch {
+        audioContext = null;
+      }
+    }
+    const releaseAudioContext = () => {
+      audioContext?.close().catch(() => {});
+      audioContext = null;
+    };
+
     // Re-encoding an oversized source through the canvas-capture +
     // MediaRecorder pipeline has failed outright on at least one real
     // device (a clean recorder stop with zero captured data) — that
@@ -731,6 +870,7 @@ export function VideoEditor({
         });
       } catch (err) {
         setCompressionStage("idle");
+        releaseAudioContext();
         const detail = err instanceof Error ? err.message : String(err);
         setError(
           `Couldn't compress that video for posting. (${detail}) Try recording at 720p or 1080p instead of 4K/120fps.`,
@@ -740,6 +880,7 @@ export function VideoEditor({
       setCompressionStage("idle");
 
       if (isUnedited) {
+        releaseAudioContext();
         onExported(effectiveSource, librarySound, state.musicStartMs);
         return;
       }
@@ -753,6 +894,7 @@ export function VideoEditor({
       try {
         await loadVideoSource(video, URL.createObjectURL(effectiveSource));
       } catch (err) {
+        releaseAudioContext();
         const detail = err instanceof Error ? err.message : String(err);
         setError(`Couldn't finish editing that video. (${detail})`);
         return;
@@ -760,7 +902,8 @@ export function VideoEditor({
     }
 
     try {
-      const { blob, extension } = await exportVideo(video, effectiveSource, state);
+      // exportVideo closes the context from here on, on every path.
+      const { blob, extension } = await exportVideo(video, effectiveSource, state, { audioContext });
       const file = new File([blob], `sorza-clip.${extension}`, { type: blob.type });
       onExported(file, librarySound, state.musicStartMs);
     } catch (err) {
@@ -825,19 +968,15 @@ export function VideoEditor({
   }
 
   return (
-    <div data-no-edge-swipe className="fixed inset-0 z-50 flex flex-col bg-black">
-      {/* No `loop` attribute: the edit preview effect already resets
-          currentTime itself once playback reaches trimEnd. The native
-          attribute doing the same thing independently is what broke
-          export — the browser's own auto-restart-on-end fired ahead of
-          export's "did we reach trimEnd" check.
-
-          Real (if off-screen) size on purpose, not `sr-only` — WebKit
-          throttles or stalls decoding for a <video> with effectively zero
-          visible area, which left export hanging short of the finish line
-          on a real iPhone. */}
-      <video ref={videoRef} src={sourceUrl} playsInline className="fixed left-[-9999px] top-0 h-40 w-40" />
-
+    // Any tap anywhere in the editor is a chance to get sound back — see
+    // unlockAudio. touchend and click, not pointerdown: a touch only
+    // counts as permission for sound once the finger lifts.
+    <div
+      data-no-edge-swipe
+      onTouchEndCapture={unlockAudio}
+      onClickCapture={unlockAudio}
+      className="fixed inset-0 z-50 flex flex-col bg-black"
+    >
       <div className="relative flex min-h-0 flex-1 flex-col">
         <StudioStage ratio={canvasSize.width / canvasSize.height}>
           <div
@@ -845,12 +984,54 @@ export function VideoEditor({
             onPointerDown={handlePreviewPointerDown}
             className="relative h-full w-full touch-none overflow-hidden rounded-[22px] bg-[#111113]"
           >
-            <canvas ref={canvasRef} className="h-full w-full" />
-            {!ready && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/55">
+            {/* The decode source the canvas draws from, sitting right
+                under it. It used to be parked off-screen, and WebKit pauses
+                a muted or soundless video it considers invisible — the
+                preview then froze or stayed blank. Under the canvas it
+                counts as on screen, while only the composited canvas shows.
+
+                No `loop` attribute: the edit preview effect already resets
+                currentTime itself once playback reaches trimEnd. The native
+                attribute doing the same thing independently is what broke
+                export — the browser's own auto-restart-on-end fired ahead
+                of export's "did we reach trimEnd" check. */}
+            <video
+              ref={videoRef}
+              src={sourceUrl}
+              playsInline
+              preload="auto"
+              aria-hidden
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            />
+            <canvas ref={canvasRef} className="relative h-full w-full" />
+            {!ready && !loadError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#111113] text-white/55">
                 <span className="h-7 w-7 animate-spin rounded-full border-2 border-white/15 border-t-white/70" />
                 <span className="text-[0.8125rem] font-medium">Loading clip</span>
               </div>
+            )}
+            {loadError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#111113] px-8 text-center">
+                <p className="text-[0.9375rem] leading-relaxed text-white/80">{loadError}</p>
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="pressable h-10 rounded-full bg-white px-5 text-[0.875rem] font-semibold text-black"
+                >
+                  Choose another
+                </button>
+              </div>
+            )}
+            {soundBlocked && ready && !isExporting && (
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={unlockAudio}
+                className="pressable absolute bottom-3 left-3 z-10 flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-[0.8125rem] font-semibold text-white backdrop-blur-xl"
+              >
+                <VolumeIcon muted className="h-4 w-4" />
+                Tap for sound
+              </button>
             )}
             <LayerHandles
               layers={state.textLayers}
@@ -872,7 +1053,8 @@ export function VideoEditor({
           onBack={onCancel}
           backLabel="Back to camera"
           center={
-            !isDraggingLayer && (
+            !isDraggingLayer &&
+            !loadError && (
               <button
                 type="button"
                 onClick={() => (state.musicFile ? setTool("music") : setSoundPickerOpen(true))}
@@ -892,7 +1074,7 @@ export function VideoEditor({
           tools={railTools}
           active={tool === "filter" || tool === "draw" || tool === "trim" || tool === "speed" || tool === "crop" || tool === "voice" ? tool : null}
           onSelect={selectRailTool}
-          hidden={tool !== null || isDraggingLayer}
+          hidden={tool !== null || isDraggingLayer || !!loadError}
         />
 
         {error && (
@@ -1145,7 +1327,13 @@ export function VideoEditor({
               ) : compressionStage === "compressing" ? (
                 `Compressing ${Math.round(compressionProgress * 100)}%`
               ) : isExporting ? (
-                progress >= 1 ? "Finishing…" : `Saving edits ${Math.round(progress * 100)}%`
+                exportStage === "sound" ? (
+                  "Preparing sound…"
+                ) : progress >= 1 ? (
+                  "Finishing…"
+                ) : (
+                  `Saving edits ${Math.round(progress * 100)}%`
+                )
               ) : (
                 <>
                   Next
