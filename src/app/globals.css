@@ -1336,6 +1336,22 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   initial-value: 0deg;
 }
 
+/* The rating reveal's tier colour — registered so it can ease between
+   tiers, and inherited so everything inside the reveal follows it. */
+@property --reveal-color {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #c98a52;
+}
+/* The soft light behind the badge — usually the same colour, but a
+   stronger blue for Diamond, whose icy text colour washes out as a glow
+   (see RANK_AMBIENT_COLORS). */
+@property --reveal-glow {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #c98a52;
+}
+
 @layer components {
   .rank-frame {
     position: relative;
@@ -1357,22 +1373,6 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   .rank-frame.rank-frame-compact::before,
   .rank-frame.rank-frame-compact::after {
     padding: 3.5px;
-  }
-
-  /* The reveal's own screen-corner rounding — used to be paired with a
-     colored material ring traced right at the screen edge (the same
-     rank-frame system RankFrame uses for small avatar badges, scaled
-     up), but a bold border drawn right at the device edge reads as a
-     phone bezel/mockup graphic drawn on top of the app, not "the screen
-     itself lit up," per real device screenshots. The ambient glow
-     (reveal-ambient-glow/-sweep, already borderless) carries the tier's
-     color instead; this class only exists so the black backdrop's own
-     corners are still rounded to match the device rather than square. */
-  .reveal-screen-corners {
-    border-radius: clamp(28px, 16vw, 64px);
-    corner-shape: squircle;
-    -webkit-corner-shape: squircle;
-    overflow: hidden;
   }
 
   .rank-frame::before,
@@ -1625,444 +1625,107 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   }
 
   /* ------------------------------------------------------------------- *
-   * Build-rating reveal — the "unboxing" sequence in rating-reveal.tsx.
-   * Deliberately tier-neutral colors (white/violet) during the charging
-   * stage since the tier isn't known yet at that point — nothing here
-   * should accidentally hint at (or spoil) what's about to be revealed.
+   * Build-rating reveal (rating-reveal.tsx). One instrument rather than a
+   * light show: a thin ring that fills with the score, a soft light
+   * behind the badge in the tier's colour, one ping per tier crossed and
+   * one swell when it lands. --reveal-color is registered (top of file)
+   * so it eases between tiers instead of jumping.
    * ------------------------------------------------------------------- */
-  .reveal-charging-glow {
-    animation: reveal-charging-pulse 1.8s ease-in-out infinite;
+  .reveal-stage {
+    transition:
+      --reveal-color 700ms var(--ease-ios),
+      --reveal-glow 700ms var(--ease-ios);
   }
 
-  @keyframes reveal-charging-pulse {
-    0%, 100% { filter: drop-shadow(0 0 18px rgb(167 139 250 / 0.55)) brightness(1); transform: scale(1); }
-    50% { filter: drop-shadow(0 0 34px rgb(216 180 254 / 0.9)) brightness(1.2); transform: scale(1.05); }
+  /* --reveal-level (0-1) is how far up the ladder the shown score is —
+     the light gets a little stronger as it climbs. */
+  .reveal-light {
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--reveal-glow) 38%, transparent), transparent);
+    opacity: calc(0.4 + var(--reveal-level, 0) * 0.6);
+    transition: opacity 500ms ease;
+  }
+  .reveal-light-swell {
+    animation: reveal-light-swell 1500ms var(--ease-ios) both;
+  }
+  @keyframes reveal-light-swell {
+    0% { transform: scale(1); filter: brightness(1); }
+    30% { transform: scale(1.3); filter: brightness(1.6); }
+    100% { transform: scale(1.08); filter: brightness(1.15); }
   }
 
-  /* Same masked-border-ring technique as .rank-frame::before, applied to
-     a plain circle with no photo inside — the tier isn't known yet
-     during charging, so this uses a neutral violet/white gradient
-     rather than any real tier's colors (nothing here should hint at or
-     spoil what's about to be revealed). */
-  .reveal-charging-frame {
-    position: relative;
-    border-radius: 9999px;
+  /* A tier change: the new badge sharpens in over the old one, which
+     softens out underneath — a cross-fade, never a bounce. */
+  .reveal-badge-in {
+    animation: reveal-badge-in 460ms var(--ease-ios) both;
   }
-  .reveal-charging-frame::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    box-sizing: border-box;
-    padding: 4px;
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask-composite: exclude;
-    background: conic-gradient(from var(--rank-angle, 0deg), #2e1065, #a78bfa, #f0abfc, #7c3aed, #2e1065, #a78bfa, #2e1065);
-    animation: rank-angle-spin 2.6s linear infinite;
-    filter: drop-shadow(0 0 14px rgb(167 139 250 / 0.6));
+  @keyframes reveal-badge-in {
+    from { opacity: 0; transform: scale(1.07); filter: blur(6px); }
+    to { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+  .reveal-badge-out {
+    animation: reveal-badge-out 460ms ease both;
+  }
+  @keyframes reveal-badge-out {
+    from { opacity: 1; transform: scale(1); filter: blur(0); }
+    to { opacity: 0; transform: scale(0.94); filter: blur(4px); }
   }
 
-  .reveal-flash {
-    animation: reveal-flash-fade 550ms ease-out forwards;
+  .reveal-ping {
+    animation: reveal-ping 900ms var(--ease-ios) both;
+  }
+  @keyframes reveal-ping {
+    from { opacity: 0.5; transform: scale(0.9); }
+    to { opacity: 0; transform: scale(1.18); }
   }
 
-  @keyframes reveal-flash-fade {
-    0% { opacity: 0; transform: scale(0.4); }
-    35% { opacity: 1; transform: scale(1.4); }
-    100% { opacity: 0; transform: scale(2.2); }
+  /* The held beat before the landing: the ring's leading point breathes. */
+  .reveal-breathe {
+    animation: reveal-breathe 1.1s ease-in-out infinite;
+  }
+  @keyframes reveal-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
   }
 
-  .reveal-punch {
-    animation: reveal-punch-scale 450ms cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+  .reveal-settle {
+    animation: reveal-settle 800ms var(--ease-ios) both;
+  }
+  @keyframes reveal-settle {
+    from { transform: scale(1.06); }
+    to { transform: scale(1); }
   }
 
-  @keyframes reveal-punch-scale {
-    0% { transform: scale(1) rotate(0deg); opacity: 1; }
-    40% { transform: scale(1.35) rotate(-8deg); opacity: 1; }
-    100% { transform: scale(0.2) rotate(12deg); opacity: 0; }
+  /* Everything after the landing arrives in order — --delay staggers it. */
+  .reveal-rise {
+    animation: reveal-rise 600ms var(--ease-ios) both;
+    animation-delay: var(--delay, 0ms);
+  }
+  @keyframes reveal-rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  .reveal-bar {
+    transform-origin: left;
+    animation: reveal-bar 1000ms var(--ease-ios) both;
+    animation-delay: var(--delay, 0ms);
+  }
+  @keyframes reveal-bar {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
   }
 
-  .reveal-shake {
-    animation: reveal-shake-wobble 450ms ease-in-out;
-  }
-
-  @keyframes reveal-shake-wobble {
-    0%, 100% { transform: translate(0, 0); }
-    20% { transform: translate(-6px, 2px); }
-    40% { transform: translate(5px, -3px); }
-    60% { transform: translate(-4px, -2px); }
-    80% { transform: translate(3px, 3px); }
-  }
-
-  .reveal-materialize {
-    animation: reveal-materialize-in 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  }
-
-  @keyframes reveal-materialize-in {
-    0% { transform: scale(0.25); opacity: 0; filter: blur(6px); }
-    60% { transform: scale(1.08); opacity: 1; filter: blur(0.5px); }
-    100% { transform: scale(1); opacity: 1; filter: blur(0px); }
-  }
-
-  .reveal-text-in {
-    animation: reveal-text-fade-up 500ms ease-out forwards;
-  }
-
-  @keyframes reveal-text-fade-up {
-    0% { transform: translateY(10px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-  }
-
-  /* Fires once every time the climbing score crosses into a new tier —
-     a ring shockwave plus the material icon giving a quick, satisfying
-     "level up" bounce. Both replay on every crossing because the
-     component remounts them with a fresh `key` each time (a changed
-     `key` is what makes React re-run a CSS animation that already
-     finished, rather than the element just sitting in its end state). */
-  .tier-levelup-ring {
-    animation: tier-levelup-ring-pulse 850ms ease-out forwards;
-  }
-
-  @keyframes tier-levelup-ring-pulse {
-    0% { transform: scale(0.85); opacity: 0.95; }
-    100% { transform: scale(1.9); opacity: 0; }
-  }
-
-  .tier-levelup-icon-pop {
-    animation: tier-levelup-icon-bounce 650ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  /* filter: blur() rides along with the same keyframes as the transform
-     that's actually moving the element — a directional/real motion blur
-     isn't something a flat CSS filter can do, but a blur that spikes
-     exactly when (and only when) the icon is moving fastest and clears
-     once it settles reads the same way at this scale. Deliberately part
-     of these same keyframes rather than a separate class: two classes
-     both setting `animation` on the same element don't combine, the
-     later one simply wins, which is exactly the bug this avoids. */
-  @keyframes tier-levelup-icon-bounce {
-    0% { transform: scale(0.8) rotate(0deg); opacity: 0; filter: blur(3px); }
-    30% { opacity: 1; }
-    45% { transform: scale(1.1) rotate(-4deg); opacity: 1; filter: blur(1.5px); }
-    100% { transform: scale(1) rotate(0deg); opacity: 1; filter: blur(0px); }
-  }
-
-  /* The quieter counterpart for a downgrade during "correcting" — a
-     settling flicker/jitter rather than the celebratory bounce above,
-     so a correction reads as the system steadying itself, not another
-     impact playing in reverse. */
-  .tier-correction-glitch {
-    animation: tier-correction-glitch-jitter 320ms ease-out;
-  }
-
-  @keyframes tier-correction-glitch-jitter {
-    0% { transform: translateX(0); opacity: 1; filter: blur(0px) saturate(1); }
-    20% { transform: translateX(-3px); opacity: 0.55; filter: blur(2px) saturate(0.4); }
-    40% { transform: translateX(3px); opacity: 0.8; filter: blur(1px) saturate(0.6); }
-    60% { transform: translateX(-1.5px); opacity: 0.65; filter: blur(1.5px) saturate(0.5); }
-    80% { transform: translateX(1px); opacity: 0.9; filter: blur(0.5px) saturate(0.8); }
-    100% { transform: translateX(0); opacity: 1; filter: blur(0px) saturate(1); }
-  }
-
-  /* The outgoing tier's icon during a crossfade — shrinks and fades away
-     underneath the incoming one (tier-levelup-icon-bounce above), rather
-     than disappearing the instant the new tier's icon mounts. */
-  .tier-icon-fade-out {
-    animation: tier-icon-fade-out-shrink 380ms cubic-bezier(0.4, 0, 1, 1) forwards;
-  }
-
-  @keyframes tier-icon-fade-out-shrink {
-    0% { transform: scale(1); opacity: 1; filter: blur(0px); }
-    100% { transform: scale(0.7); opacity: 0; filter: blur(2px); }
-  }
-
-  /* The held beat between the climb stopping and the final approach
-     starting — a slow breathing pulse on the icon itself, distinct from
-     (and layered separately from) the level-up bounce/materialize
-     animations so swapping into and out of it can't restart either of
-     those. */
-  .reveal-anticipation-pulse {
-    animation: reveal-anticipation-pulse-scale 0.4s ease-in-out infinite;
-  }
-
-  @keyframes reveal-anticipation-pulse-scale {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.06); }
-  }
-
-  /* A slow idle tilt once the final icon has settled — a "trophy on a
-     stand" quality rather than a static image. Deliberately a gentle
-     back-and-forth rock, not a full spin: the art is flat 2D shading
-     baked in for a front-on view, and a full rotation would expose that
-     (a flat badge spinning like a coin, lit from a fixed angle that
-     doesn't turn with it, looks wrong — a slight tilt doesn't). */
-  .reveal-icon-idle-tilt {
-    animation: reveal-icon-idle-tilt-rock 6s ease-in-out infinite;
-  }
-
-  @keyframes reveal-icon-idle-tilt-rock {
-    0%, 100% { transform: rotate(-2.5deg); }
-    50% { transform: rotate(2.5deg); }
-  }
-
-  /* Cosmic-only starfield (see cosmic-starfield.tsx) — each box-shadow
-     "star" is a single element, so the twinkle has to animate opacity
-     on the whole layer at once; three layers with staggered durations/
-     delays keep that from reading as one uniform pulse. */
-  .reveal-star-twinkle {
-    animation-name: reveal-star-twinkle-pulse;
-    animation-timing-function: ease-in-out;
-    animation-iteration-count: infinite;
-  }
-
-  @keyframes reveal-star-twinkle-pulse {
-    0%, 100% { opacity: 0.35; }
-    50% { opacity: 1; }
-  }
-
-  .reveal-planet-drift-a {
-    top: 12%;
-    left: 8%;
-    animation: reveal-planet-drift-a-move 22s ease-in-out infinite;
-  }
-
-  @keyframes reveal-planet-drift-a-move {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(6vw, 4vh) scale(1.15); }
-  }
-
-  .reveal-planet-drift-b {
-    bottom: 15%;
-    right: 10%;
-    animation: reveal-planet-drift-b-move 26s ease-in-out infinite;
-  }
-
-  @keyframes reveal-planet-drift-b-move {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(-5vw, -5vh) scale(0.9); }
-  }
-
-  .reveal-planet-drift-c {
-    top: 55%;
-    left: 60%;
-    animation: reveal-planet-drift-c-move 18s ease-in-out infinite;
-  }
-
-  @keyframes reveal-planet-drift-c-move {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(4vw, -3vh) scale(1.2); }
-  }
-
-  /* Cosmic's own rotating nebula, underneath the stars and planets —
-     the top of the ladder carries the most layers of anything here
-     (nebula + three star depths + three drifting planets), not just a
-     bigger version of the sweep every other bespoke tier gets. */
-  .reveal-nebula-swirl {
-    background: conic-gradient(
-      from var(--rank-angle, 0deg) at 50% 50%,
-      rgba(167, 139, 250, 0.22),
-      transparent 14%,
-      rgba(96, 165, 250, 0.18) 32%,
-      transparent 50%,
-      rgba(244, 114, 182, 0.16) 68%,
-      transparent 84%,
-      rgba(167, 139, 250, 0.2) 100%
-    );
-    filter: blur(55px);
-    animation: rank-angle-spin 34s linear infinite;
-  }
-
-  /* A shooting star only actually moves during a small slice (0-4%) of
-     its own long cycle — the rest of the duration it just sits
-     invisible at rest, waiting to loop. Staggered delays/durations per
-     star (set in cosmic-starfield.tsx) keep them from all streaking on
-     the same beat, reading as occasional rather than a barrage. */
-  .reveal-shooting-star-trail {
-    width: 130px;
-    height: 2px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), transparent);
-    animation-name: reveal-shooting-star-streak;
-    animation-timing-function: ease-out;
-    animation-iteration-count: infinite;
-    /* Without this, the element sits in its plain (fully visible,
-       static) CSS during animation-delay rather than the keyframe's
-       hidden 0% state — every star renders as a frozen bright bar for
-       up to several seconds before its staggered delay elapses and the
-       streak actually starts. */
-    animation-fill-mode: backwards;
-  }
-
-  @keyframes reveal-shooting-star-streak {
-    0% { transform: translateX(0); opacity: 0; }
-    1% { opacity: 1; }
-    4% { transform: translateX(220px); opacity: 0; }
-    100% { transform: translateX(220px); opacity: 0; }
-  }
-
-  /* Shared rising-particle motion — emerald's fireflies and ruby's
-     embers are the same drift-up-and-fade arc, just different colors
-     and sizes set per-particle via inline style (--drift-x). */
-  .reveal-firefly-rise {
-    animation-name: reveal-firefly-rise-up;
-    animation-timing-function: ease-in-out;
-    animation-iteration-count: infinite;
-  }
-
-  @keyframes reveal-firefly-rise-up {
-    0% { transform: translate(0, 0); opacity: 0; }
-    12% { opacity: 1; }
-    88% { opacity: 1; }
-    100% { transform: translate(var(--drift-x, 0), -118vh); opacity: 0; }
-  }
-
-  /* Emerald: soft vertical light shafts, like sunlight breaking through
-     a forest canopy — a few wide, faint, slowly-shifting gradient
-     bars rather than a flat wash. */
-  .reveal-emerald-shafts {
-    background:
-      linear-gradient(100deg, transparent 15%, rgba(94, 234, 212, 0.12) 22%, transparent 30%),
-      linear-gradient(100deg, transparent 55%, rgba(94, 234, 212, 0.08) 63%, transparent 72%);
-    background-size: 200% 200%;
-    animation: reveal-emerald-shafts-drift 14s ease-in-out infinite;
-  }
-
-  @keyframes reveal-emerald-shafts-drift {
-    0%, 100% { background-position: 0% 0%; }
-    50% { background-position: 15% 8%; }
-  }
-
-  /* Diamond: a slow-turning sweep of prismatic light — light refracting
-     inside a cut stone, reusing the same rotating-conic-gradient trick
-     as the ambient sweep but tighter and colder (icy blue/white/cyan
-     rather than the tier's single ambient wash color). */
-  .reveal-prism-sweep {
-    background: conic-gradient(
-      from var(--rank-angle, 0deg) at 50% 50%,
-      rgba(191, 244, 255, 0.22),
-      transparent 18%,
-      rgba(125, 211, 252, 0.16) 40%,
-      transparent 60%,
-      rgba(255, 255, 255, 0.2) 80%,
-      transparent 96%
-    );
-    filter: blur(40px);
-    animation: rank-angle-spin 9s linear infinite;
-  }
-
-  /* Ruby: a slow-pulsing heat glow underneath the rising embers — the
-     forge they're coming from, not a static backdrop. */
-  .reveal-heat-pulse {
-    background: radial-gradient(60% 50% at 50% 70%, rgba(255, 90, 60, 0.28) 0%, transparent 75%);
-    animation: reveal-heat-pulse-glow 3.2s ease-in-out infinite;
-  }
-
-  @keyframes reveal-heat-pulse-glow {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; }
-  }
-
-  /* Ruby: a rotating flame-vortex sweep, same conic-gradient-rotation
-     technique as diamond's prism sweep — warm reds/oranges/golds
-     turning like heat rising off a fire, instead of diamond's cold
-     blue/white refraction. */
-  .reveal-flame-vortex {
-    background: conic-gradient(
-      from var(--rank-angle, 0deg) at 50% 50%,
-      rgba(255, 90, 60, 0.26),
-      transparent 16%,
-      rgba(251, 191, 36, 0.18) 38%,
-      transparent 58%,
-      rgba(244, 63, 94, 0.24) 78%,
-      transparent 96%
-    );
-    filter: blur(38px);
-    animation: rank-angle-spin 7s linear infinite;
-  }
-
-  /* A light sweep across the emblem itself, not just the ring around it
-     — masked to that tier's own icon (mask-image defaults to using the
-     image's alpha channel), via an inline mask-image set per-tier in
-     rating-reveal.tsx, so the highlight only ever paints over the
-     badge's actual silhouette, never a flat rectangle around it. */
-  .icon-sweep-highlight {
-    background: linear-gradient(115deg, transparent 34%, rgba(255, 255, 255, 0.85) 50%, transparent 66%);
-    background-size: 260% 260%;
-    mix-blend-mode: overlay;
-    animation: rank-glint-sweep 4.5s ease-in-out infinite;
-  }
-
-
-  /* ------------------------------------------------------------------- *
-   * Casino-jackpot dressing for the reveal — a full-screen color wash on
-   * every tier-up (not just the contained ring pulse), and a full-screen
-   * ambient background that's always the current tier's own color and
-   * always moving, the same way a slot machine's own cabinet lights up
-   * on a win rather than just the reels themselves.
-   * ------------------------------------------------------------------- */
-  .reveal-screen-flash {
-    animation: reveal-screen-flash-fade 750ms ease-out forwards;
-  }
-
-  @keyframes reveal-screen-flash-fade {
-    0% { opacity: 0; }
-    15% { opacity: 0.55; }
-    100% { opacity: 0; }
-  }
-
-  /* The reveal's full background — replaces flat black. A fixed soft
-     glow anchored above the ring plus a slow-rotating color sweep behind
-     it, both keyed to the current tier's color and cross-fading smoothly
-     as the climb moves through tiers (the transition is on the custom
-     property itself, which is what makes the color interpolate instead
-     of hard-cutting). */
-  @property --reveal-color {
-    syntax: "<color>";
-    inherits: false;
-    initial-value: #000000;
-  }
-
-  .reveal-ambient-glow,
-  .reveal-ambient-sweep {
-    --reveal-color: #000000;
-    position: absolute;
-    inset: -30%;
-    transition: --reveal-color 800ms ease;
-  }
-
-  .reveal-ambient-glow {
-    background: radial-gradient(55% 45% at 50% 32%, color-mix(in srgb, var(--reveal-color) 42%, transparent) 0%, transparent 70%);
-  }
-
-  .reveal-ambient-sweep {
-    background: conic-gradient(
-      from var(--rank-angle, 0deg) at 50% 50%,
-      color-mix(in srgb, var(--reveal-color) 24%, transparent),
-      transparent 22%,
-      color-mix(in srgb, var(--reveal-color) 16%, transparent) 50%,
-      transparent 78%,
-      color-mix(in srgb, var(--reveal-color) 24%, transparent) 100%
-    );
-    filter: blur(50px);
-    opacity: 0.9;
-    animation: rank-angle-spin 28s linear infinite;
-  }
-
-  .reveal-landing-shake {
-    animation: reveal-shake-wobble 600ms ease-in-out;
-  }
-
-  /* Scaled by --shake-intensity (set inline per-tier in
-     rating-reveal.tsx) — the higher the tier landed on, the bigger this
-     gets, so cosmic actually feels like a bigger hit than bronze rather
-     than every landing shaking the screen by the same fixed amount. */
-  @keyframes reveal-shake-wobble {
-    0%, 100% { transform: translate(0, 0); }
-    20% { transform: translate(calc(-4px * var(--shake-intensity, 1)), calc(1.5px * var(--shake-intensity, 1))); }
-    40% { transform: translate(calc(3px * var(--shake-intensity, 1)), calc(-2px * var(--shake-intensity, 1))); }
-    60% { transform: translate(calc(-2.5px * var(--shake-intensity, 1)), calc(-1.5px * var(--shake-intensity, 1))); }
-    80% { transform: translate(calc(2px * var(--shake-intensity, 1)), calc(2px * var(--shake-intensity, 1))); }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-light-swell,
+    .reveal-badge-in,
+    .reveal-badge-out,
+    .reveal-ping,
+    .reveal-breathe,
+    .reveal-settle,
+    .reveal-rise,
+    .reveal-bar {
+      animation-duration: 1ms;
+      animation-iteration-count: 1;
+      animation-delay: 0ms;
+    }
   }
 }

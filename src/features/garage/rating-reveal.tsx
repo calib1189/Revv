@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, RANK_AMBIENT_COLORS, RANK_TIERS, type RankTier } from "@/lib/rating/rank";
-import { RANK_MATERIAL_ICONS, RANK_ICON_SRC } from "@/features/garage/rank-material-icons";
-import { ParticleBurst } from "@/features/garage/particle-burst";
-import { CosmicStarfield } from "@/features/garage/cosmic-starfield";
-import { EmeraldAura } from "@/features/garage/emerald-aura";
-import { DiamondPrism } from "@/features/garage/diamond-prism";
-import { RubyEmbers } from "@/features/garage/ruby-embers";
+import {
+  rankForScore,
+  tierProgress,
+  RANK_LABELS,
+  RANK_TEXT_COLORS,
+  RANK_AMBIENT_COLORS,
+  RANK_TIERS,
+  type RankTier,
+} from "@/lib/rating/rank";
+import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import {
   unknownClimbValue,
   cappedClimbValue,
@@ -18,7 +21,7 @@ import {
 } from "@/features/garage/climb-math";
 import { RevealSoundEngine } from "@/features/garage/reveal-sound";
 import { hapticTierUp, hapticLanding } from "@/lib/haptics";
-import type { BuildRating } from "@/lib/providers/rating-provider";
+import type { BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 
 type Stage = "climbing" | "anticipating" | "correcting" | "landing" | "landed" | "settled";
 
@@ -50,22 +53,44 @@ function ascendingRank(tier: RankTier): number {
   return RANK_TIERS.length - 1 - RANK_TIERS.findIndex((t) => t.tier === tier);
 }
 
+// Ring geometry, in the SVG's own 200-unit box.
+const RING_RADIUS = 92;
+/** Where each tier starts on the ring — one mark per boundary above 0. */
+const TIER_MARKS = RANK_TIERS.filter((t) => t.min > 0).map((t) => t.min);
+
+/** A point on the ring `value` (0-100) of the way round, from 12 o'clock. */
+function ringPoint(value: number): { x: number; y: number } {
+  const angle = (value / 100) * Math.PI * 2 - Math.PI / 2;
+  return { x: 100 + RING_RADIUS * Math.cos(angle), y: 100 + RING_RADIUS * Math.sin(angle) };
+}
+
+const SUBSCORE_ROWS: { key: keyof BuildRatingSubscores; label: string }[] = [
+  { key: "appearance", label: "Appearance" },
+  { key: "performance", label: "Performance" },
+  { key: "wheelsFitment", label: "Wheels/Fitment" },
+  { key: "interior", label: "Interior" },
+  { key: "modifications", label: "Modifications" },
+];
+
+function hasSubscores(subscores: BuildRatingSubscores | null | undefined): subscores is BuildRatingSubscores {
+  return !!subscores && SUBSCORE_ROWS.every(({ key }) => typeof subscores[key] === "number");
+}
+
 /**
- * The build-rating "unboxing" moment: the score starts at 0 and climbs
- * continuously — fast at first, slowing as it goes — for as long as the
- * real AI call takes (this doubles as the loading state), then eases
- * into an exact landing on the real score once it's ready. The tier
- * ring/icon shown is always whatever tier the *currently displayed*
- * number falls into, so every time the climb crosses a tier boundary —
- * climbing or landing, it doesn't matter which — that swap fires its
- * own level-up effect: a ring shockwave, an icon bounce, a small
- * particle burst, and a full-screen color flash, the same "the whole
- * cabinet lights up" feeling a real slot machine gives on every step
- * toward a win, not just the reels themselves. The background itself is
- * never flat — a slow-rotating color sweep behind everything, always
- * the current tier's own color, cross-fading as the tier changes.
- * Landing gets the same treatment turned up further — a bigger particle
- * burst and a screen shake.
+ * The build-rating moment. The score starts at 0 and climbs — fast at
+ * first, slowing as it goes — for as long as the real AI call takes (it
+ * doubles as the loading state), then eases into an exact landing on the
+ * real score.
+ *
+ * Built as one instrument rather than a light show: a thin ring around
+ * the badge fills with the number, with a mark at every tier boundary
+ * that lights in that tier's colour as the ring passes it. The badge is
+ * always the tier the *shown* number falls in, cross-fading softly at
+ * each crossing with a single ping and a tick of sound and haptics; the
+ * only light is one soft glow behind it, in the tier's colour, getting a
+ * little stronger as the score climbs. The landing is one swell of that
+ * light and the number settling. Then the ring steps back and the five
+ * sub-scores fill in, followed by what earned the score.
  */
 export function RatingReveal({
   result,
@@ -287,7 +312,7 @@ export function RatingReveal({
 
       setOutgoingTier(previousTier);
       if (outgoingTimeoutRef.current) clearTimeout(outgoingTimeoutRef.current);
-      outgoingTimeoutRef.current = setTimeout(() => setOutgoingTier(null), 380);
+      outgoingTimeoutRef.current = setTimeout(() => setOutgoingTier(null), 460);
     }
   }, [displayedTier, sound]);
 
@@ -298,228 +323,206 @@ export function RatingReveal({
   }, []);
 
   const landed = stage === "landed" || stage === "settled";
+  const settled = stage === "settled";
   const color = RANK_TEXT_COLORS[displayedTier];
-  const ambientColor = RANK_AMBIENT_COLORS[displayedTier];
   const Icon = RANK_MATERIAL_ICONS[displayedTier];
   const OutgoingIcon = outgoingTier ? RANK_MATERIAL_ICONS[outgoingTier] : null;
-  // 0 (bronze) through 1 (cosmic) — once landed, displayedTier already
-  // *is* the final tier (displayedValue was just set to the exact
-  // final score), so this can be read straight off it rather than
-  // needing the result prop's score again. Scales the landing shake and
-  // the size of the final confetti burst so the actual top tier is the
-  // biggest-feeling landing, not every tier hitting the same.
-  const dramaIntensity = ascendingRank(displayedTier) / Math.max(1, RANK_TIERS.length - 1);
-  // A screen shake on every single landing (bronze included) undersells
-  // the ones that should actually feel like an impact — only gold and
-  // above (dramaIntensity > 0.4, roughly the top half of the ladder)
-  // shake at all.
-  const isMajorReveal = dramaIntensity > 0.4;
+  // 0 at the bottom of the ladder, 1 at the top — how strong the light is.
+  const level = ascendingRank(displayedTier) / Math.max(1, RANK_TIERS.length - 1);
+  const head = ringPoint(Math.min(99.999, displayedValue));
+  const [whole, fraction] = displayedValue.toFixed(2).split(".");
+  const progress = landed ? tierProgress(displayedValue) : null;
+  const subscores = settled && result && hasSubscores(result.subscores) ? result.subscores : null;
+
+  const statusLabel = landed
+    ? result?.isMock
+      ? "Preview rating"
+      : "Your rating"
+    : stage === "correcting"
+      ? "Recalculating"
+      : "Rating your build";
 
   return (
     <div
-      className={`fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black reveal-screen-corners ${
-        stage === "landed" && isMajorReveal ? "reveal-landing-shake" : ""
-      }`}
-      style={{ "--shake-intensity": 1 + dramaIntensity * 1.3 } as React.CSSProperties}
+      className="reveal-stage fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#050506] text-white"
+      style={
+        {
+          "--reveal-color": color,
+          "--reveal-glow": RANK_AMBIENT_COLORS[displayedTier],
+          "--reveal-level": level,
+        } as React.CSSProperties
+      }
     >
-      {/* Bespoke top-tier landing backdrops — each of these gets its own
-          distinct scene instead of just a bigger version of every other
-          tier's effects (the same idea CosmicStarfield started with). */}
-      {landed && displayedTier === "cosmic" && <CosmicStarfield />}
-      {landed && displayedTier === "emerald" && <EmeraldAura />}
-      {landed && displayedTier === "diamond" && <DiamondPrism />}
-      {landed && displayedTier === "ruby" && <RubyEmbers />}
+      <div className="flex min-h-full flex-col items-center justify-center px-6 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[calc(2rem+env(safe-area-inset-top))]">
+        <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.24em] text-white/45">{statusLabel}</p>
 
-      {/* The reveal's whole background — always the current tier's
-          color, always moving, cross-fading smoothly as the tier
-          changes (the transition lives on the CSS custom property). */}
-      <span
-        aria-hidden
-        className="reveal-ambient-glow pointer-events-none absolute inset-0"
-        style={{ "--reveal-color": ambientColor } as React.CSSProperties}
-      />
-      <span
-        aria-hidden
-        className="reveal-ambient-sweep pointer-events-none absolute inset-0"
-        style={{ "--reveal-color": ambientColor } as React.CSSProperties}
-      />
-
-      {/* Full-screen color wash — replays on every tier-up via the
-          key-remount trick, same as the contained ring pulse. Skipped
-          for a downgrade (a correction, not an achievement) — see
-          isDowngrade above. */}
-      {!isDowngrade && (
-        <span
-          key={`screen-flash-${levelUpKey}`}
-          aria-hidden
-          className="reveal-screen-flash pointer-events-none absolute inset-0"
-          style={{ background: `radial-gradient(circle, ${color}66 0%, transparent 70%)` }}
-        />
-      )}
-
-      <div className="relative flex h-52 w-52 items-center justify-center">
-        {/* Confetti renders before (so it paints behind) the icon itself
-            — it's a backdrop effect, not something that should ever
-            overlap the badge art. Needs real room to fly outward and
-            fade before it runs out of canvas — sized to the small icon
-            box itself, it hit a hard clip right at that box's edge,
-            which read as a square frame around the icon once enough
-            particles piled up against it (worst on the final burst,
-            with the most particles). This wrapper gives it a canvas
-            several times bigger than the icon, well past where
-            particles have already faded out by the time they'd reach
-            its edge. Colors stay within this tier's own palette (its
-            text color, its ambient wash, white for sparkle) rather than
-            mixing in an unrelated fixed color, so the burst actually
-            reads as "this tier," not just "confetti." */}
-        {levelUpKey > 0 && !isDowngrade && (
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2">
-            <ParticleBurst
-              key={`sparkle-${levelUpKey}`}
-              burstKey={levelUpKey}
-              colors={[color, ambientColor, "#ffffff"]}
-              count={Math.round(40 + dramaIntensity * 70)}
-              speedMultiplier={0.8 + dramaIntensity * 0.6}
-            />
-          </div>
-        )}
-        {landed && (
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2">
-            <ParticleBurst
-              burstKey={`final-${result?.score ?? 0}`}
-              colors={[color, ambientColor, `${color}cc`, "#ffffff"]}
-              count={Math.round(130 + dramaIntensity * 90)}
-              speedMultiplier={1.25 + dramaIntensity * 0.35}
-            />
-          </div>
-        )}
-
-        {/* The previous tier's icon, kept mounted just long enough to
-            shrink and fade away underneath the new one — a genuine
-            crossfade instead of the old icon vanishing the instant the
-            new one appears (which is what a plain key-remount gives you
-            on its own). */}
-        {OutgoingIcon && outgoingTier && (
-          <div className="tier-icon-fade-out absolute inset-0 flex items-center justify-center">
-            <OutgoingIcon
-              className="h-full w-full"
-              style={{
-                filter: `brightness(1.3) contrast(1.15) saturate(1.25) drop-shadow(0 0 22px ${RANK_TEXT_COLORS[outgoingTier]}99)`,
-              }}
-            />
-          </div>
-        )}
-
+        {/* The instrument: a ring that fills with the score, a mark at
+            every tier boundary, the badge in the middle. Steps back to a
+            smaller size once everything has landed, to make room. */}
         <div
-          key={`ring-${levelUpKey}`}
-          className={`flex h-full w-full items-center justify-center ${
-            landed ? "reveal-materialize" : isDowngrade ? "tier-correction-glitch" : "tier-levelup-icon-pop"
+          className={`relative mt-6 transition-[width,height] duration-700 ease-[var(--ease-ios)] ${
+            settled ? "h-[10.5rem] w-[10.5rem]" : "h-[17.5rem] w-[17.5rem]"
           }`}
         >
-          {/* The source art itself reads a little flat against all the
-              motion around it — brightness/contrast/saturation plus a
-              colored glow (matching this tier's own color) makes it pop
-              the way the animated ring around it always has. A slow
-              pulse during the anticipation hold, or a slow idle tilt
-              once truly settled — applied here rather than on the
-              wrapper above so neither can collide with (and
-              accidentally restart) that wrapper's own level-up/
-              materialize animation. */}
-          <Icon
-            className={`h-full w-full ${
-              stage === "anticipating" ? "reveal-anticipation-pulse" : stage === "settled" ? "reveal-icon-idle-tilt" : ""
+          <span
+            key={landed ? "light-landed" : "light"}
+            aria-hidden
+            className={`reveal-light pointer-events-none absolute -inset-[45%] rounded-full ${
+              stage === "landed" ? "reveal-light-swell" : ""
             }`}
-            style={{
-              filter: `brightness(1.3) contrast(1.15) saturate(1.25) drop-shadow(0 0 22px ${color}99)`,
-            }}
           />
-          {/* A light sweep across the emblem itself (not just the ring
-              around it) — masked to this tier's own icon, using its
-              alpha channel, so the highlight only ever paints over the
-              badge's actual silhouette. */}
-          <span
-            aria-hidden
-            className="icon-sweep-highlight pointer-events-none absolute inset-0"
-            style={{
-              maskImage: `url(${RANK_ICON_SRC[displayedTier]})`,
-              maskSize: "contain",
-              maskRepeat: "no-repeat",
-              maskPosition: "center",
-              WebkitMaskImage: `url(${RANK_ICON_SRC[displayedTier]})`,
-              WebkitMaskSize: "contain",
-              WebkitMaskRepeat: "no-repeat",
-              WebkitMaskPosition: "center",
-            }}
-          />
+
+          <svg viewBox="0 0 200 200" className="absolute inset-0 h-full w-full overflow-visible" aria-hidden>
+            <circle cx="100" cy="100" r={RING_RADIUS} fill="none" stroke="rgb(255 255 255 / 0.08)" strokeWidth="2.5" />
+            <circle
+              cx="100"
+              cy="100"
+              r={RING_RADIUS}
+              fill="none"
+              stroke="var(--reveal-color)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              pathLength={100}
+              strokeDasharray="100"
+              strokeDashoffset={100 - Math.min(100, displayedValue)}
+              transform="rotate(-90 100 100)"
+              style={{ filter: "drop-shadow(0 0 6px var(--reveal-color))" }}
+            />
+            {TIER_MARKS.map((min) => {
+              const point = ringPoint(min);
+              const reached = displayedValue >= min;
+              return (
+                <circle
+                  key={min}
+                  cx={point.x}
+                  cy={point.y}
+                  r={reached ? 2.6 : 1.9}
+                  fill={reached ? RANK_TEXT_COLORS[rankForScore(min)] : "rgb(255 255 255 / 0.22)"}
+                  className="transition-[r,fill] duration-500"
+                />
+              );
+            })}
+            {/* The leading point of the line — where the number is right
+                now. Breathes during the held beat before the landing, and
+                is gone once the score has landed. */}
+            {!landed && displayedValue > 0.2 && (
+              <circle
+                cx={head.x}
+                cy={head.y}
+                r="4"
+                fill="#ffffff"
+                className={stage === "anticipating" ? "reveal-breathe" : ""}
+                style={{ filter: "drop-shadow(0 0 6px var(--reveal-color))" }}
+              />
+            )}
+          </svg>
+
+          <div className="absolute inset-[22%]">
+            {/* Each badge gets its own positioned layer: the badge itself
+                is position: relative, so two of them side by side would
+                stack one under the other mid-crossfade. */}
+            {OutgoingIcon && outgoingTier && (
+              <div key={`out-${levelUpKey}`} className="reveal-badge-out absolute inset-0">
+                <OutgoingIcon className="h-full w-full" />
+              </div>
+            )}
+            <div key={`in-${displayedTier}`} className="reveal-badge-in absolute inset-0">
+              <Icon className="h-full w-full" style={{ filter: "drop-shadow(0 10px 28px rgb(0 0 0 / 0.5))" }} />
+            </div>
+            {/* One ring leaving the badge per tier reached on the way up. */}
+            {levelUpKey > 0 && !isDowngrade && !landed && (
+              <span
+                key={`ping-${levelUpKey}`}
+                aria-hidden
+                className="reveal-ping pointer-events-none absolute -inset-[12%] rounded-full border border-[var(--reveal-color)]"
+              />
+            )}
+          </div>
         </div>
 
-        {/* Shockwave ring on every tier crossing, key-remounted so the
-            one-shot CSS animation replays each time. Skipped for a
-            downgrade — a correction settling quietly, not another
-            impact. */}
-        {!isDowngrade && (
-          <span
-            key={`pulse-${levelUpKey}`}
-            aria-hidden
-            className="tier-levelup-ring pointer-events-none absolute inset-0 rounded-full border-2"
-            style={{ borderColor: color }}
-          />
-        )}
-
-        {stage === "landed" && (
-          <span aria-hidden className="reveal-flash absolute inset-0 rounded-full bg-white" />
-        )}
-      </div>
-
-      <div className="relative mt-7 flex flex-col items-center gap-1 text-center">
-        {!landed && (
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/40">
-            {stage === "correcting" ? "Recalculating…" : "Rating your build…"}
+        <div className="mt-7 flex flex-col items-center text-center">
+          <p
+            className="text-[1.0625rem] font-semibold uppercase tracking-[0.18em]"
+            style={{ color: "var(--reveal-color)" }}
+          >
+            {RANK_LABELS[displayedTier]}
           </p>
-        )}
-        {landed && result && (
-          <p className="reveal-text-in text-xs font-semibold uppercase tracking-[0.2em] text-white/50">
-            {result.isMock ? "Preview rating" : "Your rating"}
+          <p
+            key={landed ? "score-landed" : "score"}
+            aria-live="polite"
+            className={`numeral mt-1 flex items-baseline leading-none ${landed ? "reveal-settle" : ""}`}
+          >
+            <span className="text-[4.75rem] font-semibold tracking-[-0.04em]">{whole}</span>
+            <span className="text-[2rem] font-medium text-white/40">.{fraction}</span>
           </p>
-        )}
-        <p className="text-3xl font-bold tracking-tight transition-colors duration-300 ease-out" style={{ color }}>
-          {RANK_LABELS[displayedTier]}
-        </p>
-        <p className="text-xl font-semibold tabular-nums text-white/90">{displayedValue.toFixed(2)}</p>
-      </div>
-
-      {/* The reveal used to hand off straight to the tier + score, with
-          the actual "why" living only on the garage card afterward —
-          landing the number and then saying nothing about it undersells
-          the moment. Same copy the garage card already shows, just
-          surfaced here first. */}
-      {stage === "settled" && result && (
-        <div className="reveal-text-in relative mt-5 max-w-xs px-6 text-center">
-          <p className="text-sm leading-relaxed text-white/80">{result.strengths}</p>
-          <p className="mt-2 text-sm leading-relaxed text-white/45">{result.limitingFactors}</p>
+          {progress && (
+            <p
+              className="reveal-rise mt-3 text-[0.8125rem] text-white/50"
+              style={{ "--delay": "250ms" } as React.CSSProperties}
+            >
+              {progress.next && progress.pointsToNext !== null
+                ? `${progress.pointsToNext.toFixed(2)} to ${RANK_LABELS[progress.next]}`
+                : "The top tier"}
+            </p>
+          )}
         </div>
-      )}
 
-      {!landed && !skipRequested && (
-        <button
-          type="button"
-          onClick={() => setSkipRequested(true)}
-          className="relative mt-10 text-xs text-white/40 underline underline-offset-2"
-        >
-          Skip
-        </button>
-      )}
+        {settled && result && (
+          <div className="mt-8 flex w-full max-w-sm flex-col gap-6">
+            {subscores && (
+              <ul className="reveal-rise flex flex-col gap-3.5 rounded-[22px] bg-white/[0.04] p-5 ring-1 ring-inset ring-white/[0.07]">
+                {SUBSCORE_ROWS.map(({ key, label }, i) => {
+                  const value = Math.max(0, Math.min(100, subscores[key]));
+                  const delay = { "--delay": `${150 + i * 90}ms` } as React.CSSProperties;
+                  return (
+                    <li key={key} className="reveal-rise" style={delay}>
+                      <div className="flex items-baseline justify-between text-[0.8125rem]">
+                        <span className="text-white/70">{label}</span>
+                        <span className="numeral text-white/90">{Math.round(value)}</span>
+                      </div>
+                      <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-white/[0.08]">
+                        <div
+                          className="reveal-bar h-full rounded-full"
+                          style={{ ...delay, width: `${value}%`, background: "var(--reveal-color)" }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
 
-      {stage === "settled" && (
-        <button
-          type="button"
-          onClick={onDone}
-          className="reveal-text-in relative mt-10 rounded-full px-8 py-3 text-sm font-semibold"
-          style={{ backgroundColor: color, color: "#0a0a0b" }}
-        >
-          Continue
-        </button>
-      )}
+            <div className="reveal-rise px-1 text-center" style={{ "--delay": "650ms" } as React.CSSProperties}>
+              <p className="text-[0.9375rem] leading-relaxed text-white/85">{result.strengths}</p>
+              <p className="mt-2 text-[0.875rem] leading-relaxed text-white/45">{result.limitingFactors}</p>
+            </div>
+
+            {/* Pinned to the bottom of the screen: with the breakdown and
+                the write-up above, it would otherwise sit below the fold on
+                a phone. The band behind it fades the text out under it. */}
+            <div className="sticky bottom-0 -mb-[calc(2rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-[#050506] from-60% to-transparent pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-8">
+              <button
+                type="button"
+                onClick={onDone}
+                className="reveal-rise pressable h-12 w-full rounded-full text-[0.9375rem] font-semibold text-[#0a0a0b]"
+                style={{ "--delay": "800ms", background: "var(--reveal-color)" } as React.CSSProperties}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!landed && !skipRequested && (
+          <button
+            type="button"
+            onClick={() => setSkipRequested(true)}
+            className="mt-12 rounded-full px-4 py-2 text-[0.8125rem] font-medium text-white/35 transition-colors hover:text-white/60"
+          >
+            Skip
+          </button>
+        )}
+      </div>
     </div>
   );
 }
