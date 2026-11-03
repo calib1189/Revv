@@ -19,6 +19,7 @@ export function UserRow({ data }: { data: UserRowData }) {
   const [isVerified, setIsVerified] = useState(data.isVerified);
   const [isFounder, setIsFounder] = useState(data.isFounder);
   const [confirmingFounder, setConfirmingFounder] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
 
   return (
     <li className="flex flex-col gap-2 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
@@ -44,14 +45,20 @@ export function UserRow({ data }: { data: UserRowData }) {
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              await setUserVerifiedAction(data.userId, !isVerified);
-              setIsVerified(!isVerified);
+              setVerifyError(null);
+              try {
+                await setUserVerifiedAction(data.userId, !isVerified);
+                setIsVerified(!isVerified);
+              } catch {
+                setVerifyError("Didn't save. Try again.");
+              }
             })
           }
           className="text-sm text-muted hover:text-foreground disabled:opacity-60"
         >
           {isVerified ? "Remove verified" : "Grant verified"}
         </button>
+        {verifyError && <span className="text-sm text-danger">{verifyError}</span>}
 
         {confirmingFounder ? (
           <span className="flex items-center gap-2 text-sm">

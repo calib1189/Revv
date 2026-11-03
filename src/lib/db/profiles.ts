@@ -112,8 +112,18 @@ export async function setUserVerified(
   userId: string,
   verified: boolean,
 ): Promise<void> {
-  const { error } = await supabase.from("profiles").update({ is_verified: verified }).eq("id", userId);
+  // Read back rather than trusting a clean response: RLS filtering the
+  // row out, or the trigger reverting the column, both come back without
+  // an error — the badge just silently doesn't change.
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ is_verified: verified })
+    .eq("id", userId)
+    .select("is_verified");
   if (error) throw error;
+  if (data.length === 0 || data[0].is_verified !== verified) {
+    throw new Error("The verified badge didn't change. Only admins can set it.");
+  }
 }
 
 /** Admin-only in practice — see protect_is_founder_column. Founder is a

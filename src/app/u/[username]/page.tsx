@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
-import { getProfileByUsername } from "@/lib/db/profiles";
+import { getProfileByUserId, getProfileByUsername } from "@/lib/db/profiles";
 import { getFollowerCount, getFollowingCount, isFollowing } from "@/lib/db/follows";
 import { isBlocking } from "@/lib/db/blocks";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
@@ -25,6 +25,7 @@ import { AchievementUnlockToast } from "@/features/achievements/achievement-unlo
 import { ProfileShowcase } from "@/features/achievements/achievement-showcase";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
+import { GrantVerifiedButton } from "@/features/admin/grant-verified-button";
 import { ReportButton } from "@/features/feed/report-button";
 import { MessageButton } from "@/features/messages/message-button";
 import { getStoreItem } from "@/lib/store/catalog";
@@ -68,7 +69,7 @@ export default async function ProfilePage({
       ? recordProfileVisit(supabase, currentUser.id, profile.id, sourcePostId).catch(() => {})
       : Promise.resolve();
 
-  const [followerCount, followingCount, following, amBlocking, vehicles, posts] =
+  const [followerCount, followingCount, following, amBlocking, vehicles, posts, viewerIsAdmin] =
     await Promise.all([
       getFollowerCount(supabase, profile.id),
       getFollowingCount(supabase, profile.id),
@@ -80,6 +81,13 @@ export default async function ProfilePage({
         : Promise.resolve(false),
       listVehiclesByOwner(supabase, profile.id),
       listPostsByAuthor(supabase, profile.id),
+      // Only decides whether the verified-badge control shows in the ⋯
+      // menu; granting it is checked again server-side.
+      currentUser && !isOwnProfile
+        ? getProfileByUserId(supabase, currentUser.id)
+            .then((viewer) => Boolean(viewer?.is_admin))
+            .catch(() => false)
+        : Promise.resolve(false),
       recordVisit,
     ]);
 
@@ -396,6 +404,16 @@ export default async function ProfilePage({
               }
               menu={
                 <>
+                  {viewerIsAdmin && (
+                    <>
+                      <GrantVerifiedButton
+                        userId={profile.id}
+                        username={profile.username}
+                        initialIsVerified={profile.is_verified}
+                      />
+                      <div className="h-px w-full bg-border" />
+                    </>
+                  )}
                   <BlockButton
                     targetUserId={profile.id}
                     targetUsername={profile.username}
