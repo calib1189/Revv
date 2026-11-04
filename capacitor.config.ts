@@ -62,6 +62,17 @@ const config: CapacitorConfig = {
     // exactly the oversized empty strip under the status bar this fixes.
     contentInset: "never",
   },
+  plugins: {
+    PushNotifications: {
+      // The plugin's default is ["badge"]: a notification that arrives
+      // while the app is open is delivered by Apple and then shown
+      // nowhere. That includes the test notification, which is always
+      // sent from inside the app, so it looked like push was broken
+      // when APNs had accepted it. "banner" + "list" show it like any
+      // other app does; "alert" is the pre-iOS 14 spelling of the same.
+      presentationOptions: ["badge", "sound", "banner", "list", "alert"],
+    },
+  },
 };
 
 export default config;
