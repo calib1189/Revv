@@ -15,8 +15,12 @@ import { AiDisclosure } from "@/features/garage/ai-disclosure";
 
 export function AiIdentifyPanel({
   onUseSuggestion,
+  onPhotoChange,
 }: {
   onUseSuggestion: (values: VehicleFormValues) => void;
+  /** The identified photo (or null once it is dismissed or a new lookup
+   * starts), so the add-vehicle form can make it the cover photo. */
+  onPhotoChange?: (file: File | null) => void;
 }) {
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [suggestion, setSuggestion] = useState<VehicleIdentification | null>(
@@ -29,6 +33,7 @@ export function AiIdentifyPanel({
   async function handleFile(file: File) {
     setError(null);
     setSuggestion(null);
+    onPhotoChange?.(null);
     setPreviewUrl(URL.createObjectURL(file));
     setIsIdentifying(true);
 
@@ -63,6 +68,7 @@ export function AiIdentifyPanel({
           );
         } else {
           setSuggestion(result.data);
+          onPhotoChange?.(file);
         }
       }
     } catch {
@@ -172,6 +178,7 @@ export function AiIdentifyPanel({
                     onClick={() => {
                       setSuggestion(null);
                       setPreviewUrl(null);
+                      onPhotoChange?.(null);
                     }}
                   >
                     Dismiss

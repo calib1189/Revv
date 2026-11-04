@@ -69,9 +69,26 @@ export async function createVehicleAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be logged in." };
 
+  // The add-vehicle screen uploads the identified photo first and sends
+  // its media id so it becomes the cover straight away. Only the user's
+  // own image media counts; anything else is ignored, not trusted.
+  let heroMediaId: string | null = null;
+  const heroField = formData.get("hero_media_id");
+  if (typeof heroField === "string" && heroField) {
+    const { data: heroMedia } = await supabase
+      .from("media")
+      .select("id")
+      .eq("id", heroField)
+      .eq("owner_id", user.id)
+      .eq("kind", "image")
+      .maybeSingle();
+    heroMediaId = heroMedia?.id ?? null;
+  }
+
   const vehicle = await createVehicle(supabase, {
     ...toVehicleInput(fields),
     owner_id: user.id,
+    hero_media_id: heroMediaId,
   });
   await trackEvent(supabase, user.id, "vehicle_created", {
     vehicle_id: vehicle.id,
