@@ -957,6 +957,24 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["notification_preferences"]["Insert"]>;
         Relationships: never[];
       };
+      tutorial_progress: {
+        Row: {
+          user_id: string;
+          step: number;
+          completed_at: string | null;
+          outcome: "finished" | "skipped" | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          step?: number;
+          completed_at?: string | null;
+          outcome?: "finished" | "skipped" | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tutorial_progress"]["Insert"]>;
+        Relationships: never[];
+      };
       shop_pictures: {
         Row: {
           place_id: string;

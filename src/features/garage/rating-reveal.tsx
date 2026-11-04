@@ -95,10 +95,14 @@ function hasSubscores(subscores: BuildRatingSubscores | null | undefined): subsc
 export function RatingReveal({
   result,
   onDone,
+  landedLabel,
 }: {
   /** Null while still awaiting the real rating call. */
   result: BuildRating | null;
   onDone: () => void;
+  /** Replaces "Your rating" once landed — for replaying someone else's
+   * stored rating, e.g. in the first-time walkthrough. */
+  landedLabel?: string;
 }) {
   const [stage, setStageState] = useState<Stage>("climbing");
   const [displayedValue, setDisplayedValueState] = useState(0);
@@ -363,7 +367,7 @@ export function RatingReveal({
   const statusLabel = landed
     ? result?.isMock
       ? "Preview rating"
-      : "Your rating"
+      : (landedLabel ?? "Your rating")
     : stage === "correcting"
       ? "Recalculating"
       : "Rating your build";

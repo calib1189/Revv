@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/features/settings/theme-toggle";
 import { PlaybackSettings } from "@/features/settings/playback-settings";
 import { SignOutButton } from "@/features/auth/sign-out-button";
 import { DeleteAccountButton } from "@/features/auth/delete-account-button";
+import { ReplayTutorialRow } from "@/features/tutorial/replay-tutorial-row";
 import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/grouped-list";
 import {
   BookmarkIcon,
@@ -167,6 +168,7 @@ export default async function SettingsPage() {
         <section>
           <SectionTitle>Help & about</SectionTitle>
           <GroupedList>
+            <ReplayTutorialRow />
             <GroupedRow
               href="/legal/support"
               label="Support"

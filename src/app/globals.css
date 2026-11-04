@@ -1814,3 +1814,108 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
     }
   }
 }
+
+/* ---------- First-time walkthrough (features/tutorial) ---------- */
+/* Each screen settles in from the direction you're travelling. */
+@keyframes tour-in {
+  from {
+    opacity: 0;
+    transform: translate3d(calc(var(--tour-dir, 1) * 28px), 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-tour-in {
+  animation: tour-in 560ms var(--ease-ios) both;
+  animation-delay: var(--delay, 0ms);
+}
+/* The welcome screen's light: a slow breath behind the logo. */
+@keyframes tour-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.08);
+  }
+}
+.animate-tour-breathe {
+  animation: tour-breathe 5.5s ease-in-out infinite;
+}
+/* A red light sweeping across the logo, masked to the logo itself. */
+@keyframes tour-shine {
+  0% {
+    background-position: 130% 0;
+  }
+  55%,
+  100% {
+    background-position: -30% 0;
+  }
+}
+.tour-logo-shine {
+  -webkit-mask: url(/logo-full-v2.png) center / contain no-repeat;
+  mask: url(/logo-full-v2.png) center / contain no-repeat;
+  background: linear-gradient(105deg, transparent 38%, rgb(255 92 72 / 0.95) 50%, transparent 62%);
+  background-size: 300% 100%;
+  mix-blend-mode: screen;
+  animation: tour-shine 4.2s var(--ease-ios) 0.6s infinite;
+}
+/* Progress segment filling for the current screen. */
+@keyframes tour-segment {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.animate-tour-segment {
+  transform-origin: left;
+  animation: tour-segment 700ms var(--ease-ios) both;
+}
+/* Podium columns rising into place. */
+@keyframes tour-rise-bar {
+  from {
+    transform: scaleY(0.15);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+.animate-tour-rise-bar {
+  transform-origin: bottom;
+  animation: tour-rise-bar 900ms var(--ease-ios) both;
+  animation-delay: var(--delay, 0ms);
+}
+/* "Swipe up" nudge on the feed demo. */
+@keyframes tour-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+.animate-tour-nudge {
+  animation: tour-nudge 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-tour-in,
+  .animate-tour-rise-bar {
+    animation-duration: 1ms;
+  }
+  .animate-tour-breathe,
+  .tour-logo-shine,
+  .animate-tour-nudge {
+    animation: none;
+  }
+}
