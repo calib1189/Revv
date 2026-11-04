@@ -1,5 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import type { SoundGenre } from "@/lib/sounds/genres";
+
+/** Postgres's "undefined column": the genre filter running before
+ * 0096_sounds_genre_credit.sql is applied. No sound has a genre yet then,
+ * so an empty list is the true answer, not an error to show. */
+const UNDEFINED_COLUMN = "42703";
 
 export type Sound = Database["public"]["Tables"]["sounds"]["Row"];
 export type SoundInsert = Database["public"]["Tables"]["sounds"]["Insert"];
@@ -50,18 +56,24 @@ export async function searchSounds(
   supabase: SupabaseClient<Database>,
   query: string,
   limit = 20,
+  genre: SoundGenre | null = null,
 ): Promise<Sound[]> {
-  const trimmed = query.trim();
+  // Commas and parentheses are PostgREST's own .or() syntax, so a query
+  // containing them would break the filter rather than match literally.
+  const trimmed = query.trim().replace(/[,()]/g, " ").trim();
   if (!trimmed) return [];
 
-  const { data, error } = await supabase
+  let request = supabase
     .from("sounds")
     .select("*")
-    .or(`title.ilike.%${trimmed}%,artist_name.ilike.%${trimmed}%`)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .or(`title.ilike.%${trimmed}%,artist_name.ilike.%${trimmed}%`);
+  if (genre) request = request.eq("genre", genre);
+  const { data, error } = await request.order("created_at", { ascending: false }).limit(limit);
 
-  if (error) throw error;
+  if (error) {
+    if (genre && error.code === UNDEFINED_COLUMN) return [];
+    throw error;
+  }
   return data;
 }
 
@@ -107,22 +119,24 @@ export async function getSoundUsageCounts(
   return counts;
 }
 
-/** "Trending" sounds for the browse page: a recent candidate pool ranked
- * by how many posts currently use them. Not a stored counter — see
+/** "Trending" sounds for the browse page, optionally within one genre: a
+ * recent candidate pool ranked by how many posts currently use them. Not a stored counter — see
  * getSoundUsageCounts. Good enough at today's catalog size; if the sounds
  * table grows large, this candidate-pool approach (rather than a stored
  * counter) is the first thing to revisit. */
 export async function listTrendingSounds(
   supabase: SupabaseClient<Database>,
   limit = 30,
+  genre: SoundGenre | null = null,
 ): Promise<Sound[]> {
-  const { data, error } = await supabase
-    .from("sounds")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  let request = supabase.from("sounds").select("*");
+  if (genre) request = request.eq("genre", genre);
+  const { data, error } = await request.order("created_at", { ascending: false }).limit(200);
 
-  if (error) throw error;
+  if (error) {
+    if (genre && error.code === UNDEFINED_COLUMN) return [];
+    throw error;
+  }
   if (data.length === 0) return [];
 
   const counts = await getSoundUsageCounts(supabase, data.map((s) => s.id));

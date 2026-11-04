@@ -7,6 +7,7 @@ import { listPostsBySound } from "@/lib/db/posts";
 import { composePostCards } from "@/lib/feed/compose-post-cards";
 import { ProfileReelFeed } from "@/features/profile/profile-reel-feed";
 import { SoundReelHeader } from "@/features/sounds/sound-reel-header";
+import { SoundCredit } from "@/features/sounds/sound-credit";
 import { MusicIcon } from "@/components/ui/icons";
 
 export default async function SoundPage({
@@ -36,6 +37,7 @@ export default async function SoundPage({
         </span>
         <h1 className="mt-5 text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">{sound.title}</h1>
         <p className="mt-0.5 text-[1rem] text-muted">{sound.artist_name || "Unknown artist"}</p>
+        <SoundCredit sound={sound} className="mt-2 max-w-xs text-muted" />
         <p className="mt-6 text-[0.9375rem] text-muted">No videos use this sound yet. Be the first.</p>
         <Link
           href={`/feed/new?soundId=${sound.id}`}

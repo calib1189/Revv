@@ -424,6 +424,8 @@ export interface Database {
           source: "original" | "licensed" | "user_upload";
           license_label: string | null;
           license_url: string | null;
+          genre: string | null;
+          source_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -436,6 +438,8 @@ export interface Database {
           source?: "original" | "licensed" | "user_upload";
           license_label?: string | null;
           license_url?: string | null;
+          genre?: string | null;
+          source_url?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["sounds"]["Insert"]>;

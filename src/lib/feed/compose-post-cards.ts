@@ -134,6 +134,7 @@ export async function composePostCards(
         : null,
       soundId: post.sound_id,
       soundTitle: sound?.title ?? null,
+      soundArtist: sound?.artist_name ?? null,
       soundUrl: sound ? publicSoundUrl(supabase, sound.storage_path) : null,
       // Defensively re-clamped against the sound's real length, not just
       // trusted as stored — belt-and-suspenders alongside createPost's

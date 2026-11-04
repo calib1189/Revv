@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Callout } from "@/components/ui/callout";
 import { CloseIcon } from "@/components/ui/icons";
+import { SOUND_GENRES, isSoundGenre, type SoundGenre } from "@/lib/sounds/genres";
 
 /** Anyone can add their own sound to the shared library — the same
  * "people can add their own sounds, others reuse them" mechanic as
@@ -28,6 +29,7 @@ export function SoundUploadForm({
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [artistName, setArtistName] = useState("");
+  const [genre, setGenre] = useState<SoundGenre | "">("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,14 +66,19 @@ export function SoundUploadForm({
         return;
       }
 
-      const sound = await createSound(supabase, {
+      const row = {
         owner_id: user.id,
         title: title.trim(),
         artist_name: artistName.trim() || null,
         storage_path: uploaded.storagePath,
         duration_ms: uploaded.durationMs,
-        source: "user_upload",
-      });
+        source: "user_upload" as const,
+      };
+      // The genre is a nice-to-have: if it can't be saved (the column's
+      // migration not applied yet), the sound still goes up without it.
+      const sound = genre
+        ? await createSound(supabase, { ...row, genre }).catch(() => createSound(supabase, row))
+        : await createSound(supabase, row);
 
       onUploaded(sound);
     } catch {
@@ -124,6 +131,23 @@ export function SoundUploadForm({
             onChange={(e) => setArtistName(e.target.value)}
             placeholder="Your name or handle"
           />
+        </div>
+
+        <div>
+          <Label htmlFor="sound-genre">Genre (optional)</Label>
+          <select
+            id="sound-genre"
+            value={genre}
+            onChange={(e) => setGenre(isSoundGenre(e.target.value) ? e.target.value : "")}
+            className="glass-inset h-12 w-full appearance-none rounded-[14px] px-4 text-foreground transition-[box-shadow,border-color] focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent/15"
+          >
+            <option value="">No genre</option>
+            {SOUND_GENRES.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

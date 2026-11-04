@@ -27,6 +27,9 @@ export interface PostCardData {
   vehicleTitle: string | null;
   soundId: string | null;
   soundTitle: string | null;
+  /** Shown beside the title on the post — a Creative Commons track has to
+   * credit its artist wherever it plays. */
+  soundArtist: string | null;
   /** Only meaningful for a photo post — a video's own native audio plays
    * as normal instead; see swipe-slide.tsx's PhotoMedia/VideoMedia split. */
   soundUrl: string | null;

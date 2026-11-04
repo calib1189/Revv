@@ -717,6 +717,7 @@ export function SwipeSlide({
   // snapshot from whichever server fetch produced this slide.
   const [captionOverride, setCaptionOverride] = useState<string | null | undefined>(undefined);
   const displayedCaption = captionOverride === undefined ? data.post.caption : captionOverride;
+  const soundLabel = data.soundArtist ? `${data.soundTitle} · ${data.soundArtist}` : (data.soundTitle ?? "");
   const { liked, count: likeCount, toggle: toggleLike, like } = usePostLike(
     data.post.id,
     data.isLiked,
@@ -894,9 +895,9 @@ export function SwipeSlide({
                   <MusicIcon className="h-3.5 w-3.5 flex-shrink-0" />
                 )}
                 <Link href={`/sounds/${data.soundId}`} className="min-w-0 max-w-[13rem] overflow-hidden">
-                  <span className={`flex w-max gap-8 whitespace-nowrap ${data.soundTitle.length > 24 ? "animate-marquee" : ""}`}>
-                    <span>{data.soundTitle}</span>
-                    {data.soundTitle.length > 24 && <span aria-hidden>{data.soundTitle}</span>}
+                  <span className={`flex w-max gap-8 whitespace-nowrap ${soundLabel.length > 24 ? "animate-marquee" : ""}`}>
+                    <span>{soundLabel}</span>
+                    {soundLabel.length > 24 && <span aria-hidden>{soundLabel}</span>}
                   </span>
                 </Link>
               </div>

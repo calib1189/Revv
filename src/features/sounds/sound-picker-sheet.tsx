@@ -11,6 +11,8 @@ import {
 } from "@/lib/db/sounds";
 import { SoundCover } from "@/features/sounds/sound-cover";
 import { SoundUploadForm } from "@/features/sounds/sound-upload-form";
+import { SoundGenreChips } from "@/features/sounds/sound-genre-chips";
+import { soundGenreLabel, type SoundGenre } from "@/lib/sounds/genres";
 import { CloseIcon, SearchIcon, PlusIcon, UploadIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 
@@ -50,6 +52,7 @@ export function SoundPickerSheet({
   const [isPlaying, setIsPlaying] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [genre, setGenre] = useState<SoundGenre | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const deviceInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,7 +62,7 @@ export function SoundPickerSheet({
     (async () => {
       setTrendingState("loading");
       try {
-        const sounds = await listTrendingSounds(supabase);
+        const sounds = await listTrendingSounds(supabase, 30, genre);
         if (cancelled) return;
         setTrending(sounds);
         setTrendingState("ready");
@@ -72,7 +75,7 @@ export function SoundPickerSheet({
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [reloadKey, genre]);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -82,7 +85,7 @@ export function SoundPickerSheet({
       setIsSearching(true);
       const supabase = createClient();
       try {
-        const found = await searchSounds(supabase, trimmed);
+        const found = await searchSounds(supabase, trimmed, 20, genre);
         if (cancelled) return;
         setResults(found);
         const counts = await getSoundUsageCounts(supabase, found.map((s) => s.id));
@@ -97,7 +100,7 @@ export function SoundPickerSheet({
       cancelled = true;
       clearTimeout(timeout);
     };
-  }, [query]);
+  }, [query, genre]);
 
   // Silence on the way out — a preview must never keep playing under the
   // screen this sheet was opened from.
@@ -141,6 +144,7 @@ export function SoundPickerSheet({
   }
 
   const searching = query.trim().length > 0;
+  const genreLabel = soundGenreLabel(genre);
   const shown = searching ? (results ?? []) : trending;
 
   return (
@@ -244,11 +248,21 @@ export function SoundPickerSheet({
               </button>
             )}
           </div>
+
+          <SoundGenreChips value={genre} onChange={setGenre} tone="dark" className="mt-2.5" />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3">
           <p className="micro-label px-2 pb-2 text-white/40">
-            {searching ? (isSearching ? "Searching" : "Results") : "Trending on SORZA"}
+            {searching
+              ? isSearching
+                ? "Searching"
+                : genreLabel
+                  ? `Results in ${genreLabel}`
+                  : "Results"
+              : genreLabel
+                ? `Trending in ${genreLabel}`
+                : "Trending on SORZA"}
           </p>
 
           {!searching && trendingState === "loading" && <SkeletonRows />}
@@ -273,10 +287,20 @@ export function SoundPickerSheet({
             shown.length === 0 && (
               <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
                 <p className="text-[0.9375rem] font-semibold">
-                  {searching ? `Nothing matches “${query.trim()}”` : "No sounds yet"}
+                  {searching
+                    ? `Nothing matches “${query.trim()}”`
+                    : genreLabel
+                      ? `No ${genreLabel} sounds yet`
+                      : "No sounds yet"}
                 </p>
                 <p className="text-[0.8125rem] text-white/50">
-                  {searching ? "Try a different title or artist." : "Upload the first one for everyone to use."}
+                  {searching
+                    ? genreLabel
+                      ? "Try a different title or artist, or another genre."
+                      : "Try a different title or artist."
+                    : genreLabel
+                      ? "Try another genre, or upload one yourself."
+                      : "Upload the first one for everyone to use."}
                 </p>
               </div>
             )}
