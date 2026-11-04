@@ -1642,7 +1642,13 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   .reveal-light {
     background: radial-gradient(closest-side, color-mix(in srgb, var(--reveal-glow) 38%, transparent), transparent);
     opacity: calc(0.4 + var(--reveal-level, 0) * 0.6);
-    transition: opacity 500ms ease;
+    transition: opacity 500ms ease, transform 500ms var(--ease-ios), filter 500ms ease;
+  }
+  /* The held beat before the landing: the light pulls in and brightens,
+     like it's charging. */
+  .reveal-light-charge {
+    transform: scale(0.86);
+    filter: brightness(1.45);
   }
   .reveal-light-swell {
     animation: reveal-light-swell 1500ms var(--ease-ios) both;
@@ -1687,12 +1693,83 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
     50% { opacity: 0.35; }
   }
 
-  .reveal-settle {
-    animation: reveal-settle 800ms var(--ease-ios) both;
+  /* Each tier reached: the name rolls in like a scoreboard, the number
+     punches, and the tier's mark on the ring throws a few sparks. */
+  .reveal-ticker {
+    animation: reveal-ticker 380ms var(--ease-ios) both;
   }
-  @keyframes reveal-settle {
-    from { transform: scale(1.06); }
+  @keyframes reveal-ticker {
+    from { transform: translateY(80%); opacity: 0; filter: blur(3px); }
+    to { transform: none; opacity: 1; filter: none; }
+  }
+  .reveal-kick {
+    animation: reveal-kick 380ms var(--ease-ios) both;
+  }
+  @keyframes reveal-kick {
+    from { transform: scale(1.08); }
     to { transform: scale(1); }
+  }
+  .reveal-spark {
+    animation: reveal-spark 620ms var(--ease-ios) both;
+  }
+  @keyframes reveal-spark {
+    from { transform: translateX(3px) scaleX(0.4); opacity: 1; }
+    to { transform: translateX(17px) scaleX(1); opacity: 0; }
+  }
+
+  /* The landing: a shockwave out from the ring, rays shot outward all the
+     way round, the badge stamping in with a shine across it, and the
+     number glowing in the tier's colour before it settles. */
+  .reveal-shockwave {
+    animation: reveal-shockwave 1200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes reveal-shockwave {
+    from { transform: scale(1); opacity: 0.9; }
+    to { transform: scale(2.6); opacity: 0; }
+  }
+  .reveal-ray {
+    transform-origin: bottom;
+    animation: reveal-ray 950ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes reveal-ray {
+    0% { transform: translateY(20%) scaleY(0.2); opacity: 0; }
+    15% { opacity: 1; }
+    100% { transform: translateY(-160%) scaleY(1); opacity: 0; }
+  }
+  .reveal-stamp {
+    animation: reveal-stamp 720ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+  @keyframes reveal-stamp {
+    from { transform: scale(1.22); filter: brightness(1.8); }
+    to { transform: scale(1); filter: brightness(1); }
+  }
+  .reveal-sheen {
+    background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.75) 50%, transparent 62%);
+    background-size: 260% 100%;
+    animation: reveal-sheen 1100ms ease-out 250ms both;
+  }
+  @keyframes reveal-sheen {
+    from { background-position: 130% 0; }
+    to { background-position: -30% 0; }
+  }
+  .reveal-land-number {
+    animation: reveal-land-number 900ms var(--ease-ios) both;
+  }
+  @keyframes reveal-land-number {
+    from { transform: scale(1.12); text-shadow: 0 0 32px var(--reveal-color); }
+    to { transform: scale(1); text-shadow: 0 0 0 transparent; }
+  }
+  .reveal-halo {
+    animation:
+      reveal-halo-spin 48s linear infinite,
+      reveal-halo-in 1200ms ease 400ms both;
+  }
+  @keyframes reveal-halo-spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes reveal-halo-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   /* Everything after the landing arrives in order — --delay staggers it. */
@@ -1720,7 +1797,15 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
     .reveal-badge-out,
     .reveal-ping,
     .reveal-breathe,
-    .reveal-settle,
+    .reveal-ticker,
+    .reveal-kick,
+    .reveal-spark,
+    .reveal-shockwave,
+    .reveal-ray,
+    .reveal-stamp,
+    .reveal-sheen,
+    .reveal-land-number,
+    .reveal-halo,
     .reveal-rise,
     .reveal-bar {
       animation-duration: 1ms;

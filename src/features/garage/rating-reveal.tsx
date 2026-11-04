@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   rankForScore,
   tierProgress,
@@ -10,7 +10,7 @@ import {
   RANK_TIERS,
   type RankTier,
 } from "@/lib/rating/rank";
-import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
+import { RANK_MATERIAL_ICONS, RANK_ICON_SRC } from "@/features/garage/rank-material-icons";
 import {
   unknownClimbValue,
   cappedClimbValue,
@@ -108,7 +108,20 @@ export function RatingReveal({
   // directly from it would read whatever it was at mount forever, not
   // its current value, so anything inside that loop needs this ref.
   const displayedValueRef = useRef(0);
+  // How fast the number is moving, in points per second, smoothed — sets
+  // the length of the comet tail behind the ring's leading point.
+  const [speed, setSpeed] = useState(0);
+  const speedRef = useRef(0);
+  const lastSampleRef = useRef<{ value: number; at: number } | null>(null);
   function setDisplayedValue(value: number) {
+    const now = performance.now();
+    const last = lastSampleRef.current;
+    if (last && now > last.at) {
+      const instant = Math.abs(value - last.value) / ((now - last.at) / 1000);
+      speedRef.current = speedRef.current * 0.85 + instant * 0.15;
+      setSpeed(speedRef.current);
+    }
+    lastSampleRef.current = { value, at: now };
     displayedValueRef.current = value;
     setDisplayedValueState(value);
   }
@@ -327,12 +340,25 @@ export function RatingReveal({
   const color = RANK_TEXT_COLORS[displayedTier];
   const Icon = RANK_MATERIAL_ICONS[displayedTier];
   const OutgoingIcon = outgoingTier ? RANK_MATERIAL_ICONS[outgoingTier] : null;
-  // 0 at the bottom of the ladder, 1 at the top — how strong the light is.
+  // 0 at the bottom of the ladder, 1 at the top — how strong the light is,
+  // and how big the landing gets.
   const level = ascendingRank(displayedTier) / Math.max(1, RANK_TIERS.length - 1);
   const head = ringPoint(Math.min(99.999, displayedValue));
   const [whole, fraction] = displayedValue.toFixed(2).split(".");
   const progress = landed ? tierProgress(displayedValue) : null;
   const subscores = settled && result && hasSubscores(result.subscores) ? result.subscores : null;
+
+  // The comet tail: longer the faster the number is moving.
+  const tailGradientId = `reveal-tail-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  // Always a short tail while it's moving, stretching with speed.
+  const tailUnits = landed || speed < 0.5 ? 0 : Math.min(13, 2 + speed * 0.3);
+  const tailStart = Math.max(0, displayedValue - tailUnits);
+  const tailFrom = ringPoint(tailStart);
+
+  // Where the tier just reached begins on the ring — its mark sparks.
+  const crossedMin = RANK_TIERS.find((t) => t.tier === displayedTier)?.min ?? 0;
+  const spark = crossedMin > 0 ? ringPoint(crossedMin) : null;
+  const rayCount = Math.round(16 + level * 20);
 
   const statusLabel = landed
     ? result?.isMock
@@ -344,7 +370,7 @@ export function RatingReveal({
 
   return (
     <div
-      className="reveal-stage fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-[#050506] text-white"
+      className="reveal-stage fixed inset-0 z-[60] overflow-y-auto overflow-x-hidden overscroll-contain bg-[#050506] text-white"
       style={
         {
           "--reveal-color": color,
@@ -368,11 +394,44 @@ export function RatingReveal({
             key={landed ? "light-landed" : "light"}
             aria-hidden
             className={`reveal-light pointer-events-none absolute -inset-[45%] rounded-full ${
-              stage === "landed" ? "reveal-light-swell" : ""
+              stage === "landed" ? "reveal-light-swell" : stage === "anticipating" ? "reveal-light-charge" : ""
             }`}
           />
 
+          {/* Emerald and up: a fine dotted halo turning slowly behind it
+              all once the score has landed. */}
+          {landed && level >= 0.66 && (
+            <div aria-hidden className="reveal-halo pointer-events-none absolute -inset-[7%]">
+              <svg viewBox="0 0 200 200" className="h-full w-full">
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="98"
+                  fill="none"
+                  stroke="var(--reveal-color)"
+                  strokeWidth="1"
+                  strokeDasharray="0.6 3.4"
+                  strokeLinecap="round"
+                  opacity="0.55"
+                />
+              </svg>
+            </div>
+          )}
+
           <svg viewBox="0 0 200 200" className="absolute inset-0 h-full w-full overflow-visible" aria-hidden>
+            <defs>
+              <linearGradient
+                id={tailGradientId}
+                gradientUnits="userSpaceOnUse"
+                x1={tailFrom.x}
+                y1={tailFrom.y}
+                x2={head.x}
+                y2={head.y}
+              >
+                <stop offset="0" style={{ stopColor: "var(--reveal-color)", stopOpacity: 0 }} />
+                <stop offset="1" style={{ stopColor: "#ffffff", stopOpacity: 0.95 }} />
+              </linearGradient>
+            </defs>
             <circle cx="100" cy="100" r={RING_RADIUS} fill="none" stroke="rgb(255 255 255 / 0.08)" strokeWidth="2.5" />
             <circle
               cx="100"
@@ -402,9 +461,25 @@ export function RatingReveal({
                 />
               );
             })}
-            {/* The leading point of the line — where the number is right
-                now. Breathes during the held beat before the landing, and
-                is gone once the score has landed. */}
+            {/* The comet tail, then the leading point itself — where the
+                number is right now. The point breathes during the held
+                beat before the landing, and is gone once it lands. */}
+            {tailUnits > 0.4 && (
+              <circle
+                cx="100"
+                cy="100"
+                r={RING_RADIUS}
+                fill="none"
+                stroke={`url(#${tailGradientId})`}
+                strokeWidth="5"
+                strokeLinecap="round"
+                pathLength={100}
+                strokeDasharray={`${tailUnits} 100`}
+                strokeDashoffset={-tailStart}
+                transform="rotate(-90 100 100)"
+                style={{ filter: "drop-shadow(0 0 5px var(--reveal-color))" }}
+              />
+            )}
             {!landed && displayedValue > 0.2 && (
               <circle
                 cx={head.x}
@@ -412,12 +487,63 @@ export function RatingReveal({
                 r="4"
                 fill="#ffffff"
                 className={stage === "anticipating" ? "reveal-breathe" : ""}
-                style={{ filter: "drop-shadow(0 0 6px var(--reveal-color))" }}
+                style={{ filter: "drop-shadow(0 0 7px var(--reveal-color))" }}
               />
             )}
           </svg>
 
-          <div className="absolute inset-[22%]">
+          {/* A tier reached: its mark on the ring throws a little burst of
+              sparks in that tier's colour. */}
+          {levelUpKey > 0 && !isDowngrade && !landed && spark && (
+            <span
+              key={`spark-${levelUpKey}`}
+              aria-hidden
+              className="pointer-events-none absolute h-0 w-0"
+              style={{ left: `${spark.x / 2}%`, top: `${spark.y / 2}%` }}
+            >
+              {Array.from({ length: 8 }, (_, i) => (
+                <span key={i} className="absolute left-0 top-0" style={{ transform: `rotate(${i * 45}deg)` }}>
+                  <span
+                    className="reveal-spark absolute left-0 top-[-1px] block h-[2px] w-[12px] rounded-full"
+                    style={{ background: "var(--reveal-color)" }}
+                  />
+                </span>
+              ))}
+            </span>
+          )}
+
+          {/* The landing: one shockwave out from the ring, and rays shot
+              outward all the way round — more of them the higher the tier. */}
+          {landed && (
+            <>
+              <span
+                aria-hidden
+                className="reveal-shockwave pointer-events-none absolute inset-0 rounded-full border-2 border-[var(--reveal-color)]"
+              />
+              <div aria-hidden className="pointer-events-none absolute inset-0">
+                {Array.from({ length: rayCount }, (_, i) => (
+                  <span
+                    key={i}
+                    className="absolute inset-0"
+                    style={{ transform: `rotate(${(i / rayCount) * 360}deg)` }}
+                  >
+                    <span
+                      className="reveal-ray absolute left-1/2 top-[-2%] -ml-px block h-[11%] w-[2px] rounded-full"
+                      style={{
+                        background: "linear-gradient(to top, var(--reveal-color), transparent)",
+                        animationDelay: `${(i % 3) * 40}ms`,
+                      }}
+                    />
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div
+            key={landed ? "badge-landed" : "badge"}
+            className={`absolute inset-[22%] ${landed ? "reveal-stamp" : ""}`}
+          >
             {/* Each badge gets its own positioned layer: the badge itself
                 is position: relative, so two of them side by side would
                 stack one under the other mid-crossfade. */}
@@ -429,6 +555,24 @@ export function RatingReveal({
             <div key={`in-${displayedTier}`} className="reveal-badge-in absolute inset-0">
               <Icon className="h-full w-full" style={{ filter: "drop-shadow(0 10px 28px rgb(0 0 0 / 0.5))" }} />
             </div>
+            {/* A shine across the badge as it lands — masked to the badge's
+                own silhouette, so it only ever lights the emblem itself. */}
+            {landed && (
+              <span
+                aria-hidden
+                className="reveal-sheen pointer-events-none absolute inset-0"
+                style={{
+                  maskImage: `url(${RANK_ICON_SRC[displayedTier]})`,
+                  maskSize: "contain",
+                  maskRepeat: "no-repeat",
+                  maskPosition: "center",
+                  WebkitMaskImage: `url(${RANK_ICON_SRC[displayedTier]})`,
+                  WebkitMaskSize: "contain",
+                  WebkitMaskRepeat: "no-repeat",
+                  WebkitMaskPosition: "center",
+                }}
+              />
+            )}
             {/* One ring leaving the badge per tier reached on the way up. */}
             {levelUpKey > 0 && !isDowngrade && !landed && (
               <span
@@ -441,16 +585,18 @@ export function RatingReveal({
         </div>
 
         <div className="mt-7 flex flex-col items-center text-center">
+          {/* The tier name rolls in like a scoreboard at each change. */}
+          <span className="block h-[1.6em] overflow-hidden text-[1.0625rem] font-semibold uppercase tracking-[0.18em]">
+            <span key={displayedTier} className="reveal-ticker block" style={{ color: "var(--reveal-color)" }}>
+              {RANK_LABELS[displayedTier]}
+            </span>
+          </span>
           <p
-            className="text-[1.0625rem] font-semibold uppercase tracking-[0.18em]"
-            style={{ color: "var(--reveal-color)" }}
-          >
-            {RANK_LABELS[displayedTier]}
-          </p>
-          <p
-            key={landed ? "score-landed" : "score"}
+            key={landed ? "score-landed" : `score-${levelUpKey}`}
             aria-live="polite"
-            className={`numeral mt-1 flex items-baseline leading-none ${landed ? "reveal-settle" : ""}`}
+            className={`numeral mt-1 flex items-baseline leading-none ${
+              landed ? "reveal-land-number" : levelUpKey > 0 && !isDowngrade ? "reveal-kick" : ""
+            }`}
           >
             <span className="text-[4.75rem] font-semibold tracking-[-0.04em]">{whole}</span>
             <span className="text-[2rem] font-medium text-white/40">.{fraction}</span>
