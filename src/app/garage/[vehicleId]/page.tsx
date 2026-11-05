@@ -27,6 +27,7 @@ import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ReportButton } from "@/features/feed/report-button";
 import { OwnershipVerification } from "@/features/garage/ownership-verification";
 import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
+import { buildShareText, formatScore } from "@/lib/rating/share-text";
 import { VehicleTabs } from "@/features/garage/vehicle-tabs";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
 import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
@@ -51,18 +52,26 @@ export async function generateMetadata({
   if (!vehicle) return {};
 
   const title = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
-  const description = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim]
-    .filter(Boolean)
-    .join(" ");
+  const carName = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
+  const score = await getActiveBuild(supabase, vehicleId)
+    .then((build) => build?.ai_rating_score ?? null)
+    .catch(() => null);
+  // The score is the hook in a link preview, so it leads the description.
+  const description =
+    score != null
+      ? `${carName ? `${carName} · ` : ""}SORZA score ${formatScore(score)}. Rate your own build on SORZA.`
+      : carName || undefined;
 
   return {
     title: `${title} · SORZA`,
-    description: description || undefined,
+    description,
     openGraph: {
       title,
-      description: description || undefined,
+      description,
       type: "website",
     },
+    // Large card on X/iMessage-style previews, so the photo and score show.
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -220,7 +229,7 @@ export default async function VehiclePage({
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
         <div className="absolute right-4 top-4 sm:right-6">
-          <VehicleShareButton vehicleId={vehicle.id} />
+          <VehicleShareButton vehicleId={vehicle.id} text={buildShareText({ title, score, isOwner })} />
         </div>
 
         <div className="absolute inset-x-0 bottom-0">
@@ -267,6 +276,7 @@ export default async function VehiclePage({
             topPercent={topPercent}
             ratingHistory={ratingHistory}
             rankPosition={rankPosition}
+            shareText={buildShareText({ title, score, isOwner })}
           />
         ) : (
           score != null && (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { generateBuildRatingAction, confirmBuildRatingAction } from "@/features/garage/rating-actions";
 import { AiDisclosure } from "@/features/garage/ai-disclosure";
+import { ShareScoreButton } from "@/features/garage/vehicle-share-button";
 import { RatingReveal } from "@/features/garage/rating-reveal";
 import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
 import { RatingBreakdownTrigger, type RatingHistoryPoint } from "@/features/garage/rating-breakdown-modal";
@@ -23,8 +24,11 @@ export function RateBuildPanel({
   topPercent,
   ratingHistory,
   rankPosition,
+  shareText,
 }: {
   vehicleId: string;
+  /** What goes out with the link when the owner shares their score. */
+  shareText: string;
   currentScore: number | null;
   currentStrengths: string | null;
   currentLimitingFactors: string | null;
@@ -181,7 +185,10 @@ export function RateBuildPanel({
             </div>
           )}
 
-          <div className="mt-5 flex gap-2.5">
+          <div className="mt-5">
+            <ShareScoreButton vehicleId={vehicleId} text={shareText} />
+          </div>
+          <div className="mt-2.5 flex gap-2.5">
             <Link href="/leaderboard" className="min-w-0 flex-1">
               <Button variant="secondary" className="h-11 w-full text-[0.9375rem] font-semibold">
                 How tiers work
