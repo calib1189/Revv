@@ -83,7 +83,6 @@ export function VehicleForm({
 
   return (
     <form
-      key={JSON.stringify(initialValues ?? {})}
       action={formAction}
       className="flex flex-col gap-7"
     >

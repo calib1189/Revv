@@ -62,7 +62,12 @@ export function NewVehicleClient({ userId }: { userId: string }) {
   return (
     <>
       <AiIdentifyPanel onUseSuggestion={setInitialValues} onPhotoChange={setPhoto} />
+      {/* Keyed on the suggestion so "Use details" remounts the whole
+          form. Make, model and category live in VehicleForm's state,
+          which only reads its initial values on mount: keying just the
+          inner <form> refilled year and trim but left those blank. */}
       <VehicleForm
+        key={JSON.stringify(initialValues ?? {})}
         action={createWithCover}
         initialValues={initialValues}
         submitLabel="Add vehicle"
