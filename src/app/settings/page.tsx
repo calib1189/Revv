@@ -9,6 +9,8 @@ import { Avatar } from "@/features/feed/avatar";
 import { ThemeToggle } from "@/features/settings/theme-toggle";
 import { PlaybackSettings } from "@/features/settings/playback-settings";
 import { SignOutButton } from "@/features/auth/sign-out-button";
+import { AccountSettingsList } from "@/features/auth/account-switcher";
+import { listOtherAccounts } from "@/features/auth/other-accounts";
 import { DeleteAccountButton } from "@/features/auth/delete-account-button";
 import { ReplayTutorialRow } from "@/features/tutorial/replay-tutorial-row";
 import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/grouped-list";
@@ -45,6 +47,8 @@ export default async function SettingsPage() {
         .then((counts) => counts.total)
         .catch(() => 0)
     : 0;
+
+  const otherAccounts = await listOtherAccounts(supabase, user.id);
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
@@ -193,8 +197,16 @@ export default async function SettingsPage() {
           </GroupedList>
         </section>
 
+        <section>
+          <SectionTitle>Accounts</SectionTitle>
+          <AccountSettingsList others={otherAccounts.accounts} canAdd={otherAccounts.canAdd} />
+        </section>
+
         <div className="flex flex-col gap-4">
-          <SignOutButton />
+          <SignOutButton
+            username={profile?.username ?? null}
+            hasOtherAccounts={otherAccounts.accounts.length > 0}
+          />
           {profile && <DeleteAccountButton username={profile.username} />}
         </div>
       </div>

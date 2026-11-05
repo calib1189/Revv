@@ -34,6 +34,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SettingsIcon, GemIcon, StarIcon } from "@/components/ui/icons";
 import { VerifiedChip, VerifiedSeal } from "@/features/profile/verified-credential";
+import { AccountSwitcherButton } from "@/features/auth/account-switcher";
+import { listOtherAccounts } from "@/features/auth/other-accounts";
 
 export default async function ProfilePage({
   params,
@@ -194,6 +196,11 @@ export default async function ProfilePage({
   const bestTier = bestRatingScore != null ? rankForScore(bestRatingScore) : null;
   const BestTierIcon = bestTier ? RANK_MATERIAL_ICONS[bestTier] : null;
 
+  // The other accounts signed in on this device, for the switcher at the
+  // top of your own profile. Never fails the page: worst case it shows
+  // just this account and Add account.
+  const otherAccounts = isOwnProfile ? await listOtherAccounts(supabase, profile.id) : null;
+
   const actionButtonClass = "h-10 w-full px-3 py-0 text-[0.9375rem] font-semibold";
   const credential = {
     username: profile.username,
@@ -224,7 +231,17 @@ export default async function ProfilePage({
           handles it). A z-10 tied the sticky top bar's own z-10 and,
           being later in the DOM, painted over the bar on scroll. */}
       {isOwnProfile && (
-        <div className="relative mb-2 flex justify-end">
+        <div className="relative mb-2 flex items-center justify-between gap-3">
+          <AccountSwitcherButton
+            current={{
+              id: profile.id,
+              username: profile.username,
+              displayName: profile.display_name,
+              avatarUrl,
+            }}
+            others={otherAccounts?.accounts ?? []}
+            canAdd={otherAccounts?.canAdd ?? false}
+          />
           <Link
             href="/settings"
             aria-label="Settings"

@@ -14,6 +14,8 @@ import {
 import { getClientIp } from "@/lib/http/get-client-ip";
 import { deleteDevicePushToken } from "@/lib/db/device-push-tokens";
 import { isValidDeviceToken } from "@/lib/push/validation";
+import { readAccountStash, resumeNextStashedAccount, writeAccountStash } from "@/lib/auth/account-switching";
+import { unstashAccount } from "@/lib/auth/account-stash";
 
 export interface AuthActionState {
   error: string | null;
@@ -131,6 +133,9 @@ export async function signOut(formData: FormData): Promise<void> {
   }
 
   await supabase.auth.signOut();
+  // Another account still signed in on this device opens next, the way
+  // Instagram does, instead of dropping them at the landing page.
+  if (await resumeNextStashedAccount(supabase, pushToken)) redirect("/feed");
   redirect("/");
 }
 
@@ -188,6 +193,10 @@ export async function deleteAccount(): Promise<void> {
   const admin = createServiceRoleClient();
   await admin.auth.admin.deleteUser(user.id);
 
+  // A deleted account can't stay in the switcher, and anyone else signed
+  // in on this device carries on as them.
+  await writeAccountStash(unstashAccount(await readAccountStash(), user.id));
+  if (await resumeNextStashedAccount(supabase)) redirect("/feed");
   redirect("/");
 }
 
