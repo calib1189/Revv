@@ -14,6 +14,9 @@ import { getNativePushProvider } from "@/lib/providers/get-native-push-provider"
 import { isValidDeviceToken } from "@/lib/push/validation";
 import { isPushCategory, setNotificationPreference } from "@/lib/db/notification-preferences";
 
+// Long enough to lock the phone, short enough not to feel broken.
+const TEST_PUSH_DELAY_MS = 5_000;
+
 export async function subscribeToPushAction(subscription: {
   endpoint: string;
   keys: { p256dh: string; auth: string };
@@ -99,6 +102,13 @@ export async function sendTestPushAction(): Promise<TestPushResult> {
     const service = createServiceRoleClient();
     const tokens = await listDevicePushTokensForUser(service, user.id);
     if (tokens.length === 0) return { status: "no-device" };
+
+    // iOS shows nothing for a notification that arrives while SORZA is
+    // open, and this button is always pressed inside the app. The wait
+    // gives the person time to lock the phone or switch apps so the test
+    // arrives the way a real one would. It runs here, not on the phone,
+    // because a backgrounded app's timers are paused.
+    await new Promise((resolve) => setTimeout(resolve, TEST_PUSH_DELAY_MS));
 
     const { invalidTokens, failureReasons } = await provider.send(tokens, {
       title: "SORZA",

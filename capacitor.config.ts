@@ -62,17 +62,11 @@ const config: CapacitorConfig = {
     // exactly the oversized empty strip under the status bar this fixes.
     contentInset: "never",
   },
-  plugins: {
-    PushNotifications: {
-      // The plugin's default is ["badge"]: a notification that arrives
-      // while the app is open is delivered by Apple and then shown
-      // nowhere. That includes the test notification, which is always
-      // sent from inside the app, so it looked like push was broken
-      // when APNs had accepted it. "banner" + "list" show it like any
-      // other app does; "alert" is the pre-iOS 14 spelling of the same.
-      presentationOptions: ["badge", "sound", "banner", "list", "alert"],
-    },
-  },
+  // No PushNotifications.presentationOptions on purpose: the plugin's
+  // default (badge only) keeps banners from interrupting someone who is
+  // already using the app. The catch is that a notification arriving
+  // while SORZA is open shows nowhere, which is why the test
+  // notification in Settings waits a few seconds before it is sent.
 };
 
 export default config;

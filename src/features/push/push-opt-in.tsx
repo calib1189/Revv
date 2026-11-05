@@ -42,7 +42,7 @@ function describeTestResult(result: TestPushResult): { tone: "muted" | "danger";
     case "sent":
       return {
         tone: "muted",
-        text: "Sent. It should arrive in a few seconds. iOS hides banners while the app is open, so switch to another app or lock the phone first.",
+        text: "Sent. If it showed up while you were out of the app, notifications are working. SORZA doesn't show banners while it's open.",
       };
     case "not-configured":
       return {
@@ -200,11 +200,23 @@ export function PushOptIn() {
   async function handleSendTest() {
     setTestResult(null);
     setIsTesting(true);
+    // The person is meant to leave the app during the wait, and iOS can
+    // drop the request's response while SORZA is in the background. The
+    // server still sends the notification, so a lost response after
+    // leaving is not an error; the notification itself is the answer.
+    let leftApp = false;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") leftApp = true;
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     try {
       setTestResult(await sendTestPushAction());
     } catch {
-      setTestResult({ status: "error", detail: "no response from the server" });
+      setTestResult(
+        leftApp ? { status: "sent" } : { status: "error", detail: "no response from the server" },
+      );
     } finally {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       setIsTesting(false);
     }
   }
@@ -273,8 +285,14 @@ export function PushOptIn() {
       {isNative && status === "on" && (
         <div className="mt-4 flex flex-col gap-3">
           <Button type="button" variant="secondary" disabled={isTesting} onClick={handleSendTest}>
-            {isTesting ? "Sending…" : "Send a test notification"}
+            {isTesting ? "Sending in 5 seconds…" : "Send a test notification"}
           </Button>
+          {isTesting && (
+            <p className="text-sm text-muted">
+              Lock your phone or switch to another app now. SORZA doesn&apos;t show banners while
+              it&apos;s open.
+            </p>
+          )}
           {testResult && (
             <Callout tone={describeTestResult(testResult).tone}>
               {describeTestResult(testResult).text}
