@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notifyLeaderboardDisplacements } from "@/features/leaderboard/notify-displacements";
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getVehicleById } from "@/lib/db/vehicles";
@@ -132,8 +134,11 @@ function isValidSubscores(value: BuildRatingSubscores): boolean {
  * rating can be confirmed; it no longer has any say over its content.
  */
 export async function confirmBuildRatingAction(vehicleId: string): Promise<ConfirmRatingState> {
-  const { supabase } = await requireOwner(vehicleId);
+  const { supabase, user } = await requireOwner(vehicleId);
   const build = await getOrCreateActiveBuild(supabase, vehicleId);
+  // Read before the update below replaces it: who this rating passes
+  // depends on where the build stood before.
+  const previousScore = build.ai_rating_score;
 
   // Reads and writes both go through service role — protect_ai_rating_
   // columns (0088) silently no-ops these columns for the caller's own
@@ -161,6 +166,8 @@ export async function confirmBuildRatingAction(vehicleId: string): Promise<Confi
     console.error("confirmBuildRatingAction failed:", err);
     return { error: "Couldn't save that rating. Try again." };
   }
+
+  after(() => notifyLeaderboardDisplacements(vehicleId, user.id, previousScore, pending.score));
 
   revalidatePath(`/garage/${vehicleId}`);
   revalidatePath("/garage");

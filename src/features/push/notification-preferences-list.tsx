@@ -4,7 +4,17 @@ import { useState, useTransition } from "react";
 import { setNotificationPreferenceAction } from "@/features/push/push-actions";
 import { GroupedList, GroupedRow, RowIcon } from "@/components/ui/grouped-list";
 import { Toggle } from "@/components/ui/toggle";
-import { BellIcon, CommentIcon, FlagIcon, HeartIcon, PersonIcon, UsersIcon } from "@/components/ui/icons";
+import {
+  BellIcon,
+  BoltIcon,
+  CommentIcon,
+  FlagIcon,
+  GemIcon,
+  HeartIcon,
+  PersonIcon,
+  StarIcon,
+  UsersIcon,
+} from "@/components/ui/icons";
 import type { NotificationPreferences, PushCategory } from "@/lib/db/notification-preferences";
 
 const ROWS: { category: PushCategory; label: string; detail: string; color: string; icon: typeof HeartIcon }[] = [
@@ -17,6 +27,21 @@ const ROWS: { category: PushCategory; label: string; detail: string; color: stri
     icon: CommentIcon,
   },
   { category: "follows", label: "New followers", detail: "Someone follows you", color: "#30d158", icon: PersonIcon },
+  { category: "ratings", label: "Ratings", detail: "Someone rates your car", color: "#ffd60a", icon: StarIcon },
+  {
+    category: "leaderboard",
+    label: "Leaderboard",
+    detail: "You lose #1 or drop out of the top 10",
+    color: "#c9b6ff",
+    icon: GemIcon,
+  },
+  {
+    category: "challenges",
+    label: "Weekly challenges",
+    detail: "New challenges every Monday",
+    color: "#ff453a",
+    icon: BoltIcon,
+  },
   { category: "messages", label: "Messages", detail: "New messages in your inbox", color: "#5e5ce6", icon: BellIcon },
   {
     category: "crews",

@@ -74,3 +74,14 @@ export async function deleteDevicePushTokens(
   const { error } = await supabase.from("device_push_tokens").delete().in("token", tokens);
   if (error) throw error;
 }
+
+/** Server-only (service role). Everyone with at least one iOS device
+ * registered, for a notification that goes to the whole app rather than
+ * in reply to one event (the Monday challenges reset). */
+export async function listUserIdsWithDevicePushTokens(
+  supabase: SupabaseClient<Database>,
+): Promise<string[]> {
+  const { data, error } = await supabase.from("device_push_tokens").select("user_id");
+  if (error) throw error;
+  return [...new Set(data.map((row) => row.user_id))];
+}

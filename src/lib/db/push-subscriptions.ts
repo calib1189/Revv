@@ -53,3 +53,13 @@ export async function listSubscriptionsForUser(
   if (error) throw error;
   return data;
 }
+
+/** Server-only (service role). Everyone with at least one browser
+ * subscribed to push — see listUserIdsWithDevicePushTokens. */
+export async function listUserIdsWithPushSubscriptions(
+  supabase: SupabaseClient<Database>,
+): Promise<string[]> {
+  const { data, error } = await supabase.from("push_subscriptions").select("user_id");
+  if (error) throw error;
+  return [...new Set(data.map((row) => row.user_id))];
+}

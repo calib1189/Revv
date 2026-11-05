@@ -21,6 +21,7 @@ import {
   CheckIcon,
   CloseIcon,
   GemIcon,
+  StarIcon,
 } from "@/components/ui/icons";
 import { relativeTime } from "@/lib/format/relative-time";
 
@@ -29,6 +30,7 @@ const KIND_VERB: Record<string, string> = {
   comment: "commented on your post",
   comment_reply: "replied to your comment",
   follow: "started following you",
+  peer_rating: "rated your car",
   crew_join_request: "requested to join your crew",
   crew_join_approved: "approved your request to join",
   crew_post: "posted in a crew you're in",
@@ -50,6 +52,7 @@ const KIND_BADGE: Record<string, { icon: ReactNode; color: string }> = {
   comment: { icon: <CommentIcon className="h-2.5 w-2.5" />, color: "#0a84ff" },
   comment_reply: { icon: <CommentIcon className="h-2.5 w-2.5" />, color: "#0a84ff" },
   follow: { icon: <PersonIcon className="h-2.5 w-2.5" />, color: "#30d158" },
+  peer_rating: { icon: <StarIcon className="h-2.5 w-2.5" />, color: "#ffd60a" },
   crew_join_request: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
   crew_join_approved: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
   crew_post: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },

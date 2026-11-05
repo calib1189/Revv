@@ -946,6 +946,9 @@ export interface Database {
           messages: boolean;
           crews: boolean;
           updates: boolean;
+          ratings: boolean;
+          leaderboard: boolean;
+          challenges: boolean;
           updated_at: string;
         };
         Insert: {
@@ -956,6 +959,9 @@ export interface Database {
           messages?: boolean;
           crews?: boolean;
           updates?: boolean;
+          ratings?: boolean;
+          leaderboard?: boolean;
+          challenges?: boolean;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["notification_preferences"]["Insert"]>;
