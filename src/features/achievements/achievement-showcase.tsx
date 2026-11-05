@@ -17,7 +17,7 @@ function ShowcaseBadge({ id, frameClassName }: { id: string; frameClassName?: st
   const Icon = achievement.icon;
 
   return (
-    <div className={`glass flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-3 ${frameClassName ?? ""}`}>
+    <div className={`flex items-center gap-2 rounded-full bg-foreground/[0.06] py-1.5 pl-1.5 pr-3 ${frameClassName ?? ""}`}>
       <span
         className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
         style={{ backgroundColor: `${color}26` }}

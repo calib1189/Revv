@@ -107,7 +107,7 @@ export function AccountSwitcherButton({
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-label="Switch accounts"
-        className="pressable glass-raised elev-1 flex h-10 max-w-[60vw] items-center gap-1.5 rounded-full pl-4 pr-3 text-[0.9375rem] font-semibold"
+        className="pressable -ml-1 flex h-10 max-w-[60vw] items-center gap-1.5 rounded-full px-1 text-[1.0625rem] font-semibold tracking-[-0.01em]"
       >
         <span className="truncate">@{current.username}</span>
         <ChevronRightIcon className="h-3.5 w-3.5 flex-shrink-0 rotate-90 text-muted" />

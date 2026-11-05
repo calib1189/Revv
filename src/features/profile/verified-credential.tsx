@@ -72,27 +72,6 @@ export function VerifiedSeal({ className = "h-6 w-6", ...credential }: Credentia
   );
 }
 
-/** The labelled version for the profile's credential row — the seal alone
- * relies on people already knowing what it means; this says it. */
-export function VerifiedChip(credential: Credential) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-        className="pressable inline-flex h-7 items-center gap-1.5 rounded-full bg-verified/[0.13] pl-1 pr-3 text-[0.75rem] font-semibold text-verified"
-      >
-        <VerifiedBadge className="h-5 w-5" aria-hidden />
-        Verified
-      </button>
-      <VerifiedSheet open={open} onClose={() => setOpen(false)} {...credential} />
-    </>
-  );
-}
-
 function VerifiedSheet({
   open,
   onClose,

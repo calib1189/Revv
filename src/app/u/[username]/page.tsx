@@ -32,8 +32,8 @@ import { getStoreItem } from "@/lib/store/catalog";
 import { getPointsBalance } from "@/lib/db/points";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { SettingsIcon, GemIcon, StarIcon } from "@/components/ui/icons";
-import { VerifiedChip, VerifiedSeal } from "@/features/profile/verified-credential";
+import { SettingsIcon, GemIcon } from "@/components/ui/icons";
+import { VerifiedSeal } from "@/features/profile/verified-credential";
 import { AccountSwitcherButton } from "@/features/auth/account-switcher";
 import { listOtherAccounts } from "@/features/auth/other-accounts";
 
@@ -301,31 +301,25 @@ export default async function ProfilePage({
           )}
           {profile.is_verified && <VerifiedSeal {...credential} className="h-6 w-6" />}
         </h1>
-        {profile.display_name && (
-          <p className="mt-0.5 max-w-full truncate text-[0.9375rem] text-muted">@{profile.username}</p>
+        {/* One quiet line instead of a row of pills: who they are, then
+            their best build's tier. The seal beside the name already
+            opens what "verified" means, so it isn't repeated as a chip. */}
+        {(profile.display_name || profile.is_founder) && (
+          <p className="mt-0.5 max-w-full truncate text-[0.9375rem] text-muted">
+            {profile.display_name && <>@{profile.username}</>}
+            {profile.display_name && profile.is_founder && <span aria-hidden> · </span>}
+            {profile.is_founder && <span className="text-foreground/80">Founder &amp; Owner</span>}
+          </p>
         )}
 
-        {(profile.is_verified || profile.is_founder || bestTier) && (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-            {profile.is_verified && <VerifiedChip {...credential} />}
-            {profile.is_founder && (
-              <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-accent/12 pl-2.5 pr-3 text-[0.75rem] font-semibold text-accent">
-                <StarIcon className="h-3.5 w-3.5" />
-                Founder &amp; Owner
-              </span>
-            )}
-            {bestTier && BestTierIcon && bestRatingScore != null && (
-              <span className="glass inline-flex h-7 items-center gap-1.5 rounded-full pl-1.5 pr-3">
-                <BestTierIcon className="h-5 w-5" />
-                <span className="micro-label" style={{ color: tierColorVar(bestTier) }}>
-                  {RANK_LABELS[bestTier]}
-                </span>
-                <span className="numeral text-[0.8125rem] leading-none">
-                  {bestRatingScore.toFixed(2)}
-                </span>
-              </span>
-            )}
-          </div>
+        {bestTier && BestTierIcon && bestRatingScore != null && (
+          <p className="mt-2.5 inline-flex items-center gap-1.5">
+            <BestTierIcon className="h-[18px] w-[18px]" />
+            <span className="micro-label" style={{ color: tierColorVar(bestTier) }}>
+              {RANK_LABELS[bestTier]}
+            </span>
+            <span className="numeral text-[0.875rem] leading-none">{bestRatingScore.toFixed(2)}</span>
+          </p>
         )}
 
         <div className="mt-6 flex w-full max-w-sm items-stretch">
