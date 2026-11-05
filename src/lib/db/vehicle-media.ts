@@ -55,6 +55,10 @@ export async function removeVehicleMedia(
   supabase: SupabaseClient<Database>,
   id: string,
 ): Promise<void> {
-  const { error } = await supabase.from("vehicle_media").delete().eq("id", id);
+  // RLS turns a delete the caller isn't allowed to make into "0 rows",
+  // not an error. Selecting the deleted row back is what tells a real
+  // delete apart from one that silently did nothing.
+  const { data, error } = await supabase.from("vehicle_media").delete().eq("id", id).select("id");
   if (error) throw error;
+  if (data.length === 0) throw new Error("Photo not deleted.");
 }
