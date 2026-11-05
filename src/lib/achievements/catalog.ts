@@ -1,33 +1,42 @@
 import type { SVGProps } from "react";
-import { RANK_TIERS, RANK_LABELS, RANK_TEXT_COLORS, type RankTier } from "@/lib/rating/rank";
+import { RANK_TIERS, RANK_LABELS, type RankTier } from "@/lib/rating/rank";
 import {
-  WheelIcon,
-  BadgeIcon,
-  VerifiedBadgeIcon,
-  CompassIcon,
-  GemIcon,
   ArrowUpIcon,
-  PaintIcon,
-  EngineIcon,
-  SeatIcon,
-  WrenchIcon,
-  ShoppingBagIcon,
-  CheckIcon,
-  GalleryIcon,
-  GridIcon,
-  PlayIcon,
-  HeartIcon,
-  CommentIcon,
-  EyeIcon,
-  ShareIcon,
-  BookmarkIcon,
-  UsersIcon,
-  FlagIcon,
-  StarIcon,
-  RotateIcon,
-  TimerIcon,
-  PersonIcon,
+  BadgeIcon,
+  BodyKitIcon,
   BoltIcon,
+  BookmarkIcon,
+  CameraIcon,
+  CommentIcon,
+  CompassIcon,
+  EngineIcon,
+  EyeIcon,
+  FlagIcon,
+  GalleryIcon,
+  GaugeIcon,
+  GemIcon,
+  GridIcon,
+  HeartIcon,
+  LinkIcon,
+  LugNutIcon,
+  MicIcon,
+  OilFilterIcon,
+  PaintIcon,
+  PersonIcon,
+  PinIcon,
+  PlayIcon,
+  RotateIcon,
+  SeatIcon,
+  ShareIcon,
+  ShoppingBagIcon,
+  StarIcon,
+  SteeringWheelIcon,
+  SuspensionIcon,
+  TimerIcon,
+  UsersIcon,
+  VerifiedBadgeIcon,
+  WheelIcon,
+  WrenchIcon,
 } from "@/components/ui/icons";
 
 export type AchievementCategory =
@@ -90,7 +99,7 @@ function tierMilestones(): AchievementDef[] {
  * separately). */
 export const ACHIEVEMENTS: AchievementDef[] = [
   // ---- Garage ----
-  { id: "first_car", name: "First Car", description: "Added your first vehicle to the garage", category: "garage", icon: WheelIcon, points: 10 },
+  { id: "first_car", name: "First Car", description: "Added your first vehicle to the garage", category: "garage", icon: SteeringWheelIcon, points: 10 },
   { id: "car_collector_3", name: "Small Fleet", description: "Own 3 vehicles", category: "garage", icon: WheelIcon, points: 20 },
   { id: "car_collector_5", name: "Growing Fleet", description: "Own 5 vehicles", category: "garage", icon: WheelIcon, points: 35 },
   { id: "car_collector_10", name: "Car Collector", description: "Own 10 vehicles", category: "garage", icon: WheelIcon, points: 60 },
@@ -110,10 +119,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "improved_20", name: "Glow Up", description: "Improved a build's rating by 20+ points from its first score", category: "rating", icon: ArrowUpIcon, points: 60 },
   { id: "appearance_90", name: "Showroom Ready", description: "Scored 90+ on Appearance", category: "rating", icon: PaintIcon, points: 20 },
   { id: "performance_90", name: "Track Ready", description: "Scored 90+ on Performance", category: "rating", icon: EngineIcon, points: 20 },
-  { id: "wheels_fitment_90", name: "Perfect Stance", description: "Scored 90+ on Wheels/Fitment", category: "rating", icon: WheelIcon, points: 20 },
+  { id: "wheels_fitment_90", name: "Perfect Stance", description: "Scored 90+ on Wheels/Fitment", category: "rating", icon: SuspensionIcon, points: 20 },
   { id: "interior_90", name: "Cockpit Ready", description: "Scored 90+ on Interior", category: "rating", icon: SeatIcon, points: 20 },
-  { id: "modifications_90", name: "Fully Built", description: "Scored 90+ on Modifications", category: "rating", icon: WrenchIcon, points: 20 },
-  { id: "all_rounder", name: "All-Rounder", description: "Scored 80+ across every category on one build", category: "rating", icon: GemIcon, points: 60 },
+  { id: "modifications_90", name: "Fully Built", description: "Scored 90+ on Modifications", category: "rating", icon: BodyKitIcon, points: 20 },
+  { id: "all_rounder", name: "All-Rounder", description: "Scored 80+ across every category on one build", category: "rating", icon: GaugeIcon, points: 60 },
 
   // ---- Mods ----
   { id: "first_mod", name: "First Mod", description: "Logged your first modification", category: "mods", icon: WrenchIcon, points: 10 },
@@ -121,15 +130,15 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "mods_10", name: "Building Momentum", description: "Logged 10 modifications", category: "mods", icon: WrenchIcon, points: 20 },
   { id: "mods_25", name: "Heavily Modded", description: "Logged 25 modifications", category: "mods", icon: WrenchIcon, points: 35 },
   { id: "mods_50", name: "Mod Master", description: "Logged 50 modifications", category: "mods", icon: WrenchIcon, points: 60 },
-  { id: "mod_installed", name: "Wrenched In", description: "Marked a modification as installed", category: "mods", icon: CheckIcon, points: 10 },
-  { id: "mods_installed_10", name: "Hands-On", description: "Installed 10 modifications", category: "mods", icon: CheckIcon, points: 20 },
+  { id: "mod_installed", name: "Wrenched In", description: "Marked a modification as installed", category: "mods", icon: LugNutIcon, points: 10 },
+  { id: "mods_installed_10", name: "Hands-On", description: "Installed 10 modifications", category: "mods", icon: LugNutIcon, points: 20 },
   { id: "budget_set", name: "Budgeting", description: "Set a budget on a build", category: "mods", icon: ShoppingBagIcon, points: 10 },
   { id: "invested_1000", name: "Invested", description: "Spent $1,000+ across your builds", category: "mods", icon: ShoppingBagIcon, points: 20 },
   { id: "invested_5000", name: "Committed", description: "Spent $5,000+ across your builds", category: "mods", icon: ShoppingBagIcon, points: 35 },
   { id: "invested_10000", name: "All In", description: "Spent $10,000+ across your builds", category: "mods", icon: ShoppingBagIcon, points: 60 },
 
   // ---- Photos ----
-  { id: "first_photo", name: "First Photo", description: "Added your first garage photo", category: "photos", icon: GalleryIcon, points: 10 },
+  { id: "first_photo", name: "First Photo", description: "Added your first garage photo", category: "photos", icon: CameraIcon, points: 10 },
   { id: "photos_10", name: "Photo Log", description: "Added 10 garage photos", category: "photos", icon: GalleryIcon, points: 20 },
   { id: "photos_25", name: "Documented", description: "Added 25 garage photos", category: "photos", icon: GalleryIcon, points: 35 },
   { id: "photos_50", name: "Photo Archive", description: "Added 50 garage photos", category: "photos", icon: GalleryIcon, points: 60 },
@@ -159,9 +168,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "saved_10", name: "Save-Worthy", description: "A post was saved 10 times", category: "engagement", icon: BookmarkIcon, points: 20 },
 
   // ---- Engagement given ----
-  { id: "first_comment", name: "Joined In", description: "Left your first comment", category: "engagement", icon: CommentIcon, points: 10 },
-  { id: "comments_made_25", name: "Active Voice", description: "Left 25 comments", category: "engagement", icon: CommentIcon, points: 20 },
-  { id: "comments_made_100", name: "Community Regular", description: "Left 100 comments", category: "engagement", icon: CommentIcon, points: 35 },
+  { id: "first_comment", name: "Joined In", description: "Left your first comment", category: "engagement", icon: MicIcon, points: 10 },
+  { id: "comments_made_25", name: "Active Voice", description: "Left 25 comments", category: "engagement", icon: MicIcon, points: 20 },
+  { id: "comments_made_100", name: "Community Regular", description: "Left 100 comments", category: "engagement", icon: MicIcon, points: 35 },
 
   // ---- Social ----
   { id: "first_follower", name: "First Fan", description: "Gained your first follower", category: "social", icon: UsersIcon, points: 10 },
@@ -171,13 +180,13 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "followers_500", name: "Rising Star", description: "Reached 500 followers", category: "social", icon: UsersIcon, points: 100 },
   { id: "followers_1000", name: "Influencer", description: "Reached 1,000 followers", category: "social", icon: UsersIcon, points: 100 },
   { id: "followers_5000", name: "SORZA Celebrity", description: "Reached 5,000 followers", category: "social", icon: UsersIcon, points: 100 },
-  { id: "following_10", name: "Curating Your Feed", description: "Followed 10 accounts", category: "social", icon: UsersIcon, points: 10 },
-  { id: "following_50", name: "Plugged In", description: "Followed 50 accounts", category: "social", icon: UsersIcon, points: 20 },
+  { id: "following_10", name: "Curating Your Feed", description: "Followed 10 accounts", category: "social", icon: LinkIcon, points: 10 },
+  { id: "following_50", name: "Plugged In", description: "Followed 50 accounts", category: "social", icon: LinkIcon, points: 20 },
 
   // ---- Crew ----
   { id: "joined_crew", name: "Crew Member", description: "Joined a crew", category: "crew", icon: FlagIcon, points: 10 },
   { id: "joined_3_crews", name: "Well Connected", description: "Joined 3 crews", category: "crew", icon: FlagIcon, points: 20 },
-  { id: "crew_founder", name: "Crew Founder", description: "Created a crew", category: "crew", icon: FlagIcon, points: 10 },
+  { id: "crew_founder", name: "Crew Founder", description: "Created a crew", category: "crew", icon: BadgeIcon, points: 10 },
   { id: "crew_grew_10", name: "Building a Crew", description: "A crew you founded reached 10 members", category: "crew", icon: FlagIcon, points: 35 },
   { id: "crew_grew_50", name: "Crew Leader", description: "A crew you founded reached 50 members", category: "crew", icon: FlagIcon, points: 60 },
 
@@ -194,12 +203,12 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "build_copied_by_others", name: "Trendsetter", description: "Someone copied one of your builds", category: "mods", icon: RotateIcon, points: 60 },
 
   // ---- Meetups ----
-  { id: "hosted_meetup", name: "Meetup Host", description: "Hosted your first meetup", category: "meetups", icon: TimerIcon, points: 10 },
-  { id: "hosted_5_meetups", name: "Regular Host", description: "Hosted 5 meetups", category: "meetups", icon: TimerIcon, points: 35 },
+  { id: "hosted_meetup", name: "Meetup Host", description: "Hosted your first meetup", category: "meetups", icon: PinIcon, points: 10 },
+  { id: "hosted_5_meetups", name: "Regular Host", description: "Hosted 5 meetups", category: "meetups", icon: PinIcon, points: 35 },
 
   // ---- Maintenance ----
-  { id: "first_maintenance", name: "Maintenance Log", description: "Logged your first maintenance record", category: "maintenance", icon: WrenchIcon, points: 10 },
-  { id: "maintenance_5", name: "Well Maintained", description: "Logged 5 maintenance records", category: "maintenance", icon: WrenchIcon, points: 20 },
+  { id: "first_maintenance", name: "Maintenance Log", description: "Logged your first maintenance record", category: "maintenance", icon: OilFilterIcon, points: 10 },
+  { id: "maintenance_5", name: "Well Maintained", description: "Logged 5 maintenance records", category: "maintenance", icon: OilFilterIcon, points: 20 },
 
   // ---- Profile ----
   { id: "profile_complete", name: "Profile Complete", description: "Added a bio and profile photo", category: "profile", icon: PersonIcon, points: 10 },
@@ -210,22 +219,13 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "perfect_week", name: "Perfect Week", description: "Completed every challenge in a single week", category: "challenges", icon: BoltIcon, points: 35 },
 
   // ---- Membership ----
-  { id: "member_30_days", name: "One Month In", description: "Been on SORZA for 30 days", category: "profile", icon: StarIcon, points: 10 },
-  { id: "member_100_days", name: "Regular", description: "Been on SORZA for 100 days", category: "profile", icon: StarIcon, points: 20 },
-  { id: "member_1_year", name: "SORZA Veteran", description: "Been on SORZA for a full year", category: "profile", icon: StarIcon, points: 60 },
+  { id: "member_30_days", name: "One Month In", description: "Been on SORZA for 30 days", category: "profile", icon: TimerIcon, points: 10 },
+  { id: "member_100_days", name: "Regular", description: "Been on SORZA for 100 days", category: "profile", icon: TimerIcon, points: 20 },
+  { id: "member_1_year", name: "SORZA Veteran", description: "Been on SORZA for a full year", category: "profile", icon: TimerIcon, points: 60 },
 ];
 
 const ACHIEVEMENT_BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
 
 export function getAchievement(id: string): AchievementDef | undefined {
   return ACHIEVEMENT_BY_ID.get(id);
-}
-
-/** Badge color — a tier milestone uses that tier's own color (so
- * "Diamond Tier" reads visually consistent with every Diamond ring
- * elsewhere in the app); everything else uses a single neutral gold,
- * distinct from any real rank tier's color so a non-tier achievement is
- * never mistaken for a rank claim. */
-export function achievementColor(achievement: AchievementDef): string {
-  return achievement.tier ? RANK_TEXT_COLORS[achievement.tier] : "#e8bf4f";
 }

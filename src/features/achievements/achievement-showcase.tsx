@@ -1,5 +1,5 @@
-import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import { achievementColor, getAchievement } from "@/lib/achievements/catalog";
+import { AchievementMedal } from "@/features/achievements/achievement-medal";
+import { getAchievement } from "@/lib/achievements/catalog";
 
 /** Same icon-in-a-colored-circle language as AchievementBadge, just
  * smaller — this sits inline in the profile header, not in a grid.
@@ -12,22 +12,9 @@ function ShowcaseBadge({ id, frameClassName }: { id: string; frameClassName?: st
   const achievement = getAchievement(id);
   if (!achievement) return null;
 
-  const color = achievementColor(achievement);
-  const TierIcon = achievement.tier ? RANK_MATERIAL_ICONS[achievement.tier] : null;
-  const Icon = achievement.icon;
-
   return (
-    <div className={`flex items-center gap-2 rounded-full bg-foreground/[0.06] py-1.5 pl-1.5 pr-3 ${frameClassName ?? ""}`}>
-      <span
-        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
-        style={{ backgroundColor: `${color}26` }}
-      >
-        {TierIcon ? (
-          <TierIcon className="h-5 w-5" />
-        ) : Icon ? (
-          <Icon className="h-3.5 w-3.5" style={{ color }} />
-        ) : null}
-      </span>
+    <div className={`flex items-center gap-2 rounded-full bg-foreground/[0.06] py-1 pl-1 pr-3 ${frameClassName ?? ""}`}>
+      <AchievementMedal achievement={achievement} className="h-8 w-8 flex-shrink-0" compact />
       <span className="whitespace-nowrap text-xs font-medium">{achievement.name}</span>
     </div>
   );

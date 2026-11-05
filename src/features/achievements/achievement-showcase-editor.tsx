@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import { ACHIEVEMENTS, achievementColor, getAchievement } from "@/lib/achievements/catalog";
+import { AchievementMedal } from "@/features/achievements/achievement-medal";
+import { ACHIEVEMENTS, getAchievement } from "@/lib/achievements/catalog";
 import { updateShowcaseAction } from "@/features/achievements/actions";
 import { CloseIcon, PlusIcon } from "@/components/ui/icons";
 
@@ -11,18 +11,7 @@ const MAX_SHOWCASED = 3;
 function SlotIcon({ id }: { id: string }) {
   const achievement = getAchievement(id);
   if (!achievement) return null;
-  const color = achievementColor(achievement);
-  const TierIcon = achievement.tier ? RANK_MATERIAL_ICONS[achievement.tier] : null;
-  const Icon = achievement.icon;
-
-  return (
-    <span
-      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
-      style={{ backgroundColor: `${color}26` }}
-    >
-      {TierIcon ? <TierIcon className="h-7 w-7" /> : Icon ? <Icon className="h-5 w-5" style={{ color }} /> : null}
-    </span>
-  );
+  return <AchievementMedal achievement={achievement} className="h-10 w-10 flex-shrink-0" compact />;
 }
 
 /** Owner-only — lets them pin up to 3 of their own unlocked achievements

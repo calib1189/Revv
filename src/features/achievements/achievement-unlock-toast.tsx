@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import { achievementColor, type AchievementDef } from "@/lib/achievements/catalog";
+import { AchievementMedal } from "@/features/achievements/achievement-medal";
+import type { AchievementDef } from "@/lib/achievements/catalog";
 import { hapticLanding } from "@/lib/haptics";
 
 const TOAST_DURATION_MS = 3500;
@@ -27,10 +27,6 @@ export function AchievementUnlockToast({ achievements }: { achievements: Achieve
 
   if (!current) return null;
 
-  const color = achievementColor(current);
-  const TierIcon = current.tier ? RANK_MATERIAL_ICONS[current.tier] : null;
-  const Icon = current.icon;
-
   return (
     // top-4 alone sat right under the status bar/notch (the sticky
     // header itself accounts for env(safe-area-inset-top); this didn't)
@@ -45,16 +41,7 @@ export function AchievementUnlockToast({ achievements }: { achievements: Achieve
         key={current.id}
         className="animate-achievement-toast glass-raised pointer-events-none flex items-center gap-3 rounded-2xl px-4 py-3 shadow-lg"
       >
-        <span
-          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full"
-          style={{ backgroundColor: `${color}26` }}
-        >
-          {TierIcon ? (
-            <TierIcon className="h-8 w-8" />
-          ) : Icon ? (
-            <Icon className="h-5 w-5" style={{ color }} />
-          ) : null}
-        </span>
+        <AchievementMedal achievement={current} className="h-12 w-12 flex-shrink-0" />
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
             Achievement unlocked

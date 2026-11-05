@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { LockIcon } from "@/components/ui/icons";
-import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import { achievementColor, type AchievementDef } from "@/lib/achievements/catalog";
+import { AchievementMedal } from "@/features/achievements/achievement-medal";
+import type { AchievementDef } from "@/lib/achievements/catalog";
 import { formatDateOnly } from "@/lib/format/date";
 
 export function AchievementBadge({
@@ -21,32 +21,23 @@ export function AchievementBadge({
   footer?: ReactNode;
 }) {
   const unlocked = unlockedAt != null;
-  const color = achievementColor(achievement);
-  // A tier milestone uses the real crest artwork; every other achievement
-  // has its own explicit icon in the catalog now — there's no longer a
-  // generic star fallback to reach for.
-  const TierIcon = achievement.tier ? RANK_MATERIAL_ICONS[achievement.tier] : null;
-  const Icon = achievement.icon;
 
   return (
-    <div
-      className={`glass flex flex-col items-center gap-2 rounded-2xl p-4 text-center transition-opacity ${
-        unlocked ? "" : "opacity-45"
-      }`}
-    >
-      <span
-        className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl"
-        style={{ backgroundColor: unlocked ? `${color}26` : "rgba(255,255,255,0.06)" }}
-      >
-        {!unlocked ? (
-          <LockIcon className="h-6 w-6 text-muted" />
-        ) : TierIcon ? (
-          <TierIcon className="h-10 w-10" />
-        ) : Icon ? (
-          <Icon className="h-7 w-7" style={{ color }} />
-        ) : null}
+    <div className="glass flex flex-col items-center gap-2 rounded-2xl p-4 text-center">
+      {/* Locked medals still show their art, in grey, so the case reads as
+          things to go and get rather than a wall of padlocks. */}
+      <span className="relative flex-shrink-0">
+        <AchievementMedal
+          achievement={achievement}
+          className={`h-16 w-16 ${unlocked ? "" : "opacity-35 grayscale"}`}
+        />
+        {!unlocked && (
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-surface-raised ring-2 ring-background">
+            <LockIcon className="h-3 w-3 text-muted" />
+          </span>
+        )}
       </span>
-      <div className="min-w-0">
+      <div className={`min-w-0 ${unlocked ? "" : "opacity-60"}`}>
         <p className="truncate text-sm font-semibold">{achievement.name}</p>
         <p className="mt-0.5 text-xs text-muted">{achievement.description}</p>
         {unlocked && <p className="mt-1 text-[10px] text-muted">{formatDateOnly(unlockedAt)}</p>}
