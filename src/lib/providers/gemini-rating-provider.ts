@@ -1,4 +1,5 @@
 import type { BuildRating, RatingPhoto, RatingProvider } from "./rating-provider";
+import { blendRatingScore } from "@/lib/rating/blend-score";
 
 const MODEL = "gemini-3.5-flash-lite";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
@@ -12,9 +13,10 @@ const PROMPT =
   "the build details below. Custom paint, custom-fabricated panels, " +
   "widebody kits, and other bodywork are major modifications — weigh them " +
   "at least as heavily as bolt-on parts. Give an honest but encouraging " +
-  "precise score from 0 to 100 with two decimal places (e.g. 87.50, " +
-  "72.25, 95.75) — use the decimals for real differentiation between " +
-  "similar builds rather than defaulting to whole numbers, considering " +
+  "precise score from 0 to 100 with two decimal places (e.g. 83.47, " +
+  "71.82, 94.16). Every hundredth is available: don't round to whole, " +
+  "half or quarter points (.00, .25, .50, .75) — use the decimals for " +
+  "real differentiation between similar builds, considering " +
   "how coherent and well-executed the build looks and how clean the car " +
   "presents in the photos. A bone-stock car isn't bad, it just scores " +
   "lower than a thoughtfully built one — but only call a car stock if " +
@@ -31,7 +33,8 @@ const PROMPT =
   "excellent, what the very highest tier would still require. Never say " +
   "something vague like 'needs more mods' without naming what kind.\n\n" +
   "Finally, break your read of the build down into five independent " +
-  "0-100 subscores — each is your own honest judgment of that one facet " +
+  "0-100 subscores, each with one or two decimals and the same care " +
+  "about not rounding — each is your own honest judgment of that one facet " +
   "alone, not a component that has to add up to the headline score: " +
   "`appearance` (paint, body condition, panel gaps, overall visual " +
   "presentation), `performance` (engine/drivetrain mods, exhaust, " +
@@ -129,17 +132,22 @@ export class GeminiRatingProvider implements RatingProvider {
 
     const parsed: GeminiRatingResponse = JSON.parse(text);
 
+    const subscores = {
+      appearance: clampScore(parsed.appearance),
+      performance: clampScore(parsed.performance),
+      wheelsFitment: clampScore(parsed.wheelsFitment),
+      interior: clampScore(parsed.interior),
+      modifications: clampScore(parsed.modifications),
+    };
+
     return {
-      score: clampScore(parsed.score),
+      // Blended with the five categories rather than taken as-is: the
+      // model's own headline number clusters on a few values (see
+      // blend-score.ts).
+      score: blendRatingScore(parsed.score, subscores),
       strengths: parsed.strengths,
       limitingFactors: parsed.limitingFactors,
-      subscores: {
-        appearance: clampScore(parsed.appearance),
-        performance: clampScore(parsed.performance),
-        wheelsFitment: clampScore(parsed.wheelsFitment),
-        interior: clampScore(parsed.interior),
-        modifications: clampScore(parsed.modifications),
-      },
+      subscores,
       isMock: false,
     };
   }

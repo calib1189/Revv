@@ -1,8 +1,6 @@
 export interface BuildRatingSubscores {
-  /** All 0-100. Sum/average has no special meaning — each is the AI's
-   * independent read of that one facet, not a weighted component of
-   * `score` (the headline score is its own holistic judgment call, not
-   * derived from these). */
+  /** All 0-100. Each is the AI's independent read of that one facet.
+   * They also refine the headline `score`: see lib/rating/blend-score.ts. */
   appearance: number;
   performance: number;
   wheelsFitment: number;
@@ -11,7 +9,8 @@ export interface BuildRatingSubscores {
 }
 
 export interface BuildRating {
-  /** 0-100, two decimal places. */
+  /** 0-100, two decimal places: the model's holistic score blended with
+   * its subscores (blendRatingScore). */
   score: number;
   /** What earned the score — specific things observed, 1-2 sentences. */
   strengths: string;
