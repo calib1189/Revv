@@ -1,8 +1,11 @@
 import type { BuildRating, RatingPhoto, RatingProvider } from "./rating-provider";
 import { blendRatingScore } from "@/lib/rating/blend-score";
+import { parseGeminiAnswer, postGemini } from "./gemini-request";
 
 const MODEL = "gemini-3.5-flash-lite";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+// Several photos in one call take longer than a single-image check.
+const ATTEMPT_TIMEOUT_MS = 20_000;
 
 const PROMPT =
   "You are rating a car build for a fun, gamified ranking feature on an " +
@@ -78,59 +81,51 @@ export class GeminiRatingProvider implements RatingProvider {
       },
     }));
 
-    const res = await fetch(`${ENDPOINT}?key=${this.apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: `${PROMPT}\n\nBUILD DETAILS:\n${buildSummary}` },
-              ...imageParts,
-            ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              score: { type: "NUMBER" },
-              strengths: { type: "STRING" },
-              limitingFactors: { type: "STRING" },
-              appearance: { type: "NUMBER" },
-              performance: { type: "NUMBER" },
-              wheelsFitment: { type: "NUMBER" },
-              interior: { type: "NUMBER" },
-              modifications: { type: "NUMBER" },
-            },
-            required: [
-              "score",
-              "strengths",
-              "limitingFactors",
-              "appearance",
-              "performance",
-              "wheelsFitment",
-              "interior",
-              "modifications",
-            ],
-          },
+    const body = JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: `${PROMPT}\n\nBUILD DETAILS:\n${buildSummary}` },
+            ...imageParts,
+          ],
         },
-      }),
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            score: { type: "NUMBER" },
+            strengths: { type: "STRING" },
+            limitingFactors: { type: "STRING" },
+            appearance: { type: "NUMBER" },
+            performance: { type: "NUMBER" },
+            wheelsFitment: { type: "NUMBER" },
+            interior: { type: "NUMBER" },
+            modifications: { type: "NUMBER" },
+          },
+          required: [
+            "score",
+            "strengths",
+            "limitingFactors",
+            "appearance",
+            "performance",
+            "wheelsFitment",
+            "interior",
+            "modifications",
+          ],
+        },
+      },
     });
 
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Gemini rating request failed: ${res.status} ${body}`);
-    }
-
-    const json = await res.json();
-    const text: string | undefined = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) {
-      throw new Error("Gemini response did not include a rating.");
-    }
-
-    const parsed: GeminiRatingResponse = JSON.parse(text);
+    // Retried on a rate limit, brief outage or dropped connection: a
+    // single failed call used to surface as an error the owner had to
+    // retry by hand.
+    const json = await postGemini(`${ENDPOINT}?key=${this.apiKey}`, body, {
+      label: "rating",
+      timeoutMs: ATTEMPT_TIMEOUT_MS,
+    });
+    const parsed = parseGeminiAnswer<GeminiRatingResponse>(json, "rating");
 
     const subscores = {
       appearance: clampScore(parsed.appearance),

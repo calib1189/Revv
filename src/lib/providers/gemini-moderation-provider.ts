@@ -1,4 +1,5 @@
 import type { ModerationResult, ModerationProvider } from "./moderation-provider";
+import { parseGeminiAnswer, postGemini } from "./gemini-request";
 
 // Same lite model as gemini-vision-provider.ts — this is a binary
 // classification task, not something that needs the full model.
@@ -19,16 +20,7 @@ interface GeminiModerationResponse {
   confidence: number;
 }
 
-/** Statuses that mean "not right now" rather than "never" — the free
- * tier's per-minute rate limit (429) above all, since moderation shares
- * it with ratings and vehicle identification. */
-const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
-const ATTEMPTS = 3;
 const ATTEMPT_TIMEOUT_MS = 15_000;
-
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Real moderation via the Gemini API — same free-tier-eligible vision
@@ -66,46 +58,13 @@ export class GeminiModerationProvider implements ModerationProvider {
       },
     });
 
-    // A single failed call used to fail the whole upload. A rate limit, a
-    // brief outage or a dropped connection gets two more tries, a beat
-    // apart; each try is capped so a hung request can't hold the upload.
-    let res: Response | null = null;
-    for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-      try {
-        res = await fetch(`${ENDPOINT}?key=${this.apiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body,
-          signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
-        });
-      } catch (err) {
-        if (attempt === ATTEMPTS) throw err;
-        await wait(attempt * 800);
-        continue;
-      }
-      if (res.ok || !RETRYABLE_STATUSES.has(res.status) || attempt === ATTEMPTS) break;
-      await wait(attempt * 800);
-    }
-
-    if (!res || !res.ok) {
-      const detail = res ? `${res.status} ${await res.text()}` : "no response";
-      throw new Error(`Gemini moderation request failed: ${detail}`);
-    }
-
-    const json = await res.json();
-    // The verdict is whichever part carries text — not necessarily the
-    // first, since a model can lead with a thinking part of its own.
-    const parts: { text?: unknown; thought?: unknown }[] = json.candidates?.[0]?.content?.parts ?? [];
-    const text = parts.find((part) => typeof part.text === "string" && !part.thought)?.text as
-      | string
-      | undefined;
-    if (!text) {
-      throw new Error(
-        `Gemini response did not include a moderation verdict (finishReason: ${json.candidates?.[0]?.finishReason ?? "none"}).`,
-      );
-    }
-
-    const parsed: GeminiModerationResponse = JSON.parse(text);
+    // Retried on a rate limit, brief outage or dropped connection, so a
+    // single failed call doesn't fail the whole upload.
+    const json = await postGemini(`${ENDPOINT}?key=${this.apiKey}`, body, {
+      label: "moderation",
+      timeoutMs: ATTEMPT_TIMEOUT_MS,
+    });
+    const parsed = parseGeminiAnswer<GeminiModerationResponse>(json, "moderation verdict");
 
     return {
       flagged: parsed.flagged,

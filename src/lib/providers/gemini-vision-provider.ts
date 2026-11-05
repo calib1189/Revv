@@ -1,10 +1,12 @@
 import { VEHICLE_CATEGORIES, isVehicleCategory } from "@/lib/vehicles/category";
 import type { VehicleIdentification, VisionProvider } from "./vision-provider";
+import { parseGeminiAnswer, postGemini } from "./gemini-request";
 
 // The lite variant is ~10x faster than the full model for this task with
 // equivalent accuracy in testing — worth it for a synchronous UI action.
 const MODEL = "gemini-3.5-flash-lite";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const ATTEMPT_TIMEOUT_MS = 15_000;
 
 const PROMPT =
   "Identify this vehicle's model year, make, model, and trim from the photo. " +
@@ -40,48 +42,37 @@ export class GeminiVisionProvider implements VisionProvider {
   ): Promise<VehicleIdentification> {
     const base64 = Buffer.from(imageBytes).toString("base64");
 
-    const res = await fetch(`${ENDPOINT}?key=${this.apiKey}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: PROMPT },
-              { inlineData: { mimeType, data: base64 } },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              year: { type: "INTEGER", nullable: true },
-              make: { type: "STRING", nullable: true },
-              model: { type: "STRING", nullable: true },
-              trim: { type: "STRING", nullable: true },
-              category: { type: "STRING", nullable: true },
-              confidence: { type: "NUMBER" },
-            },
-            required: ["year", "make", "model", "trim", "category", "confidence"],
-          },
+    const body = JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: PROMPT },
+            { inlineData: { mimeType, data: base64 } },
+          ],
         },
-      }),
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            year: { type: "INTEGER", nullable: true },
+            make: { type: "STRING", nullable: true },
+            model: { type: "STRING", nullable: true },
+            trim: { type: "STRING", nullable: true },
+            category: { type: "STRING", nullable: true },
+            confidence: { type: "NUMBER" },
+          },
+          required: ["year", "make", "model", "trim", "category", "confidence"],
+        },
+      },
     });
 
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Gemini vision request failed: ${res.status} ${body}`);
-    }
-
-    const json = await res.json();
-    const text: string | undefined = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) {
-      throw new Error("Gemini response did not include identification data.");
-    }
-
-    const parsed: GeminiIdentifyResponse = JSON.parse(text);
+    const json = await postGemini(`${ENDPOINT}?key=${this.apiKey}`, body, {
+      label: "vision",
+      timeoutMs: ATTEMPT_TIMEOUT_MS,
+    });
+    const parsed = parseGeminiAnswer<GeminiIdentifyResponse>(json, "vehicle identification");
     const confidence = Math.max(0, Math.min(1, parsed.confidence));
 
     return {

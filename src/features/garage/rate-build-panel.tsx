@@ -93,6 +93,8 @@ export function RateBuildPanel({
         setPending(null);
         router.refresh();
       }
+    } catch {
+      setError("Couldn't save that rating. Check your connection and try again.");
     } finally {
       setIsConfirming(false);
     }

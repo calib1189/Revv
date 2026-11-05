@@ -6,6 +6,7 @@ import { notifyLeaderboardDisplacements } from "@/features/leaderboard/notify-di
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getVehicleById } from "@/lib/db/vehicles";
+import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
 import {
@@ -35,6 +36,23 @@ async function requireOwner(vehicleId: string) {
   return { supabase, user, vehicle };
 }
 
+/** One photo for the rating call, with a second try: a storage hiccup
+ * on any one of up to four photos used to fail the whole rating. */
+async function fetchRatingPhoto(url: string): Promise<RatingPhoto> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+      if (!res.ok) throw new Error(`Photo fetch failed: ${res.status}`);
+      const bytes = await res.arrayBuffer();
+      const mimeType = res.headers.get("content-type") ?? "image/jpeg";
+      return { bytes, mimeType };
+    } catch (err) {
+      if (attempt >= 2) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+}
+
 export interface GenerateRatingResult {
   data?: BuildRating;
   error?: string;
@@ -43,15 +61,19 @@ export interface GenerateRatingResult {
 export async function generateBuildRatingAction(
   vehicleId: string,
 ): Promise<GenerateRatingResult> {
-  const { supabase, vehicle } = await requireOwner(vehicleId);
+  const { supabase, user, vehicle } = await requireOwner(vehicleId);
 
-  const existingBuild = await getActiveBuild(supabase, vehicleId);
+  const [existingBuild, profile] = await Promise.all([
+    getActiveBuild(supabase, vehicleId),
+    getProfileByUserId(supabase, user.id),
+  ]);
   // ai_rating_last_attempt_at (set below, right after a real AI call
   // completes) is the actual gate — it's recorded even if the result
   // never gets confirmed. Falling back to ai_rating_rated_at covers a
   // build whose last rating predates this column existing at all.
+  // Admins aren't limited, so the app's own team can re-rate freely.
   const lastAttempt = existingBuild?.ai_rating_last_attempt_at ?? existingBuild?.ai_rating_rated_at;
-  if (lastAttempt) {
+  if (lastAttempt && !profile?.is_admin) {
     const hoursSince = (Date.now() - new Date(lastAttempt).getTime()) / (1000 * 60 * 60);
     if (hoursSince < RATE_LIMIT_HOURS) {
       const hoursLeft = Math.ceil(RATE_LIMIT_HOURS - hoursSince);
@@ -78,16 +100,9 @@ export async function generateBuildRatingAction(
 
   let photos: RatingPhoto[];
   try {
-    photos = await Promise.all(
-      photoUrls.map(async (url) => {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Failed to fetch ${url}`);
-        const bytes = await res.arrayBuffer();
-        const mimeType = res.headers.get("content-type") ?? "image/jpeg";
-        return { bytes, mimeType };
-      }),
-    );
-  } catch {
+    photos = await Promise.all(photoUrls.map(fetchRatingPhoto));
+  } catch (err) {
+    console.error("generateBuildRatingAction photo load failed:", err);
     return { error: "Couldn't load your photos. Try again." };
   }
 
@@ -110,7 +125,10 @@ export async function generateBuildRatingAction(
     const serviceRole = createServiceRoleClient();
     await savePendingBuildRating(serviceRole, build.id, rating);
     return { data: rating };
-  } catch {
+  } catch (err) {
+    // Logged so a failure is diagnosable from Vercel's logs; the provider
+    // has already retried anything worth retrying by this point.
+    console.error("generateBuildRatingAction failed:", err);
     return { error: "Couldn't rate that build right now. Try again in a bit." };
   }
 }
