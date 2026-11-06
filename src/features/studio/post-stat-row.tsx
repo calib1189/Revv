@@ -48,7 +48,7 @@ export function PostStatRow({
 
       <div className="min-w-0 flex-1">
         <Link href={href} className="block min-w-0">
-          <p className="truncate text-[0.9375rem] font-semibold">{post.caption || "Untitled post"}</p>
+          <p className="truncate text-[0.9375rem] font-semibold">{post.caption || (post.post_type === "video" ? "Video post" : "Photo post")}</p>
           <p className="text-[0.8125rem] text-muted">{formatDateOnly(post.created_at)}</p>
         </Link>
 

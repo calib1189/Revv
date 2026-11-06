@@ -189,8 +189,10 @@ export function RateBuildPanel({
             <ShareScoreButton vehicleId={vehicleId} text={shareText} />
           </div>
           <div className="mt-2.5 flex gap-2.5">
-            <Link href="/leaderboard" className="min-w-0 flex-1">
-              <Button variant="secondary" className="h-11 w-full text-[0.9375rem] font-semibold">
+            {/* Never narrower than its label: min-w-0 here let a phone
+                squeeze "How tiers work" onto two lines in a one-line pill. */}
+            <Link href="/leaderboard" className="flex-1">
+              <Button variant="secondary" className="h-11 w-full whitespace-nowrap px-3 text-[0.9375rem] font-semibold">
                 How tiers work
               </Button>
             </Link>

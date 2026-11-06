@@ -139,9 +139,16 @@ function ModificationRow({
             >
               {STATUS_LABEL[part.status]}
             </span>
-            {part.category && <span>{part.category}</span>}
-            {part.installed_at && (
-              <span>· {formatDateOnly(part.installed_at)}</span>
+            {/* Category and date as one unit, so a wrap moves them
+                together instead of leaving a stray "·" at a line start.
+                The category is whatever the owner typed; only its first
+                letter is lifted, for display. */}
+            {(part.category || part.installed_at) && (
+              <span className="inline-block first-letter:uppercase">
+                {[part.category, part.installed_at && formatDateOnly(part.installed_at)]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
             )}
           </div>
           {photoError && (
@@ -174,8 +181,10 @@ function ModificationRow({
               href={buildPartSearchUrl(searchQuery)}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              className="mt-2 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-accent"
+              className="mt-2 inline-flex items-center gap-1 text-[0.8125rem] font-medium text-muted transition-colors hover:text-foreground"
             >
+              {/* Muted, not accent: it sits on every unlinked mod, and ten
+                  red links in a row drowned out the mods themselves. */}
               <SearchIcon className="h-3.5 w-3.5" />
               Search for this part
             </a>

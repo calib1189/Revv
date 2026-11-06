@@ -88,15 +88,19 @@ export function BudgetCard({
           </ProgressRing>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-[0.8125rem] font-medium text-muted">Spent</p>
+          <p className="text-[0.8125rem] font-medium text-muted">{isOwner ? "Spent" : "Total invested"}</p>
           <p className="numeral mt-0.5 text-[1.625rem] leading-none">{formatCents(summary.spentCents)}</p>
-          <p className={`mt-1.5 text-[0.8125rem] ${overBudget ? "text-danger" : "text-muted"}`}>
-            {summary.budgetCents == null
-              ? "No budget set"
-              : overBudget
-                ? `${formatCents(-summary.remainingCents!)} over ${formatCents(summary.budgetCents)}`
-                : `${formatCents(summary.remainingCents!)} left of ${formatCents(summary.budgetCents)}`}
-          </p>
+          {/* "No budget set" is a prompt for the owner; a visitor has
+              nothing to do with it, so they just see the total. */}
+          {(summary.budgetCents != null || isOwner) && (
+            <p className={`mt-1.5 text-[0.8125rem] ${overBudget ? "text-danger" : "text-muted"}`}>
+              {summary.budgetCents == null
+                ? "No budget set"
+                : overBudget
+                  ? `${formatCents(-summary.remainingCents!)} over ${formatCents(summary.budgetCents)}`
+                  : `${formatCents(summary.remainingCents!)} left of ${formatCents(summary.budgetCents)}`}
+            </p>
+          )}
         </div>
         {isOwner && (
           <button

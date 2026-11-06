@@ -170,7 +170,9 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "name_color",
     name: "Founder",
     price: 0,
-    value: "linear-gradient(90deg, #000000, #ff4433, #fbbf24, #ff4433, #000000)",
+    // No black stops: the shimmer sweeps every stop across the letters,
+    // and a black one made the name vanish on dark and red headers.
+    value: "linear-gradient(90deg, #ff4433, #ff8a3d, #fbbf24, #ffe4a8, #fbbf24, #ff8a3d, #ff4433)",
     effectClassName: "text-shimmer-anim",
     founderOnly: true,
   },
