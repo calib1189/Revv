@@ -92,7 +92,7 @@ export default async function AdminUsersPage({
             defaultValue={q}
             placeholder="Search by username or name"
             autoComplete="off"
-            className="h-11 min-w-0 flex-1 bg-transparent text-[0.9375rem] outline-none placeholder:text-muted"
+            className="h-11 min-w-0 flex-1 bg-transparent text-[0.9375rem] outline-none placeholder:text-muted/60"
           />
         </label>
       </form>

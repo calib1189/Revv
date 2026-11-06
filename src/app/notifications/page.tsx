@@ -24,6 +24,7 @@ import {
   StarIcon,
 } from "@/components/ui/icons";
 import { relativeTime } from "@/lib/format/relative-time";
+import { groupNotifications, groupedVerb } from "@/lib/notifications/group";
 
 const KIND_VERB: Record<string, string> = {
   like: "liked your post",
@@ -137,11 +138,13 @@ export default async function NotificationsPage() {
               <section key={group.title}>
                 <SectionTitle>{group.title}</SectionTitle>
                 <ul className="glass-raised elev-1 overflow-hidden rounded-[22px]">
-                  {group.items.map((n, i) => {
+                  {/* Repeats from one person fold into one row
+                      ("liked 2 of your posts"); the newest one leads. */}
+                  {groupNotifications(group.items).map(({ lead: n, targetCount, unread }, i) => {
                     const username = n.actor_id
                       ? (usernameByActorId.get(n.actor_id) ?? "unknown")
                       : "SORZA";
-                    const verb = KIND_VERB[n.kind] ?? n.kind;
+                    const verb = groupedVerb(n.kind, targetCount, KIND_VERB[n.kind] ?? n.kind);
                     const badge = KIND_BADGE[n.kind];
                     const href =
                       n.kind === "follow"
@@ -171,8 +174,8 @@ export default async function NotificationsPage() {
                           className="flex items-center gap-3 py-3 pl-2 pr-4 transition-colors active:bg-foreground/[0.06]"
                         >
                           <span
-                            aria-label={n.read_at ? undefined : "Unread"}
-                            className={`h-2 w-2 flex-shrink-0 rounded-full ${n.read_at ? "" : "bg-accent"}`}
+                            aria-label={unread ? "Unread" : undefined}
+                            className={`h-2 w-2 flex-shrink-0 rounded-full ${unread ? "bg-accent" : ""}`}
                           />
                           <span className="relative flex-shrink-0">
                             <Avatar
@@ -194,7 +197,7 @@ export default async function NotificationsPage() {
                             {n.actor_id && verifiedActorIds.has(n.actor_id) && (
                               <VerifiedBadge className="ml-1 h-3.5 w-3.5 align-[-0.15em]" />
                             )}{" "}
-                            <span className={n.read_at ? "text-muted" : ""}>{verb}</span>
+                            <span className={unread ? "" : "text-muted"}>{verb}</span>
                           </span>
                           <span className="flex-shrink-0 self-start pt-0.5 text-[0.8125rem] text-muted" suppressHydrationWarning>
                             {relativeTime(n.created_at)}

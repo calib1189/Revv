@@ -272,7 +272,7 @@ export function CreateMeetupForm({ userId, crews }: { userId: string; crews: Cre
             rows={3}
             maxLength={2000}
             placeholder="Anything people should know before showing up"
-            className="glass-inset w-full rounded-[14px] px-4 py-3 text-foreground placeholder:text-muted transition-[box-shadow,border-color] focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent/15"
+            className="glass-inset w-full rounded-[14px] px-4 py-3 text-foreground placeholder:text-muted/60 transition-[box-shadow,border-color] focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent/15"
           />
         </div>
 

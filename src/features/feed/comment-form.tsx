@@ -90,7 +90,7 @@ export function CommentForm({
           autoComplete="off"
           enterKeyHint="send"
           aria-label={parentId ? "Reply" : "Comment"}
-          className="min-w-0 flex-1 bg-transparent py-1.5 text-[0.9375rem] text-foreground placeholder:text-muted focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-[0.9375rem] text-foreground placeholder:text-muted/60 focus:outline-none"
         />
         <button
           type="submit"

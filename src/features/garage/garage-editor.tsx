@@ -259,10 +259,10 @@ export function GarageEditor({
         <div
           className="mb-1 flex flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5"
           style={{ background: "var(--segment-track)" }}
-          aria-label={`${balance} points`}
+          aria-label={`${balance.toLocaleString("en-US")} points`}
         >
           <GemIcon className="h-4 w-4 text-accent" />
-          <span className="numeral text-[1.0625rem] leading-none">{balance}</span>
+          <span className="numeral text-[1.0625rem] leading-none">{balance.toLocaleString("en-US")}</span>
         </div>
       </header>
 

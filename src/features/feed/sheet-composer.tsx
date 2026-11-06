@@ -151,7 +151,7 @@ export const SheetComposer = forwardRef<
           autoComplete="off"
           enterKeyHint="send"
           aria-label={replyTo ? "Reply" : "Comment"}
-          className={`min-w-0 flex-1 resize-none bg-transparent text-[0.9375rem] leading-snug text-foreground placeholder:text-muted focus:outline-none ${
+          className={`min-w-0 flex-1 resize-none bg-transparent text-[0.9375rem] leading-snug text-foreground placeholder:text-muted/60 focus:outline-none ${
             focused ? "min-h-[3.25rem]" : "h-8 overflow-hidden py-1.5"
           }`}
         />

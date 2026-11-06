@@ -25,7 +25,7 @@ export function FormGroup({
 }
 
 const fieldClass =
-  "min-w-0 flex-1 bg-transparent py-3 text-foreground placeholder:text-muted/70 focus:outline-none";
+  "min-w-0 flex-1 bg-transparent py-3 text-foreground placeholder:text-muted/60 focus:outline-none";
 
 export function FormField({
   label,
@@ -64,7 +64,7 @@ export function FormTextarea({
     <div className="relative px-4">
       <textarea
         id={id}
-        className="w-full resize-none bg-transparent py-3 text-foreground placeholder:text-muted/70 focus:outline-none"
+        className="w-full resize-none bg-transparent py-3 text-foreground placeholder:text-muted/60 focus:outline-none"
         {...props}
       />
     </div>

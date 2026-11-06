@@ -31,7 +31,7 @@ export function MessageForm({ conversationId }: { conversationId: string }) {
           maxLength={4000}
           autoComplete="off"
           aria-label="Message"
-          className="min-w-0 flex-1 bg-transparent py-1.5 text-foreground placeholder:text-muted focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-foreground placeholder:text-muted/60 focus:outline-none"
         />
         <button
           type="submit"

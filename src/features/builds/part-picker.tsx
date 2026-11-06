@@ -44,7 +44,7 @@ export function PartPicker({ initialPart }: { initialPart?: Part | null }) {
           if (selected) setSelected(null);
         }}
         placeholder="Search brand or product…"
-        className="glass-inset w-full rounded-[14px] px-4 py-3 text-foreground placeholder:text-muted transition-[box-shadow,border-color] focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent/15"
+        className="glass-inset w-full rounded-[14px] px-4 py-3 text-foreground placeholder:text-muted/60 transition-[box-shadow,border-color] focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent/15"
       />
 
       {selected && (

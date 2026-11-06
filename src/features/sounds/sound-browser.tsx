@@ -141,7 +141,7 @@ export function SoundBrowser({
               if (!e.target.value.trim()) setResults(null);
             }}
             placeholder="Search sounds…"
-            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted focus:outline-none"
+            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted/60 focus:outline-none"
           />
         </div>
         <button

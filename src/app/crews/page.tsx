@@ -119,17 +119,33 @@ export default async function CrewsPage() {
       )}
 
       {publicCardData.length === 0 ? (
-        <EmptyState
-          card
-          icon={<FlagIcon />}
-          title="No crews yet"
-          body="Start one around your car, your area, or your scene."
-          action={
-            <Link href="/crews/new">
-              <Button className="px-5">Create the first crew</Button>
-            </Link>
-          }
-        />
+        // Someone already in a (private) crew saw "No crews yet" right
+        // under their own crew. The empty state is about crews to join.
+        yourCardData.length > 0 ? (
+          <EmptyState
+            card
+            icon={<FlagIcon />}
+            title="No crews to join yet"
+            body="Public crews other people start will show up here."
+            action={
+              <Link href="/crews/new">
+                <Button variant="secondary" className="px-5">Start another crew</Button>
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState
+            card
+            icon={<FlagIcon />}
+            title="No crews yet"
+            body="Start one around your car, your area, or your scene."
+            action={
+              <Link href="/crews/new">
+                <Button className="px-5">Create the first crew</Button>
+              </Link>
+            }
+          />
+        )
       ) : (
         <CrewsPageTabs crews={publicCardData} />
       )}

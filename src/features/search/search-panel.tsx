@@ -94,7 +94,7 @@ export function SearchPanel() {
           placeholder="Accounts, cars, #hashtags"
           autoFocus
           aria-label="Search"
-          className="w-full bg-transparent text-foreground placeholder:text-muted focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+          className="w-full bg-transparent text-foreground placeholder:text-muted/60 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
         {query && (
           <button

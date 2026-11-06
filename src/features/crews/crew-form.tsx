@@ -108,7 +108,7 @@ export function CrewForm({ action, crew, submitLabel }: CrewFormProps) {
           rows={4}
           placeholder="What's this crew about?"
           defaultValue={crew?.description ?? ""}
-          className="glass-inset w-full rounded-[14px] px-4 py-3 text-foreground placeholder:text-muted transition-[box-shadow,border-color] focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent/15"
+          className="glass-inset w-full rounded-[14px] px-4 py-3 text-foreground placeholder:text-muted/60 transition-[box-shadow,border-color] focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent/15"
         />
       </div>
 
