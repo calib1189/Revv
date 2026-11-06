@@ -13,6 +13,7 @@ import { ProductCard } from "@/features/builds/product-card";
 import { BuyButton } from "@/features/parts/buy-button";
 import { buildPartSearchUrl } from "@/lib/affiliate/amazon-search-link";
 import { Button } from "@/components/ui/button";
+import { MediaImg } from "@/components/ui/media-img";
 import { SearchIcon, PlusIcon } from "@/components/ui/icons";
 import { SectionTitle } from "@/components/ui/grouped-list";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -50,8 +51,7 @@ function ModificationIcon({
   return (
     <div className="relative flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-foreground/[0.06] text-muted">
       {photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- decorative thumbnail in a list; not worth a sized-ancestor Image setup here
-        <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+        <MediaImg src={photoUrl} sizes="56px" loading="lazy" className="h-full w-full object-cover" />
       ) : (
         // Invoked as a plain function rather than <CategoryIcon /> — it's
         // always one of a fixed, stable set of icons under the hood, but

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** A bare <video preload="metadata"> reliably loads duration/dimensions,
  * but several browsers (mobile Safari especially) never actually decode
@@ -10,14 +10,34 @@ import { useRef } from "react";
  * metadata is ready forces the browser to decode and paint that frame,
  * which then just sits there as a real poster image — without
  * downloading the whole file the way preload="auto" would for every
- * video in a grid. */
+ * video in a grid.
+ *
+ * Painting that frame still pulls a few MB per clip from Supabase
+ * Storage, so the src is only attached once the tile gets near the
+ * screen. A profile with forty videos no longer fetches all forty the
+ * moment it opens. */
 export function VideoThumbnail({ url, className }: { url: string; className?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [nearView, setNearView] = useState(false);
+
+  useEffect(() => {
+    if (nearView) return;
+    const el = videoRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setNearView(true);
+      },
+      { rootMargin: "300px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [nearView]);
 
   return (
     <video
       ref={videoRef}
-      src={url}
+      src={nearView ? url : undefined}
       muted
       playsInline
       preload="metadata"

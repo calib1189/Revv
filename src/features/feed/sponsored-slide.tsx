@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { MediaImg } from "@/components/ui/media-img";
 import { recordAdImpressionAction, recordAdClickAction } from "@/features/ads/actions";
 
 export interface SponsoredSlideData {
@@ -54,8 +55,7 @@ export function SponsoredSlide({
       className={`relative ${slideHeight} w-full flex-shrink-0 snap-start overflow-hidden bg-black`}
     >
       {data.photoUrl && (
-        // eslint-disable-next-line @next/next/no-img-element -- full-bleed slide, next/image fill needs a sized ancestor we don't have here
-        <img src={data.photoUrl} alt="" className="h-full w-full object-cover" />
+        <MediaImg src={data.photoUrl} sizes="100vw" className="h-full w-full object-cover" />
       )}
 
       {/* Bottom-right rather than the top corner — the top strip is

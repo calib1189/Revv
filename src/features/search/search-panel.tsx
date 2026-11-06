@@ -11,6 +11,8 @@ import { PeopleList } from "@/features/profile/people-list";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
+import { MediaImg } from "@/components/ui/media-img";
+import { VideoThumbnail } from "@/features/profile/video-thumbnail";
 import { SearchIcon, PlayIcon, CloseIcon } from "@/components/ui/icons";
 import type { Profile } from "@/lib/db/profiles";
 
@@ -147,11 +149,13 @@ export function SearchPanel() {
                     href={`/p/${post.id}`}
                     className="group relative aspect-[3/4] overflow-hidden bg-surface"
                   >
-                    {post.thumbnailUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- small grid thumbnail, next/image fill overhead isn't worth it here
-                      <img
+                    {post.thumbnailUrl && post.isVideo ? (
+                      <VideoThumbnail url={post.thumbnailUrl} className="h-full w-full object-cover" />
+                    ) : post.thumbnailUrl ? (
+                      <MediaImg
                         src={post.thumbnailUrl}
-                        alt=""
+                        sizes="(min-width: 640px) 200px, 33vw"
+                        loading="lazy"
                         className="h-full w-full object-cover"
                       />
                     ) : (

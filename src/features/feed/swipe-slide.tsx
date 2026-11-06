@@ -25,6 +25,7 @@ import {
   WheelIcon,
 } from "@/components/ui/icons";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { MediaImg } from "@/components/ui/media-img";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { relativeTime } from "@/lib/format/relative-time";
 import { SITE_URL } from "@/lib/site-url";
@@ -33,7 +34,9 @@ import type { PostCardData } from "@/features/feed/post-card";
 
 /** The shadow every white control on the video carries, so it stays
  * legible over a bright frame without a box behind it. */
-const ON_VIDEO_SHADOW = "[filter:drop-shadow(0_1px_4px_rgb(0_0_0/0.55))]";
+/** Feed photos are drawn edge to edge. */
+export const FEED_IMAGE_SIZES = "100vw";
+const ON_VIDEO_SHADOW ="[filter:drop-shadow(0_1px_4px_rgb(0_0_0/0.55))]";
 
 function formatClock(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
@@ -605,18 +608,19 @@ function PhotoMedia({
       }}
       {...longPressHandlers}
     >
-      {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} />}
+      {/* preload="none": a song is often 4MB+, and this mounts for the
+          next post too. play() (when the slide is on screen) loads it. */}
+      {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} preload="none" />}
       <div
         ref={containerRef}
         onScroll={handleScroll}
         className="no-scrollbar flex h-full snap-x snap-mandatory overflow-x-auto"
       >
         {urls.map((url, i) => (
-          // eslint-disable-next-line @next/next/no-img-element -- full-bleed slide, next/image fill needs a sized ancestor we don't have here
-          <img
+          <MediaImg
             key={i}
             src={shouldLoad ? url : undefined}
-            alt=""
+            sizes={FEED_IMAGE_SIZES}
             loading="lazy"
             className="h-full w-full flex-shrink-0 snap-center object-cover"
           />
