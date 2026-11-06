@@ -67,3 +67,20 @@ export async function getAttendeeCountsForMeetups(
   }
   return counts;
 }
+
+/** Whether this person has already said they're going, so a car change
+ * isn't treated as a new RSVP. */
+export async function isAttendingMeetup(
+  supabase: SupabaseClient<Database>,
+  meetupId: string,
+  userId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("meetup_attendees")
+    .select("user_id")
+    .eq("meetup_id", meetupId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data != null;
+}

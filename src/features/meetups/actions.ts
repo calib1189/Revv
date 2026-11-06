@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirmed-user";
 import { requireAdmin } from "@/lib/auth/require-admin";
@@ -20,7 +21,8 @@ import {
   type Meetup,
 } from "@/lib/db/meetups";
 import { getMeetupViewCountsForMeetups } from "@/lib/db/meetup-views";
-import { removeMeetupAttendance, setMeetupAttendance } from "@/lib/db/meetup-attendees";
+import { isAttendingMeetup, removeMeetupAttendance, setMeetupAttendance } from "@/lib/db/meetup-attendees";
+import { getProfileByUserId } from "@/lib/db/profiles";
 import { getVehicleById } from "@/lib/db/vehicles";
 import { isMeetupOver } from "@/lib/meetups/attendance";
 import { createAuditLog } from "@/lib/db/audit-logs";
@@ -265,11 +267,31 @@ export async function attendMeetupAction(
     }
   }
 
+  let isNew: boolean;
   try {
+    isNew = !(await isAttendingMeetup(supabase, meetupId, user.id));
     await setMeetupAttendance(supabase, meetupId, user.id, vehicleId);
   } catch {
     return { error: "Couldn't save that. Try again." };
   }
+
+  // Push the host, the first time only: switching cars isn't news. The
+  // Activity entry comes from the trigger in 0099, on the same rule.
+  if (isNew && meetup.host_id !== user.id) {
+    after(async () => {
+      const attendee = await getProfileByUserId(supabase, user.id);
+      await sendPushToUser(
+        meetup.host_id,
+        {
+          title: "SORZA",
+          body: `@${attendee?.username ?? "Someone"} is going to ${meetup.title}`,
+          url: `/discover/${meetupId}`,
+        },
+        "meets",
+      );
+    });
+  }
+
   revalidatePath(`/discover/${meetupId}`);
   revalidatePath("/discover");
   return {};

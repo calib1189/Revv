@@ -22,6 +22,7 @@ import {
   CloseIcon,
   GemIcon,
   StarIcon,
+  PinIcon,
 } from "@/components/ui/icons";
 import { relativeTime } from "@/lib/format/relative-time";
 import { groupNotifications, groupedVerb } from "@/lib/notifications/group";
@@ -35,6 +36,7 @@ const KIND_VERB: Record<string, string> = {
   crew_join_request: "requested to join your crew",
   crew_join_approved: "approved your request to join",
   crew_post: "posted in a crew you're in",
+  meetup_attending: "is going to your meet",
   // These four have no actor — an admin decision or an automated check,
   // never a specific person to attribute it to (see the triggers in
   // 0092_more_notification_kinds.sql, every one inserts actor_id: null).
@@ -57,6 +59,7 @@ const KIND_BADGE: Record<string, { icon: ReactNode; color: string }> = {
   crew_join_request: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
   crew_join_approved: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
   crew_post: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
+  meetup_attending: { icon: <PinIcon className="h-2.5 w-2.5" />, color: "#ff453a" },
   meetup_approved: { icon: <CheckIcon className="h-2.5 w-2.5" />, color: "#30d158" },
   meetup_rejected: { icon: <CloseIcon className="h-2.5 w-2.5" />, color: "#8e8e93" },
   ad_approved: { icon: <CheckIcon className="h-2.5 w-2.5" />, color: "#30d158" },

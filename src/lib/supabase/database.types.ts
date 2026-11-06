@@ -965,6 +965,7 @@ export interface Database {
           ratings: boolean;
           leaderboard: boolean;
           challenges: boolean;
+          meets: boolean;
           updated_at: string;
         };
         Insert: {
@@ -978,6 +979,7 @@ export interface Database {
           ratings?: boolean;
           leaderboard?: boolean;
           challenges?: boolean;
+          meets?: boolean;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["notification_preferences"]["Insert"]>;

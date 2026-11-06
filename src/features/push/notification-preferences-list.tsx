@@ -12,6 +12,7 @@ import {
   GemIcon,
   HeartIcon,
   PersonIcon,
+  PinIcon,
   StarIcon,
   UsersIcon,
 } from "@/components/ui/icons";
@@ -50,6 +51,7 @@ const ROWS: { category: PushCategory; label: string; detail: string; color: stri
     color: "#bf5af2",
     icon: UsersIcon,
   },
+  { category: "meets", label: "Meets", detail: "Someone's going to your meet", color: "#ff453a", icon: PinIcon },
   {
     category: "updates",
     label: "Updates from SORZA",

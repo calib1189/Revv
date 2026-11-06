@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
-/** The kinds of push notification someone can switch off (0094, 0097). */
+/** The kinds of push notification someone can switch off (0094, 0097, 0099). */
 export const PUSH_CATEGORIES = [
   "likes",
   "comments",
@@ -12,6 +12,7 @@ export const PUSH_CATEGORIES = [
   "ratings",
   "leaderboard",
   "challenges",
+  "meets",
 ] as const;
 export type PushCategory = (typeof PUSH_CATEGORIES)[number];
 
@@ -27,10 +28,21 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   ratings: true,
   leaderboard: true,
   challenges: true,
+  meets: true,
 };
 
-// Postgres "undefined_column": the database hasn't had 0097 applied yet.
+// Postgres "undefined_column": the database is missing a migration that
+// added a category column (0097 or 0099).
 const UNDEFINED_COLUMN = "42703";
+
+// Newest schema first. Each step back drops the columns one migration
+// added, so Settings still loads before that migration is applied and
+// the missing categories read as on.
+const COLUMN_SETS = [
+  "likes, comments, follows, messages, crews, updates, ratings, leaderboard, challenges, meets",
+  "likes, comments, follows, messages, crews, updates, ratings, leaderboard, challenges",
+  "likes, comments, follows, messages, crews, updates",
+];
 
 export function isPushCategory(value: string): value is PushCategory {
   return (PUSH_CATEGORIES as readonly string[]).includes(value);
@@ -42,23 +54,18 @@ export async function getNotificationPreferences(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<NotificationPreferences> {
-  const { data, error } = await supabase
-    .from("notification_preferences")
-    .select("likes, comments, follows, messages, crews, updates, ratings, leaderboard, challenges")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!error) return data ?? DEFAULT_NOTIFICATION_PREFERENCES;
-  if (error.code !== UNDEFINED_COLUMN) throw error;
-
-  // Before 0097: read the original six and treat the new three as on,
-  // so Settings still loads and nobody's existing choices are lost.
-  const legacy = await supabase
-    .from("notification_preferences")
-    .select("likes, comments, follows, messages, crews, updates")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (legacy.error) throw legacy.error;
-  return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...legacy.data };
+  for (const columns of COLUMN_SETS) {
+    const { data, error } = await supabase
+      .from("notification_preferences")
+      .select(columns)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!error) {
+      return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...(data as Partial<NotificationPreferences> | null) };
+    }
+    if (error.code !== UNDEFINED_COLUMN) throw error;
+  }
+  return DEFAULT_NOTIFICATION_PREFERENCES;
 }
 
 export async function setNotificationPreference(
