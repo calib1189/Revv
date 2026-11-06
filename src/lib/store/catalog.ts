@@ -54,6 +54,10 @@ export interface StoreItem {
  * less than its real price no matter what a request claims. */
 const PROFILE_ITEMS: StoreItem[] = [
   // ---- Name colors ----
+  // Every stop has to read on a near-black header: gradients shimmer
+  // each stop across the letters, so one dark stop makes the name
+  // vanish mid-sweep. Darkest stops sit around #8b5cf6/#ef4444
+  // brightness, never navy, forest or near-black.
   { id: "name_ice", category: "name_color", name: "Ice Blue", price: 50, value: "#38bdf8" },
   { id: "name_emerald", category: "name_color", name: "Emerald", price: 50, value: "#22c55e" },
   { id: "name_violet", category: "name_color", name: "Violet", price: 75, value: "#a78bfa" },
@@ -71,7 +75,7 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "name_color",
     name: "Royal",
     price: 160,
-    value: "linear-gradient(120deg, #1e3a8a, #fbbf24, #1e3a8a)",
+    value: "linear-gradient(120deg, #4f6fe0, #fbbf24, #4f6fe0)",
   },
   {
     id: "name_titanium",
@@ -79,7 +83,7 @@ const PROFILE_ITEMS: StoreItem[] = [
     name: "Titanium",
     price: 220,
     value:
-      "linear-gradient(90deg, #3f3f46, #a1a1aa, #e4e4e7, #71717a, #3f3f46, #a1a1aa, #3f3f46)",
+      "linear-gradient(90deg, #8b8b94, #c4c4cc, #f4f4f5, #a1a1aa, #8b8b94, #c4c4cc, #8b8b94)",
     effectClassName: "text-shimmer-anim",
   },
   {
@@ -87,7 +91,7 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "name_color",
     name: "Toxic",
     price: 200,
-    value: "linear-gradient(90deg, #14532d, #a3e635, #4ade80, #a3e635, #14532d)",
+    value: "linear-gradient(90deg, #22c55e, #a3e635, #4ade80, #a3e635, #22c55e)",
     effectClassName: "text-shimmer-anim",
   },
   {
@@ -95,7 +99,7 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "name_color",
     name: "Inferno",
     price: 240,
-    value: "linear-gradient(90deg, #7f1d1d, #f97316, #fbbf24, #f97316, #7f1d1d)",
+    value: "linear-gradient(90deg, #ef4444, #f97316, #fbbf24, #f97316, #ef4444)",
     effectClassName: "text-shimmer-anim",
   },
   {
@@ -115,14 +119,14 @@ const PROFILE_ITEMS: StoreItem[] = [
     // Same layered-weave technique as bg_carbon and frame_carbon, just a
     // tighter period so the weave still reads at text size.
     value:
-      "repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 1px, transparent 1px, transparent 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.45) 0px, rgba(0,0,0,0.45) 2px, transparent 2px, transparent 6px), repeating-linear-gradient(45deg, #4b4b52 0px, #4b4b52 3px, #1c1c1f 3px, #1c1c1f 6px)",
+      "repeating-linear-gradient(45deg, rgba(255,255,255,0.22) 0px, rgba(255,255,255,0.22) 1px, transparent 1px, transparent 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.3) 0px, rgba(0,0,0,0.3) 2px, transparent 2px, transparent 6px), repeating-linear-gradient(45deg, #a1a1aa 0px, #a1a1aa 3px, #63636b 3px, #63636b 6px)",
   },
   {
     id: "name_bronze",
     category: "name_color",
     name: "Bronze",
     price: 70,
-    value: "linear-gradient(120deg, #7c4a1e, #c98a52, #e8b989, #c98a52, #7c4a1e)",
+    value: "linear-gradient(120deg, #b07a45, #c98a52, #e8b989, #c98a52, #b07a45)",
   },
   {
     id: "name_neon",
@@ -137,7 +141,7 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "name_color",
     name: "Cosmic",
     price: 200,
-    value: "linear-gradient(120deg, #2e1065, #7c3aed, #a78bfa, #7c3aed, #2e1065)",
+    value: "linear-gradient(120deg, #8b5cf6, #a78bfa, #c4b5fd, #a78bfa, #8b5cf6)",
   },
   {
     id: "name_aurora",
@@ -161,7 +165,7 @@ const PROFILE_ITEMS: StoreItem[] = [
     category: "name_color",
     name: "Legendary",
     price: 550,
-    value: "linear-gradient(90deg, #451a03, #fbbf24, #ef4444, #a21caf, #451a03, #fbbf24)",
+    value: "linear-gradient(90deg, #f59e0b, #fbbf24, #ef4444, #d946ef, #f59e0b, #fbbf24)",
     effectClassName: "text-shimmer-anim",
   },
   { id: "name_ruby", category: "name_color", name: "Ruby", price: 110, value: "#e0115f" },

@@ -165,7 +165,11 @@
   --color-danger: var(--danger);
   --color-success: var(--success);
   --color-verified: var(--verified);
-  --font-sans: var(--font-geist-sans);
+  /* San Francisco wherever it exists (iPhone, iPad, Mac): the app should
+     read like it was built for iOS, and SF is the face every Apple app
+     uses. -apple-system and BlinkMacSystemFont only resolve on Apple
+     platforms, so everywhere else this falls through to Geist. */
+  --font-sans: -apple-system, BlinkMacSystemFont, var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
@@ -205,27 +209,20 @@ body {
 }
 
 @layer components {
-  /* ---- Instrument type system -------------------------------------
-     A build's score is this product's core artifact — the thing the
-     whole app exists to produce — so numbers get the treatment an
-     instrument cluster gives them rather than being set in the same
-     body face as a caption. Geist Mono is already loaded for the app
-     (layout.tsx), so this costs no extra font weight. */
+  /* ---- Numbers ------------------------------------------------------
+     A build's score is this product's core artifact, so numbers get
+     their own treatment: the body face with tabular figures, the way
+     Apple sets numbers in Fitness, Health and Stocks. This used to be
+     Geist Mono, which read as a developer tool (slashed zeros, a
+     decimal point as wide as a digit) rather than a consumer app. */
 
   /* Any figure the eye is meant to land on: a score, a rank, a stat.
-     Tabular so digits don't jitter between rows in a list, tightened
-     because mono at display size is otherwise too airy to read as one
-     unit. */
+     Tabular so digits don't jitter between rows in a list. */
   .numeral {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-variant-numeric: tabular-nums;
     font-weight: 600;
-    /* Mono gives every glyph the same advance width, including the
-       decimal point — at display size that reads as "8 8 . 2 5", five
-       separate characters instead of one number. This pulls it back
-       into a single unit while keeping the tabular alignment that stops
-       digits jittering between rows. */
-    letter-spacing: -0.055em;
+    letter-spacing: -0.02em;
   }
 
   /* The small uppercase label that sits with a numeral — tier names,
