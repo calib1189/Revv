@@ -17,6 +17,7 @@ export interface MeetupListItem {
   hostUsername: string;
   photoUrl: string | null;
   photoCount: number;
+  goingCount: number;
 }
 
 export function MeetupsList({
@@ -134,13 +135,14 @@ export function MeetupsList({
         />
       ) : (
         <div className="flex flex-col gap-5">
-          {sorted.map(({ meetup, hostUsername, photoUrl, photoCount }, index) => (
+          {sorted.map(({ meetup, hostUsername, photoUrl, photoCount, goingCount }, index) => (
             <MeetupCard
               key={meetup.id}
               meetup={meetup}
               hostUsername={hostUsername}
               photoUrl={photoUrl}
               photoCount={photoCount}
+              goingCount={goingCount}
               distanceMiles={distanceFor(meetup)}
               priority={index === 0}
             />

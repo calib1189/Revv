@@ -827,6 +827,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["meetup_views"]["Insert"]>;
         Relationships: never[];
       };
+      meetup_attendees: {
+        Row: {
+          meetup_id: string;
+          user_id: string;
+          vehicle_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          meetup_id: string;
+          user_id: string;
+          vehicle_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["meetup_attendees"]["Insert"]>;
+        Relationships: never[];
+      };
       events: {
         Row: {
           id: string;

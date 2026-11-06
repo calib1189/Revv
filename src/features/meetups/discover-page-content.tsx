@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { listUpcomingMeetups } from "@/lib/db/meetups";
 import { listMeetupMediaForMeetups } from "@/lib/db/meetup-media";
+import { getAttendeeCountsForMeetups } from "@/lib/db/meetup-attendees";
 import { publicMediaUrl } from "@/lib/db/media";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getCrewsByIds } from "@/lib/db/crews";
@@ -40,6 +41,15 @@ export async function DiscoverPageContent() {
     hostProfiles.filter(Boolean).map((p) => [p!.id, p!.username]),
   );
 
+  // Same fail-soft as sounds above: until 0098 is applied the cards just
+  // show no "going" count.
+  let goingCounts = new Map<string, number>();
+  try {
+    goingCounts = await getAttendeeCountsForMeetups(supabase, meetups.map((m) => m.id));
+  } catch {
+    goingCounts = new Map();
+  }
+
   const mediaByMeetup = new Map<string, (typeof meetupMedia)[number][]>();
   for (const mm of meetupMedia) {
     const list = mediaByMeetup.get(mm.meetup_id) ?? [];
@@ -54,6 +64,7 @@ export async function DiscoverPageContent() {
       hostUsername: usernameById.get(meetup.host_id) ?? "unknown",
       photoUrl: media[0] ? publicMediaUrl(supabase, media[0].media.storage_path) : null,
       photoCount: media.length,
+      goingCount: goingCounts.get(meetup.id) ?? 0,
     };
   });
 

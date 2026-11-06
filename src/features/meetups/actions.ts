@@ -20,6 +20,9 @@ import {
   type Meetup,
 } from "@/lib/db/meetups";
 import { getMeetupViewCountsForMeetups } from "@/lib/db/meetup-views";
+import { removeMeetupAttendance, setMeetupAttendance } from "@/lib/db/meetup-attendees";
+import { getVehicleById } from "@/lib/db/vehicles";
+import { isMeetupOver } from "@/lib/meetups/attendance";
 import { createAuditLog } from "@/lib/db/audit-logs";
 import { validateMeetup } from "@/lib/validation/meetup";
 import { sendPushToUser } from "@/lib/push/send";
@@ -235,4 +238,51 @@ export async function rejectMeetupAction(meetupId: string): Promise<void> {
       url: `/discover/${meetupId}`,
     }, "updates");
   }
+}
+
+export interface AttendanceResult {
+  error?: string;
+}
+
+/** Says you're going to a meet, bringing `vehicleId` (or no car), or
+ * switches the car if you'd already said you're going. The vehicle has to
+ * be yours and the meet has to be live and not over; RLS on
+ * meetup_attendees (0098) enforces the same rules, this just turns them
+ * into readable messages. */
+export async function attendMeetupAction(
+  meetupId: string,
+  vehicleId: string | null,
+): Promise<AttendanceResult> {
+  const { supabase, user } = await requireUser();
+  const meetup = await getMeetupById(supabase, meetupId);
+  if (!meetup || meetup.status !== "active") return { error: "This meet isn't open yet." };
+  if (isMeetupOver(meetup.starts_at)) return { error: "This meet has already happened." };
+
+  if (vehicleId) {
+    const vehicle = await getVehicleById(supabase, vehicleId);
+    if (!vehicle || vehicle.owner_id !== user.id) {
+      return { error: "Pick a car from your own garage." };
+    }
+  }
+
+  try {
+    await setMeetupAttendance(supabase, meetupId, user.id, vehicleId);
+  } catch {
+    return { error: "Couldn't save that. Try again." };
+  }
+  revalidatePath(`/discover/${meetupId}`);
+  revalidatePath("/discover");
+  return {};
+}
+
+export async function leaveMeetupAction(meetupId: string): Promise<AttendanceResult> {
+  const { supabase, user } = await requireUser();
+  try {
+    await removeMeetupAttendance(supabase, meetupId, user.id);
+  } catch {
+    return { error: "Couldn't save that. Try again." };
+  }
+  revalidatePath(`/discover/${meetupId}`);
+  revalidatePath("/discover");
+  return {};
 }

@@ -5,7 +5,13 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getMeetupById } from "@/lib/db/meetups";
 import { listMeetupMediaForMeetups } from "@/lib/db/meetup-media";
-import { getMediaById, publicMediaUrl } from "@/lib/db/media";
+import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { listMeetupAttendees } from "@/lib/db/meetup-attendees";
+import { listVehiclesByOwner } from "@/lib/db/vehicles";
+import { composeAttendees, type AttendeeEntry } from "@/lib/meetups/compose-attendees";
+import { isMeetupOver } from "@/lib/meetups/attendance";
+import { MeetupAttendees } from "@/features/meetups/meetup-attendees";
+import { AttendButton, type GarageCarOption } from "@/features/meetups/attend-button";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMeetupViewCount, recordMeetupView } from "@/lib/db/meetup-views";
 import { PhotoCarousel } from "@/features/feed/photo-carousel";
@@ -49,6 +55,35 @@ export default async function MeetupDetailPage({
     }
   }
   const viewCount = await getMeetupViewCount(supabase, meetup.id);
+
+  // RSVPs. Fail-soft until 0098_meetup_attendees.sql is applied: the
+  // section is left out rather than taking the whole meet page down.
+  let attendees: AttendeeEntry[] | null = null;
+  try {
+    attendees = await composeAttendees(supabase, await listMeetupAttendees(supabase, meetup.id));
+  } catch {
+    attendees = null;
+  }
+  const isOver = isMeetupOver(meetup.starts_at);
+  const viewerId = user?.id ?? null;
+  const myRsvp = attendees?.find((a) => a.userId === viewerId) ?? null;
+  // Only a live meet takes RSVPs; a host still sees their pending one
+  // without the control.
+  const canRsvp = attendees != null && !isOver && meetup.status === "active";
+  let myCars: GarageCarOption[] = [];
+  if (canRsvp && user) {
+    const vehicles = await listVehiclesByOwner(supabase, user.id);
+    const heroMedia = await getMediaByIds(
+      supabase,
+      vehicles.map((v) => v.hero_media_id).filter((id): id is string => Boolean(id)),
+    );
+    const heroUrlById = new Map(heroMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]));
+    myCars = vehicles.map((v) => ({
+      id: v.id,
+      title: v.nickname || `${v.make} ${v.model}`,
+      heroUrl: v.hero_media_id ? (heroUrlById.get(v.hero_media_id) ?? null) : null,
+    }));
+  }
 
   const start = new Date(meetup.starts_at);
   const hostAvatarMedia = host?.avatar_media_id
@@ -124,6 +159,24 @@ export default async function MeetupDetailPage({
             <SectionTitle>About</SectionTitle>
             <p className="whitespace-pre-wrap px-1 text-[0.9375rem] leading-relaxed">{meetup.description}</p>
           </section>
+        )}
+
+        {attendees && (
+          <MeetupAttendees
+            attendees={attendees}
+            isOver={isOver}
+            viewerId={viewerId}
+            control={
+              canRsvp ? (
+                <AttendButton
+                  meetupId={meetup.id}
+                  isLoggedIn={user != null}
+                  cars={myCars}
+                  attending={myRsvp ? { vehicleId: myRsvp.vehicleId } : null}
+                />
+              ) : undefined
+            }
+          />
         )}
 
         {isHost && (

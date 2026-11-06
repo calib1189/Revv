@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { PinIcon, CompassIcon, TimerIcon, GemIcon } from "@/components/ui/icons";
+import { PinIcon, CompassIcon, TimerIcon, GemIcon, UsersIcon } from "@/components/ui/icons";
 import { formatDateTime } from "@/lib/format/date";
 import { formatDistance } from "@/lib/geo/distance";
 import { MEETUP_TIERS, type Meetup, type MeetupTier } from "@/lib/db/meetups";
@@ -20,6 +20,7 @@ export interface MeetupCardData {
   hostUsername: string;
   photoUrl: string | null;
   photoCount: number;
+  goingCount: number;
   distanceMiles: number | null;
   /** True for the first card in the list — it's the one that ends up
    * as the page's Largest Contentful Paint, so it should load eagerly
@@ -32,6 +33,7 @@ export function MeetupCard({
   hostUsername,
   photoUrl,
   photoCount,
+  goingCount,
   distanceMiles,
   priority,
 }: MeetupCardData) {
@@ -112,9 +114,17 @@ export function MeetupCard({
           <p className="mt-3 line-clamp-2 text-[0.9375rem] leading-relaxed">{meetup.description}</p>
         )}
 
-        <p className="mt-3 border-t border-border pt-3 text-[0.8125rem] text-muted">
-          Hosted by <span className="font-semibold text-foreground">@{hostUsername}</span>
-        </p>
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3 text-[0.8125rem] text-muted">
+          <p className="min-w-0 truncate">
+            Hosted by <span className="font-semibold text-foreground">@{hostUsername}</span>
+          </p>
+          {goingCount > 0 && (
+            <p className="flex flex-shrink-0 items-center gap-1">
+              <UsersIcon className="h-3.5 w-3.5" />
+              <span className="numeral text-foreground">{goingCount.toLocaleString("en-US")}</span> going
+            </p>
+          )}
+        </div>
       </div>
     </Link>
   );
