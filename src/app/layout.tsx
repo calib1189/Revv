@@ -10,6 +10,7 @@ import { getTutorialProgress } from "@/lib/db/tutorial-progress";
 import { tutorialStartStep } from "@/lib/tutorial/steps";
 import { TutorialHost } from "@/features/tutorial/tutorial-host";
 import { SITE_URL } from "@/lib/site-url";
+import { APP_STORE_ID } from "@/lib/app-store";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,6 +35,10 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "SORZA",
   },
+  // Safari's own "SORZA — Get / Open" bar across the top of every page,
+  // shared build links included. Only Safari draws it, never the app's
+  // WebView, so people already in the app don't see it.
+  itunes: { appId: APP_STORE_ID },
 };
 
 export const viewport: Viewport = {

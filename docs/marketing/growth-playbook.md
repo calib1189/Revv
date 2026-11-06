@@ -2,6 +2,8 @@
 
 **The one hook:** *"I let an AI rate my car."* Every car person wants to know what their build scores, and they want to argue about it. Build everything around that moment, and always show the number.
 
+**Your link in bio:** `sorza.net/download`. On an iPhone it opens the App Store; anywhere else it opens sorza.net, which has a Download on the App Store button and web sign-up.
+
 **What's already working for you:** every build link now previews as the car's photo with its SORZA score, and owners have a **Share my score** button under their rating. Every share is an ad.
 
 ---
@@ -83,7 +85,7 @@ Read the rules first, since most ban self-promotion. Post your *own* car's ratin
 ## The meet challenge (your best free event)
 
 1. Ask an organizer to announce: *"Highest SORZA score at the meet gets featured."*
-2. Make a small sign with a QR code to sorza.net.
+2. Make a small sign with a QR code to **sorza.net/download** (iPhones go straight to the App Store; everyone else gets the website).
 3. Help people rate their car on the spot. It takes about 20 seconds.
 4. Film the top 3 reveals for your TikTok.
 5. Post the winner and tag the meet. Their friends download the app to see their own scores.

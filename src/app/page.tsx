@@ -9,6 +9,7 @@ import { composeLeaderboard, type LeaderboardEntry } from "@/lib/leaderboard/com
 import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
 import { LeaderboardHeroCard } from "@/features/leaderboard/leaderboard-hero-card";
 import { TierLadder } from "@/features/leaderboard/tier-ladder";
+import { GetAppActions } from "@/features/landing/get-app-actions";
 import { Button } from "@/components/ui/button";
 import { SupabaseNotConfigured } from "@/components/ui/supabase-not-configured";
 
@@ -88,15 +89,8 @@ export default async function LandingPage() {
             board against every other build on SORZA.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/signup">
-              <Button className="px-7 py-3 text-base">Get started</Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="secondary" className="px-7 py-3 text-base">
-                Log in
-              </Button>
-            </Link>
+          <div className="mt-8">
+            <GetAppActions />
           </div>
         </div>
       </section>
@@ -179,9 +173,7 @@ export default async function LandingPage() {
             Your build deserves a real score.
           </h2>
           <div className="mt-8">
-            <Link href="/signup">
-              <Button className="px-7 py-3 text-base">Get started</Button>
-            </Link>
+            <GetAppActions showLogin={false} />
           </div>
         </div>
       </section>
