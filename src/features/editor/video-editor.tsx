@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { drawFrame } from "@/features/editor/draw-frame";
 import { useVideoExport } from "@/features/editor/use-video-export";
 import { compressVideo } from "@/features/editor/compress-video";
+import { shrinkVideoForFeed } from "@/features/editor/shrink-video";
 import { TrimScrubber } from "@/features/editor/trim-scrubber";
 import { capturePreviewSource } from "@/features/editor/capture-preview-source";
 import { aspectNeedsPan } from "@/features/editor/crop";
@@ -785,6 +786,21 @@ export function VideoEditor({
     window.addEventListener("pointerup", up);
   }
 
+  /** Last step before handing the clip back: brings an oversized file
+   * down to feed size (shrink-video.ts) so every view of the post costs
+   * less bandwidth. Hands back the original whenever shrinking can't help. */
+  async function finishWith(file: File) {
+    const final = await shrinkVideoForFeed(file, {
+      onStart: () => {
+        setCompressionProgress(0);
+        setCompressionStage("compressing");
+      },
+      onProgress: setCompressionProgress,
+    });
+    setCompressionStage("idle");
+    onExported(final, librarySound, state.musicStartMs);
+  }
+
   async function handleDone() {
     const video = videoRef.current;
     if (!video) return;
@@ -827,7 +843,7 @@ export function VideoEditor({
     // source's resolution, so this is expected to succeed even when the
     // pass-through can't.
     if (isUnedited && source.size <= MAX_VIDEO_BYTES) {
-      onExported(source, librarySound, state.musicStartMs);
+      await finishWith(source);
       return;
     }
 
@@ -881,7 +897,7 @@ export function VideoEditor({
 
       if (isUnedited) {
         releaseAudioContext();
-        onExported(effectiveSource, librarySound, state.musicStartMs);
+        await finishWith(effectiveSource);
         return;
       }
 
@@ -905,7 +921,7 @@ export function VideoEditor({
       // exportVideo closes the context from here on, on every path.
       const { blob, extension } = await exportVideo(video, effectiveSource, state, { audioContext });
       const file = new File([blob], `sorza-clip.${extension}`, { type: blob.type });
-      onExported(file, librarySound, state.musicStartMs);
+      await finishWith(file);
     } catch (err) {
       // Surfaces the real underlying reason (a MediaRecorder construction
       // failure, a codec issue, decodeAudioData rejecting) instead of one
