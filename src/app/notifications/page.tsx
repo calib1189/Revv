@@ -25,6 +25,7 @@ import {
   PinIcon,
 } from "@/components/ui/icons";
 import { relativeTime } from "@/lib/format/relative-time";
+import { getShopReviewPlaceIds } from "@/lib/db/shop-reviews";
 import { groupNotifications, groupedVerb } from "@/lib/notifications/group";
 
 const KIND_VERB: Record<string, string> = {
@@ -37,6 +38,7 @@ const KIND_VERB: Record<string, string> = {
   crew_join_approved: "approved your request to join",
   crew_post: "posted in a crew you're in",
   meetup_attending: "is going to your meet",
+  shop_review: "reviewed your shop",
   // These four have no actor — an admin decision or an automated check,
   // never a specific person to attribute it to (see the triggers in
   // 0092_more_notification_kinds.sql, every one inserts actor_id: null).
@@ -60,6 +62,7 @@ const KIND_BADGE: Record<string, { icon: ReactNode; color: string }> = {
   crew_join_approved: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
   crew_post: { icon: <UsersIcon className="h-2.5 w-2.5" />, color: "#bf5af2" },
   meetup_attending: { icon: <PinIcon className="h-2.5 w-2.5" />, color: "#ff453a" },
+  shop_review: { icon: <StarIcon className="h-2.5 w-2.5" />, color: "#f0cd6e" },
   meetup_approved: { icon: <CheckIcon className="h-2.5 w-2.5" />, color: "#30d158" },
   meetup_rejected: { icon: <CloseIcon className="h-2.5 w-2.5" />, color: "#8e8e93" },
   ad_approved: { icon: <CheckIcon className="h-2.5 w-2.5" />, color: "#30d158" },
@@ -86,6 +89,14 @@ export default async function NotificationsPage() {
     (a): a is NonNullable<typeof a> => Boolean(a),
   );
   const usernameByActorId = new Map(actors.map((a) => [a.id, a.username]));
+  // A shop review links to its shop, whose id is a Google place id rather
+  // than the review's own id.
+  const placeIdByReviewId = await getShopReviewPlaceIds(
+    supabase,
+    notifications
+      .filter((n) => n.target_type === "shop_review" && n.target_id)
+      .map((n) => n.target_id as string),
+  ).catch(() => new Map<string, string>());
   const verifiedActorIds = new Set(actors.filter((a) => a.is_verified).map((a) => a.id));
   // Best-effort: a missing avatar just falls back to the initial.
   const avatarMedia = await getMediaByIds(
@@ -162,6 +173,8 @@ export default async function NotificationsPage() {
                               ? `/discover/${n.target_id}`
                               : n.target_type === "vehicle" && n.target_id
                                 ? `/garage/${n.target_id}`
+                                : n.target_type === "shop_review" && n.target_id && placeIdByReviewId.get(n.target_id)
+                                  ? `/discover/shop/${encodeURIComponent(placeIdByReviewId.get(n.target_id)!)}`
                                 : n.target_type === "ad_campaign"
                                   ? // No dedicated page for an advertiser to view their
                                     // own campaign yet — this at least lands somewhere

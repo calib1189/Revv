@@ -2095,3 +2095,14 @@ export function ExternalLinkIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** Rounded-square camera glyph for a shop's Instagram link. */
+export function InstagramIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+      <circle cx="12" cy="12" r="3.75" />
+      <circle cx="17.1" cy="6.9" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

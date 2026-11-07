@@ -6,6 +6,7 @@ import { updateReportStatus, type Report } from "@/lib/db/reports";
 import { deletePost } from "@/lib/db/posts";
 import { deleteComment } from "@/lib/db/comments";
 import { deleteVehicle, updateVehicle } from "@/lib/db/vehicles";
+import { deleteShopReview } from "@/lib/db/shop-reviews";
 import { setUserBanned, setUserVerified, setUserFounder } from "@/lib/db/profiles";
 import { updateBusinessProfile } from "@/lib/db/business-profiles";
 import { createAuditLog } from "@/lib/db/audit-logs";
@@ -36,6 +37,8 @@ export async function removeReportedContentAction(
     await deleteComment(supabase, targetId);
   } else if (targetType === "vehicle") {
     await deleteVehicle(supabase, targetId);
+  } else if (targetType === "shop_review") {
+    await deleteShopReview(supabase, targetId);
   }
   // profile reports: no admin removal action built yet — the report can
   // still be dismissed/resolved below, content just isn't auto-deleted

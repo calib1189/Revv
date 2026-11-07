@@ -20,16 +20,23 @@ export function ReportRow({
   report,
   reporterUsername,
   authorId,
+  contextHref,
+  preview,
 }: {
   report: Report;
   reporterUsername: string;
+  /** Where the reported thing lives, when the report itself can't say
+   * (a shop review lives on its shop's page). */
+  contextHref?: string | null;
+  /** A short quote of the reported text, for content with no page of its own. */
+  preview?: string | null;
   /** Whoever authored/owns the reported thing — null if it was already
    * deleted before this report was reviewed. */
   authorId: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
   const [resolved, setResolved] = useState(false);
-  const href = targetHref(report);
+  const href = contextHref ?? targetHref(report);
 
   if (resolved) return null;
 
@@ -37,8 +44,9 @@ export function ReportRow({
     <li className="flex flex-col gap-2 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <p className="text-sm font-medium capitalize">
-          {report.target_type} reported for {report.reason}
+          {report.target_type.replace("_", " ")} reported for {report.reason}
         </p>
+        {preview && <p className="mt-1 line-clamp-3 text-sm text-muted">&ldquo;{preview}&rdquo;</p>}
         <p className="text-xs text-muted" suppressHydrationWarning>
           Reported by @{reporterUsername} · {relativeTime(report.created_at)}
         </p>
@@ -65,7 +73,8 @@ export function ReportRow({
         </button>
         {(report.target_type === "post" ||
           report.target_type === "comment" ||
-          report.target_type === "vehicle") && (
+          report.target_type === "vehicle" ||
+          report.target_type === "shop_review") && (
           <button
             type="button"
             disabled={isPending}

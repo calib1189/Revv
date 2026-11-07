@@ -689,7 +689,7 @@ export interface Database {
         Row: {
           id: string;
           reporter_id: string;
-          target_type: "post" | "comment" | "profile" | "vehicle";
+          target_type: "post" | "comment" | "profile" | "vehicle" | "shop_review";
           target_id: string;
           reason: string;
           status: "open" | "reviewed" | "dismissed";
@@ -698,7 +698,7 @@ export interface Database {
         Insert: {
           id?: string;
           reporter_id: string;
-          target_type: "post" | "comment" | "profile" | "vehicle";
+          target_type: "post" | "comment" | "profile" | "vehicle" | "shop_review";
           target_id: string;
           reason: string;
           status?: "open" | "reviewed" | "dismissed";
@@ -933,6 +933,8 @@ export interface Database {
           starts_at: string | null;
           ends_at: string | null;
           picture_media_id: string | null;
+          /** 0100 — the admin who granted this promotion for free; null for a paid one. */
+          comped_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -948,6 +950,7 @@ export interface Database {
           starts_at?: string | null;
           ends_at?: string | null;
           picture_media_id?: string | null;
+          comped_by?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["shop_promotions"]["Insert"]>;
@@ -1030,6 +1033,14 @@ export interface Database {
           logo_media_id: string | null;
           verification_status: "none" | "pending" | "approved" | "rejected";
           verification_media_id: string | null;
+          /** 0101 listing details — absent until that migration is applied. */
+          cover_media_id: string | null;
+          tagline: string | null;
+          services: string[];
+          hours: Json | null;
+          phone: string | null;
+          website_url: string | null;
+          instagram: string | null;
           created_at: string;
         };
         Insert: {
@@ -1042,9 +1053,46 @@ export interface Database {
           logo_media_id?: string | null;
           verification_status?: "none" | "pending" | "approved" | "rejected";
           verification_media_id?: string | null;
+          cover_media_id?: string | null;
+          tagline?: string | null;
+          services?: string[];
+          hours?: Json | null;
+          phone?: string | null;
+          website_url?: string | null;
+          instagram?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["business_profiles"]["Insert"]>;
+        Relationships: never[];
+      };
+      shop_reviews: {
+        Row: {
+          id: string;
+          place_id: string;
+          author_id: string;
+          vehicle_id: string | null;
+          rating: number;
+          service: string | null;
+          body: string | null;
+          owner_reply: string | null;
+          owner_replied_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          place_id: string;
+          author_id: string;
+          vehicle_id?: string | null;
+          rating: number;
+          service?: string | null;
+          body?: string | null;
+          owner_reply?: string | null;
+          owner_replied_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["shop_reviews"]["Insert"]>;
         Relationships: never[];
       };
       business_profile_media: {

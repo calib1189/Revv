@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { startConversationAction } from "@/features/messages/actions";
 import {
   recordShopPromotionClickAction,
   recordShopInquiryAction,
   recordShopWebsiteClickAction,
 } from "@/features/shops/actions";
-import { PinIcon, CheckIcon } from "@/components/ui/icons";
+import { PinIcon } from "@/components/ui/icons";
 
 function buildAppleMapsUrl(name: string, lat: number, lng: number): string {
   const params = new URLSearchParams({ q: name, ll: `${lat},${lng}` });
@@ -41,37 +42,6 @@ export function DirectionsButton({
   );
 }
 
-/** A lightweight "I'm interested" signal — no message actually gets
- * sent anywhere, this just logs an inquiry event so the shop's Business
- * Analytics can show real interest, not a full contact/messaging
- * feature (there's no way to reach an arbitrary Google-sourced business
- * on SORZA at all). */
-export function GetAQuoteButton({ placeId }: { placeId: string }) {
-  const [sent, setSent] = useState(false);
-
-  if (sent) {
-    return (
-      <span className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-success/12 px-4 text-[0.9375rem] font-semibold text-success">
-        <CheckIcon className="h-4 w-4" />
-        Interest sent
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        setSent(true);
-        recordShopInquiryAction(placeId);
-      }}
-      className="pressable glass flex h-11 flex-1 items-center justify-center gap-2 rounded-full px-4 text-[0.9375rem] font-semibold text-foreground"
-    >
-      Get a quote
-    </button>
-  );
-}
-
 export function WebsiteLink({ placeId, url }: { placeId: string; url: string }) {
   const hostname = (() => {
     try {
@@ -90,6 +60,47 @@ export function WebsiteLink({ placeId, url }: { placeId: string; url: string }) 
       className="truncate text-sm text-accent hover:underline"
     >
       {hostname}
+    </a>
+  );
+}
+
+/** A claimed shop's real contact button: opens a DM with the verified
+ * owner, and counts as an inquiry in their analytics. */
+export function MessageShopButton({ placeId, ownerId }: { placeId: string; ownerId: string }) {
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() =>
+          startTransition(async () => {
+            recordShopInquiryAction(placeId);
+            const result = await startConversationAction(ownerId);
+            if (result?.error) setError(result.error);
+          })
+        }
+        className="pressable glass flex h-11 w-full items-center justify-center gap-2 rounded-full px-4 text-[0.9375rem] font-semibold text-foreground disabled:opacity-60"
+      >
+        {isPending ? "Opening…" : "Message shop"}
+      </button>
+      {error && <p className="mt-1 text-center text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
+/** An unclaimed shop has no one on SORZA to message, so the second button
+ * calls its listed number instead. Still counts as an inquiry. */
+export function CallShopButton({ placeId, phone }: { placeId: string; phone: string }) {
+  return (
+    <a
+      href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+      onClick={() => recordShopInquiryAction(placeId)}
+      className="pressable glass flex h-11 flex-1 items-center justify-center gap-2 rounded-full px-4 text-[0.9375rem] font-semibold text-foreground"
+    >
+      Call
     </a>
   );
 }

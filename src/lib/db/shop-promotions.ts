@@ -103,6 +103,69 @@ export async function listAllActiveShopPromotions(
   return data;
 }
 
+/** Every live (unexpired) promotion on one shop, newest first — backs the
+ * admin's comp card on the shop page, which needs to see what's already
+ * running there before granting another. */
+export async function listLiveShopPromotionsForPlace(
+  supabase: SupabaseClient<Database>,
+  placeId: string,
+): Promise<ShopPromotion[]> {
+  const { data, error } = await supabase
+    .from("shop_promotions")
+    .select("*")
+    .eq("place_id", placeId)
+    .eq("status", "active")
+    .gt("ends_at", new Date().toISOString())
+    .order("ends_at", { ascending: false });
+
+  if (error) throw error;
+  return data;
+}
+
+/** An admin's free promotion (0100). Inserted already active — there's
+ * no payment to wait for — under the admin's own session, which RLS only
+ * allows for a $0 row stamped with that admin's id. */
+export async function createCompedShopPromotion(
+  supabase: SupabaseClient<Database>,
+  input: {
+    adminId: string;
+    placeId: string;
+    placeName: string;
+    tier: ShopPromotionTier;
+    category: string | null;
+    startsAt: Date;
+    endsAt: Date;
+  },
+): Promise<ShopPromotion> {
+  return createShopPromotion(supabase, {
+    promoter_id: input.adminId,
+    comped_by: input.adminId,
+    place_id: input.placeId,
+    place_name: input.placeName,
+    tier: input.tier,
+    category: input.category,
+    price_cents: 0,
+    status: "active",
+    starts_at: input.startsAt.toISOString(),
+    ends_at: input.endsAt.toISOString(),
+  });
+}
+
+/** Ends a comped promotion now. RLS (0100) only lets an admin do this,
+ * and only to a comped row — a paid promotion's dates never move. */
+export async function endCompedShopPromotion(
+  supabase: SupabaseClient<Database>,
+  promotionId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("shop_promotions")
+    .update({ ends_at: new Date().toISOString() })
+    .eq("id", promotionId)
+    .not("comped_by", "is", null);
+
+  if (error) throw error;
+}
+
 /** Which tier (if any) each of these place_ids currently has an active,
  * unexpired promotion at — used to sort/badge search results after they
  * come back from Places API, since Google itself has no concept of this.

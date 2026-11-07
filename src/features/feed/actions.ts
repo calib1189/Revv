@@ -339,7 +339,7 @@ export interface ReportFormState {
 }
 
 export async function createReportAction(
-  targetType: "post" | "comment" | "vehicle" | "profile",
+  targetType: "post" | "comment" | "vehicle" | "profile" | "shop_review",
   targetId: string,
   _prevState: ReportFormState,
   formData: FormData,

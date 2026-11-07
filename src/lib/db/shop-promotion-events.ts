@@ -98,3 +98,16 @@ export async function hasPromotedShop(
   if (error) return false;
   return Boolean(data);
 }
+
+/** Whether the signed-in viewer may see this shop's analytics: they've
+ * promoted it, or they're its verified owner (0101). Falls back to the
+ * promoter-only check until 0101 is applied. */
+export async function canViewShopAnalytics(
+  supabase: SupabaseClient<Database>,
+  placeId: string,
+): Promise<boolean> {
+  const untyped = supabase as unknown as SupabaseClient;
+  const { data, error } = await untyped.rpc("can_view_shop_analytics", { p_place_id: placeId });
+  if (error) return hasPromotedShop(supabase, placeId);
+  return Boolean(data);
+}

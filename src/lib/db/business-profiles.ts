@@ -40,14 +40,18 @@ export async function getBusinessProfileByPlaceId(
   supabase: SupabaseClient<Database>,
   placeId: string,
 ): Promise<BusinessProfile | null> {
+  // A place can have one live claim plus any number of rejected ones
+  // (0085's unique index skips rejected rows), and an admin's RLS sees
+  // them all — so this takes the approved one if there is one, else the
+  // newest, instead of erroring on more than one row.
   const { data, error } = await supabase
     .from("business_profiles")
     .select("*")
     .eq("place_id", placeId)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data;
+  return data.find((p) => p.verification_status === "approved") ?? data[0] ?? null;
 }
 
 export async function listBusinessProfilesByOwner(
@@ -69,6 +73,22 @@ export async function updateBusinessProfile(
   id: string,
   patch: Partial<
     Pick<BusinessProfile, "description" | "logo_media_id" | "verification_media_id" | "verification_status">
+  >,
+): Promise<void> {
+  const { error } = await supabase.from("business_profiles").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+/** The listing details an owner edits (0101). RLS limits this to the
+ * owner's own row; the caller validates the values first. */
+export async function updateBusinessDetails(
+  supabase: SupabaseClient<Database>,
+  id: string,
+  patch: Partial<
+    Pick<
+      BusinessProfile,
+      "tagline" | "services" | "hours" | "phone" | "website_url" | "instagram" | "cover_media_id"
+    >
   >,
 ): Promise<void> {
   const { error } = await supabase.from("business_profiles").update(patch).eq("id", id);

@@ -81,7 +81,8 @@ export default async function AdminActivePage() {
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-muted">
-                  @{usernameById.get(p.promoter_id) ?? "unknown"} · ends {formatDateTime(p.ends_at!)}
+                  {p.comped_by ? "Free, from " : ""}@{usernameById.get(p.promoter_id) ?? "unknown"} · ends{" "}
+                  {formatDateTime(p.ends_at!)}
                 </p>
               </li>
             ))}

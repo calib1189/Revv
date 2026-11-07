@@ -25,6 +25,7 @@ import {
   getShopPromotionEventCounts,
   getShopAnalyticsCounts,
   hasPromotedShop,
+  canViewShopAnalytics,
   type ShopPromotionEventCounts,
   type ShopPromotionEventKind,
   type ShopAnalyticsCounts,
@@ -566,7 +567,7 @@ export async function getShopAnalyticsAction(placeId: string): Promise<ShopAnaly
   }
 
   const supabase = await createClient();
-  const hasAccess = await hasPromotedShop(supabase, placeId);
+  const hasAccess = await canViewShopAnalytics(supabase, placeId);
   if (!hasAccess) {
     return { counts: EMPTY_SHOP_ANALYTICS, hasAccess: false, requiresAuth: false };
   }

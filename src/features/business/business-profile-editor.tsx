@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { uploadImage, uploadErrorMessage } from "@/lib/storage/upload";
 import { createMedia, publicMediaUrl } from "@/lib/db/media";
+import { updateBusinessDetails } from "@/lib/db/business-profiles";
 import {
   addBusinessProfileMedia,
   removeBusinessProfileMedia,
@@ -30,6 +31,7 @@ export function BusinessProfileEditor({
   businessProfileId,
   description: initialDescription,
   logoUrl: initialLogoUrl,
+  coverUrl: initialCoverUrl,
   gallery: initialGallery,
   verificationStatus: initialStatus,
 }: {
@@ -40,6 +42,7 @@ export function BusinessProfileEditor({
   placeId: string;
   description: string;
   logoUrl: string | null;
+  coverUrl: string | null;
   gallery: GalleryPhoto[];
   verificationStatus: VerificationStatus;
 }) {
@@ -52,6 +55,11 @@ export function BusinessProfileEditor({
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const [coverUrl, setCoverUrl] = useState(initialCoverUrl);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const [gallery, setGallery] = useState<GalleryPhoto[]>(initialGallery);
   const [galleryUploading, setGalleryUploading] = useState(false);
@@ -112,6 +120,34 @@ export function BusinessProfileEditor({
       setLogoError(uploadErrorMessage(err, "Couldn't upload that photo. Try again."));
     } finally {
       setLogoUploading(false);
+    }
+  }
+
+  async function handleCoverFile(rawFile: File) {
+    const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
+    const fileError = validateImageFile(file);
+    if (fileError) return setCoverError(fileError);
+
+    setCoverError(null);
+    setCoverUploading(true);
+    try {
+      const supabase = createClient();
+      const uploaded = await uploadImage(supabase, userId, file, { moderate: true });
+      const media = await createMedia(supabase, {
+        owner_id: userId,
+        storage_path: uploaded.storagePath,
+        kind: "image",
+        width: uploaded.width,
+        height: uploaded.height,
+      });
+      await updateBusinessDetails(supabase, businessProfileId, { cover_media_id: media.id });
+      setCoverUrl(publicMediaUrl(supabase, uploaded.storagePath));
+    } catch (err) {
+      setCoverError(
+        uploadErrorMessage(err, "Couldn't save that cover photo. If this keeps happening, migration 0101 may not be applied yet."),
+      );
+    } finally {
+      setCoverUploading(false);
     }
   }
 
@@ -232,6 +268,42 @@ export function BusinessProfileEditor({
           </div>
         </div>
         {logoError && <p className="mt-3 text-[0.8125rem] text-danger">{logoError}</p>}
+      </section>
+
+      <section className={card}>
+        <div className="mb-3">
+          <p className="text-[1.0625rem] font-semibold">Cover photo</p>
+          <p className="mt-0.5 text-[0.8125rem] text-muted">The wide photo across the top of your listing. Your shop, your bay, or your best work.</p>
+        </div>
+        <div className="mb-3 aspect-[16/9] overflow-hidden rounded-[16px] bg-foreground/[0.06]">
+          {coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- storage-hosted preview at a fixed size
+            <img src={coverUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-[0.8125rem] text-muted">No cover photo yet</div>
+          )}
+        </div>
+        <input
+          ref={coverInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleCoverFile(file);
+            e.target.value = "";
+          }}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={coverUploading}
+          onClick={() => coverInputRef.current?.click()}
+          className="h-10 w-full text-[0.9375rem] font-semibold"
+        >
+          {coverUploading ? "Uploading…" : coverUrl ? "Change Cover Photo" : "Add Cover Photo"}
+        </Button>
+        {coverError && <p className="mt-2 text-[0.8125rem] text-danger">{coverError}</p>}
       </section>
 
       <section className={card}>
