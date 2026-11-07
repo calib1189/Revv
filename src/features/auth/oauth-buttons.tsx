@@ -4,6 +4,15 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleIcon, AppleIcon } from "@/components/ui/icons";
 
+/** Google otherwise signs straight into whichever Google account the
+ * browser is already logged into. That makes it impossible to add a
+ * second SORZA account that uses a different Gmail. "select_account"
+ * always shows Google's account picker, which costs one tap when there's
+ * only one account. */
+function providerQueryParams(provider: "google" | "apple"): Record<string, string> | undefined {
+  return provider === "google" ? { prompt: "select_account" } : undefined;
+}
+
 export function OAuthButtons({ disabled = false }: { disabled?: boolean }) {
   const [pending, setPending] = useState<"google" | "apple" | null>(null);
 
@@ -23,7 +32,11 @@ export function OAuthButtons({ disabled = false }: { disabled?: boolean }) {
       const { Browser } = await import("@capacitor/browser");
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: "sorza://auth/callback", skipBrowserRedirect: true },
+        options: {
+          redirectTo: "sorza://auth/callback",
+          skipBrowserRedirect: true,
+          queryParams: providerQueryParams(provider),
+        },
       });
       if (error || !data.url) {
         setPending(null);
@@ -36,7 +49,10 @@ export function OAuthButtons({ disabled = false }: { disabled?: boolean }) {
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: providerQueryParams(provider),
+      },
     });
     if (error) setPending(null);
   }
