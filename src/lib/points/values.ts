@@ -41,3 +41,15 @@ export function pointsForAchievement(achievementId: string): number {
  * finishing whichever challenges are live each week rather than
  * min-maxing toward the highest-value one. */
 export const CHALLENGE_COMPLETION_POINTS = 25;
+
+/** Sorza Daily. Each is paid at most once per person per day (the
+ * ledger's unique key), so repeating an action never earns more — only
+ * coming back tomorrow does. Placing is the big one; taking part is
+ * modest on purpose so points track real participation, not volume. */
+export const DAILY_POINTS = {
+  entered: 15,
+  voted: 5,
+  ratedRides: 10,
+  place: { 1: 75, 2: 40, 3: 25 } as Record<number, number>,
+  streak: { 7: 50, 30: 150 } as Record<number, number>,
+};

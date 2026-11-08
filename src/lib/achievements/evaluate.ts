@@ -76,6 +76,12 @@ export interface AchievementStats {
   // Weekly challenges
   challengesCompletedTotal: number;
   hadPerfectWeek: boolean;
+
+  // Sorza Daily
+  dailyEntryDays: number;
+  dailyVoteDays: number;
+  dailyWins: number;
+  dailyLongestStreak: number;
 }
 
 /** Every count-based achievement family shares this shape: unlock at or
@@ -85,7 +91,7 @@ function thresholdIds(value: number, tiers: { id: string; min: number }[]): stri
   return tiers.filter((t) => value >= t.min).map((t) => t.id);
 }
 
-/** Pure — checks a stats snapshot against the fixed 100-achievement
+/** Pure — checks a stats snapshot against the fixed achievement
  * catalog and returns every id currently qualified for. Deliberately
  * doesn't know about already-unlocked achievements or persistence at
  * all; the caller (lib/achievements/unlock.ts) diffs this against
@@ -303,6 +309,16 @@ export function evaluateAchievements(stats: AchievementStats): string[] {
   // Weekly challenges
   if (stats.challengesCompletedTotal >= 1) unlocked.push("first_challenge");
   if (stats.hadPerfectWeek) unlocked.push("perfect_week");
+
+  if (stats.dailyEntryDays >= 1) unlocked.push("daily_first_entry");
+  if (stats.dailyVoteDays >= 1) unlocked.push("daily_first_vote");
+  if (stats.dailyWins >= 1) unlocked.push("daily_winner");
+  unlocked.push(
+    ...thresholdIds(stats.dailyLongestStreak, [
+      { id: "daily_streak_7", min: 7 },
+      { id: "daily_streak_30", min: 30 },
+    ]),
+  );
 
   return unlocked;
 }

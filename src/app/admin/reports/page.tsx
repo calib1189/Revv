@@ -5,6 +5,7 @@ import { getPostById } from "@/lib/db/posts";
 import { getCommentById } from "@/lib/db/comments";
 import { getVehicleById } from "@/lib/db/vehicles";
 import { getShopReviewById } from "@/lib/db/shop-reviews";
+import { getDailySubmissionById } from "@/lib/db/daily";
 import { ReportRow } from "@/features/admin/report-row";
 
 /** Resolves whoever actually authored/owns the reported thing — the
@@ -25,6 +26,9 @@ async function resolveAuthorId(
   if (report.target_type === "shop_review") {
     return (await getShopReviewById(supabase, report.target_id).catch(() => null))?.author_id ?? null;
   }
+  if (report.target_type === "daily_submission") {
+    return (await getDailySubmissionById(supabase, report.target_id).catch(() => null))?.user_id ?? null;
+  }
   return (await getVehicleById(supabase, report.target_id))?.owner_id ?? null;
 }
 
@@ -33,6 +37,10 @@ async function resolveShopReviewContext(
   supabase: Awaited<ReturnType<typeof createClient>>,
   report: Report,
 ): Promise<{ href: string | null; preview: string | null }> {
+  if (report.target_type === "daily_submission") {
+    const entry = await getDailySubmissionById(supabase, report.target_id).catch(() => null);
+    return { href: entry ? "/daily" : null, preview: entry?.caption ?? (entry ? "Sorza Daily entry (photo)" : null) };
+  }
   if (report.target_type !== "shop_review") return { href: null, preview: null };
   const review = await getShopReviewById(supabase, report.target_id).catch(() => null);
   if (!review) return { href: null, preview: null };

@@ -12,7 +12,7 @@ import {
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getNativePushProvider } from "@/lib/providers/get-native-push-provider";
 import { isValidDeviceToken } from "@/lib/push/validation";
-import { isPushCategory, setNotificationPreference } from "@/lib/db/notification-preferences";
+import { isPushCategory, setNotificationPreference, setQuietHours, setTimeZone } from "@/lib/db/notification-preferences";
 
 // Long enough to lock the phone, short enough not to feel broken.
 const TEST_PUSH_DELAY_MS = 5_000;
@@ -139,5 +139,39 @@ export async function setNotificationPreferenceAction(
     return {};
   } catch {
     return { error: "Couldn't save that. Try again." };
+  }
+}
+
+/** Saves quiet hours (0106). Hours are local to the person's device. */
+export async function setQuietHoursAction(input: {
+  enabled: boolean;
+  start: number;
+  end: number;
+}): Promise<{ error?: string }> {
+  const valid = (h: number) => Number.isInteger(h) && h >= 0 && h <= 23;
+  if (!valid(input.start) || !valid(input.end)) return { error: "Pick a start and end time." };
+  try {
+    const { supabase, user } = await requireConfirmedUser();
+    await setQuietHours(supabase, user.id, input);
+    return {};
+  } catch {
+    return { error: "Couldn't save that. Try again." };
+  }
+}
+
+/** Remembers the device's time zone, so quiet hours and morning/evening
+ * notifications land at the right local time. */
+export async function saveTimeZoneAction(timeZone: string): Promise<void> {
+  if (!timeZone || timeZone.length > 64) return;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+  } catch {
+    return;
+  }
+  try {
+    const { supabase, user } = await requireConfirmedUser();
+    await setTimeZone(supabase, user.id, timeZone);
+  } catch {
+    // Best-effort: notifications fall back to Central time.
   }
 }

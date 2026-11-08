@@ -78,7 +78,7 @@ export interface Database {
           id: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily";
           source_id: string;
           created_at: string;
         };
@@ -86,7 +86,7 @@ export interface Database {
           id?: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily";
           source_id: string;
           created_at?: string;
         };
@@ -689,7 +689,7 @@ export interface Database {
         Row: {
           id: string;
           reporter_id: string;
-          target_type: "post" | "comment" | "profile" | "vehicle" | "shop_review";
+          target_type: "post" | "comment" | "profile" | "vehicle" | "shop_review" | "daily_submission";
           target_id: string;
           reason: string;
           status: "open" | "reviewed" | "dismissed";
@@ -698,7 +698,7 @@ export interface Database {
         Insert: {
           id?: string;
           reporter_id: string;
-          target_type: "post" | "comment" | "profile" | "vehicle" | "shop_review";
+          target_type: "post" | "comment" | "profile" | "vehicle" | "shop_review" | "daily_submission";
           target_id: string;
           reason: string;
           status?: "open" | "reviewed" | "dismissed";
@@ -969,6 +969,15 @@ export interface Database {
           leaderboard: boolean;
           challenges: boolean;
           meets: boolean;
+          /** 0106 — Sorza Daily switches, quiet hours and time zone. */
+          daily_challenge: boolean;
+          daily_results: boolean;
+          daily_votes: boolean;
+          rate_ride: boolean;
+          quiet_hours: boolean;
+          quiet_start: number;
+          quiet_end: number;
+          time_zone: string | null;
           updated_at: string;
         };
         Insert: {
@@ -983,6 +992,14 @@ export interface Database {
           leaderboard?: boolean;
           challenges?: boolean;
           meets?: boolean;
+          daily_challenge?: boolean;
+          daily_results?: boolean;
+          daily_votes?: boolean;
+          rate_ride?: boolean;
+          quiet_hours?: boolean;
+          quiet_start?: number;
+          quiet_end?: number;
+          time_zone?: string | null;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["notification_preferences"]["Insert"]>;
@@ -1063,6 +1080,149 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["business_profiles"]["Insert"]>;
+        Relationships: never[];
+      };
+      daily_challenges: {
+        Row: {
+          id: string;
+          challenge_date: string;
+          title: string;
+          description: string;
+          icon: "engine" | "wheel" | "steering" | "seat" | "gauge" | "wrench" | "star" | "flag";
+          cover_media_id: string | null;
+          starts_at: string;
+          ends_at: string;
+          created_by: string | null;
+          /** 0104 — set once the server has settled the results. */
+          results_finalized_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          challenge_date: string;
+          title: string;
+          description: string;
+          icon?: "engine" | "wheel" | "steering" | "seat" | "gauge" | "wrench" | "star" | "flag";
+          cover_media_id?: string | null;
+          starts_at: string;
+          ends_at: string;
+          created_by?: string | null;
+          results_finalized_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["daily_challenges"]["Insert"]>;
+        Relationships: never[];
+      };
+      daily_submissions: {
+        Row: {
+          id: string;
+          challenge_id: string;
+          user_id: string;
+          vehicle_id: string | null;
+          media_id: string;
+          caption: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          challenge_id: string;
+          user_id: string;
+          vehicle_id?: string | null;
+          media_id: string;
+          caption?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["daily_submissions"]["Insert"]>;
+        Relationships: never[];
+      };
+      daily_votes: {
+        Row: {
+          challenge_id: string;
+          voter_id: string;
+          submission_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          challenge_id: string;
+          voter_id: string;
+          submission_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["daily_votes"]["Insert"]>;
+        Relationships: never[];
+      };
+      daily_placements: {
+        Row: {
+          challenge_id: string;
+          submission_id: string;
+          user_id: string;
+          place: number;
+          votes: number;
+          created_at: string;
+        };
+        Insert: {
+          challenge_id: string;
+          submission_id: string;
+          user_id: string;
+          place: number;
+          votes: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["daily_placements"]["Insert"]>;
+        Relationships: never[];
+      };
+      rate_ride_rounds: {
+        Row: {
+          user_id: string;
+          round_date: string;
+          vehicle_ids: string[];
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          round_date: string;
+          vehicle_ids: string[];
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["rate_ride_rounds"]["Insert"]>;
+        Relationships: never[];
+      };
+      daily_activity: {
+        Row: {
+          user_id: string;
+          activity_date: string;
+          kind: "entered" | "voted" | "rated_rides" | "placed";
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          activity_date: string;
+          kind: "entered" | "voted" | "rated_rides" | "placed";
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["daily_activity"]["Insert"]>;
+        Relationships: never[];
+      };
+      daily_push_log: {
+        Row: {
+          user_id: string;
+          day: string;
+          kind: "morning" | "evening" | "vote";
+          slot: number;
+          sent_at: string;
+        };
+        Insert: {
+          user_id: string;
+          day: string;
+          kind: "morning" | "evening" | "vote";
+          slot?: number;
+          sent_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["daily_push_log"]["Insert"]>;
         Relationships: never[];
       };
       shop_reviews: {

@@ -16,6 +16,8 @@ import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
 import { AchievementUnlockToast } from "@/features/achievements/achievement-unlock-toast";
 import { getWeeklyChallengeProgress } from "@/lib/challenges/progress";
 import { WeeklyChallengesCard } from "@/features/challenges/weekly-challenges-card";
+import { DailyTeaserCard } from "@/features/daily/daily-teaser-card";
+import { loadDailyTeaser } from "@/lib/daily/teaser";
 import { ChallengeCompleteToast } from "@/features/challenges/challenge-complete-toast";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getStoreItem } from "@/lib/store/catalog";
@@ -148,6 +150,7 @@ export async function GaragePageContent({
   } catch (err) {
     console.error("Achievements/challenges check failed:", err);
   }
+  const dailyTeaser = await loadDailyTeaser(user.id);
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
@@ -234,6 +237,12 @@ export async function GaragePageContent({
             />
           </section>
         </>
+      )}
+
+      {dailyTeaser && (
+        <div className="animate-section-rise mb-4" style={{ animationDelay: "160ms" }}>
+          <DailyTeaserCard teaser={dailyTeaser} />
+        </div>
       )}
 
       {challengeProgress.length > 0 && (

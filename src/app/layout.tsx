@@ -7,6 +7,7 @@ import { NativeAppBridge } from "@/components/shell/native-app-bridge";
 import { TabPagerProvider } from "@/components/shell/tab-pager-context";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { TutorialGate } from "@/features/tutorial/tutorial-gate";
+import { TimeZoneSync } from "@/features/push/time-zone-sync";
 import { SITE_URL } from "@/lib/site-url";
 import { APP_STORE_ID } from "@/lib/app-store";
 import "./globals.css";
@@ -72,6 +73,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <NativeAppBridge isSignedIn={Boolean(user)} />
+        {user && <TimeZoneSync />}
         {user && (
           <Suspense fallback={null}>
             <TutorialGate userId={user.id} confirmed={Boolean(user.email_confirmed_at)} />

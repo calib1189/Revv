@@ -39,7 +39,7 @@ export function ReportButton({
   targetId,
   defaultOpen = false,
 }: {
-  targetType: "post" | "comment" | "vehicle" | "profile" | "shop_review";
+  targetType: "post" | "comment" | "vehicle" | "profile" | "shop_review" | "daily_submission";
   targetId: string;
   /** Skips straight to the reason form — for embedding inside a menu
    * that already required its own deliberate "Report" tap to get here,

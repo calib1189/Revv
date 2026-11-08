@@ -27,6 +27,10 @@ import { computeRankPosition } from "@/lib/rating/rank-position";
 import { evaluateAchievements, type SubscoreMax } from "@/lib/achievements/evaluate";
 import { ACHIEVEMENTS, getAchievement, type AchievementDef } from "@/lib/achievements/catalog";
 import { CHALLENGES } from "@/lib/challenges/catalog";
+import { listDailyActivity, STREAK_KINDS } from "@/lib/db/daily-activity";
+import { countDailyWins } from "@/lib/db/daily";
+import { computeStreak } from "@/lib/daily/streak";
+import { dailyDateKey } from "@/lib/daily/day";
 
 const SUBSCORE_KEYS = ["appearance", "performance", "wheelsFitment", "interior", "modifications"] as const;
 
@@ -273,6 +277,8 @@ export async function checkAndUnlockAchievements(
 
     challengesCompletedTotal: challengeCompletions.length,
     hadPerfectWeek,
+
+    ...(await getDailyStats(supabase, userId)),
   });
 
   const newIds = qualifiedIds.filter((id) => !unlockedIds.has(id));
@@ -294,4 +300,27 @@ export async function checkAndUnlockAchievements(
   // reasoning a real reward feels earned by actually collecting it,
   // not just quietly appearing in a ledger you never opened.
   return newIds.map((id) => getAchievement(id)).filter((a): a is AchievementDef => Boolean(a));
+}
+
+/** Sorza Daily participation for achievements. All zeros when the Daily
+ * tables don't exist yet (before 0103-0105), so nothing else breaks. */
+async function getDailyStats(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<{ dailyEntryDays: number; dailyVoteDays: number; dailyWins: number; dailyLongestStreak: number }> {
+  try {
+    const [activity, wins] = await Promise.all([
+      listDailyActivity(supabase, userId),
+      countDailyWins(supabase, userId),
+    ]);
+    const streakDays = activity.filter((a) => STREAK_KINDS.includes(a.kind)).map((a) => a.activity_date);
+    return {
+      dailyEntryDays: activity.filter((a) => a.kind === "entered").length,
+      dailyVoteDays: activity.filter((a) => a.kind === "voted").length,
+      dailyWins: wins,
+      dailyLongestStreak: computeStreak(streakDays, dailyDateKey()).longest,
+    };
+  } catch {
+    return { dailyEntryDays: 0, dailyVoteDays: 0, dailyWins: 0, dailyLongestStreak: 0 };
+  }
 }

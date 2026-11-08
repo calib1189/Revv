@@ -74,7 +74,8 @@ export function ReportRow({
         {(report.target_type === "post" ||
           report.target_type === "comment" ||
           report.target_type === "vehicle" ||
-          report.target_type === "shop_review") && (
+          report.target_type === "shop_review" ||
+          report.target_type === "daily_submission") && (
           <button
             type="button"
             disabled={isPending}

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { loadMoreFeedPostsAction, loadFeedByCategoryAction } from "@/features/feed/actions";
 import { SwipeSlide } from "@/features/feed/swipe-slide";
 import { SponsoredSlide, type SponsoredSlideData } from "@/features/feed/sponsored-slide";
+import { DailyFeedSlide } from "@/features/daily/daily-teaser-card";
+import type { DailyTeaser } from "@/lib/daily/teaser";
 import { CategoryFilterBar } from "@/features/feed/category-filter-bar";
 import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 import { useTabPagerContext } from "@/components/shell/tab-pager-context";
@@ -20,10 +22,13 @@ const AD_INJECTION_INDEX = 3;
 export function SwipeFeed({
   initialPosts,
   ad,
+  daily = null,
   isAuthenticated,
 }: {
   initialPosts: PostCardData[];
   ad: SponsoredSlideData | null;
+  /** Today's Sorza Daily challenge, shown as the first slide. */
+  daily?: DailyTeaser | null;
   isAuthenticated: boolean;
 }) {
   const [category, setCategory] = useState<VehicleCategory | null>(null);
@@ -151,6 +156,7 @@ export function SwipeFeed({
           ref={scrollContainerRef}
           className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}
         >
+          {daily && category === null && <DailyFeedSlide teaser={daily} slideHeight={feedHeight} />}
           {posts.map((post, index) => (
             <div key={post.post.id} className="contents">
               {/* Only on the unfiltered view — the one ad fetched for

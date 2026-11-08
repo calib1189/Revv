@@ -44,6 +44,10 @@ function stats(overrides: Partial<AchievementStats> = {}): AchievementStats {
     accountAgeDays: 0,
     challengesCompletedTotal: 0,
     hadPerfectWeek: false,
+    dailyEntryDays: 0,
+    dailyVoteDays: 0,
+    dailyWins: 0,
+    dailyLongestStreak: 0,
     ...overrides,
   };
 }
@@ -100,6 +104,10 @@ describe("evaluateAchievements", () => {
         accountAgeDays: 400,
         challengesCompletedTotal: 10,
         hadPerfectWeek: true,
+        dailyEntryDays: 40,
+        dailyVoteDays: 40,
+        dailyWins: 3,
+        dailyLongestStreak: 30,
       }),
     );
     for (const id of everything) {
@@ -192,5 +200,17 @@ describe("evaluateAchievements", () => {
     const oneOff = evaluateAchievements(stats({ challengesCompletedTotal: 1, hadPerfectWeek: false }));
     expect(oneOff).toContain("first_challenge");
     expect(oneOff).not.toContain("perfect_week");
+  });
+});
+
+describe("Sorza Daily achievements", () => {
+  it("unlock from real participation only", () => {
+    expect(evaluateAchievements(stats())).not.toEqual(
+      expect.arrayContaining(["daily_first_entry"]),
+    );
+    const ids = evaluateAchievements(stats({ dailyEntryDays: 1, dailyVoteDays: 1, dailyWins: 1, dailyLongestStreak: 7 }));
+    expect(ids).toEqual(expect.arrayContaining(["daily_first_entry", "daily_first_vote", "daily_winner", "daily_streak_7"]));
+    expect(ids).not.toContain("daily_streak_30");
+    expect(evaluateAchievements(stats({ dailyLongestStreak: 30 }))).toContain("daily_streak_30");
   });
 });

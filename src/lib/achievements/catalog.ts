@@ -52,7 +52,8 @@ export type AchievementCategory =
   | "meetups"
   | "maintenance"
   | "profile"
-  | "challenges";
+  | "challenges"
+  | "daily";
 
 export interface AchievementDef {
   id: string;
@@ -90,7 +91,7 @@ function tierMilestones(): AchievementDef[] {
     }));
 }
 
-/** The fixed, code-defined achievement catalog — 100 real, computable
+/** The fixed, code-defined achievement catalog — 105 real, computable
  * milestones tied to the core loop, never a fabricated or arbitrary
  * list. See lib/achievements/evaluate.ts for how a user's real stats
  * get checked against these. A count-based achievement always unlocks
@@ -217,6 +218,13 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // ---- Weekly challenges ----
   { id: "first_challenge", name: "Challenger", description: "Completed your first weekly challenge", category: "challenges", icon: BoltIcon, points: 10 },
   { id: "perfect_week", name: "Perfect Week", description: "Completed every challenge in a single week", category: "challenges", icon: BoltIcon, points: 35 },
+
+  // ---- Sorza Daily ----
+  { id: "daily_first_entry", name: "Daily Debut", description: "Entered your first Sorza Daily challenge", category: "daily", icon: CameraIcon, points: 10 },
+  { id: "daily_first_vote", name: "Ballot Cast", description: "Voted in a Sorza Daily challenge", category: "daily", icon: FlagIcon, points: 10 },
+  { id: "daily_winner", name: "Daily Champion", description: "Won a Sorza Daily challenge", category: "daily", icon: StarIcon, points: 60 },
+  { id: "daily_streak_7", name: "7-Day Participant", description: "Took part in Sorza Daily 7 days running", category: "daily", icon: TimerIcon, points: 35 },
+  { id: "daily_streak_30", name: "30-Day Participant", description: "Took part in Sorza Daily 30 days running", category: "daily", icon: TimerIcon, points: 100 },
 
   // ---- Membership ----
   { id: "member_30_days", name: "One Month In", description: "Been on SORZA for 30 days", category: "profile", icon: TimerIcon, points: 10 },

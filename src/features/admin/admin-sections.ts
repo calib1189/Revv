@@ -88,6 +88,13 @@ export const ADMIN_SECTION_GROUPS: AdminSectionGroup[] = [
         color: "#0a84ff",
       },
       {
+        href: "/admin/daily",
+        label: "Sorza Daily",
+        description: "Schedule and edit daily challenges",
+        icon: FlagIcon,
+        color: "#ff4433",
+      },
+      {
         href: "/admin/active",
         label: "Live now",
         description: "Running ads, promoted shops and paid meets",

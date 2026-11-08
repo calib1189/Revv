@@ -1,5 +1,5 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/cron/authorize";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { listUserIdsWithDevicePushTokens } from "@/lib/db/device-push-tokens";
 import { listUserIdsWithPushSubscriptions } from "@/lib/db/push-subscriptions";
@@ -15,20 +15,9 @@ export const maxDuration = 60;
 const BATCH_SIZE = 10;
 
 /** Vercel Cron calls this on Mondays (vercel.json), after the weekly
- * challenges reset at 00:00 UTC (lib/challenges/week.ts). Vercel signs
- * each call with `Authorization: Bearer $CRON_SECRET`. With no
- * CRON_SECRET set, nothing can call it: anyone who found the URL could
- * otherwise send a notification to every user. */
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const given = Buffer.from(request.headers.get("authorization") ?? "");
-  const expected = Buffer.from(`Bearer ${secret}`);
-  return given.length === expected.length && timingSafeEqual(given, expected);
-}
-
+ * challenges reset at 00:00 UTC (lib/challenges/week.ts). */
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

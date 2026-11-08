@@ -8,8 +8,10 @@ import { SectionTitle } from "@/components/ui/grouped-list";
 import { Callout } from "@/components/ui/callout";
 import {
   getNotificationPreferences,
+  getQuietHours,
   type NotificationPreferences,
 } from "@/lib/db/notification-preferences";
+import { QuietHoursSettings } from "@/features/push/quiet-hours-settings";
 
 export default async function NotificationSettingsPage() {
   const user = await getCurrentUser();
@@ -18,11 +20,13 @@ export default async function NotificationSettingsPage() {
   // Null when the preferences table (0094) isn't there yet — the
   // switches are left out rather than shown in a state they can't save.
   let preferences: NotificationPreferences | null = null;
+  const supabase = await createClient();
   try {
-    preferences = await getNotificationPreferences(await createClient(), user.id);
+    preferences = await getNotificationPreferences(supabase, user.id);
   } catch {
     preferences = null;
   }
+  const quiet = await getQuietHours(supabase, user.id);
 
   return (
     <PageShell>
@@ -41,6 +45,13 @@ export default async function NotificationSettingsPage() {
           <Callout tone="muted">Choosing which notifications you get isn&apos;t available right now.</Callout>
         )}
       </section>
+
+      {preferences && (
+        <section className="mt-8">
+          <SectionTitle>Quiet hours</SectionTitle>
+          <QuietHoursSettings initial={quiet} />
+        </section>
+      )}
     </PageShell>
   );
 }
