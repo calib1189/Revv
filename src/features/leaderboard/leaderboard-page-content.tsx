@@ -70,9 +70,13 @@ function categoryHref(category: VehicleCategory | null, scope: LeaderboardScope 
 export async function LeaderboardPageContent({
   initialCategory = null,
   initialScope = "global",
+  eagerImages = true,
 }: {
   initialCategory?: VehicleCategory | null;
   initialScope?: LeaderboardScope;
+  /** False when this is a swipe-neighbor panel rather than the one being
+   * opened, so its big #1 photo doesn't compete with what's on screen. */
+  eagerImages?: boolean;
 }) {
   const supabase = await createClient();
   const currentUser = await getCurrentUser();
@@ -189,7 +193,7 @@ export async function LeaderboardPageContent({
         />
       ) : (
         <div className="animate-section-rise flex flex-col gap-4" style={{ animationDelay: "120ms" }}>
-          <LeaderboardHeroCard entry={entries[0]} />
+          <LeaderboardHeroCard entry={entries[0]} priority={eagerImages} />
           {runnersUp.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {runnersUp.map((entry, i) => (

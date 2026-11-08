@@ -29,7 +29,13 @@ import { getStoreItem } from "@/lib/store/catalog";
  * at the middleware level (middleware.ts's PROTECTED_EXACT) before this
  * ever renders — this inline prompt only ever shows for someone already
  * browsing the pager from another (public) tab while logged out. */
-export async function GaragePageContent() {
+export async function GaragePageContent({
+  eagerImages = true,
+}: {
+  /** False when Garage is a swipe-neighbor panel rather than the one
+   * being opened, so its first car photo doesn't load ahead of it. */
+  eagerImages?: boolean;
+} = {}) {
   const user = await getCurrentUser();
   if (!user) {
     return (
@@ -195,7 +201,7 @@ export async function GaragePageContent() {
                       : null
                   }
                   ratingScore={activeBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null}
-                  priority={index === 0}
+                  priority={eagerImages && index === 0}
                   nameColorValue={nameColorItem?.value}
                   nameColorEffectClassName={nameColorItem?.effectClassName}
                 />

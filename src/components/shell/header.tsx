@@ -36,25 +36,24 @@ export async function Header() {
   }
 
   const supabase = await createClient();
-  const [profile, notificationCount] = await Promise.all([
+  // All at once: this header renders on every full page load, so each
+  // query that waits on another adds a round trip to app launch.
+  // The message count degrades to 0 if messaging isn't set up, instead
+  // of taking down every page's nav.
+  const [profile, notificationCount, messageCount] = await Promise.all([
     getProfileByUserId(supabase, user.id),
     getUnreadNotificationCount(supabase, user.id),
+    listConversationsForUser(supabase, user.id)
+      .then((conversations) =>
+        getUnreadMessageCount(
+          supabase,
+          conversations.map((c) => c.id),
+          user.id,
+        ),
+      )
+      .catch(() => 0),
   ]);
   const username = profile?.username ?? null;
-
-  // Degrade gracefully if the messaging migration hasn't been applied yet
-  // — a missing table here shouldn't take down every page's nav.
-  let messageCount = 0;
-  try {
-    const conversations = await listConversationsForUser(supabase, user.id);
-    messageCount = await getUnreadMessageCount(
-      supabase,
-      conversations.map((c) => c.id),
-      user.id,
-    );
-  } catch {
-    messageCount = 0;
-  }
 
   return (
     <>

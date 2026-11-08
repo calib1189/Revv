@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/shell/header";
@@ -5,10 +6,7 @@ import { LayoutFooter } from "@/components/shell/layout-footer";
 import { NativeAppBridge } from "@/components/shell/native-app-bridge";
 import { TabPagerProvider } from "@/components/shell/tab-pager-context";
 import { getCurrentUser } from "@/lib/auth/get-user";
-import { createClient } from "@/lib/supabase/server";
-import { getTutorialProgress } from "@/lib/db/tutorial-progress";
-import { tutorialStartStep } from "@/lib/tutorial/steps";
-import { TutorialHost } from "@/features/tutorial/tutorial-host";
+import { TutorialGate } from "@/features/tutorial/tutorial-gate";
 import { SITE_URL } from "@/lib/site-url";
 import { APP_STORE_ID } from "@/lib/app-store";
 import "./globals.css";
@@ -54,19 +52,6 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await getCurrentUser();
 
-  // Where the first-time walkthrough should open for this person, if at
-  // all. Only for confirmed accounts (their progress can actually be
-  // saved), and never when it can't be read — e.g. before migration 0095
-  // has been applied — so it can't end up showing on every launch.
-  let tutorialStep: number | null = null;
-  if (user?.email_confirmed_at) {
-    try {
-      tutorialStep = tutorialStartStep(await getTutorialProgress(await createClient(), user.id));
-    } catch {
-      tutorialStep = null;
-    }
-  }
-
   return (
     <html
       lang="en"
@@ -87,7 +72,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <NativeAppBridge isSignedIn={Boolean(user)} />
-        {user && <TutorialHost startStep={tutorialStep} />}
+        {user && (
+          <Suspense fallback={null}>
+            <TutorialGate userId={user.id} confirmed={Boolean(user.email_confirmed_at)} />
+          </Suspense>
+        )}
         <TabPagerProvider>
           <Header />
           <div

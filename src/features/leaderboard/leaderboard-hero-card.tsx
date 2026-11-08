@@ -38,7 +38,7 @@ function Plinth({
  * card sits in a soft halo of its own tier colour, which is the page's
  * only real flourish and the reason the board looks different the day
  * someone new takes the top spot. */
-export function LeaderboardHeroCard({ entry }: { entry: LeaderboardEntry }) {
+export function LeaderboardHeroCard({ entry, priority = true }: { entry: LeaderboardEntry; priority?: boolean }) {
   const tier = rankForScore(entry.score);
   const Icon = RANK_MATERIAL_ICONS[tier];
   const tierColor = RANK_TEXT_COLORS[tier];
@@ -55,7 +55,7 @@ export function LeaderboardHeroCard({ entry }: { entry: LeaderboardEntry }) {
               src={entry.heroUrl}
               alt=""
               fill
-              priority
+              priority={priority}
               sizes="(min-width: 640px) 672px, 100vw"
               className="object-cover transition-transform duration-[900ms] ease-[var(--ease-ios)] group-hover:scale-[1.035]"
             />

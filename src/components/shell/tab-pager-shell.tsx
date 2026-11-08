@@ -40,13 +40,20 @@ export function TabPagerShell({
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ready, setReady] = useState(false);
 
-  // Runs before the browser paints the first client-rendered frame —
-  // positions the container at the right panel and only then reveals it,
-  // so there's no visible flash of Garage (index 0) before snapping to
-  // wherever the actual current tab is.
+  // Until this runs, every panel is shifted left by CSS (see the
+  // transform below) so the server-rendered HTML already shows the right
+  // tab — the page is readable before any JavaScript has loaded, instead
+  // of staying hidden until hydration. This then swaps that CSS shift for
+  // the real scroll position before the browser paints, so nothing jumps.
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    // The CSS shift has to go first: while the panels are translated
+    // left, the row has no scrollable width to its right, so setting
+    // scrollLeft would be clamped back to 0 (Garage).
+    for (const panel of Array.from(container.children)) {
+      (panel as HTMLElement).style.transform = "";
+    }
     container.scrollLeft = initialIndex * container.clientWidth;
     setReady(true);
     // Deliberately only on mount — this is initial positioning, not a
@@ -110,7 +117,7 @@ export function TabPagerShell({
   return (
     <div
       className="relative"
-      style={{ marginTop: `calc(-1 * ${HEADER_HEIGHT})`, visibility: ready ? "visible" : "hidden" }}
+      style={{ marginTop: `calc(-1 * ${HEADER_HEIGHT})` }}
     >
       <div
         ref={containerRef}
@@ -119,7 +126,11 @@ export function TabPagerShell({
         {tabs.map((tab) => {
           const isFeed = tab.href === "/feed";
           return (
-            <div key={tab.href} className="h-full w-full flex-shrink-0 snap-center">
+            <div
+              key={tab.href}
+              className="h-full w-full flex-shrink-0 snap-center"
+              style={ready || initialIndex === 0 ? undefined : { transform: `translateX(-${initialIndex * 100}%)` }}
+            >
               {isFeed ? (
                 tab.content
               ) : (

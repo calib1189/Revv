@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { TabPagerShell } from "@/components/shell/tab-pager-shell";
 import { TAB_HREFS } from "@/components/shell/tab-order";
@@ -38,12 +39,21 @@ export async function TabsShellContent({
   // through TAB_HREFS below — so the panel order actually mounted here
   // can never drift from the order the tab bar's indices assume, even if
   // TAB_HREFS itself is ever reordered.
+  // Each panel gets its own Suspense boundary: all four still render on
+  // the server (swiping needs them mounted), but the one being opened
+  // streams in as soon as its own data is ready instead of waiting for
+  // the slowest of the four. Only that panel's lead photo loads eagerly;
+  // the others' load like any off-screen image.
   const contentByHref: Record<(typeof TAB_HREFS)[number], ReactNode> = {
-    "/garage": <GaragePageContent />,
+    "/garage": <GaragePageContent eagerImages={initialHref === "/garage"} />,
     "/feed": <FeedPageContent />,
     "/discover": <DiscoverPageContent />,
     "/leaderboard": (
-      <LeaderboardPageContent initialCategory={leaderboardCategory} initialScope={leaderboardScope} />
+      <LeaderboardPageContent
+        initialCategory={leaderboardCategory}
+        initialScope={leaderboardScope}
+        eagerImages={initialHref === "/leaderboard"}
+      />
     ),
   };
 
@@ -51,7 +61,16 @@ export async function TabsShellContent({
     <TabPagerShell
       initialHref={initialHref}
       isAuthenticated={Boolean(user)}
-      tabs={TAB_HREFS.map((href) => ({ href, content: contentByHref[href] }))}
+      tabs={TAB_HREFS.map((href) => ({
+        href,
+        content: <Suspense fallback={<PanelSkeleton href={href} />}>{contentByHref[href]}</Suspense>,
+      }))}
     />
   );
+}
+
+/** What a panel shows while its data streams in. */
+function PanelSkeleton({ href }: { href: string }) {
+  if (href === "/feed") return <div className="h-full w-full animate-pulse bg-surface" aria-busy="true" />;
+  return <PageSkeleton width="3xl" variant="cards" control={href !== "/garage"} />;
 }

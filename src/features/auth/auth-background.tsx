@@ -1,6 +1,8 @@
 /** The login page's backdrop — a looping muted video (cars being built
  * and driven), scaled down and re-encoded for the web (the source was a
- * 65MB 4K clip; this is a 720x1280 re-encode at a fraction of that).
+ * 65MB 4K clip; this is a 540x960, 24fps, ~1.4MB re-encode — it sits
+ * under a heavy dark scrim, so extra resolution was never visible, only
+ * downloaded by every first-time visitor).
  * No poster/fallback image — just the video. Respects
  * prefers-reduced-motion by hiding it via CSS (see globals.css), which
  * falls back to the plain dark page background, not a still image.

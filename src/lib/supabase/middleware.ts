@@ -69,23 +69,34 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
+  // This runs before every page, navigation and server action, so it
+  // matters what it costs. getClaims() refreshes an expired session the
+  // same way getUser() does, but then checks the token's signature
+  // locally against the project's (cached) ES256 key instead of making a
+  // network round trip to Supabase Auth.
+  //
+  // Signed-in-only pages still call getUser(): they also have to know
+  // whether the email is confirmed, which the token doesn't carry.
+  if (!isProtectedPath(request.nextUrl.pathname)) {
+    await supabase.auth.getClaims();
+    return response;
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (isProtectedPath(request.nextUrl.pathname)) {
-    if (!user) {
-      const redirectUrl = new URL("/login", request.url);
-      redirectUrl.searchParams.set("next", request.nextUrl.pathname);
-      return NextResponse.redirect(redirectUrl);
-    }
-    // A session exists but the email was never confirmed — Supabase still
-    // hands back an active session in that case, so this is the actual
-    // gate keeping a fake/unconfirmed signup out of the app rather than
-    // just out of a login form.
-    if (!user.email_confirmed_at) {
-      return NextResponse.redirect(new URL("/signup/check-email", request.url));
-    }
+  if (!user) {
+    const redirectUrl = new URL("/login", request.url);
+    redirectUrl.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(redirectUrl);
+  }
+  // A session exists but the email was never confirmed — Supabase still
+  // hands back an active session in that case, so this is the actual
+  // gate keeping a fake/unconfirmed signup out of the app rather than
+  // just out of a login form.
+  if (!user.email_confirmed_at) {
+    return NextResponse.redirect(new URL("/signup/check-email", request.url));
   }
 
   return response;
