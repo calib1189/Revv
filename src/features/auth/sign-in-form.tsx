@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import Link from "next/link";
 import { signIn, type AuthActionState } from "@/features/auth/actions";
 import { OAuthButtons } from "@/features/auth/oauth-buttons";
 import { TermsCheckbox } from "@/features/auth/terms-checkbox";
 import { Hcaptcha } from "@/features/auth/hcaptcha";
+import { useAuthGate } from "@/features/auth/use-auth-gate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,14 +19,13 @@ export function SignInForm({ next }: { next?: string }) {
     signIn,
     initialState,
   );
-  const [captchaVerified, setCaptchaVerified] = useState(false);
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const { acceptedTerms, setAcceptedTerms, setCaptchaVerified, nudge, allowOAuth, guardSubmit } = useAuthGate();
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form action={formAction} onSubmit={guardSubmit} className="flex flex-col gap-4">
       {state.error && <Callout tone="danger">{state.error}</Callout>}
-      <TermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} />
-      <OAuthButtons disabled={!acceptedTerms} />
+      <TermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} attention={nudge === "terms"} />
+      <OAuthButtons allowStart={allowOAuth} />
       <input type="hidden" name="next" value={next ?? "/feed"} />
 
       <div>
@@ -58,8 +58,13 @@ export function SignInForm({ next }: { next?: string }) {
       </div>
 
       <Hcaptcha name="captchaToken" onVerifiedChange={setCaptchaVerified} />
+      {nudge === "captcha" && (
+        <p role="alert" className="-mt-2 px-1 text-[0.8125rem] font-medium text-accent">
+          Tick &ldquo;I am human&rdquo; above first.
+        </p>
+      )}
 
-      <Button type="submit" disabled={isPending || !captchaVerified || !acceptedTerms} className="mt-2 h-12 w-full text-[1rem] font-semibold">
+      <Button type="submit" disabled={isPending} className="mt-2 h-12 w-full text-[1rem] font-semibold">
         {isPending ? "Logging in…" : "Log in"}
       </Button>
 

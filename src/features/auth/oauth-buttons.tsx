@@ -13,10 +13,13 @@ function providerQueryParams(provider: "google" | "apple"): Record<string, strin
   return provider === "google" ? { prompt: "select_account" } : undefined;
 }
 
-export function OAuthButtons({ disabled = false }: { disabled?: boolean }) {
+/** `allowStart` runs on tap and can veto the sign-in (the login forms use
+ * it to point at the unticked terms box rather than greying these out). */
+export function OAuthButtons({ allowStart }: { allowStart?: () => boolean }) {
   const [pending, setPending] = useState<"google" | "apple" | null>(null);
 
   async function handleOAuth(provider: "google" | "apple") {
+    if (allowStart && !allowStart()) return;
     setPending(provider);
     const supabase = createClient();
 
@@ -61,7 +64,7 @@ export function OAuthButtons({ disabled = false }: { disabled?: boolean }) {
     <div className="flex flex-col gap-3">
       <button
         type="button"
-        disabled={pending !== null || disabled}
+        disabled={pending !== null}
         onClick={() => handleOAuth("google")}
         className="pressable flex h-12 items-center justify-center gap-2.5 rounded-full border border-black/10 bg-white px-4 text-[0.9375rem] font-semibold text-[#1f1f1f] hover:opacity-90 disabled:opacity-60"
       >
@@ -70,7 +73,7 @@ export function OAuthButtons({ disabled = false }: { disabled?: boolean }) {
       </button>
       <button
         type="button"
-        disabled={pending !== null || disabled}
+        disabled={pending !== null}
         onClick={() => handleOAuth("apple")}
         className="pressable flex h-12 items-center justify-center gap-2.5 rounded-full bg-black px-4 text-[0.9375rem] font-semibold text-white ring-1 ring-inset ring-white/15 hover:opacity-90 disabled:opacity-60"
       >
