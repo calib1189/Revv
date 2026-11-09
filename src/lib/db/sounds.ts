@@ -7,6 +7,12 @@ import type { SoundGenre } from "@/lib/sounds/genres";
  * so an empty list is the true answer, not an error to show. */
 const UNDEFINED_COLUMN = "42703";
 
+/** The synthesized starter loops (scripts/generate-sounds.mjs). Members
+ * said they didn't sound like real music, so browsing and search leave
+ * them out. A post that already uses one still plays it: lookups by id
+ * don't filter. */
+const HIDDEN_SOURCE = "original";
+
 export type Sound = Database["public"]["Tables"]["sounds"]["Row"];
 export type SoundInsert = Database["public"]["Tables"]["sounds"]["Insert"];
 
@@ -66,6 +72,7 @@ export async function searchSounds(
   let request = supabase
     .from("sounds")
     .select("*")
+    .neq("source", HIDDEN_SOURCE)
     .or(`title.ilike.%${trimmed}%,artist_name.ilike.%${trimmed}%`);
   if (genre) request = request.eq("genre", genre);
   const { data, error } = await request.order("created_at", { ascending: false }).limit(limit);
@@ -129,7 +136,7 @@ export async function listTrendingSounds(
   limit = 30,
   genre: SoundGenre | null = null,
 ): Promise<Sound[]> {
-  let request = supabase.from("sounds").select("*");
+  let request = supabase.from("sounds").select("*").neq("source", HIDDEN_SOURCE);
   if (genre) request = request.eq("genre", genre);
   const { data, error } = await request.order("created_at", { ascending: false }).limit(200);
 
