@@ -25,6 +25,9 @@ export interface DayState {
   participatedYesterday: boolean;
   /** Their best place yesterday, if they placed. */
   placeYesterday: number | null;
+  /** Whether yesterday's challenge produced a winner at all (no votes
+   * means no podium, and nothing to announce). */
+  yesterdayHadWinner: boolean;
   enteredToday: boolean;
   ratedRidesToday: boolean;
   /** Whether Rate the Ride has any cars for them today. */
@@ -87,7 +90,7 @@ export function decideScheduledPush({
     ? prefs.quietEnd
     : MORNING_HOUR;
   if (!sent.has("morning") && localHour >= morningStart && localHour <= MORNING_LAST_HOUR) {
-    if (state.participatedYesterday && prefs.dailyResults) {
+    if (state.participatedYesterday && prefs.dailyResults && (state.placeYesterday || state.yesterdayHadWinner)) {
       return { kind: "morning", category: "daily_results", variant: state.placeYesterday ? "placed" : "results" };
     }
     if (prefs.dailyChallenge && !state.enteredToday) {

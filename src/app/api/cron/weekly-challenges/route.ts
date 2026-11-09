@@ -14,7 +14,8 @@ export const maxDuration = 60;
 // so this bounds how many are open together.
 const BATCH_SIZE = 10;
 
-/** Vercel Cron calls this on Mondays (vercel.json), after the weekly
+/** Vercel Cron calls this on Mondays at 20:00 UTC (2pm Central in winter,
+ * 3pm in summer; vercel.json), well after the weekly
  * challenges reset at 00:00 UTC (lib/challenges/week.ts). */
 export async function GET(request: Request) {
   if (!isCronAuthorized(request)) {

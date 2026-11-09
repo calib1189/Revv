@@ -94,8 +94,9 @@ function payloadFor(
     case "results":
       return {
         title: "Sorza Daily",
-        body: "Yesterday's winner has been crowned. See where you placed.",
-        url: yesterday ? `/daily/results/${yesterday.challenge_date}` : "/daily",
+        body: `Yesterday's winner has been crowned. Today's challenge is live: ${today.title}.`,
+        // The Daily page shows both: today's challenge and yesterday's podium.
+        url: "/daily",
       };
     case "live":
       return { title: "Sorza Daily", body: `Today's challenge is live: ${today.title}. Think your build can win?`, url: "/daily" };
@@ -180,6 +181,7 @@ export async function sendDueDailyPushes(today: DailyChallenge, now: Date = new 
     const state: DayState = {
       participatedYesterday: participatedYesterday.has(userId),
       placeYesterday: bestPlace.get(userId) ?? null,
+      yesterdayHadWinner: bestPlace.size > 0,
       enteredToday: enteredToday.has(userId),
       ratedRidesToday: Boolean(round && round.length > 0 && round.every((id) => rated.has(id))),
       // A round is only built when they open Rate the Ride; until then

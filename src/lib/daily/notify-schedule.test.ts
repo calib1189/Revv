@@ -13,6 +13,7 @@ const prefs: PushPrefs = {
 const state: DayState = {
   participatedYesterday: false,
   placeYesterday: null,
+  yesterdayHadWinner: true,
   enteredToday: false,
   ratedRidesToday: false,
   ridesAvailable: true,
@@ -65,6 +66,17 @@ describe("decideScheduledPush", () => {
     expect(
       decideScheduledPush({ localHour: 10, prefs, sent: new Set(), state: { ...state, participatedYesterday: true, placeYesterday: 1 } }),
     ).toEqual({ kind: "morning", category: "daily_results", variant: "placed" });
+  });
+
+  it("sends today's challenge instead of results when yesterday had no winner", () => {
+    expect(
+      decideScheduledPush({
+        localHour: 9,
+        prefs,
+        sent: new Set(),
+        state: { ...state, participatedYesterday: true, yesterdayHadWinner: false },
+      }),
+    ).toEqual({ kind: "morning", category: "daily_challenge", variant: "live" });
   });
 
   it("respects switched-off categories", () => {
