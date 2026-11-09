@@ -15,6 +15,7 @@ import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
 import { RatingBreakdownTrigger, type RatingHistoryPoint } from "@/features/garage/rating-breakdown-modal";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
+import { requestAppReviewAfterRating } from "@/lib/native/app-review";
 import { GemIcon, ChevronRightIcon } from "@/components/ui/icons";
 import type { BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 import type { RankPosition } from "@/lib/rating/rank-position";
@@ -94,8 +95,12 @@ export function RateBuildPanel({
   function handleRevealDone() {
     setIsRevealing(false);
     if (!revealResult) return;
-    if (revealResult.isMock) setPending(revealResult);
-    else router.refresh();
+    if (revealResult.isMock) {
+      setPending(revealResult);
+    } else {
+      router.refresh();
+      requestAppReviewAfterRating(revealResult.score);
+    }
   }
 
   async function handleConfirm() {

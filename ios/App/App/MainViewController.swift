@@ -1,6 +1,40 @@
 import Capacitor
+import StoreKit
 import UIKit
 import WebKit
+
+/// Apple's own "Enjoying SORZA?" star prompt, called from the web side
+/// (src/lib/native/app-review.ts) after an owner's build lands a good
+/// score. Lives here, registered by instance in capacitorDidLoad, rather
+/// than as an npm plugin: it's one StoreKit call, and the file is already
+/// in the App target, so there's no Xcode project change to make.
+///
+/// Apple decides whether the prompt actually appears (at most three times
+/// a year per person, never again once they've rated this version), so
+/// this resolves either way and never reports whether anything showed.
+@objc(AppReviewPlugin)
+public class AppReviewPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "AppReviewPlugin"
+    public let jsName = "AppReview"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "requestReview", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func requestReview(_ call: CAPPluginCall) {
+        Task { @MainActor in
+            let scene = UIApplication.shared.connectedScenes
+                .first { $0.activationState == .foregroundActive } as? UIWindowScene
+            if let scene = scene {
+                if #available(iOS 16.0, *) {
+                    AppStore.requestReview(in: scene)
+                } else {
+                    SKStoreReviewController.requestReview(in: scene)
+                }
+            }
+            call.resolve()
+        }
+    }
+}
 
 /// Native-scrollview tweaks that make the wrapped WebView read as an app
 /// instead of a browser tab:
@@ -39,6 +73,10 @@ class MainViewController: CAPBridgeViewController {
     // punished on the first check, short enough that a genuinely stuck
     // launch doesn't leave someone staring at a blank screen for long.
     private static let stallCheckDelaysSeconds: [Double] = [4, 8, 12]
+
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(AppReviewPlugin())
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
