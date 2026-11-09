@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { getViewerAffinity } from "@/lib/ranking/viewer-affinity";
 import { listFollowingIds } from "@/lib/db/follows";
-import { listVerifiedVehicleIds } from "@/lib/db/vehicles";
+import { listLeaderboardVehicleIds } from "@/lib/db/vehicles";
 import { getBestRatingScoresByOwnerIds } from "@/lib/rating/best-build-scores";
 import { getProfilesByIds, type Profile } from "@/lib/db/profiles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
@@ -33,7 +33,7 @@ export async function listSuggestedFollows(
   const [affinity, followingIds, verifiedVehicleIds] = await Promise.all([
     getViewerAffinity(supabase, viewerId),
     listFollowingIds(supabase, viewerId),
-    listVerifiedVehicleIds(supabase),
+    listLeaderboardVehicleIds(supabase),
   ]);
   if (verifiedVehicleIds.length === 0) return [];
 

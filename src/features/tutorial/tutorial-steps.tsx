@@ -279,7 +279,7 @@ function RatedBuildCard({
           {watched ? "Watch it again" : "Watch it get rated"}
         </button>
         <p className="text-center text-[0.6875rem] leading-relaxed text-white/40">
-          The real rating of the top verified build, replayed. Five scores: appearance, performance, wheels and fitment, interior,
+          The real rating of the top build on SORZA, replayed. Five scores: appearance, performance, wheels and fitment, interior,
           and mods.
         </p>
       </div>
@@ -291,7 +291,7 @@ function RatedBuildCard({
 
 type Scope = "global" | "friends" | "crew";
 const SCOPE_COPY: Record<Scope, string> = {
-  global: "Every verified build on SORZA.",
+  global: "Every approved build on SORZA.",
   friends: "Only the people you follow.",
   crew: "Just the members of your crews.",
 };
@@ -303,7 +303,7 @@ export function LeaderboardDemo({ podium, loading }: { podium: TutorialShowcase[
   if (podium.length === 0) {
     return (
       <Panel className="p-5 text-[0.875rem] leading-relaxed text-white/60">
-        No builds are ranked yet. Verify your car and get it rated to take the first spot.
+        No builds are ranked yet. Add your car and get it rated to take the first spot.
       </Panel>
     );
   }
@@ -369,7 +369,7 @@ export function LeaderboardDemo({ podium, loading }: { podium: TutorialShowcase[
         </div>
         <span className="numeral text-[1rem] font-semibold">{pick.score.toFixed(2)}</span>
       </Panel>
-      <p className="text-center text-[0.6875rem] text-white/40">Only verified cars are ranked. Verify yours from its garage page.</p>
+      <p className="text-center text-[0.6875rem] text-white/40">SORZA approves every new car. Once yours is approved, its score puts it on the board.</p>
     </div>
   );
 }

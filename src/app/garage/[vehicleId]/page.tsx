@@ -3,7 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
-import { getVehicleById, listVerifiedVehicleIds } from "@/lib/db/vehicles";
+import { getVehicleById, listLeaderboardVehicleIds } from "@/lib/db/vehicles";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getStoreItem } from "@/lib/store/catalog";
 import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
@@ -25,7 +25,7 @@ import { VehicleSpecs } from "@/features/garage/vehicle-specs";
 import { CoverPhotoUploader } from "@/features/garage/cover-photo-uploader";
 import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ReportButton } from "@/features/feed/report-button";
-import { OwnershipVerification } from "@/features/garage/ownership-verification";
+import { LeaderboardStatus } from "@/features/garage/leaderboard-status";
 import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
 import { buildShareText, formatScore } from "@/lib/rating/share-text";
 import { VehicleTabs } from "@/features/garage/vehicle-tabs";
@@ -179,7 +179,7 @@ export default async function VehiclePage({
     isOwner && activeBuild?.ai_rating_score != null && vehicle.ownership_verification_status === "approved"
       ? computeRankPosition(
           activeBuild.ai_rating_score,
-          await listAllRatingScores(supabase, await listVerifiedVehicleIds(supabase)),
+          await listAllRatingScores(supabase, await listLeaderboardVehicleIds(supabase)),
         )
       : null;
 
@@ -309,10 +309,10 @@ export default async function VehiclePage({
         />
 
         {isOwner && (
-          <OwnershipVerification
-            vehicleId={vehicle.id}
-            userId={vehicle.owner_id}
+          <LeaderboardStatus
             status={vehicle.ownership_verification_status}
+            hasPhoto={Boolean(heroMedia) || gallery.some((g) => g.media.kind === "image")}
+            rated={score != null}
           />
         )}
 

@@ -6,6 +6,7 @@ import { updateReportStatus, type Report } from "@/lib/db/reports";
 import { deletePost } from "@/lib/db/posts";
 import { deleteComment } from "@/lib/db/comments";
 import { deleteVehicle, updateVehicle } from "@/lib/db/vehicles";
+import { getActiveBuild } from "@/lib/db/builds";
 import { deleteShopReview } from "@/lib/db/shop-reviews";
 import { deleteDailySubmission } from "@/lib/db/daily";
 import { setUserBanned, setUserVerified, setUserFounder } from "@/lib/db/profiles";
@@ -134,11 +135,16 @@ export async function setOwnershipVerificationStatusAction(
   });
   revalidatePath("/admin/verifications");
   revalidatePath("/leaderboard");
+  revalidatePath(`/garage/${vehicleId}`);
   if (status === "approved") {
     const name = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
+    const build = await getActiveBuild(supabase, vehicleId);
+    const rated = build?.ai_rating_score != null;
     await sendPushToUser(vehicle.owner_id, {
       title: "SORZA",
-      body: `${name} is now verified — its build is eligible for the leaderboard`,
+      body: rated
+        ? `${name} is approved and on the leaderboard`
+        : `${name} is approved. Rate it to get on the leaderboard`,
       url: `/garage/${vehicleId}`,
     }, "updates");
   }

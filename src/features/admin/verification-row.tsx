@@ -25,6 +25,8 @@ export interface VerificationRowData {
   priorVehicleCount: number;
   priorRejectedCount: number;
   photoUrl: string | null;
+  /** Its saved SORZA score, or null if it hasn't been rated yet. */
+  score: number | null;
 }
 
 const SPEC_FIELDS: { label: string; get: (d: VerificationRowData) => string | number | null }[] = [
@@ -54,9 +56,9 @@ export function VerificationRow({ data }: { data: VerificationRowData }) {
 
   return (
     <li className="flex flex-col gap-3 rounded-2xl border border-border p-4">
-      {/* Full-size photo, not a small crop — the whole point of this
-          review is confirming the car and the handwritten username are
-          both clearly legible, which a thumbnail can't show. */}
+      {/* Full-size photo, not a small crop: the review is judging
+          whether this is a real car the person owns, which a thumbnail
+          can't show. */}
       <div className="relative aspect-square w-full max-w-xs self-center overflow-hidden rounded-xl bg-surface-raised sm:self-start">
         {data.photoUrl && (
           <Image src={data.photoUrl} alt="" fill sizes="(min-width: 640px) 320px, 100vw" className="object-cover" />
@@ -69,7 +71,12 @@ export function VerificationRow({ data }: { data: VerificationRowData }) {
       </div>
 
       <div>
-        <p className="text-sm font-medium">{data.vehicleTitle || "Untitled vehicle"}</p>
+        <p className="text-sm font-medium">
+          {data.vehicleTitle || "Untitled vehicle"}
+          <span className="ml-2 text-xs font-normal text-muted">
+            {data.score != null ? `Score ${data.score.toFixed(2)}` : "Not rated yet"}
+          </span>
+        </p>
         {specs.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
             {specs.map((s) => (

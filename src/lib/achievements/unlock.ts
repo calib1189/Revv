@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getProfileByUserId } from "@/lib/db/profiles";
-import { listVehiclesByOwner, listVerifiedVehicleIds, listVehicleIdsByCategory } from "@/lib/db/vehicles";
+import { listVehiclesByOwner, listLeaderboardVehicleIds, listVehicleIdsByCategory } from "@/lib/db/vehicles";
 import { listActiveBuildsByVehicleIds, listAllRatingScores, countBuildsCopiedFrom } from "@/lib/db/builds";
 import { listBuildRatingHistoryForBuilds } from "@/lib/db/build-rating-history";
 import { listBuildPartsForBuilds } from "@/lib/db/build-parts";
@@ -63,7 +63,9 @@ export async function checkAndUnlockAchievements(
   ]);
 
   const vehicleIds = vehicles.map((v) => v.id);
+  // Approved by an admin, which is also what puts a car on the leaderboard.
   const verifiedVehicles = vehicles.filter((v) => v.ownership_verification_status === "approved");
+  const leaderboardVehicles = verifiedVehicles;
   const categoryCount = new Set(vehicles.map((v) => v.category)).size;
 
   const [
@@ -174,7 +176,7 @@ export async function checkAndUnlockAchievements(
   // reasoning rate-position.ts uses elsewhere, so this achievement never
   // claims a rank the real leaderboard wouldn't back up.
   const bestVerifiedScore = activeBuilds
-    .filter((b) => verifiedVehicles.some((v) => v.id === b.vehicle_id))
+    .filter((b) => leaderboardVehicles.some((v) => v.id === b.vehicle_id))
     .reduce<number | null>((best, b) => {
       if (b.ai_rating_score == null) return best;
       return best == null || b.ai_rating_score > best ? b.ai_rating_score : best;
@@ -183,7 +185,7 @@ export async function checkAndUnlockAchievements(
   let leaderboardRank: number | null = null;
   let bestCategoryRank: number | null = null;
   if (bestVerifiedScore != null) {
-    const allVerifiedIds = await listVerifiedVehicleIds(supabase);
+    const allVerifiedIds = await listLeaderboardVehicleIds(supabase);
     leaderboardRank = computeRankPosition(
       bestVerifiedScore,
       await listAllRatingScores(supabase, allVerifiedIds),
@@ -192,10 +194,10 @@ export async function checkAndUnlockAchievements(
     // Best position across any single category board the user actually
     // has a verified, rated vehicle in — bounded by their own category
     // diversity (typically 1-3), not every category SORZA supports.
-    const ownCategories = [...new Set(verifiedVehicles.map((v) => v.category))];
+    const ownCategories = [...new Set(leaderboardVehicles.map((v) => v.category))];
     const categoryRanks = await Promise.all(
       ownCategories.map(async (category) => {
-        const vehicleInCategory = verifiedVehicles.find((v) => v.category === category);
+        const vehicleInCategory = leaderboardVehicles.find((v) => v.category === category);
         const build = vehicleInCategory ? activeBuildByVehicle.get(vehicleInCategory.id) : undefined;
         if (!build?.ai_rating_score) return null;
         const categoryVehicleIds = await listVehicleIdsByCategory(supabase, category);

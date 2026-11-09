@@ -6,7 +6,7 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { listTopRatedBuilds } from "@/lib/db/builds";
 import {
   listVehicleIdsByCategory,
-  listVerifiedVehicleIds,
+  listLeaderboardVehicleIds,
   listVehiclesByOwnerIds,
 } from "@/lib/db/vehicles";
 import { listFollowingIds } from "@/lib/db/follows";
@@ -93,7 +93,7 @@ export async function LeaderboardPageContent({
   // reason listVehicleIdsByCategory itself avoids one — no dependency on
   // PostgREST's embedded-resource relationship cache staying in sync.
   const [verifiedVehicleIds, categoryVehicleIds, scopeOwnerIds, dailyTeaser] = await Promise.all([
-    listVerifiedVehicleIds(supabase),
+    listLeaderboardVehicleIds(supabase),
     initialCategory ? listVehicleIdsByCategory(supabase, initialCategory) : Promise.resolve(null),
     resolveScopeOwnerIds(supabase, scope, currentUser?.id ?? null),
     loadDailyTeaser(currentUser?.id ?? null),
@@ -142,7 +142,7 @@ export async function LeaderboardPageContent({
       <div className="relative mx-auto w-full max-w-2xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
       <header className="animate-section-rise mb-5">
         <p className="text-[0.8125rem] font-medium text-muted">
-          {initialCategory ? VEHICLE_CATEGORY_LABELS[initialCategory] : "Verified builds, ranked by AI"}
+          {initialCategory ? VEHICLE_CATEGORY_LABELS[initialCategory] : "Approved builds, ranked by AI"}
         </p>
         <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">
           Leaderboard

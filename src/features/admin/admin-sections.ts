@@ -45,8 +45,8 @@ export const ADMIN_SECTION_GROUPS: AdminSectionGroup[] = [
       },
       {
         href: "/admin/verifications",
-        label: "Vehicle ownership",
-        description: "Proof-of-ownership photos",
+        label: "New cars",
+        description: "Approve real cars for the leaderboard",
         icon: CheckIcon,
         color: "#30d158",
         countKey: "verifications",

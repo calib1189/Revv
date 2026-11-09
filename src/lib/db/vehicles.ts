@@ -57,12 +57,14 @@ export async function listVehicleIdsByCategory(
   return data.map((v) => v.id);
 }
 
-/** Vehicle ids with an admin-approved ownership verification photo — the
- * leaderboard's eligibility gate, filtered the same way
+/** Vehicle ids that can appear on the leaderboard: cars an admin has
+ * approved (from the new-car queue, judged on the car's own photos).
+ * An approved car is ranked as soon as it has a saved score. Filtered
+ * the same way
  * listVehicleIdsByCategory is (a plain id list, not a Postgres-side
  * join) for the same reason: it doesn't depend on PostgREST's
  * embedded-resource relationship cache staying in sync. */
-export async function listVerifiedVehicleIds(
+export async function listLeaderboardVehicleIds(
   supabase: SupabaseClient<Database>,
 ): Promise<string[]> {
   const { data, error } = await supabase
@@ -74,15 +76,19 @@ export async function listVerifiedVehicleIds(
   return data.map((v) => v.id);
 }
 
-/** Vehicles currently awaiting admin review — the ownership-verification
- * queue's source list. */
-export async function listPendingVerifications(
+/** New cars waiting for an admin to approve them for the leaderboard:
+ * any car with a photo that hasn't been approved or rejected yet. Owners
+ * used to have to upload a separate photo with their username on paper
+ * first ("pending"); that step is gone, so a car joins this queue as soon
+ * as it's added with a photo. Older "pending" submissions still show. */
+export async function listVehiclesAwaitingApproval(
   supabase: SupabaseClient<Database>,
 ): Promise<Vehicle[]> {
   const { data, error } = await supabase
     .from("vehicles")
     .select("*")
-    .eq("ownership_verification_status", "pending")
+    .in("ownership_verification_status", ["none", "pending"])
+    .or("hero_media_id.not.is.null,ownership_verification_media_id.not.is.null")
     .order("created_at", { ascending: true });
 
   if (error) throw error;

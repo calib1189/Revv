@@ -4,7 +4,7 @@ import type { BuildRating } from "@/lib/providers/rating-provider";
 import { listRankedFeedPosts } from "@/lib/ranking/ranked-feed";
 import { composePostCards } from "@/lib/feed/compose-post-cards";
 import { listTopRatedBuilds } from "@/lib/db/builds";
-import { listVehiclesByOwner, listVerifiedVehicleIds } from "@/lib/db/vehicles";
+import { listVehiclesByOwner, listLeaderboardVehicleIds } from "@/lib/db/vehicles";
 import { composeLeaderboard } from "@/lib/leaderboard/compose-leaderboard";
 import { listUpcomingMeetups } from "@/lib/db/meetups";
 import { listMeetupMediaForMeetups } from "@/lib/db/meetup-media";
@@ -85,7 +85,7 @@ async function loadPosts(supabase: SupabaseClient<Database>, viewerId: string): 
 
 async function loadBoard(supabase: SupabaseClient<Database>) {
   // Same eligibility as the real leaderboard: verified vehicles only.
-  const verified = await listVerifiedVehicleIds(supabase);
+  const verified = await listLeaderboardVehicleIds(supabase);
   const builds = await listTopRatedBuilds(supabase, 10, verified);
   const entries = await composeLeaderboard(supabase, builds);
   const podium = entries.slice(0, 3).map((e) => ({

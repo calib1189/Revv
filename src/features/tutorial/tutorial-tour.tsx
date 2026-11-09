@@ -36,7 +36,7 @@ const COPY: Record<Exclude<TutorialStepId, "welcome">, { eyebrow: string; title:
   leaderboard: {
     eyebrow: "Leaderboards",
     title: "See where you rank",
-    body: "Rated, verified builds are ranked by score. Compete with everyone, with friends, or inside your crew.",
+    body: "Approved, rated builds are ranked by score. Compete with everyone, with friends, or inside your crew.",
   },
   discover: {
     eyebrow: "Discover",

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { listOpenReports } from "@/lib/db/reports";
-import { listPendingVerifications } from "@/lib/db/vehicles";
+import { listVehiclesAwaitingApproval } from "@/lib/db/vehicles";
 import { listPendingBusinessVerifications } from "@/lib/db/business-profiles";
 import { listPendingReviewCampaigns } from "@/lib/db/ad-campaigns";
 import { listPendingReviewMeetups } from "@/lib/db/meetups";
@@ -23,7 +23,7 @@ export interface AdminQueueCounts {
 export async function getAdminQueueCounts(supabase: SupabaseClient<Database>): Promise<AdminQueueCounts> {
   const [reports, verifications, ads, meetups] = await Promise.all([
     listOpenReports(supabase),
-    listPendingVerifications(supabase),
+    listVehiclesAwaitingApproval(supabase),
     listPendingReviewCampaigns(supabase),
     listPendingReviewMeetups(supabase),
   ]);

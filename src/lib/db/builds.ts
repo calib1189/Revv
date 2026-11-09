@@ -348,3 +348,18 @@ export async function countBuildsCopiedFrom(
   if (error) throw error;
   return count ?? 0;
 }
+
+/** Each vehicle's saved score on its active build (null when unrated). */
+export async function listActiveBuildScores(
+  supabase: SupabaseClient<Database>,
+  vehicleIds: string[],
+): Promise<Map<string, number | null>> {
+  if (vehicleIds.length === 0) return new Map();
+  const { data, error } = await supabase
+    .from("builds")
+    .select("vehicle_id, ai_rating_score")
+    .eq("status", "active")
+    .in("vehicle_id", vehicleIds);
+  if (error) throw error;
+  return new Map(data.map((b) => [b.vehicle_id, b.ai_rating_score]));
+}
