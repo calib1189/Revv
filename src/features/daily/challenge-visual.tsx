@@ -27,10 +27,37 @@ export function ChallengeIconGlyph({ icon, className }: { icon: ChallengeIcon; c
   return <Icon className={className} />;
 }
 
+/**
+ * The stock photo for each challenge icon, used whenever the admin hasn't
+ * set a cover photo. Files live in public/daily/ (served by the app, not
+ * Supabase Storage). All from Unsplash, free under the Unsplash License
+ * (commercial use, no attribution required; credited here anyway):
+ *   engine    unsplash.com/photos/QCDM7eeYm_o  @abstract_ion
+ *   wheel     unsplash.com/photos/2KD6Z-SmTQE  @giorgiotrovato
+ *   steering  unsplash.com/photos/FFAq3r9u0-Y  @zachwileydesign
+ *   seat      unsplash.com/photos/O_DZkRlr6Tc  @mike_marchi
+ *   gauge     unsplash.com/photos/s40VRZ1HqXs  @schiepatrick
+ *   wrench    unsplash.com/photos/YkBaEl7f1C8  @sl33vo
+ *   star      unsplash.com/photos/pYjGj5XnNlI  @romanellophotos
+ *   flag      unsplash.com/photos/_QlczAt-Ffc  @spencerdavis
+ *
+ * `focus` is the photo's subject (CSS object-position), so it stays in
+ * frame in the square Daily card, the wide Garage banner and the tall
+ * feed slide alike.
+ */
+const DAILY_PHOTOS: Record<ChallengeIcon, { src: string; focus: string }> = {
+  engine: { src: "/daily/engine.jpg", focus: "50% 40%" },
+  wheel: { src: "/daily/wheel.jpg", focus: "62% 50%" },
+  steering: { src: "/daily/steering.jpg", focus: "45% 45%" },
+  seat: { src: "/daily/seat.jpg", focus: "60% 45%" },
+  gauge: { src: "/daily/gauge.jpg", focus: "40% 60%" },
+  wrench: { src: "/daily/wrench.jpg", focus: "48% 55%" },
+  star: { src: "/daily/star.jpg", focus: "50% 62%" },
+  flag: { src: "/daily/flag.jpg", focus: "72% 62%" },
+};
+
 /** The challenge's picture: the admin's cover photo when there is one,
- * otherwise the challenge's own icon set large on a dark plate, with a
- * thin red rule, so a rotation day still has a deliberate visual
- * instead of a stock placeholder. */
+ * otherwise the stock photo for the challenge's icon. */
 export function ChallengeVisual({
   icon,
   coverUrl,
@@ -40,15 +67,16 @@ export function ChallengeVisual({
   coverUrl: string | null;
   priority?: boolean;
 }) {
-  if (coverUrl) {
-    return (
-      <Image src={coverUrl} alt="" fill priority={priority} sizes="(min-width: 768px) 672px, 100vw" className="object-cover" />
-    );
-  }
+  const stock = DAILY_PHOTOS[icon];
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(120%_90%_at_70%_20%,#2a2a2e_0%,#121214_55%,#0a0a0b_100%)]">
-      <ChallengeIconGlyph icon={icon} className="h-28 w-28 text-white/[0.85]" />
-      <span className="absolute bottom-0 left-0 h-1 w-24 bg-accent" />
-    </div>
+    <Image
+      src={coverUrl ?? stock.src}
+      alt=""
+      fill
+      priority={priority}
+      sizes="(min-width: 768px) 672px, 100vw"
+      className="object-cover"
+      style={coverUrl ? undefined : { objectPosition: stock.focus }}
+    />
   );
 }

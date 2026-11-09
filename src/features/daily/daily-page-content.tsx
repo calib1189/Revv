@@ -12,12 +12,12 @@ import {
   type DailyChallenge,
 } from "@/lib/db/daily";
 import { addDays, dailyDateKey, isChallengeOpen } from "@/lib/daily/day";
-import { formatDayLong } from "@/lib/daily/format";
+import { dailyNumber, formatDayLong } from "@/lib/daily/format";
+import { DAILY_POINTS } from "@/lib/points/values";
 import { composeDailyEntries, listGaragePhotos } from "@/lib/daily/compose";
 import { loadChallengeResults, type ChallengeResults } from "@/lib/daily/results";
 import { settleDueDailyChallenges } from "@/lib/daily/settle";
-import { ChallengeVisual } from "@/features/daily/challenge-visual";
-import { Countdown } from "@/features/daily/countdown";
+import { ChallengeHero } from "@/features/daily/challenge-hero";
 import { MyEntry } from "@/features/daily/my-entry";
 import { EntriesGallery } from "@/features/daily/entries-gallery";
 import { ResultsPodium } from "@/features/daily/results-podium";
@@ -30,7 +30,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionTitle } from "@/components/ui/grouped-list";
-import { FlagIcon, ChevronRightIcon } from "@/components/ui/icons";
+import { CameraIcon, FlagIcon, ChevronRightIcon } from "@/components/ui/icons";
+import { DailyEmpty } from "@/features/daily/daily-empty";
 
 /** The Sorza Daily screen: today's challenge with its countdown, your
  * entry, today's entries to vote on, and yesterday's results. */
@@ -96,43 +97,30 @@ export async function DailyPageContent() {
       </header>
 
       {/* Today's challenge */}
-      <section className="overflow-hidden rounded-[26px] bg-neutral-950 elev-3">
-        <div className="relative aspect-[16/10] w-full">
-          <ChallengeVisual
-            icon={challenge.icon}
-            coverUrl={cover ? publicMediaUrl(supabase, cover.storage_path) : null}
-            priority
-          />
-          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 to-transparent" />
-          <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1.5 text-[0.75rem] font-semibold text-white backdrop-blur-md">
-            <span className={`h-1.5 w-1.5 rounded-full ${isOpen ? "bg-accent" : "bg-white/40"}`} />
-            {isOpen ? <Countdown endsAt={challenge.ends_at} /> : "Closed"}
-            {isOpen && <span className="text-white/60">left</span>}
-          </div>
-          <div className="absolute inset-x-0 bottom-0 p-5">
-            <p className="micro-label text-accent">Today&apos;s challenge</p>
-            <h2 className="mt-1 text-balance text-[1.75rem] font-bold leading-[1.1] tracking-[-0.02em] text-white">
-              {challenge.title}
-            </h2>
-          </div>
-        </div>
-        <div className="flex flex-col gap-4 p-5 pt-3">
-          <p className="text-[0.9375rem] leading-relaxed text-white/80">{challenge.description}</p>
-          <p className="numeral text-[0.8125rem] text-white/55">
-            {entries.length === 1 ? "1 entry" : `${entries.length} entries`} ·{" "}
-            {voteTotal === 1 ? "1 vote" : `${voteTotal} votes`} cast · ends midnight CT
-          </p>
-          <MyEntry
-            userId={user?.id ?? null}
-            isOpen={isOpen}
-            entry={myEntry}
-            entryVotes={myEntryVotes}
-            garage={garage}
-            loginHref={loginHref}
-            challengeTitle={challenge.title}
-          />
-        </div>
-      </section>
+      <ChallengeHero
+        icon={challenge.icon}
+        coverUrl={cover ? publicMediaUrl(supabase, cover.storage_path) : null}
+        title={challenge.title}
+        description={challenge.description}
+        endsAt={challenge.ends_at}
+        isOpen={isOpen}
+        number={dailyNumber(challenge.challenge_date)}
+        stats={[
+          { label: "Entries", value: entries.length.toLocaleString() },
+          { label: "Votes", value: voteTotal.toLocaleString() },
+          { label: "Winner", value: `+${DAILY_POINTS.place[1]} pts`, accent: true },
+        ]}
+      >
+        <MyEntry
+          userId={user?.id ?? null}
+          isOpen={isOpen}
+          entry={myEntry}
+          entryVotes={myEntryVotes}
+          garage={garage}
+          loginHref={loginHref}
+          challengeTitle={challenge.title}
+        />
+      </ChallengeHero>
 
       {personal && (
         <section className="mt-6 flex flex-col gap-2.5">
@@ -148,11 +136,15 @@ export async function DailyPageContent() {
           One vote each. Tap again to take it back. Vote counts are revealed when the challenge ends.
         </p>
         {others.length === 0 ? (
-          <p className="glass-raised elev-1 rounded-[22px] px-5 py-6 text-center text-[0.875rem] leading-relaxed text-muted">
-            {myEntry
-              ? "You're the first one in. Entries from everyone else show up here to vote on."
-              : "No entries yet today. The first one sets the bar."}
-          </p>
+          myEntry ? (
+            <DailyEmpty
+              icon={<CameraIcon />}
+              title="You're the first one in"
+              body="Entries from everyone else show up here to vote on."
+            />
+          ) : (
+            <DailyEmpty icon={<CameraIcon />} title="No entries yet" body="The first one sets the bar." />
+          )
         ) : (
           <EntriesGallery
             entries={others}

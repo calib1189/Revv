@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Avatar } from "@/features/feed/avatar";
 import type { PodiumEntry } from "@/lib/daily/results";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { FlagIcon } from "@/components/ui/icons";
+import { DailyEmpty } from "@/features/daily/daily-empty";
 
 const ORDINAL: Record<number, string> = { 1: "1st", 2: "2nd", 3: "3rd" };
 
@@ -26,17 +28,15 @@ export function ResultsPodium({
   voteTotal: number;
 }) {
   if (entryCount === 0) {
-    return (
-      <p className="glass-raised elev-1 rounded-[22px] px-5 py-6 text-center text-[0.875rem] leading-relaxed text-muted">
-        Nobody entered this one.
-      </p>
-    );
+    return <DailyEmpty icon={<FlagIcon />} title="No entries" body="Nobody entered this one." />;
   }
   if (podium.length === 0) {
     return (
-      <p className="glass-raised elev-1 rounded-[22px] px-5 py-6 text-center text-[0.875rem] leading-relaxed text-muted">
-        {entryCount === 1 ? "1 entry" : `${entryCount} entries`} and no votes cast, so no winner this time.
-      </p>
+      <DailyEmpty
+        icon={<FlagIcon />}
+        title="No winner"
+        body={`${entryCount === 1 ? "1 entry" : `${entryCount} entries`} and no votes cast, so no winner this time.`}
+      />
     );
   }
 

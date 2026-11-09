@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { formatTimeLeft } from "@/lib/daily/format";
+import { formatClock, formatTimeLeft } from "@/lib/daily/format";
 
 function subscribeSeconds(callback: () => void): () => void {
   const id = window.setInterval(callback, 1000);
@@ -16,16 +16,20 @@ export function Countdown({
   fallback = "Ends at midnight CT",
   closedLabel = "Closed",
   className = "",
+  clock = false,
 }: {
   endsAt: string;
   fallback?: string;
   closedLabel?: string;
   className?: string;
+  /** "23:41:07" instead of "23h 41m". */
+  clock?: boolean;
 }) {
   const end = new Date(endsAt).getTime();
+  const format = clock ? formatClock : formatTimeLeft;
   const left = useSyncExternalStore(
     subscribeSeconds,
-    () => formatTimeLeft(end - Date.now()) ?? closedLabel,
+    () => format(end - Date.now()) ?? closedLabel,
     () => fallback,
   );
   return <span className={`numeral ${className}`}>{left}</span>;
