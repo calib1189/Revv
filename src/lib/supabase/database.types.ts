@@ -151,6 +151,7 @@ export interface Database {
           category: string;
           ownership_verification_status: "none" | "pending" | "approved" | "rejected";
           ownership_verification_media_id: string | null;
+          ownership_rejection_reason: string | null;
           equipped_backdrop: string | null;
           created_at: string;
         };
@@ -171,6 +172,7 @@ export interface Database {
           category?: string;
           ownership_verification_status?: "none" | "pending" | "approved" | "rejected";
           ownership_verification_media_id?: string | null;
+          ownership_rejection_reason?: string | null;
           equipped_backdrop?: string | null;
           created_at?: string;
         };

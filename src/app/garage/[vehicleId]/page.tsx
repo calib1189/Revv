@@ -313,6 +313,7 @@ export default async function VehiclePage({
             status={vehicle.ownership_verification_status}
             hasPhoto={Boolean(heroMedia) || gallery.some((g) => g.media.kind === "image")}
             rated={score != null}
+            rejectionReason={vehicle.ownership_rejection_reason ?? null}
           />
         )}
 

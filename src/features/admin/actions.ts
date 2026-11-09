@@ -5,8 +5,9 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 import { updateReportStatus, type Report } from "@/lib/db/reports";
 import { deletePost } from "@/lib/db/posts";
 import { deleteComment } from "@/lib/db/comments";
-import { deleteVehicle, updateVehicle } from "@/lib/db/vehicles";
+import { deleteVehicle, updateVehicle, type Vehicle } from "@/lib/db/vehicles";
 import { getActiveBuild } from "@/lib/db/builds";
+import { normalizeRejectionReason, rejectionPushBody } from "@/lib/validation/rejection-reason";
 import { deleteShopReview } from "@/lib/db/shop-reviews";
 import { deleteDailySubmission } from "@/lib/db/daily";
 import { setUserBanned, setUserVerified, setUserFounder } from "@/lib/db/profiles";
@@ -119,25 +120,46 @@ export async function setUserFounderAction(userId: string, isFounder: boolean): 
   revalidatePath("/admin/users");
 }
 
+/** Approve or reject a new car for the leaderboard. A rejection can carry
+ * a message for the owner: it's sent in the push and shown on their car
+ * page, where a new cover photo sends the car back for review (0108).
+ * Approving clears any old message. */
 export async function setOwnershipVerificationStatusAction(
   vehicleId: string,
   status: "approved" | "rejected",
-): Promise<void> {
+  rawReason?: string | null,
+): Promise<{ error: string | null }> {
   const { supabase, userId } = await requireAdmin();
+  const { reason, error: reasonError } = normalizeRejectionReason(status === "rejected" ? rawReason : null);
+  if (reasonError) return { error: reasonError };
+
   // updateVehicle returns the full row, so no separate fetch is needed
   // to get owner_id/nickname/make/model for the push below.
-  const vehicle = await updateVehicle(supabase, vehicleId, { ownership_verification_status: status });
+  let vehicle: Vehicle;
+  try {
+    vehicle = await updateVehicle(supabase, vehicleId, {
+      ownership_verification_status: status,
+      ownership_rejection_reason: reason,
+    });
+  } catch (err) {
+    // Migration 0108 not applied yet: still approve or reject, just
+    // without storing the message (the push below still carries it).
+    if (!isMissingColumnError(err)) throw err;
+    vehicle = await updateVehicle(supabase, vehicleId, { ownership_verification_status: status });
+  }
   await createAuditLog(supabase, {
     actorId: userId,
     action: status === "approved" ? "vehicle.verification_approved" : "vehicle.verification_rejected",
     targetType: "vehicle",
     targetId: vehicleId,
+    ...(reason ? { metadata: { reason } } : {}),
   });
   revalidatePath("/admin/verifications");
   revalidatePath("/leaderboard");
   revalidatePath(`/garage/${vehicleId}`);
+
+  const name = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
   if (status === "approved") {
-    const name = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
     const build = await getActiveBuild(supabase, vehicleId);
     const rated = build?.ai_rating_score != null;
     await sendPushToUser(vehicle.owner_id, {
@@ -147,7 +169,20 @@ export async function setOwnershipVerificationStatusAction(
         : `${name} is approved. Rate it to get on the leaderboard`,
       url: `/garage/${vehicleId}`,
     }, "updates");
+  } else {
+    await sendPushToUser(vehicle.owner_id, {
+      title: "SORZA",
+      body: rejectionPushBody(name, reason),
+      url: `/garage/${vehicleId}`,
+    }, "updates");
   }
+  return { error: null };
+}
+
+/** PostgREST's "that column doesn't exist" (schema cache or Postgres). */
+function isMissingColumnError(err: unknown): boolean {
+  const e = err as { code?: string; message?: string } | null;
+  return e?.code === "PGRST204" || e?.code === "42703" || /ownership_rejection_reason/.test(e?.message ?? "");
 }
 
 export async function setBusinessVerificationStatusAction(

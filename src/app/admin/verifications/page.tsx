@@ -67,6 +67,8 @@ export default async function AdminVerificationsPage() {
       priorRejectedCount: history?.rejected ?? 0,
       photoUrl: photoMediaId(vehicle) ? (photoUrlByMediaId.get(photoMediaId(vehicle)!) ?? null) : null,
       score: scoreByVehicleId.get(vehicle.id) ?? null,
+      previousRejectionReason:
+        vehicle.ownership_verification_status === "pending" ? (vehicle.ownership_rejection_reason ?? null) : null,
     };
   });
 

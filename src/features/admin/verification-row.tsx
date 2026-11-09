@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { setOwnershipVerificationStatusAction } from "@/features/admin/actions";
 import { formatDateTime } from "@/lib/format/date";
+import { REJECTION_REASON_MAX } from "@/lib/validation/rejection-reason";
 
 export interface VerificationRowData {
   vehicleId: string;
@@ -27,6 +28,9 @@ export interface VerificationRowData {
   photoUrl: string | null;
   /** Its saved SORZA score, or null if it hasn't been rated yet. */
   score: number | null;
+  /** Set when this car was rejected before and came back with a new
+   * photo: what the owner was told last time. */
+  previousRejectionReason: string | null;
 }
 
 const SPEC_FIELDS: { label: string; get: (d: VerificationRowData) => string | number | null }[] = [
@@ -40,13 +44,26 @@ const SPEC_FIELDS: { label: string; get: (d: VerificationRowData) => string | nu
 export function VerificationRow({ data }: { data: VerificationRowData }) {
   const [isPending, startTransition] = useTransition();
   const [resolved, setResolved] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   if (resolved) return null;
 
   function handle(status: "approved" | "rejected") {
+    setError(null);
     startTransition(async () => {
-      await setOwnershipVerificationStatusAction(data.vehicleId, status);
-      setResolved(true);
+      try {
+        const result = await setOwnershipVerificationStatusAction(
+          data.vehicleId,
+          status,
+          status === "rejected" ? reason : null,
+        );
+        if (result.error) setError(result.error);
+        else setResolved(true);
+      } catch {
+        setError("Couldn't save that. Try again.");
+      }
     });
   }
 
@@ -112,24 +129,77 @@ export function VerificationRow({ data }: { data: VerificationRowData }) {
         </span>
       </div>
 
-      <div className="flex justify-end gap-3 border-t border-border pt-3">
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => handle("approved")}
-          className="text-sm font-medium text-success hover:underline disabled:opacity-60"
-        >
-          Approve
-        </button>
-        <button
-          type="button"
-          disabled={isPending}
-          onClick={() => handle("rejected")}
-          className="text-sm text-danger hover:underline disabled:opacity-60"
-        >
-          Reject
-        </button>
-      </div>
+      {data.previousRejectionReason && (
+        <p className="rounded-xl bg-foreground/[0.05] px-3 py-2 text-xs text-muted">
+          Rejected before, now has a new photo. You told them: &ldquo;{data.previousRejectionReason}&rdquo;
+        </p>
+      )}
+
+      {rejecting ? (
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <label htmlFor={`reject-${data.vehicleId}`} className="text-sm font-medium">
+            Why isn&apos;t it approved?
+          </label>
+          <textarea
+            id={`reject-${data.vehicleId}`}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            maxLength={REJECTION_REASON_MAX}
+            rows={3}
+            autoFocus
+            placeholder="e.g. This photo looks like it's from Google. Upload a photo you took of your car."
+            className="glass-inset w-full rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent/30"
+          />
+          <p className="text-xs text-muted">
+            @{data.ownerUsername} gets this as a notification and sees it on their car page. A new cover photo sends
+            the car back here.
+          </p>
+          {error && <p className="text-xs text-danger">{error}</p>}
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                setRejecting(false);
+                setError(null);
+              }}
+              className="text-sm text-muted hover:underline disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => handle("rejected")}
+              className="text-sm font-medium text-danger hover:underline disabled:opacity-60"
+            >
+              {isPending ? "Sending…" : reason.trim() ? "Reject and send" : "Reject without a message"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          {error && <p className="text-xs text-danger">{error}</p>}
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => handle("approved")}
+              className="text-sm font-medium text-success hover:underline disabled:opacity-60"
+            >
+              {isPending ? "Saving…" : "Approve"}
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => setRejecting(true)}
+              className="text-sm text-danger hover:underline disabled:opacity-60"
+            >
+              Reject
+            </button>
+          </div>
+        </div>
+      )}
     </li>
   );
 }
