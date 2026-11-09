@@ -8,7 +8,7 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { getStoreItem } from "@/lib/store/catalog";
 import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
-import { getActiveBuild, listAllRatingScores } from "@/lib/db/builds";
+import { getActiveBuild, listAllRatingScores, pendingRatingFromBuild } from "@/lib/db/builds";
 import { listBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { computeTopPercent } from "@/lib/rating/percentile";
 import { computeRankPosition, type RankPosition } from "@/lib/rating/rank-position";
@@ -277,6 +277,8 @@ export default async function VehiclePage({
             ratingHistory={ratingHistory}
             rankPosition={rankPosition}
             shareText={buildShareText({ title, score, isOwner })}
+            savedPending={activeBuild ? pendingRatingFromBuild(activeBuild) : null}
+            hasPhotos={Boolean(heroMedia) || gallery.some((g) => g.media.kind === "image")}
           />
         ) : (
           score != null && (
@@ -333,7 +335,7 @@ export default async function VehiclePage({
         <VehicleSpecs vehicle={vehicle} />
 
         {isOwner && (
-          <section>
+          <section id="manage" className="scroll-mt-20">
             <SectionTitle>Manage</SectionTitle>
             <GroupedList>
               <CoverPhotoUploader

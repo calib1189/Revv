@@ -3,7 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { generateBuildRatingAction, confirmBuildRatingAction } from "@/features/garage/rating-actions";
+import {
+  generateBuildRatingAction,
+  confirmBuildRatingAction,
+  discardPendingRatingAction,
+} from "@/features/garage/rating-actions";
 import { AiDisclosure } from "@/features/garage/ai-disclosure";
 import { ShareScoreButton } from "@/features/garage/vehicle-share-button";
 import { RatingReveal } from "@/features/garage/rating-reveal";
@@ -25,6 +29,8 @@ export function RateBuildPanel({
   ratingHistory,
   rankPosition,
   shareText,
+  savedPending,
+  hasPhotos,
 }: {
   vehicleId: string;
   /** What goes out with the link when the owner shares their score. */
@@ -36,11 +42,18 @@ export function RateBuildPanel({
   topPercent: number | null;
   ratingHistory: RatingHistoryPoint[];
   rankPosition: RankPosition | null;
+  /** A rating generated earlier but never saved. It stays on the server
+   * (and counts toward the 24h limit), so it's offered again here rather
+   * than leaving "rate again in 23h" as the only thing they can see. */
+  savedPending: BuildRating | null;
+  /** The AI rates from photos; without one, point at adding a photo. */
+  hasPhotos: boolean;
 }) {
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [pending, setPending] = useState<BuildRating | null>(null);
+  const [pending, setPending] = useState<BuildRating | null>(savedPending);
+  const [isDiscarding, setIsDiscarding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Opens the moment "Rate my build" is tapped, not once the response
   // arrives — the reveal's own charging stage is what covers the real
@@ -104,42 +117,65 @@ export function RateBuildPanel({
     }
   }
 
+  async function handleDiscard() {
+    setIsDiscarding(true);
+    setError(null);
+    try {
+      const result = await discardPendingRatingAction(vehicleId);
+      if (result.error) setError(result.error);
+      else setPending(null);
+    } catch {
+      setError("Couldn't discard that rating. Check your connection and try again.");
+    } finally {
+      setIsDiscarding(false);
+    }
+  }
+
   if (pending) {
     return (
       <div className="glass-raised elev-2 rounded-[28px] p-5 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <p className="text-[0.9375rem] font-semibold">New rating</p>
+          <p className="text-[0.9375rem] font-semibold">{currentScore != null ? "Your new score" : "Your score is ready"}</p>
           {pending.isMock && (
             <span className="rounded-full bg-foreground/10 px-2.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted">
               Mock
             </span>
           )}
         </div>
-        <ScoreHero score={pending.score} caption="Only you can see this until you choose to show it" />
+        <ScoreHero
+          score={pending.score}
+          caption={
+            currentScore != null
+              ? `Not saved yet. Your current score of ${currentScore.toFixed(2)} stays until you save this one.`
+              : "Not saved yet. Save it to put your car on the leaderboard."
+          }
+        />
         <ScoreReasons strengths={pending.strengths} limitingFactors={pending.limitingFactors} />
         {error && (
           <div className="mt-4">
             <Callout tone="danger">{error}</Callout>
           </div>
         )}
-        <div className="mt-5 flex gap-2.5">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setPending(null)}
-            className="h-11 flex-1 text-[0.9375rem] font-semibold"
-          >
-            Discard
-          </Button>
-          <Button
-            type="button"
-            disabled={isConfirming}
-            onClick={handleConfirm}
-            className="h-11 flex-1 text-[0.9375rem] font-semibold"
-          >
-            {isConfirming ? "Saving…" : "Show rating"}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          disabled={isConfirming || isDiscarding}
+          onClick={handleConfirm}
+          className="mt-5 h-12 w-full text-[1rem] font-semibold"
+        >
+          {isConfirming ? "Saving…" : "Save score"}
+        </Button>
+        <button
+          type="button"
+          disabled={isConfirming || isDiscarding}
+          onClick={handleDiscard}
+          className="mt-2 h-10 w-full text-[0.875rem] font-medium text-muted disabled:opacity-50"
+        >
+          {isDiscarding
+            ? "Discarding…"
+            : currentScore != null
+              ? "Keep my current score"
+              : "Discard"}
+        </button>
       </div>
     );
   }
@@ -222,14 +258,25 @@ export function RateBuildPanel({
         <p className="mt-1.5 max-w-xs text-[0.9375rem] leading-relaxed text-muted">
           Get a tier, a score out of 100, and exactly what&apos;s holding it back.
         </p>
-        <Button
-          type="button"
-          disabled={isGenerating}
-          onClick={handleGenerate}
-          className="mt-6 h-12 w-full max-w-xs text-[1rem] font-semibold"
-        >
-          {isGenerating ? "Rating…" : "Rate my build"}
-        </Button>
+        {hasPhotos ? (
+          <Button
+            type="button"
+            disabled={isGenerating}
+            onClick={handleGenerate}
+            className="mt-6 h-12 w-full max-w-xs text-[1rem] font-semibold"
+          >
+            {isGenerating ? "Rating…" : "Rate my build"}
+          </Button>
+        ) : (
+          <>
+            <a href="#manage" className="mt-6 block w-full max-w-xs">
+              <Button type="button" tabIndex={-1} className="h-12 w-full text-[1rem] font-semibold">
+                Add a photo to get rated
+              </Button>
+            </a>
+            <p className="mt-2 max-w-xs text-[0.8125rem] text-muted">The AI rates your car from its photos.</p>
+          </>
+        )}
         <AiDisclosure className="mt-3 max-w-xs" />
         {error && (
           <div className="mt-4 w-full">

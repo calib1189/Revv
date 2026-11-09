@@ -16,6 +16,7 @@ import {
   markBuildRatingAttempt,
   savePendingBuildRating,
   getPendingBuildRating,
+  clearPendingBuildRating,
 } from "@/lib/db/builds";
 import { insertBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { listBuildParts } from "@/lib/db/build-parts";
@@ -189,5 +190,22 @@ export async function confirmBuildRatingAction(vehicleId: string): Promise<Confi
 
   revalidatePath(`/garage/${vehicleId}`);
   revalidatePath("/garage");
+  return { error: null };
+}
+
+/** "Discard" on an unsaved rating. Without clearing it server-side it
+ * would come back the next time the owner opens the car. The 24h limit
+ * still counts from when it was generated. */
+export async function discardPendingRatingAction(vehicleId: string): Promise<{ error: string | null }> {
+  const { supabase } = await requireOwner(vehicleId);
+  const build = await getActiveBuild(supabase, vehicleId);
+  if (!build) return { error: null };
+  try {
+    await clearPendingBuildRating(createServiceRoleClient(), build.id);
+  } catch (err) {
+    console.error("discardPendingRatingAction failed:", err);
+    return { error: "Couldn't discard that rating. Try again." };
+  }
+  revalidatePath(`/garage/${vehicleId}`);
   return { error: null };
 }

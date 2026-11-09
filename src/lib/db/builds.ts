@@ -200,22 +200,54 @@ export async function getPendingBuildRating(
     .single();
 
   if (error) throw error;
+  return pendingRatingFromBuild(data);
+}
+
+type PendingColumns = Pick<
+  Build,
+  | "ai_rating_pending_score"
+  | "ai_rating_pending_strengths"
+  | "ai_rating_pending_limiting_factors"
+  | "ai_rating_pending_subscores"
+  | "ai_rating_pending_is_mock"
+>;
+
+/** The generated-but-unsaved rating held on a build row, or null. Used by
+ * the owner's vehicle page so a rating they didn't save yet is still
+ * there to save when they come back, instead of only living on the
+ * screen that generated it. */
+export function pendingRatingFromBuild(row: PendingColumns): PendingBuildRating | null {
   if (
-    data.ai_rating_pending_score == null ||
-    data.ai_rating_pending_strengths == null ||
-    data.ai_rating_pending_limiting_factors == null ||
-    data.ai_rating_pending_subscores == null
+    row.ai_rating_pending_score == null ||
+    row.ai_rating_pending_strengths == null ||
+    row.ai_rating_pending_limiting_factors == null ||
+    row.ai_rating_pending_subscores == null
   ) {
     return null;
   }
-
   return {
-    score: data.ai_rating_pending_score,
-    strengths: data.ai_rating_pending_strengths,
-    limitingFactors: data.ai_rating_pending_limiting_factors,
-    subscores: data.ai_rating_pending_subscores as unknown as BuildRatingSubscores,
-    isMock: data.ai_rating_pending_is_mock ?? false,
+    score: row.ai_rating_pending_score,
+    strengths: row.ai_rating_pending_strengths,
+    limitingFactors: row.ai_rating_pending_limiting_factors,
+    subscores: row.ai_rating_pending_subscores as unknown as BuildRatingSubscores,
+    isMock: row.ai_rating_pending_is_mock ?? false,
   };
+}
+
+/** Throws away an unsaved rating the owner chose to discard. Service-role
+ * only, like every other write to these columns (0088). */
+export async function clearPendingBuildRating(supabase: SupabaseClient<Database>, id: string): Promise<void> {
+  const { error } = await supabase
+    .from("builds")
+    .update({
+      ai_rating_pending_score: null,
+      ai_rating_pending_strengths: null,
+      ai_rating_pending_limiting_factors: null,
+      ai_rating_pending_subscores: null,
+      ai_rating_pending_is_mock: null,
+    })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 /** Marks the moment an AI rating call actually happened — independent of
