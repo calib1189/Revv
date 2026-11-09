@@ -112,19 +112,32 @@ export async function generateBuildRatingAction(
 
   try {
     const rating = await provider.rateBuild(photos, summary);
-    // Recorded the moment a real result comes back — before the caller
-    // has any chance to discard it — so the daily limit is on the AI
-    // call itself, not on choosing to keep the result.
+    // Recorded the moment a real result comes back, so the daily limit
+    // is on the AI call itself.
     const build = await getOrCreateActiveBuild(supabase, vehicleId);
     await markBuildRatingAttempt(supabase, build.id);
-    // Stored via service role, not the caller's own session — this is
-    // the one write of rating content that's trustworthy, because it's
-    // exactly what the provider just returned, not anything a client
-    // supplied. confirmBuildRatingAction reads this back rather than
-    // accepting rating content as arguments (see 0088's migration
-    // comment for what that used to allow).
+    const previousScore = build.ai_rating_score;
+    // A mock result (no AI key configured) is never ranked silently: it
+    // waits as a labelled pending score instead (CLAUDE.md: never present
+    // mock output as real).
+    if (rating.isMock) {
+      await savePendingBuildRating(createServiceRoleClient(), build.id, rating);
+      return { data: rating };
+    }
+    // Saved straight away: the score is SORZA's judgment of the build,
+    // not a guess about the car for the owner to correct, and a separate
+    // Save step left most first scores unsaved (see CLAUDE.md invariant
+    // 5's exception). Written via service role with exactly what the
+    // provider returned, never anything a client supplied (0088).
     const serviceRole = createServiceRoleClient();
-    await savePendingBuildRating(serviceRole, build.id, rating);
+    await updateBuildRating(serviceRole, build.id, rating);
+    await insertBuildRatingHistory(serviceRole, build.id, rating).catch((err) =>
+      console.error("insertBuildRatingHistory failed:", err),
+    );
+    after(() => notifyLeaderboardDisplacements(vehicleId, user.id, previousScore, rating.score));
+    revalidatePath(`/garage/${vehicleId}`);
+    revalidatePath("/garage");
+    revalidatePath("/leaderboard");
     return { data: rating };
   } catch (err) {
     // Logged so a failure is diagnosable from Vercel's logs; the provider

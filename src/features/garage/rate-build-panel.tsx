@@ -89,9 +89,13 @@ export function RateBuildPanel({
   // "New rating" card (strengths/limiting factors, Show this rating/
   // Discard) take over — the reveal is a moment in front of that card,
   // not a replacement for the review step it already had.
+  // The score is already saved by the time the reveal finishes; this
+  // just reloads the page so the saved score and rank show.
   function handleRevealDone() {
     setIsRevealing(false);
-    if (revealResult) setPending(revealResult);
+    if (!revealResult) return;
+    if (revealResult.isMock) setPending(revealResult);
+    else router.refresh();
   }
 
   async function handleConfirm() {
@@ -164,18 +168,19 @@ export function RateBuildPanel({
         >
           {isConfirming ? "Saving…" : "Save score"}
         </Button>
-        <button
-          type="button"
-          disabled={isConfirming || isDiscarding}
-          onClick={handleDiscard}
-          className="mt-2 h-10 w-full text-[0.875rem] font-medium text-muted disabled:opacity-50"
-        >
-          {isDiscarding
-            ? "Discarding…"
-            : currentScore != null
-              ? "Keep my current score"
-              : "Discard"}
-        </button>
+        {/* Only a re-rate can be turned down. On a first rating there's no
+            older score to keep, so throwing it away only left the car
+            unrated and locked out of rating for 24 hours. */}
+        {currentScore != null && (
+          <button
+            type="button"
+            disabled={isConfirming || isDiscarding}
+            onClick={handleDiscard}
+            className="mt-2 h-10 w-full text-[0.875rem] font-medium text-muted disabled:opacity-50"
+          >
+            {isDiscarding ? "Discarding…" : "Keep my current score"}
+          </button>
+        )}
       </div>
     );
   }

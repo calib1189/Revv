@@ -28,6 +28,7 @@ These are load-bearing. Every version depends on them. Breaking one is a rewrite
 4. **Money is integer cents. Always.** Column names end in `_cents`. No floats.
 5. **AI proposes, the owner confirms, only confirmed data persists.**
    Vision output, spec guesses, and generated values go into a pending/confirm UI. The user's confirmation is what writes to `vehicles`, `build_parts`, or `parts`. Store the AI's confidence alongside its suggestion; never hide it.
+   Exception, decided by the owner on 2026-11-08: the AI build rating (the SORZA score) saves the moment it's generated, with no confirm step. It's SORZA's judgment of the build, not a guess about the car for the owner to correct, and the Save step left most first scores unsaved. Re-rates save too; the 24h limit counts every attempt.
 6. **Fitment is deterministic arithmetic. No LLM in the calculation path.**
    An LLM may help a user describe what they want. It never decides whether a wheel fits. Missing input data returns "insufficient data", not a guess.
 7. **Unverified data is labeled unverified, in the UI, every time.**
