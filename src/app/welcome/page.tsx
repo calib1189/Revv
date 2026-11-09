@@ -3,13 +3,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId, markProfileOnboarded } from "@/lib/db/profiles";
-import { ClaimUsernameForm } from "@/features/profile/claim-username-form";
 import { PlusIcon, UsersIcon, HomeIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
-
-/** Matches the auth.users trigger's fallback username, e.g. "user_a1b2c3d4"
- * — the shape an OAuth signup gets since Google/Apple never collect one. */
-const AUTO_USERNAME_PATTERN = /^user_[0-9a-f]{8}$/;
 
 const STEPS = [
   {
@@ -45,6 +40,9 @@ export default async function WelcomePage() {
     // best-effort — never block the welcome screen on this write
   }
 
+  // Google and Apple signups pick their username first, on the
+  // full-screen step the root layout shows (FirstRunGate), so by the
+  // time this page is visible the name greeting them is their own.
   return (
     <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-14">
       {/* iOS "Welcome / What's New" sheet: big centred title, a short
@@ -55,12 +53,6 @@ export default async function WelcomePage() {
       <p className="mt-3 text-center text-[1rem] text-muted">
         {profile?.username ? `You're in, @${profile.username}. ` : ""}Here&apos;s where to start.
       </p>
-
-      {profile?.username && AUTO_USERNAME_PATTERN.test(profile.username) && (
-        <div className="glass-raised elev-1 mt-8 rounded-[22px] p-5">
-          <ClaimUsernameForm />
-        </div>
-      )}
 
       <div className="mt-10 flex flex-col gap-7">
         {STEPS.map(({ href, icon: Icon, title, description }, i) => (

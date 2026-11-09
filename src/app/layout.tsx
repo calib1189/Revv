@@ -6,7 +6,7 @@ import { LayoutFooter } from "@/components/shell/layout-footer";
 import { NativeAppBridge } from "@/components/shell/native-app-bridge";
 import { TabPagerProvider } from "@/components/shell/tab-pager-context";
 import { getCurrentUser } from "@/lib/auth/get-user";
-import { TutorialGate } from "@/features/tutorial/tutorial-gate";
+import { FirstRunGate } from "@/features/onboarding/first-run-gate";
 import { TimeZoneSync } from "@/features/push/time-zone-sync";
 import { SITE_URL } from "@/lib/site-url";
 import { APP_STORE_ID } from "@/lib/app-store";
@@ -76,7 +76,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {user && <TimeZoneSync />}
         {user && (
           <Suspense fallback={null}>
-            <TutorialGate userId={user.id} confirmed={Boolean(user.email_confirmed_at)} />
+            <FirstRunGate user={user} />
           </Suspense>
         )}
         <TabPagerProvider>

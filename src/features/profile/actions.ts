@@ -13,7 +13,7 @@ import {
 } from "@/lib/db/profiles";
 import { blockUser, unblockUser } from "@/lib/db/blocks";
 import { validateBio, validateDisplayName } from "@/lib/validation/profile";
-import { validateUsername } from "@/lib/validation/username";
+import { isPlaceholderUsername, validateUsername } from "@/lib/validation/username";
 import { sendPushToUser } from "@/lib/push/send";
 
 export async function toggleFollowAction(
@@ -74,32 +74,41 @@ export async function updateBioAction(
 
 export interface ClaimUsernameState {
   error: string | null;
+  /** Set once the name is saved. */
+  claimed: string | null;
 }
 
-/** For an OAuth signup, which never collects a username up front — the
- * auth.users trigger falls back to "user_<8 hex chars>" so the account
- * still works immediately, but this lets them pick a real one on first
- * login. */
+/** Google and Apple never ask for a username, so those accounts start
+ * as "user_<8 hex chars>" (the auth.users trigger's fallback) and must
+ * pick a real one before using the app — see ChooseUsernameScreen. Only
+ * works while the account still has that placeholder; changing a chosen
+ * name goes through changeUsernameAction in Settings. */
 export async function claimUsernameAction(
   _prevState: ClaimUsernameState,
   formData: FormData,
 ): Promise<ClaimUsernameState> {
   const username = String(formData.get("username") ?? "").trim();
   const error = validateUsername(username);
-  if (error) return { error };
+  if (error) return { error, claimed: null };
+  if (isPlaceholderUsername(username)) return { error: "Pick a name of your own.", claimed: null };
 
   const { supabase, user } = await requireUser();
+  const current = await getProfileByUserId(supabase, user.id);
+  if (current && !isPlaceholderUsername(current.username)) {
+    return { error: null, claimed: current.username };
+  }
+  const existing = await getProfileByUsername(supabase, username);
+  if (existing && existing.id !== user.id) return { error: "That username is taken.", claimed: null };
+
   try {
     await updateProfileUsername(supabase, user.id, username);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "";
-    if (message.toLowerCase().includes("duplicate")) {
-      return { error: "That username is already taken." };
-    }
-    return { error: "Couldn't save that username. Try again." };
+    const message = err instanceof Error ? err.message : String((err as { message?: string })?.message ?? "");
+    if (message.toLowerCase().includes("duplicate")) return { error: "That username is taken.", claimed: null };
+    return { error: "Couldn't save that username. Try again.", claimed: null };
   }
-  revalidatePath("/welcome");
-  return { error: null };
+  revalidatePath("/", "layout");
+  return { error: null, claimed: username };
 }
 
 export interface ChangeUsernameState {

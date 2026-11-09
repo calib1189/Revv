@@ -32,6 +32,17 @@ export async function createProfile(
   return data;
 }
 
+/** Which of these usernames already belong to someone, in one query. */
+export async function listTakenUsernames(
+  supabase: SupabaseClient<Database>,
+  usernames: string[],
+): Promise<Set<string>> {
+  if (usernames.length === 0) return new Set();
+  const { data, error } = await supabase.from("profiles").select("username").in("username", usernames);
+  if (error) throw error;
+  return new Set(data.map((row) => row.username));
+}
+
 export async function getProfileByUsername(
   supabase: SupabaseClient<Database>,
   username: string,
