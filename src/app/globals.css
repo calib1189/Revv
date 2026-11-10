@@ -988,18 +988,6 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
      same box-shadow property would just have one clobber the other;
      outline/filter are separate properties so both effects render
      together regardless of cascade order. */
-  .frame-bronze-ring {
-    outline: 2px solid #c98a52;
-    outline-offset: 2px;
-    filter: drop-shadow(0 0 6px rgb(201 138 82 / 0.45));
-  }
-
-  .frame-gold-ring {
-    outline: 2px solid #fbbf24;
-    outline-offset: 2px;
-    filter: drop-shadow(0 0 7px rgb(251 191 36 / 0.5));
-  }
-
   .frame-neon-ring {
     outline: 2px solid #22d3ee;
     outline-offset: 2px;
@@ -1233,20 +1221,6 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
     filter: drop-shadow(0 0 6px rgb(163 230 53 / 0.7));
   }
 
-  /* Titanium and Cosmic Rings — simpler outline+filter rings, same tier
-     of effort as bronze/gold/neon rather than a full masked spin. */
-  .frame-titanium-ring {
-    outline: 2px solid #a1a1aa;
-    outline-offset: 2px;
-    filter: drop-shadow(0 0 6px rgb(212 212 216 / 0.5));
-  }
-
-  .frame-cosmic-ring {
-    outline: 2px solid #7c3aed;
-    outline-offset: 2px;
-    filter: drop-shadow(0 0 7px rgb(124 58 237 / 0.6));
-  }
-
   /* Founder Ring — reserved for profiles.is_founder, never sold. Black/
      red/gold, the app's own accent colors, so it reads as "the house
      color" rather than another purchasable material. Same moderate
@@ -1270,6 +1244,244 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
     background: conic-gradient(from var(--rank-angle, 0deg), #000000, #ff4433, #fbbf24, #ff4433, #000000, #ff4433, #000000);
     animation: rank-angle-spin 7s linear infinite;
     filter: drop-shadow(0 0 4px rgb(255 68 51 / 0.45));
+  }
+
+  /* Metal and car-culture rings — the same masked conic band as Prism,
+     so a metal ring reads as polished metal (light catching it as it
+     turns) rather than a flat outline. */
+  .frame-bronze-ring,
+  .frame-gold-ring,
+  .frame-titanium-ring,
+  .frame-cosmic-ring,
+  .frame-checkered-ring,
+  .frame-candy-ring,
+  .frame-redline-ring,
+  .frame-nitrous-ring,
+  .frame-chameleon-ring {
+    position: relative;
+  }
+  .frame-bronze-ring::before,
+  .frame-gold-ring::before,
+  .frame-titanium-ring::before,
+  .frame-cosmic-ring::before,
+  .frame-checkered-ring::before,
+  .frame-candy-ring::before,
+  .frame-redline-ring::before,
+  .frame-nitrous-ring::before,
+  .frame-chameleon-ring::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: inherit;
+    padding: 2px;
+    pointer-events: none;
+    box-sizing: border-box;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .frame-bronze-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #6b3f17, #e8b989, #b07a45, #5c3713, #c98a52, #f3d2ab, #6b3f17);
+    animation: rank-angle-spin 18s linear infinite;
+    filter: drop-shadow(0 0 4px rgb(201 138 82 / 0.45));
+  }
+
+  .frame-gold-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #8a6a10, #fde68a, #f59e0b, #fff7d6, #b8860b, #fcd34d, #8a6a10);
+    animation: rank-angle-spin 12s linear infinite;
+    filter: drop-shadow(0 0 5px rgb(251 191 36 / 0.5));
+  }
+
+  /* Heat-blued titanium, like a burnt exhaust tip: blue, violet, straw gold. */
+  .frame-titanium-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #3c4656, #93a8c2, #6b5b95, #c4b5fd, #d4a85a, #6b5b95, #3c4656);
+    animation: rank-angle-spin 14s linear infinite;
+    filter: drop-shadow(0 0 4px rgb(147 168 194 / 0.5));
+  }
+
+  .frame-cosmic-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #1e1b4b, #7c3aed, #e9d5ff, #4c1d95, #a78bfa, #312e81, #1e1b4b);
+    animation: rank-angle-spin 9s linear infinite;
+    filter: drop-shadow(0 0 5px rgb(124 58 237 / 0.6));
+  }
+
+  /* A real two-row checker: a thicker band than the other rings so the
+     squares read as a flag, not a dashed line. */
+  .frame-checkered-ring::before {
+    inset: -5px;
+    padding: 4px;
+    background: repeating-conic-gradient(#f4f4f5 0 25%, #18181b 0 50%) 0 0 / 4px 4px;
+  }
+
+  .frame-candy-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #7f0015, #ff2e4d, #ffd1d9, #e11d48, #7f0015, #ff6b81, #7f0015);
+    animation: rank-angle-spin 7s linear infinite;
+    filter: drop-shadow(0 0 5px rgb(244 63 94 / 0.55));
+  }
+
+  /* A tach needle sweeping a dark track into the red. */
+  .frame-redline-ring::before {
+    background:
+      conic-gradient(from var(--rank-angle, 0deg), transparent 0deg 150deg, rgb(255 59 48 / 0.35) 240deg, #ff3b30 335deg, #ffe1de 358deg, transparent 360deg),
+      repeating-conic-gradient(rgb(255 255 255 / 0.55) 0deg 2deg, transparent 2deg 12deg),
+      linear-gradient(#2a2a2f, #2a2a2f);
+    animation: rank-angle-spin 2.6s linear infinite;
+    filter: drop-shadow(0 0 5px rgb(255 59 48 / 0.6));
+  }
+
+  .frame-nitrous-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #1d4ed8, #93c5fd, #ffffff, #60a5fa, #1e3a8a, #93c5fd, #1d4ed8);
+    animation: rank-angle-spin 3.2s linear infinite;
+    filter: drop-shadow(0 0 6px rgb(96 165 250 / 0.65));
+  }
+
+  .frame-chameleon-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #7c3aed, #22d3ee, #34d399, #fcd34d, #34d399, #22d3ee, #7c3aed);
+    animation: rank-angle-spin 8s linear infinite;
+    filter: drop-shadow(0 0 5px rgb(34 211 238 / 0.5));
+  }
+
+  /* Redline name: brake-light red that kicks twice, like bouncing off
+     the rev limiter, then settles. */
+  .text-redline-glow {
+    animation: text-redline-kf 4s ease-in-out infinite;
+  }
+
+  @keyframes text-redline-kf {
+    0%, 60%, 100% { text-shadow: 0 0 4px rgb(255 59 48 / 0.55); }
+    66%, 76% { text-shadow: 0 0 12px rgb(255 59 48 / 0.95), 0 0 2px #ff3b30; }
+    71% { text-shadow: 0 0 5px rgb(255 59 48 / 0.6); }
+  }
+
+  /* Color-flip paint: swings back and forth across its hues, the way
+     the color changes as you walk around the car. */
+  .text-flip-anim {
+    background-size: 300% 100%;
+    animation: flip-move 9s ease-in-out infinite alternate;
+  }
+
+  .bg-flip-anim {
+    background-size: 300% 300%;
+    animation: flip-move 16s ease-in-out infinite alternate;
+  }
+
+  @keyframes flip-move {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+  }
+
+  /* The layered car-culture backgrounds: each item's `value` lists its
+     layers top-first, and these classes size and place each layer. */
+  .bg-checker {
+    background-size: 100% 100%, 24px 24px;
+  }
+
+  .bg-kerb {
+    background-size: 100% 14px, 100% 2px, 100% 100%, 100% 100%;
+    background-position: 0 0, 0 14px, 0 0, 0 0;
+    background-repeat: no-repeat;
+  }
+
+  .bg-redline-anim {
+    animation: bg-redline-kf 4s ease-in-out infinite;
+  }
+
+  @keyframes bg-redline-kf {
+    0%, 60%, 100% { filter: brightness(1); }
+    66%, 76% { filter: brightness(1.3); }
+    71% { filter: brightness(1.05); }
+  }
+
+  .bg-candy-anim {
+    background-size: 250% 100%, 3px 3px, 5px 5px, 100% 100%;
+    background-position: 130% 0, 0 0, 1px 2px, 0 0;
+    animation: bg-candy-move 8s ease-in-out infinite;
+  }
+
+  @keyframes bg-candy-move {
+    0% { background-position: 130% 0, 0 0, 1px 2px, 0 0; }
+    100% { background-position: -30% 0, 0 0, 1px 2px, 0 0; }
+  }
+
+  .bg-nightmeet-anim {
+    background-size: 140% 140%;
+    animation: bg-nightmeet-move 20s ease-in-out infinite alternate;
+  }
+
+  @keyframes bg-nightmeet-move {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 60%; }
+  }
+
+  /* Glowing lamps in a row overhead, with their wash on the wall below
+     moving at the same speed. */
+  .bg-tunnel-anim {
+    background-size: 72px 14px, 72px 60px, 100% 100%, 100% 100%;
+    background-position: 0 12%, 0 26%, 0 0, 0 0;
+    background-repeat: repeat-x, repeat-x, no-repeat, no-repeat;
+    animation: bg-tunnel-move 0.9s linear infinite;
+  }
+
+  @keyframes bg-tunnel-move {
+    0% { background-position: 0 12%, 0 26%, 0 0, 0 0; }
+    100% { background-position: -72px 12%, -72px 26%, 0 0, 0 0; }
+  }
+
+  /* Two layers of long thin streaks at different sizes and speeds, so
+     the purge has depth. */
+  .bg-nitrous-anim {
+    background-size: 120px 18px, 190px 29px, 100% 100%, 100% 100%, 100% 100%;
+    background-position: 0 0, 40px 9px, 0 0, 0 0, 0 0;
+    background-repeat: repeat, repeat, no-repeat, no-repeat, no-repeat;
+    animation: bg-nitrous-move 1.1s linear infinite;
+  }
+
+  @keyframes bg-nitrous-move {
+    0% { background-position: 0 0, 40px 9px, 0 0, 0 0, 0 0; }
+    100% { background-position: 120px 0, 230px 9px, 0 0, 0 0, 0 0; }
+  }
+
+  /* Cosmetics are on screen constantly (names, headers, badges), so
+     with reduced motion they hold still and keep their colors. */
+  @media (prefers-reduced-motion: reduce) {
+    .text-shimmer-anim,
+    .text-flip-anim,
+    .text-neon-pulse,
+    .text-redline-glow,
+    .bg-velocity-anim,
+    .bg-chrome-flow-anim,
+    .bg-inferno-anim,
+    .bg-ruby-anim,
+    .bg-aurora-anim,
+    .bg-galaxy-anim,
+    .bg-neon-pulse,
+    .bg-redline-anim,
+    .bg-candy-anim,
+    .bg-nightmeet-anim,
+    .bg-tunnel-anim,
+    .bg-nitrous-anim,
+    .bg-flip-anim,
+    .frame-neon-ring,
+    .frame-bronze-ring::before,
+    .frame-gold-ring::before,
+    .frame-titanium-ring::before,
+    .frame-cosmic-ring::before,
+    .frame-checkered-ring::before,
+    .frame-candy-ring::before,
+    .frame-redline-ring::before,
+    .frame-nitrous-ring::before,
+    .frame-chameleon-ring::before,
+    .frame-prism-ring::before,
+    .frame-inferno-ring::before,
+    .frame-aurora-ring::before,
+    .frame-diamond-ring::before,
+    .frame-legendary-ring::before,
+    .frame-toxic-ring::before,
+    .frame-founder-ring::before {
+      animation: none;
+    }
   }
 }
 
