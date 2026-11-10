@@ -58,7 +58,7 @@ export async function DailyPageContent() {
   const user = await getCurrentUser();
   const isOpen = isChallengeOpen(challenge);
 
-  const [submissions, voteTotal, myVote, myEntryVotes, garage, cover, yesterday] = await Promise.all([
+  const [submissions, voteTotal, myVote, myEntryVotes, garage, cover, yesterday, sponsorLogo] = await Promise.all([
     listDailySubmissions(supabase, challenge.id),
     getDailyVoteTotal(supabase, challenge.id).catch(() => 0),
     user ? getMyDailyVote(supabase, challenge.id, user.id).catch(() => null) : null,
@@ -66,6 +66,7 @@ export async function DailyPageContent() {
     user ? listGaragePhotos(supabase, user.id).catch(() => ({ cars: [], photos: [] })) : { cars: [], photos: [] },
     challenge.cover_media_id ? getMediaById(supabase, challenge.cover_media_id).catch(() => null) : null,
     getDailyChallengeByDate(supabase, addDays(today, -1)).catch(() => null),
+    challenge.sponsor_logo_media_id ? getMediaById(supabase, challenge.sponsor_logo_media_id).catch(() => null) : null,
   ]);
   const entries = await composeDailyEntries(supabase, submissions);
   const myEntry = user ? (entries.find((e) => e.userId === user.id) ?? null) : null;
@@ -105,6 +106,17 @@ export async function DailyPageContent() {
         endsAt={challenge.ends_at}
         isOpen={isOpen}
         number={dailyNumber(challenge.challenge_date)}
+        sponsor={
+          challenge.sponsor_name
+            ? {
+                name: challenge.sponsor_name,
+                url: challenge.sponsor_url ?? null,
+                logoUrl: sponsorLogo ? publicMediaUrl(supabase, sponsorLogo.storage_path) : null,
+              }
+            : null
+        }
+        prize={challenge.prize ?? null}
+        prizePoints={DAILY_POINTS.place[1]}
         stats={[
           { label: "Entries", value: entries.length.toLocaleString() },
           { label: "Votes", value: voteTotal.toLocaleString() },

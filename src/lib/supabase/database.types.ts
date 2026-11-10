@@ -78,7 +78,7 @@ export interface Database {
           id: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund";
           source_id: string;
           created_at: string;
         };
@@ -86,11 +86,73 @@ export interface Database {
           id?: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund";
           source_id: string;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["points_ledger"]["Insert"]>;
+        Relationships: never[];
+      };
+      /** 0110 — points bought with real money. Written by the server only. */
+      points_purchases: {
+        Row: {
+          id: string;
+          user_id: string;
+          provider: "apple" | "stripe";
+          provider_ref: string;
+          pack_id: string;
+          points: number;
+          amount_cents: number;
+          currency: string;
+          refunded_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          provider: "apple" | "stripe";
+          provider_ref: string;
+          pack_id: string;
+          points: number;
+          amount_cents: number;
+          currency?: string;
+          refunded_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["points_purchases"]["Insert"]>;
+        Relationships: never[];
+      };
+      /** 0110 — printed rank decals. Written by the server only. */
+      decal_orders: {
+        Row: {
+          id: string;
+          user_id: string;
+          vehicle_id: string | null;
+          tier: "bronze" | "copper" | "iron" | "silver" | "gold" | "platinum" | "emerald" | "diamond" | "ruby" | "cosmic";
+          score: number;
+          status: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
+          amount_cents: number;
+          stripe_session_id: string | null;
+          printer_order_id: string | null;
+          error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          vehicle_id?: string | null;
+          tier: "bronze" | "copper" | "iron" | "silver" | "gold" | "platinum" | "emerald" | "diamond" | "ruby" | "cosmic";
+          score: number;
+          status?: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
+          amount_cents: number;
+          stripe_session_id?: string | null;
+          printer_order_id?: string | null;
+          error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["decal_orders"]["Insert"]>;
         Relationships: never[];
       };
       store_items_owned: {
@@ -1097,6 +1159,11 @@ export interface Database {
           created_by: string | null;
           /** 0104 — set once the server has settled the results. */
           results_finalized_at: string | null;
+          /** 0109 — a sponsored day, and/or a prize for the winner. */
+          sponsor_name: string | null;
+          sponsor_url: string | null;
+          sponsor_logo_media_id: string | null;
+          prize: string | null;
           created_at: string;
         };
         Insert: {
@@ -1110,6 +1177,10 @@ export interface Database {
           ends_at: string;
           created_by?: string | null;
           results_finalized_at?: string | null;
+          sponsor_name?: string | null;
+          sponsor_url?: string | null;
+          sponsor_logo_media_id?: string | null;
+          prize?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["daily_challenges"]["Insert"]>;

@@ -16,6 +16,9 @@ export interface DailyTeaser {
   /** Up to three real entry photos, newest first. */
   entryPhotos: string[];
   tookPartToday: boolean;
+  /** A sponsored day's sponsor, and/or what the winner gets (0109). */
+  sponsorName: string | null;
+  prize: string | null;
 }
 
 /** Today's challenge in brief, for the Feed slide, the Garage card and
@@ -48,6 +51,8 @@ export const loadDailyTeaser = cache(async (userId: string | null): Promise<Dail
       entryCount: submissions.length,
       entryPhotos: recent.map((s) => urlById.get(s.media_id)).filter((u): u is string => Boolean(u)),
       tookPartToday: tookPart || Boolean(userId && submissions.some((s) => s.user_id === userId)),
+      sponsorName: challenge.sponsor_name ?? null,
+      prize: challenge.prize ?? null,
     };
   } catch {
     return null;

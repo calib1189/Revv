@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { ChallengeVisual } from "@/features/daily/challenge-visual";
 import { Countdown } from "@/features/daily/countdown";
 import type { ChallengeIcon } from "@/lib/daily/rotation";
+import { PresentedBy, PrizeStrip, type DailySponsor } from "@/features/daily/sponsor-credit";
 
 /** Today's challenge, as the Daily page's lead card: the art (or the
  * admin's cover photo) with the live clock and the title over it, then
@@ -15,6 +16,10 @@ export function ChallengeHero({
   isOpen,
   number,
   stats,
+  sponsor = null,
+  prize = null,
+  prizePoints,
+  exampleClock,
   children,
 }: {
   icon: ChallengeIcon;
@@ -25,6 +30,14 @@ export function ChallengeHero({
   isOpen: boolean;
   number: number;
   stats: { label: string; value: string; accent?: boolean }[];
+  /** A sponsored day: shown as "Presented by" under the title. */
+  sponsor?: DailySponsor | null;
+  /** What the winner gets beyond points, with the points it comes with. */
+  prize?: string | null;
+  prizePoints: number;
+  /** A fixed time to show instead of the live countdown (the example
+   * card on the sponsor page). */
+  exampleClock?: string;
   children?: ReactNode;
 }) {
   return (
@@ -43,7 +56,11 @@ export function ChallengeHero({
                   <span className="relative h-2 w-2 rounded-full bg-accent" />
                 </span>
                 <span className="tracking-[0.12em] text-white/60">LIVE</span>
-                <Countdown endsAt={endsAt} clock fallback="--:--:--" className="tracking-[0.02em]" />
+                {exampleClock ? (
+                  <span className="numeral tracking-[0.02em]">{exampleClock}</span>
+                ) : (
+                  <Countdown endsAt={endsAt} clock fallback="--:--:--" className="tracking-[0.02em]" />
+                )}
               </>
             ) : (
               <>
@@ -65,10 +82,12 @@ export function ChallengeHero({
           <h2 className="mt-2 max-w-[17ch] text-balance text-[2.25rem] font-bold leading-[0.98] tracking-[-0.035em] sm:text-[2.75rem]">
             {title}
           </h2>
+          {sponsor && <PresentedBy sponsor={sponsor} className="mt-2.5" />}
         </div>
       </div>
 
       <div className="flex flex-col gap-5 px-5 pb-5 pt-2">
+        {prize && <PrizeStrip prize={prize} points={prizePoints} />}
         <p className="text-[0.9375rem] leading-relaxed text-white/75">{description}</p>
         <dl className="grid grid-cols-3 divide-x divide-white/[0.08] rounded-[18px] bg-white/[0.04] py-3 ring-1 ring-white/[0.06]">
           {stats.map((s) => (

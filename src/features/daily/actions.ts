@@ -17,10 +17,11 @@ import {
   removeDailyVote,
   upsertDailySubmission,
   upsertScheduledChallenge,
+  deleteScheduledChallenge,
 } from "@/lib/db/daily";
 import { dailyDateKey, isChallengeOpen, isDateKey } from "@/lib/daily/day";
 import { isChallengeIcon } from "@/lib/daily/rotation";
-import { normalizeCaption, normalizeChallengeText } from "@/lib/daily/validation";
+import { normalizeCaption, normalizeChallengeText, normalizeSponsor } from "@/lib/daily/validation";
 import { rewardDailyActivity } from "@/lib/daily/rewards";
 import { notifyEntryVote } from "@/lib/daily/notify";
 import { getOrCreateRideRound } from "@/lib/daily/ride-server";
@@ -101,19 +102,23 @@ export async function removeDailyEntryAction(submissionId: string): Promise<Dail
 }
 
 /** Admin: schedule a challenge for a date, or rewrite one that's already
- * scheduled (including one the weekday rotation created). */
+ * scheduled (including one the weekday rotation created). A sponsor and
+ * prize are optional; left blank it's an ordinary day. */
 export async function scheduleDailyChallengeAction(input: {
   dateKey: string;
   title: string;
   description: string;
   icon: string;
   coverMediaId: string | null;
+  sponsor: { name: string; url: string; logoMediaId: string | null; prize: string };
 }): Promise<DailyActionResult> {
   if (!isDateKey(input.dateKey)) return { error: "Pick a date." };
   if (input.dateKey < dailyDateKey()) return { error: "That day has already finished." };
   if (!isChallengeIcon(input.icon)) return { error: "Pick a visual." };
   const text = normalizeChallengeText(input);
   if ("error" in text) return { error: text.error };
+  const sponsor = normalizeSponsor(input.sponsor);
+  if ("error" in sponsor) return { error: sponsor.error };
 
   let admin;
   try {
@@ -122,6 +127,7 @@ export async function scheduleDailyChallengeAction(input: {
     return { error: "Only admins can do that." };
   }
 
+  const hasSponsor = Object.values(sponsor.value).some((v) => v !== null);
   try {
     await upsertScheduledChallenge(admin.supabase, {
       dateKey: input.dateKey,
@@ -129,19 +135,50 @@ export async function scheduleDailyChallengeAction(input: {
       icon: input.icon,
       coverMediaId: input.coverMediaId,
       adminId: admin.userId,
+      sponsor: sponsor.value,
     });
     await createAuditLog(admin.supabase, {
       actorId: admin.userId,
       action: "daily_challenge.scheduled",
       targetType: "daily_challenge",
-      metadata: { dateKey: input.dateKey, title: text.value.title },
+      metadata: { dateKey: input.dateKey, title: text.value.title, sponsor: sponsor.value.name, prize: sponsor.value.prize },
     }).catch(() => undefined);
   } catch {
-    return { error: "Couldn't save that challenge. If this keeps happening, migration 0103 may not be applied yet." };
+    return {
+      error: hasSponsor
+        ? "Couldn't save that challenge. Sponsors and prizes need migration 0109 applied first."
+        : "Couldn't save that challenge. If this keeps happening, migration 0103 may not be applied yet.",
+    };
   }
 
   revalidatePath("/admin/daily");
   revalidatePath("/daily");
+  return {};
+}
+
+/** Admin: put a future day back on the weekday rotation. Today can't be
+ * cleared: it's already running and may have entries. */
+export async function clearDailyChallengeAction(dateKey: string): Promise<DailyActionResult> {
+  if (!isDateKey(dateKey)) return { error: "Pick a date." };
+  if (dateKey <= dailyDateKey()) return { error: "Today's challenge is already running, so it can't be cleared." };
+  let admin;
+  try {
+    admin = await requireAdmin();
+  } catch {
+    return { error: "Only admins can do that." };
+  }
+  try {
+    await deleteScheduledChallenge(admin.supabase, dateKey);
+    await createAuditLog(admin.supabase, {
+      actorId: admin.userId,
+      action: "daily_challenge.cleared",
+      targetType: "daily_challenge",
+      metadata: { dateKey },
+    }).catch(() => undefined);
+  } catch {
+    return { error: "Couldn't clear that day." };
+  }
+  revalidatePath("/admin/daily");
   return {};
 }
 

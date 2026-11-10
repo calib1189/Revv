@@ -8,9 +8,9 @@ import { uploadImage, uploadErrorMessage } from "@/lib/storage/upload";
 import { createMedia, publicMediaUrl } from "@/lib/db/media";
 import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
-import { scheduleDailyChallengeAction } from "@/features/daily/actions";
+import { clearDailyChallengeAction, scheduleDailyChallengeAction } from "@/features/daily/actions";
 import { CHALLENGE_ICONS, type ChallengeIcon } from "@/lib/daily/rotation";
-import { MAX_CHALLENGE_DESCRIPTION, MAX_CHALLENGE_TITLE } from "@/lib/daily/validation";
+import { MAX_CHALLENGE_DESCRIPTION, MAX_CHALLENGE_TITLE, MAX_PRIZE, MAX_SPONSOR_NAME } from "@/lib/daily/validation";
 import { formatDayShort } from "@/lib/daily/format";
 import { ChallengeIconGlyph } from "@/features/daily/challenge-visual";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,16 @@ export interface ScheduleDay {
   icon: ChallengeIcon;
   coverMediaId: string | null;
   coverUrl: string | null;
+  sponsorName: string | null;
+  sponsorUrl: string | null;
+  sponsorLogoMediaId: string | null;
+  sponsorLogoUrl: string | null;
+  prize: string | null;
 }
 
-/** Admin: the next two weeks, one row per day; tap a day to edit it. */
+type Uploaded = { mediaId: string; url: string };
+
+/** Admin: the next two months, one row per day; tap a day to edit it. */
 export function AdminDailySchedule({ days, adminId }: { days: ScheduleDay[]; adminId: string }) {
   const [editing, setEditing] = useState<string | null>(null);
   return (
@@ -56,6 +63,12 @@ export function AdminDailySchedule({ days, adminId }: { days: ScheduleDay[]; adm
                   {day.isToday ? "Today" : formatDayShort(day.dateKey)} · {day.isCustom ? "Scheduled" : "Rotation"}
                 </span>
                 <span className="block truncate text-[0.9375rem] font-semibold">{day.title}</span>
+                {(day.sponsorName || day.prize) && (
+                  <span className="mt-0.5 block truncate text-[0.75rem] font-semibold text-accent">
+                    {day.sponsorName ? `Sponsored by ${day.sponsorName}` : "Prize day"}
+                    {day.prize ? ` · ${day.prize}` : ""}
+                  </span>
+                )}
               </span>
               <span className="text-[0.8125rem] font-semibold text-accent">Edit</span>
             </button>
@@ -66,42 +79,110 @@ export function AdminDailySchedule({ days, adminId }: { days: ScheduleDay[]; adm
   );
 }
 
-function DayEditor({ day, adminId, onDone }: { day: ScheduleDay; adminId: string; onDone: () => void }) {
-  const [title, setTitle] = useState(day.title);
-  const [description, setDescription] = useState(day.description);
-  const [icon, setIcon] = useState<ChallengeIcon>(day.icon);
-  const [cover, setCover] = useState<{ mediaId: string; url: string } | null>(
-    day.coverMediaId && day.coverUrl ? { mediaId: day.coverMediaId, url: day.coverUrl } : null,
-  );
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
+/** Uploads one (already checked) image as the admin and hands back its
+ * media row. */
+async function uploadAdminImage(adminId: string, file: File): Promise<Uploaded> {
+  const supabase = createClient();
+  const uploaded = await uploadImage(supabase, adminId, file, { moderate: true });
+  const media = await createMedia(supabase, {
+    owner_id: adminId,
+    storage_path: uploaded.storagePath,
+    kind: "image",
+    width: uploaded.width,
+    height: uploaded.height,
+  });
+  return { mediaId: media.id, url: publicMediaUrl(supabase, uploaded.storagePath) };
+}
 
+function ImagePicker({
+  label,
+  hint,
+  value,
+  onChange,
+  adminId,
+  onError,
+  round = false,
+}: {
+  label: string;
+  hint?: string;
+  value: Uploaded | null;
+  onChange: (value: Uploaded | null) => void;
+  adminId: string;
+  onError: (message: string | null) => void;
+  round?: boolean;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
   async function handleFile(rawFile: File) {
     const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
     const fileError = validateImageFile(file);
-    if (fileError) return setError(fileError);
-    setError(null);
+    if (fileError) return onError(fileError);
+    onError(null);
     setIsUploading(true);
     try {
-      const supabase = createClient();
-      const uploaded = await uploadImage(supabase, adminId, file, { moderate: true });
-      const media = await createMedia(supabase, {
-        owner_id: adminId,
-        storage_path: uploaded.storagePath,
-        kind: "image",
-        width: uploaded.width,
-        height: uploaded.height,
-      });
-      setCover({ mediaId: media.id, url: publicMediaUrl(supabase, uploaded.storagePath) });
+      onChange(await uploadAdminImage(adminId, file));
     } catch (err) {
-      setError(uploadErrorMessage(err, "Couldn't upload that photo."));
+      onError(uploadErrorMessage(err, "Couldn't upload that photo."));
     } finally {
       setIsUploading(false);
     }
   }
+  return (
+    <div>
+      <Label>{label}</Label>
+      {hint && <p className="-mt-1 mb-2 text-[0.75rem] text-muted">{hint}</p>}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleFile(file);
+          e.target.value = "";
+        }}
+      />
+      <div className="flex items-center gap-3">
+        <span
+          className={`relative overflow-hidden bg-foreground/[0.06] ${round ? "h-14 w-14 rounded-full" : "h-16 w-24 rounded-[10px]"}`}
+        >
+          {value && <Image src={value.url} alt="" fill sizes="192px" className={round ? "object-contain p-1" : "object-cover"} />}
+        </span>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={isUploading}
+          onClick={() => fileRef.current?.click()}
+          className="h-9 px-4 py-0 text-[0.8125rem]"
+        >
+          {isUploading ? "Uploading…" : value ? "Change" : "Upload"}
+        </Button>
+        {value && (
+          <button type="button" onClick={() => onChange(null)} className="text-[0.8125rem] text-muted">
+            Remove
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DayEditor({ day, adminId, onDone }: { day: ScheduleDay; adminId: string; onDone: () => void }) {
+  const [title, setTitle] = useState(day.title);
+  const [description, setDescription] = useState(day.description);
+  const [icon, setIcon] = useState<ChallengeIcon>(day.icon);
+  const [cover, setCover] = useState<Uploaded | null>(
+    day.coverMediaId && day.coverUrl ? { mediaId: day.coverMediaId, url: day.coverUrl } : null,
+  );
+  const [sponsorName, setSponsorName] = useState(day.sponsorName ?? "");
+  const [sponsorUrl, setSponsorUrl] = useState(day.sponsorUrl ?? "");
+  const [logo, setLogo] = useState<Uploaded | null>(
+    day.sponsorLogoMediaId && day.sponsorLogoUrl ? { mediaId: day.sponsorLogoMediaId, url: day.sponsorLogoUrl } : null,
+  );
+  const [prize, setPrize] = useState(day.prize ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   function handleSave() {
     setError(null);
@@ -112,7 +193,22 @@ function DayEditor({ day, adminId, onDone }: { day: ScheduleDay; adminId: string
         description,
         icon,
         coverMediaId: cover?.mediaId ?? null,
+        sponsor: { name: sponsorName, url: sponsorUrl, logoMediaId: logo?.mediaId ?? null, prize },
       });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      onDone();
+      router.refresh();
+    });
+  }
+
+  function handleClear() {
+    if (!window.confirm("Put this day back on the weekday rotation? Its title, photo, sponsor and prize are removed.")) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await clearDailyChallengeAction(day.dateKey);
       if (result.error) {
         setError(result.error);
         return;
@@ -144,8 +240,16 @@ function DayEditor({ day, adminId, onDone }: { day: ScheduleDay; adminId: string
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
+      <ImagePicker
+        label="Cover photo"
+        hint="The big picture on the challenge card. Without one, the photo for the icon below is used."
+        value={cover}
+        onChange={setCover}
+        adminId={adminId}
+        onError={setError}
+      />
       <div>
-        <Label>Visual when there&apos;s no cover photo</Label>
+        <Label>Icon (picks the stock photo when there&apos;s no cover)</Label>
         <div className="flex flex-wrap gap-2">
           {CHALLENGE_ICONS.map((key) => (
             <button
@@ -163,48 +267,69 @@ function DayEditor({ day, adminId, onDone }: { day: ScheduleDay; adminId: string
           ))}
         </div>
       </div>
-      <div>
-        <Label>Cover photo</Label>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFile(file);
-            e.target.value = "";
-          }}
+
+      <div className="flex flex-col gap-4 rounded-[16px] bg-foreground/[0.04] p-3.5">
+        <div>
+          <p className="text-[0.875rem] font-semibold">Sponsor and prize</p>
+          <p className="mt-0.5 text-[0.75rem] leading-relaxed text-muted">
+            Optional. Leave it all blank for a normal day. A prize works without a sponsor, for a day SORZA runs itself.
+          </p>
+        </div>
+        <div>
+          <Label htmlFor={`sponsor-${day.dateKey}`}>Sponsor name</Label>
+          <Input
+            id={`sponsor-${day.dateKey}`}
+            value={sponsorName}
+            maxLength={MAX_SPONSOR_NAME}
+            placeholder="Lone Star Detailing"
+            onChange={(e) => setSponsorName(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor={`sponsor-url-${day.dateKey}`}>Sponsor link</Label>
+          <Input
+            id={`sponsor-url-${day.dateKey}`}
+            value={sponsorUrl}
+            inputMode="url"
+            placeholder="https://their-site.com"
+            onChange={(e) => setSponsorUrl(e.target.value)}
+          />
+        </div>
+        <ImagePicker
+          label="Sponsor logo"
+          hint="Square works best. Shown small next to their name."
+          value={logo}
+          onChange={setLogo}
+          adminId={adminId}
+          onError={setError}
+          round
         />
-        <div className="flex items-center gap-3">
-          <span className="relative h-16 w-24 overflow-hidden rounded-[10px] bg-foreground/[0.06]">
-            {cover && <Image src={cover.url} alt="" fill sizes="192px" className="object-cover" />}
-          </span>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={isUploading}
-            onClick={() => fileRef.current?.click()}
-            className="h-9 px-4 py-0 text-[0.8125rem]"
-          >
-            {isUploading ? "Uploading…" : cover ? "Change" : "Upload"}
-          </Button>
-          {cover && (
-            <button type="button" onClick={() => setCover(null)} className="text-[0.8125rem] text-muted">
-              Remove
-            </button>
-          )}
+        <div>
+          <Label htmlFor={`prize-${day.dateKey}`}>Prize for the winner</Label>
+          <Input
+            id={`prize-${day.dateKey}`}
+            value={prize}
+            maxLength={MAX_PRIZE}
+            placeholder="Free full detail ($150 value)"
+            onChange={(e) => setPrize(e.target.value)}
+          />
         </div>
       </div>
+
       {error && <p className="text-[0.8125rem] text-danger">{error}</p>}
       <div className="flex gap-2">
-        <Button type="button" disabled={isPending || isUploading} onClick={handleSave} className="h-10 flex-1 text-[0.875rem] font-semibold">
+        <Button type="button" disabled={isPending} onClick={handleSave} className="h-10 flex-1 text-[0.875rem] font-semibold">
           {isPending ? "Saving…" : "Save"}
         </Button>
         <Button type="button" variant="secondary" onClick={onDone} className="h-10 px-5 text-[0.875rem]">
           Cancel
         </Button>
       </div>
+      {day.isCustom && !day.isToday && (
+        <button type="button" onClick={handleClear} disabled={isPending} className="self-start text-[0.8125rem] text-muted">
+          Clear this day (back to the rotation)
+        </button>
+      )}
     </div>
   );
 }

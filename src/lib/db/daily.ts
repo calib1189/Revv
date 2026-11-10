@@ -102,22 +102,43 @@ export async function upsertScheduledChallenge(
     icon: ChallengeIcon;
     coverMediaId: string | null;
     adminId: string;
+    sponsor: { name: string | null; url: string | null; logoMediaId: string | null; prize: string | null };
   },
 ): Promise<void> {
   const { startsAt, endsAt } = dayBounds(input.dateKey);
-  const { error } = await supabase.from("daily_challenges").upsert(
-    {
-      challenge_date: input.dateKey,
-      title: input.title,
-      description: input.description,
-      icon: input.icon,
-      cover_media_id: input.coverMediaId,
-      starts_at: startsAt.toISOString(),
-      ends_at: endsAt.toISOString(),
-      created_by: input.adminId,
-    },
-    { onConflict: "challenge_date" },
-  );
+  const base = {
+    challenge_date: input.dateKey,
+    title: input.title,
+    description: input.description,
+    icon: input.icon,
+    cover_media_id: input.coverMediaId,
+    starts_at: startsAt.toISOString(),
+    ends_at: endsAt.toISOString(),
+    created_by: input.adminId,
+  };
+  const sponsor = {
+    sponsor_name: input.sponsor.name,
+    sponsor_url: input.sponsor.url,
+    sponsor_logo_media_id: input.sponsor.logoMediaId,
+    prize: input.sponsor.prize,
+  };
+  const { error } = await supabase.from("daily_challenges").upsert({ ...base, ...sponsor }, { onConflict: "challenge_date" });
+  if (!error) return;
+  // Before 0109 the sponsor columns don't exist. An ordinary day still
+  // saves; one with sponsor details fails, so the admin knows to apply it.
+  const hasSponsor = Object.values(sponsor).some((v) => v !== null);
+  if (!hasSponsor && (error.code === "PGRST204" || error.code === "42703")) {
+    const retry = await supabase.from("daily_challenges").upsert(base, { onConflict: "challenge_date" });
+    if (retry.error) throw retry.error;
+    return;
+  }
+  throw error;
+}
+
+/** Puts a future day back on the weekday rotation (RLS only lets admins
+ * delete a day that hasn't started). */
+export async function deleteScheduledChallenge(supabase: SupabaseClient<Database>, dateKey: string): Promise<void> {
+  const { error } = await supabase.from("daily_challenges").delete().eq("challenge_date", dateKey);
   if (error) throw error;
 }
 

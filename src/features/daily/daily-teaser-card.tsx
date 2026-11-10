@@ -5,6 +5,13 @@ import { ChallengeVisual } from "@/features/daily/challenge-visual";
 import { Countdown } from "@/features/daily/countdown";
 import { ChevronRightIcon } from "@/components/ui/icons";
 
+/** "Presented by X · Win: Y", whichever parts the day has. */
+function sponsorLine(teaser: DailyTeaser): string {
+  return [teaser.sponsorName && `Presented by ${teaser.sponsorName}`, teaser.prize && `Win: ${teaser.prize}`]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 /** Today's challenge as a card (the Garage tab's entry point). */
 export function DailyTeaserCard({ teaser }: { teaser: DailyTeaser }) {
   return (
@@ -15,6 +22,9 @@ export function DailyTeaserCard({ teaser }: { teaser: DailyTeaser }) {
         <div className="absolute inset-y-0 left-0 flex max-w-[75%] flex-col justify-center gap-1 p-4">
           <p className="micro-label text-accent">Sorza Daily</p>
           <p className="text-balance text-[1.25rem] font-bold leading-tight text-white">{teaser.title}</p>
+          {(teaser.sponsorName || teaser.prize) && (
+            <p className="truncate text-[0.75rem] font-semibold text-white/85">{sponsorLine(teaser)}</p>
+          )}
           <p className="text-[0.75rem] text-white/70">
             <Countdown endsAt={teaser.endsAt} /> left ·{" "}
             {teaser.entryCount === 1 ? "1 entry" : `${teaser.entryCount} entries`}
@@ -39,6 +49,9 @@ export function DailyFeedSlide({ teaser, slideHeight }: { teaser: DailyTeaser; s
       <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-5 pb-[calc(env(safe-area-inset-bottom)+5.5rem)]">
         <p className="micro-label text-accent">Today on Sorza Daily</p>
         <h2 className="text-balance text-[2rem] font-bold leading-[1.05] tracking-[-0.02em] text-white">{teaser.title}</h2>
+        {(teaser.sponsorName || teaser.prize) && (
+          <p className="text-[0.9375rem] font-semibold text-white">{sponsorLine(teaser)}</p>
+        )}
         <p className="max-w-md text-[0.9375rem] leading-relaxed text-white/80">{teaser.description}</p>
         {teaser.entryPhotos.length > 0 && (
           <div className="flex items-center gap-2">

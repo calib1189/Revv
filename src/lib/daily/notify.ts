@@ -74,6 +74,11 @@ async function claimLogSlot(
   return data.length > 0;
 }
 
+/** ", presented by X" on a sponsored day (0109 columns), else nothing. */
+function presentedBy(challenge: DailyChallenge): string {
+  return challenge.sponsor_name ? `, presented by ${challenge.sponsor_name}` : "";
+}
+
 function payloadFor(
   push: ScheduledPush,
   today: DailyChallenge,
@@ -99,9 +104,21 @@ function payloadFor(
         url: "/daily",
       };
     case "live":
-      return { title: "Sorza Daily", body: `Today's challenge is live: ${today.title}. Think your build can win?`, url: "/daily" };
+      return {
+        title: "Sorza Daily",
+        body: today.prize
+          ? `Today's challenge is live: ${today.title}${presentedBy(today)}. Winner gets ${today.prize}.`
+          : `Today's challenge is live: ${today.title}${presentedBy(today)}. Think your build can win?`,
+        url: "/daily",
+      };
     case "reminder":
-      return { title: "Sorza Daily", body: `${today.title} ends tonight. Have you submitted your ride?`, url: "/daily" };
+      return {
+        title: "Sorza Daily",
+        body: today.prize
+          ? `${today.title} ends tonight, and the winner gets ${today.prize}. Have you submitted your ride?`
+          : `${today.title} ends tonight. Have you submitted your ride?`,
+        url: "/daily",
+      };
     case "rides":
       return {
         title: "Rate the Ride",
