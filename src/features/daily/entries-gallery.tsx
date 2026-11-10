@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { voteForDailyEntryAction } from "@/features/daily/actions";
-import { DailySheet } from "@/features/daily/daily-sheet";
+import { Sheet } from "@/components/ui/sheet";
 import { ReportButton } from "@/features/feed/report-button";
 import { Avatar } from "@/features/feed/avatar";
 import type { DailyEntry } from "@/lib/daily/compose";
@@ -106,7 +106,7 @@ export function EntriesGallery({
         })}
       </ul>
 
-      <DailySheet open={viewing !== null} onClose={() => setViewing(null)} title={viewing ? `@${viewing.username}` : ""}>
+      <Sheet open={viewing !== null} onClose={() => setViewing(null)} title={viewing ? `@${viewing.username}` : ""}>
         {viewing && (
           <EntryDetail
             entry={viewing}
@@ -118,7 +118,7 @@ export function EntriesGallery({
             onVote={() => toggleVote(viewing)}
           />
         )}
-      </DailySheet>
+      </Sheet>
     </>
   );
 }

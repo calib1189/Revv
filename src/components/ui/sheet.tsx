@@ -7,10 +7,11 @@ import { useHideBottomNav } from "@/lib/ui/use-hide-bottom-nav";
 
 const subscribeNever = () => () => {};
 
-/** A bottom sheet for Sorza Daily (entering, viewing an entry). Same
- * material and motion as the comment sheet, without its drag-to-close
- * machinery: a close button and a tap on the backdrop are enough here. */
-export function DailySheet({
+/** A bottom sheet (Sorza Daily's entry and entry views, the store's item
+ * try-on and points packs). Same material and motion as the comment
+ * sheet, without its drag-to-close machinery: a close button and a tap
+ * on the backdrop are enough here. */
+export function Sheet({
   open,
   onClose,
   title,

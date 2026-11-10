@@ -7,8 +7,8 @@ import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { listCrewsOwnedBy } from "@/lib/db/crews";
 import { Suspense } from "react";
 import { StoreTabs, type OwnedCrewOption } from "@/features/store/store-tabs";
-import { PointsPacks } from "@/features/store/points-packs";
 import { pointsPacksEnabled } from "@/lib/points/packs";
+import { storeWeek } from "@/lib/store/featured";
 
 export default async function StorePage() {
   const user = await getCurrentUser();
@@ -55,30 +55,31 @@ export default async function StorePage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
-      {pointsPacksEnabled(profile?.is_admin ?? false) && (
-        <Suspense fallback={null}>
-          <PointsPacks userId={user.id} />
-        </Suspense>
-      )}
-      {/* Keyed on the balance so bought points show the moment the page refreshes. */}
-      <StoreTabs
-        key={balance}
-        initialBalance={balance}
-        initialOwnedItemIds={ownedItemIds}
-        profilePreviewLabel={`@${profile?.username ?? user.id}`}
-        profileEquipped={{
-          name_color: profile?.equipped_name_color ?? null,
-          profile_background: profile?.equipped_profile_background ?? null,
-          showcase_frame: profile?.equipped_showcase_frame ?? null,
-        }}
-        garagePreviewLabel={garagePreviewLabel}
-        garageEquipped={{
-          vehicle_name_color: profile?.equipped_vehicle_name_color ?? null,
-        }}
-        crews={crews}
-        isFounder={profile?.is_founder ?? false}
-      />
+    <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
+      {/* Keyed on the balance so bought points show the moment the page
+          refreshes. Suspense: the wallet reads ?points=added. */}
+      <Suspense fallback={null}>
+        <StoreTabs
+          key={balance}
+          userId={user.id}
+          packsEnabled={pointsPacksEnabled(profile?.is_admin ?? false)}
+          week={storeWeek()}
+          initialBalance={balance}
+          initialOwnedItemIds={ownedItemIds}
+          profilePreviewLabel={`@${profile?.username ?? user.id}`}
+          profileEquipped={{
+            name_color: profile?.equipped_name_color ?? null,
+            profile_background: profile?.equipped_profile_background ?? null,
+            showcase_frame: profile?.equipped_showcase_frame ?? null,
+          }}
+          garagePreviewLabel={garagePreviewLabel}
+          garageEquipped={{
+            vehicle_name_color: profile?.equipped_vehicle_name_color ?? null,
+          }}
+          crews={crews}
+          isFounder={profile?.is_founder ?? false}
+        />
+      </Suspense>
     </div>
   );
 }

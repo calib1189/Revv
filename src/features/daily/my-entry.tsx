@@ -10,7 +10,7 @@ import { createMedia, publicMediaUrl } from "@/lib/db/media";
 import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
 import { removeDailyEntryAction, submitDailyEntryAction } from "@/features/daily/actions";
-import { DailySheet } from "@/features/daily/daily-sheet";
+import { Sheet } from "@/components/ui/sheet";
 import type { DailyEntry, GarageCar, GaragePhoto } from "@/lib/daily/compose";
 import { MAX_CAPTION } from "@/lib/daily/validation";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -98,7 +98,7 @@ export function MyEntry({
       ) : null}
       {error && <p className="mt-2 text-[0.8125rem] text-danger">{error}</p>}
 
-      <DailySheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={entry ? "Edit your entry" : challengeTitle}>
+      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title={entry ? "Edit your entry" : challengeTitle}>
         <EnterForm
           userId={userId}
           garage={garage}
@@ -108,7 +108,7 @@ export function MyEntry({
             router.refresh();
           }}
         />
-      </DailySheet>
+      </Sheet>
     </>
   );
 }

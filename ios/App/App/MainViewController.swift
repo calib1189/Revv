@@ -55,6 +55,10 @@ public class PointsStorePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "unfinished", returnType: CAPPluginReturnPromise)
     ]
 
+    /// Purchases made this session, so `finish` can close one directly
+    /// instead of searching Apple's list of unfinished transactions.
+    private var purchased: [UInt64: Transaction] = [:]
+
     /// The packs' localized prices, as the App Store shows them.
     @objc func products(_ call: CAPPluginCall) {
         let ids = call.getArray("ids", String.self) ?? []
@@ -86,6 +90,7 @@ public class PointsStorePlugin: CAPPlugin, CAPBridgedPlugin {
                 case .success(let verification):
                     switch verification {
                     case .verified(let transaction):
+                        self.purchased[transaction.id] = transaction
                         call.resolve(["status": "purchased", "transactionId": String(transaction.id)])
                     case .unverified:
                         call.reject("The App Store couldn't verify that purchase.")
@@ -112,9 +117,15 @@ public class PointsStorePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         Task {
+            if let transaction = self.purchased.removeValue(forKey: id) {
+                await transaction.finish()
+                call.resolve()
+                return
+            }
             for await result in Transaction.unfinished {
                 if case .verified(let transaction) = result, transaction.id == id {
                     await transaction.finish()
+                    break
                 }
             }
             call.resolve()
