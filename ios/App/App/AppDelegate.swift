@@ -1,3 +1,4 @@
+import AVFoundation
 import UIKit
 import Capacitor
 
@@ -7,7 +8,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Without this the app runs on iOS's default audio category, which
+        // the ring/silent switch mutes: every feed video (an engine pull, a
+        // post's added sound) played silent for anyone with silent mode on,
+        // even though the files have sound. .playback is what TikTok and
+        // Instagram use. It doesn't take the audio over at launch: other
+        // apps' music only stops once a SORZA video actually plays sound.
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
         return true
     }
 

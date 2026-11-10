@@ -30,6 +30,7 @@ import { formatCompactNumber } from "@/lib/format/compact-number";
 import { relativeTime } from "@/lib/format/relative-time";
 import { SITE_URL } from "@/lib/site-url";
 import { getDevicePreferences } from "@/lib/device-preferences";
+import { isAutoplayBlocked, isFeedMuted, onNextGesture, setFeedMuted, useFeedMuted } from "@/features/feed/feed-sound";
 import type { PostCardData } from "@/features/feed/post-card";
 
 /** The shadow every white control on the video carries, so it stays
@@ -275,24 +276,87 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
   const hasRecordedCompletion = useRef(false);
   const isIntersectingRef = useRef(false);
   const { spawn, layer: heartLayer } = useFloatingHearts();
-  // WebKit (and Chrome) refuse to autoplay *unmuted* media until the page
-  // has had a real user gesture, so the first video on a fresh launch had
-  // nothing to play with sound and sat black. Falling back to muted keeps
-  // it playing from the first frame; the long-press menu brings sound
-  // back the moment a real gesture is available.
-  const [isMuted, setIsMuted] = useState(false);
+  // Sound is on unless the viewer muted the feed (feed-sound.ts).
+  const feedMuted = useFeedMuted();
+  // The one case a video mutes itself: the browser refused to start sound
+  // before the viewer had tapped anything (web, first video). It plays
+  // muted until their next tap, then the sound comes back on its own.
+  const [blocked, setBlocked] = useState(false);
+  const blockedRef = useRef(false);
+  const setBlockedBoth = (value: boolean) => {
+    blockedRef.current = value;
+    setBlocked(value);
+  };
+  const isMuted = feedMuted || blocked;
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (el) el.muted = isMuted;
+    onMutedChange(isMuted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onMutedChange is the parent's setState
+  }, [isMuted]);
+
+  function unmute() {
+    const el = videoRef.current;
+    setFeedMuted(false);
+    setBlockedBoth(false);
+    if (!el) return;
+    el.muted = false;
+    // Inside a real tap, so audible playback is allowed.
+    el.play().then(() => setIsPaused(false)).catch(() => {});
+  }
+
+  /** Plays this video if it's the one on screen. Muted only if the viewer
+   * muted the feed, or the browser refused sound before any tap. */
+  function startPlayback() {
+    const el = videoRef.current;
+    if (!el || !isIntersectingRef.current) return;
+    // Settings > Playback: with autoplay off the video waits on its play
+    // button for a tap.
+    if (!getDevicePreferences().autoplayVideos) {
+      setIsPaused(true);
+      return;
+    }
+    // Not loaded yet: loadedmetadata (below) calls this again.
+    if (!el.getAttribute("src")) return;
+    el.muted = isFeedMuted() || blockedRef.current;
+    el.play()
+      .then(() => setIsPaused(false))
+      .catch((err: unknown) => {
+        // Interrupted (scrolled away) or not ready: never a reason to mute.
+        if (!isAutoplayBlocked(err) || el.muted) return;
+        el.muted = true;
+        setBlockedBoth(true);
+        el.play()
+          .then(() => setIsPaused(false))
+          .catch(() => setIsPaused(true));
+      });
+  }
+
+  // Blocked: the viewer's next tap anywhere else brings the sound back. A
+  // tap on this video itself is handled by togglePlayPause.
+  useEffect(() => {
+    if (!blocked) return;
+    return onNextGesture((e) => {
+      if (containerRef.current?.contains(e.target as Node)) return;
+      setBlockedBoth(false);
+      const el = videoRef.current;
+      if (el && !isFeedMuted() && isIntersectingRef.current) {
+        el.muted = false;
+        el.play().catch(() => {});
+      }
+    });
+  }, [blocked]);
 
   useImperativeHandle(ref, () => ({
     toggleMute() {
-      const el = videoRef.current;
-      const next = !isMuted;
-      setIsMuted(next);
-      onMutedChange(next);
-      if (!el) return;
-      el.muted = next;
       // Runs inside the menu row's own click handler, so starting audible
       // playback is allowed here even if the automatic attempt wasn't.
-      if (!next) el.play().catch(() => {});
+      if (isFeedMuted() || blockedRef.current) {
+        unmute();
+        return;
+      }
+      setFeedMuted(true);
     },
     resumeAfterMenuClose() {
       const el = videoRef.current;
@@ -300,7 +364,7 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
       if (!el || !isIntersectingRef.current) return;
       el.play().then(() => setIsPaused(false)).catch(() => {});
     },
-  }), [isMuted, onMutedChange]);
+  }));
 
   useEffect(() => {
     const el = videoRef.current;
@@ -310,39 +374,20 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
     const observer = new IntersectionObserver(
       ([entry]) => {
         isIntersectingRef.current = entry.isIntersecting && entry.intersectionRatio > 0.6;
-        if (isIntersectingRef.current) {
-          // Settings → Playback: with autoplay off the video waits on its
-          // play button for a tap; with sound off it starts muted (the
-          // long-press menu still turns it on).
-          const { autoplayVideos, videoSound } = getDevicePreferences();
-          if (!autoplayVideos) {
-            setIsPaused(true);
-            return;
-          }
-          if (!videoSound && !el.muted) {
-            el.muted = true;
-            setIsMuted(true);
-            onMutedChange(true);
-          }
-          el.play()
-            .then(() => setIsPaused(false))
-            .catch(() => {
-              el.muted = true;
-              setIsMuted(true);
-              onMutedChange(true);
-              el.play()
-                .then(() => setIsPaused(false))
-                .catch(() => setIsPaused(true));
-            });
-        } else {
-          el.pause();
-        }
+        if (isIntersectingRef.current) startPlayback();
+        else el.pause();
       },
       { threshold: [0, 0.6, 1] },
     );
     observer.observe(container);
-    return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onMutedChange is the parent's setState, stable enough that re-subscribing the observer on identity churn would be pure overhead
+    // The video often scrolls on screen before its source is set (media
+    // loads lazily), so it also starts once that source has loaded.
+    el.addEventListener("loadedmetadata", startPlayback);
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("loadedmetadata", startPlayback);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startPlayback reads only refs and module state
   }, []);
 
   // The progress line along the bottom. Driven from requestAnimationFrame
@@ -396,6 +441,12 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
   }, [postId, trackCompletion]);
 
   function togglePlayPause() {
+    // The first tap on a video the browser started muted brings its sound
+    // back instead of pausing it.
+    if (blockedRef.current) {
+      unmute();
+      return;
+    }
     const el = videoRef.current;
     if (!el) return;
     if (el.paused) {
@@ -472,6 +523,7 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
         preload="metadata"
         className="h-full w-full object-cover"
       />
+      {isMuted && shouldLoad && <SoundOffPill onUnmute={unmute} />}
       {isPaused && !scrub && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span className="animate-rise-in flex h-[72px] w-[72px] items-center justify-center rounded-full bg-black/30 backdrop-blur-sm">
@@ -510,6 +562,27 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
     </div>
   );
 });
+
+/** Shown whenever a post's sound is off. iPhones refuse to start a
+ * video with sound until there's been a tap, so the feed falls back to
+ * playing muted, and before this the only way back to sound was hidden
+ * in the long-press menu: people just heard nothing. */
+function SoundOffPill({ onUnmute }: { onUnmute: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onUnmute();
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="pressable absolute left-3 top-3 z-[6] flex h-9 items-center gap-1.5 rounded-full bg-black/55 pl-2.5 pr-3.5 text-[0.8125rem] font-semibold text-white backdrop-blur-xl"
+    >
+      <VolumeIcon muted className="h-4 w-4" />
+      Tap for sound
+    </button>
+  );
+}
 
 /** A photo post has no audio track of its own, unlike a video — so an
  * attached sound actually plays here (looped, synced to on-screen
@@ -564,15 +637,20 @@ function PhotoMedia({
       ([entry]) => {
         if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
           // Same Settings → Playback "start with sound" choice as videos.
-          if (!getDevicePreferences().videoSound && !audio.muted) {
-            audio.muted = true;
-            onMutedChange(true);
-          }
-          audio.play().catch(() => {
-            // Audible autoplay was refused — muted autoplay never is.
+          audio.muted = isFeedMuted();
+          onMutedChange(audio.muted);
+          audio.play().catch((err: unknown) => {
+            // Only a refusal to start sound before any tap mutes it, and
+            // only until the next tap. Anything else isn't a reason to.
+            if (!isAutoplayBlocked(err) || audio.muted) return;
             audio.muted = true;
             onMutedChange(true);
             audio.play().catch(() => {});
+            onNextGesture(() => {
+              if (isFeedMuted()) return;
+              audio.muted = false;
+              onMutedChange(false);
+            });
           });
         } else {
           audio.pause();
@@ -611,6 +689,7 @@ function PhotoMedia({
       {/* preload="none": a song is often 4MB+, and this mounts for the
           next post too. play() (when the slide is on screen) loads it. */}
       {soundUrl && shouldLoad && <audio ref={audioRef} src={soundUrl} preload="none" />}
+
       <div
         ref={containerRef}
         onScroll={handleScroll}
@@ -748,6 +827,7 @@ export function SwipeSlide({
     const audio = photoAudioRef.current;
     const next = !photoSoundMuted;
     setPhotoSoundMuted(next);
+    setFeedMuted(next);
     if (!audio) return;
     audio.muted = next;
     // A real click, so audible playback is allowed here even if the
