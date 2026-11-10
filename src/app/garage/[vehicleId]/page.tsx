@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
@@ -27,6 +26,7 @@ import { DeleteVehicleButton } from "@/features/garage/delete-vehicle-button";
 import { ReportButton } from "@/features/feed/report-button";
 import { LeaderboardStatus } from "@/features/garage/leaderboard-status";
 import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
+import { VehicleHeroPhoto } from "@/features/garage/vehicle-hero-photo";
 import { buildShareText, formatScore } from "@/lib/rating/share-text";
 import { VehicleTabs } from "@/features/garage/vehicle-tabs";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
@@ -219,7 +219,11 @@ export default async function VehiclePage({
           lower edge over a scrim, the way a feature story opens. */}
       <div className="relative h-[min(78svh,560px)] w-full overflow-hidden bg-neutral-950 sm:h-[min(70vh,620px)]">
         {heroUrl ? (
-          <Image src={heroUrl} alt={title} fill priority sizes="100vw" className="object-cover" />
+          <VehicleHeroPhoto
+            url={heroUrl}
+            title={title}
+            galleryUrls={gallery.filter((g) => g.media.kind === "image").map((g) => publicMediaUrl(supabase, g.media.storage_path))}
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-[0.9375rem] text-white/50">
             {isOwner ? "Add a cover photo below" : "No cover photo yet"}

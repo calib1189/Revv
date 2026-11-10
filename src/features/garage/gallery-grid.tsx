@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { removeVehicleMedia } from "@/lib/db/vehicle-media";
 import { TrashIcon } from "@/components/ui/icons";
+import { PhotoViewer } from "@/components/ui/photo-viewer";
 
 export interface GalleryPhoto {
   vehicleMediaId: string;
@@ -28,6 +29,8 @@ export function GalleryGrid({
   // photo doesn't sit there looking undeleted.
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  // Which photo is open full screen, by its place in `visible`.
+  const [viewing, setViewing] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -62,7 +65,7 @@ export function GalleryGrid({
         </p>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {visible.map((photo) => {
+        {visible.map((photo, i) => {
           const confirming = confirmingId === photo.vehicleMediaId;
           const removing = removingId === photo.vehicleMediaId;
           return (
@@ -70,13 +73,20 @@ export function GalleryGrid({
               key={photo.vehicleMediaId}
               className="relative aspect-square overflow-hidden rounded-xl bg-surface"
             >
-              <Image
-                src={photo.url}
-                alt=""
-                fill
-                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-                className={`object-cover transition-opacity ${removing ? "opacity-40" : ""}`}
-              />
+              <button
+                type="button"
+                onClick={() => setViewing(i)}
+                aria-label={`View photo ${i + 1} full screen`}
+                className="absolute inset-0"
+              >
+                <Image
+                  src={photo.url}
+                  alt=""
+                  fill
+                  sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+                  className={`object-cover transition-opacity ${removing ? "opacity-40" : ""}`}
+                />
+              </button>
               {isOwner && (
                 // Always visible: phones have no hover, which is what hid
                 // this button before. Two taps, so a stray one can't
@@ -100,6 +110,9 @@ export function GalleryGrid({
           );
         })}
       </div>
+      {viewing !== null && (
+        <PhotoViewer photos={visible.map((p) => ({ url: p.url }))} startIndex={viewing} onClose={() => setViewing(null)} />
+      )}
     </div>
   );
 }
