@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/supabase/database.types";
+import { createRetryingFetch } from "@/lib/supabase/retrying-fetch";
+
+// Reads retry through brief network or Supabase blips (retrying-fetch.ts).
+const retryingFetch = createRetryingFetch();
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -9,6 +13,7 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: retryingFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();

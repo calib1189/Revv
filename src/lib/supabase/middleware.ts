@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { createRetryingFetch } from "@/lib/supabase/retrying-fetch";
+
+const retryingFetch = createRetryingFetch();
 
 // Exact/pattern matches only — /garage/[id] and /p/[id] stay public (both
 // vehicles and posts are publicly readable), so a plain prefix match would
@@ -52,6 +55,7 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      global: { fetch: retryingFetch },
       cookies: {
         getAll() {
           return request.cookies.getAll();

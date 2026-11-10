@@ -3,10 +3,10 @@
 import { ErrorState } from "@/components/ui/error-state";
 
 export default function GlobalError({
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
-  return <ErrorState message="This page couldn't load." onRetry={reset} />;
+  return <ErrorState message="This page couldn't load." onRetry={retry} />;
 }

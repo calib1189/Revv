@@ -4,15 +4,15 @@ import { Callout } from "@/components/ui/callout";
 import { Button } from "@/components/ui/button";
 
 export default function AdminPartsError({
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
       <Callout tone="danger">Couldn&apos;t load the parts catalog.</Callout>
-      <Button variant="secondary" onClick={reset}>
+      <Button variant="secondary" onClick={retry}>
         Try again
       </Button>
     </div>

@@ -3,10 +3,10 @@
 import { ErrorState } from "@/components/ui/error-state";
 
 export default function SettingsError({
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
-  return <ErrorState message="Couldn't load Settings." onRetry={reset} />;
+  return <ErrorState message="Couldn't load Settings." onRetry={retry} />;
 }

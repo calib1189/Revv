@@ -1,10 +1,10 @@
 "use client";
 
 export default function GlobalError({
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   return (
     <html lang="en">
@@ -27,7 +27,7 @@ export default function GlobalError({
           Something went wrong loading SORZA.
         </p>
         <button
-          onClick={reset}
+          onClick={retry}
           style={{
             borderRadius: "9999px",
             padding: "0.6rem 1.25rem",

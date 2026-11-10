@@ -3,10 +3,10 @@
 import { ErrorState } from "@/components/ui/error-state";
 
 export default function StoreError({
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
-  return <ErrorState message="Couldn't load the Store." onRetry={reset} />;
+  return <ErrorState message="Couldn't load the Store." onRetry={retry} />;
 }

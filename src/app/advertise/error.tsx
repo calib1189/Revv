@@ -3,10 +3,10 @@
 import { ErrorState } from "@/components/ui/error-state";
 
 export default function AdvertiseError({
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
-  return <ErrorState message="Couldn't load Advertise on SORZA." onRetry={reset} />;
+  return <ErrorState message="Couldn't load Advertise on SORZA." onRetry={retry} />;
 }

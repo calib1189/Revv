@@ -3,6 +3,7 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { TabPagerShell } from "@/components/shell/tab-pager-shell";
 import { TAB_HREFS } from "@/components/shell/tab-order";
+import { PanelErrorBoundary } from "@/components/shell/panel-error-boundary";
 import { GaragePageContent } from "@/features/garage/garage-page-content";
 import { FeedPageContent } from "@/features/feed/feed-page-content";
 import { DiscoverPageContent } from "@/features/meetups/discover-page-content";
@@ -63,11 +64,22 @@ export async function TabsShellContent({
       isAuthenticated={Boolean(user)}
       tabs={TAB_HREFS.map((href) => ({
         href,
-        content: <Suspense fallback={<PanelSkeleton href={href} />}>{contentByHref[href]}</Suspense>,
+        content: (
+          <PanelErrorBoundary label={PANEL_LABELS[href]}>
+            <Suspense fallback={<PanelSkeleton href={href} />}>{contentByHref[href]}</Suspense>
+          </PanelErrorBoundary>
+        ),
       }))}
     />
   );
 }
+
+const PANEL_LABELS: Record<(typeof TAB_HREFS)[number], string> = {
+  "/garage": "your garage",
+  "/feed": "the feed",
+  "/discover": "Discover",
+  "/leaderboard": "the leaderboard",
+};
 
 /** What a panel shows while its data streams in. */
 function PanelSkeleton({ href }: { href: string }) {
