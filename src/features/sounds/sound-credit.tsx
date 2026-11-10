@@ -21,7 +21,9 @@ export function SoundCredit({ sound, className = "" }: { sound: Sound; className
         <>
           {" · "}
           <a href={sound.source_url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
-            Source
+            {/* A producer who said yes to SORZA directly gets a link to
+                their page; a Creative Commons track links its source. */}
+            {sound.license_url ? "Source" : "Artist"}
           </a>
         </>
       )}

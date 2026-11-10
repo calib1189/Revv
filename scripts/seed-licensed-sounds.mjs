@@ -10,6 +10,16 @@
 // qualify: syncing a song to a video counts as an adaptation, and SORZA is
 // a commercial app. Every entry was checked on its source page.
 //
+// The one other way in is "Artist permission": a producer said yes to
+// SORZA directly. Those entries need a `permission` record ({ grantedOn,
+// via, proof }) whose `proof` file (a screenshot or saved email of the
+// yes) exists, or the entry is refused. The in-app credit then reads
+// "Used with the artist's permission" and links to the artist's page.
+//
+// A track comes from `fileUrl` (a host below) or `file`: an MP3 in the
+// music inbox (D:/Revv/music-inbox, outside git), for files an artist
+// sends over or downloads only a signed-in account can make.
+//
 // Safe to re-run: a track whose source_url is already in the table is
 // skipped, so nothing is added twice.
 //
@@ -21,9 +31,9 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DRY_RUN = process.argv.includes("--dry-run");
@@ -46,7 +56,10 @@ const LICENSES = {
   "CC BY 4.0": "https://creativecommons.org/licenses/by/4.0/",
   "CC BY 3.0": "https://creativecommons.org/licenses/by/3.0/",
   "CC0 1.0": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "Artist permission": null,
 };
+const PERMISSION_LABEL = "Used with the artist's permission";
+const INBOX = join(__dirname, "..", "music-inbox");
 // Where track files may come from: the hosts the artists publish on.
 const FILE_HOSTS = new Set(["files.freemusicarchive.org", "incompetech.com"]);
 const MAX_BYTES = 20 * 1024 * 1024; // same caps as a member's upload
@@ -112,6 +125,18 @@ function validate(entry, n) {
   if (!GENRES.has(entry.genre)) throw new Error(`${where}: unknown genre "${entry.genre}"`);
   if (!(entry.license in LICENSES)) throw new Error(`${where}: license must be one of ${Object.keys(LICENSES).join(", ")}`);
   if (!/^https:\/\//.test(entry.sourceUrl ?? "")) throw new Error(`${where}: sourceUrl must be https`);
+  if (entry.license === "Artist permission") {
+    const p = entry.permission ?? {};
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.grantedOn ?? "")) throw new Error(`${where}: permission.grantedOn must be YYYY-MM-DD`);
+    if (!p.via) throw new Error(`${where}: permission.via (where they said yes) is required`);
+    if (!p.proof || !existsSync(join(INBOX, "proof", basename(p.proof)))) {
+      throw new Error(`${where}: permission.proof must be a file in music-inbox/proof/`);
+    }
+  }
+  if (entry.file) {
+    if (!existsSync(join(INBOX, basename(entry.file)))) throw new Error(`${where}: ${entry.file} is not in music-inbox/`);
+    return;
+  }
   const file = new URL(entry.fileUrl);
   if (file.protocol !== "https:" || !FILE_HOSTS.has(file.hostname)) throw new Error(`${where}: fileUrl host not allowed`);
 }
@@ -148,9 +173,14 @@ for (const entry of manifest) {
     continue;
   }
   try {
-    const res = await fetch(entry.fileUrl, { headers: { "User-Agent": "SORZA sound library seeder" } });
-    if (!res.ok) throw new Error(`download failed (${res.status})`);
-    const buf = Buffer.from(await res.arrayBuffer());
+    let buf;
+    if (entry.file) {
+      buf = readFileSync(join(INBOX, basename(entry.file)));
+    } else {
+      const res = await fetch(entry.fileUrl, { headers: { "User-Agent": "SORZA sound library seeder" } });
+      if (!res.ok) throw new Error(`download failed (${res.status})`);
+      buf = Buffer.from(await res.arrayBuffer());
+    }
     if (buf.length > MAX_BYTES) throw new Error(`file is ${(buf.length / 1048576).toFixed(1)}MB, over the 20MB cap`);
     const durationMs = mp3DurationMs(buf);
     if (durationMs > MAX_MS) throw new Error("longer than the 5-minute cap every sound has");
@@ -175,7 +205,7 @@ for (const entry of manifest) {
       storage_path: storagePath,
       duration_ms: durationMs,
       source: "licensed",
-      license_label: entry.license,
+      license_label: entry.license === "Artist permission" ? PERMISSION_LABEL : entry.license,
       license_url: LICENSES[entry.license],
       source_url: entry.sourceUrl,
       genre: entry.genre,
