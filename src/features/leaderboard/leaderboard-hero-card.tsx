@@ -117,7 +117,7 @@ export function LeaderboardRunnerUpCard({ rank, entry }: { rank: number; entry: 
         )}
         <div className="photo-scrim pointer-events-none absolute inset-0" />
         {/* .photo-scrim is bottom-weighted, so the rank numeral needs its
-            own patch of shade — #2 and #3 are as often shot against bright
+            own patch of shade — #2 to #5 are as often shot against bright
             sky as against anything else. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent" />
 

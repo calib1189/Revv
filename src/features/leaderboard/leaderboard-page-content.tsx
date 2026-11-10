@@ -110,8 +110,9 @@ export async function LeaderboardPageContent({
   const builds = await listTopRatedBuilds(supabase, 50, vehicleIds);
   const entries = await composeLeaderboard(supabase, builds);
 
-  const runnersUp = entries.slice(1, 3);
-  const rest = entries.slice(3);
+  // #1 gets the big card, #2–#5 a 2×2 grid of photo cards, then the list.
+  const runnersUp = entries.slice(1, 5);
+  const rest = entries.slice(5);
 
   // Where the viewer's own best build sits, so the first thing they look
   // for is the first thing the page answers. Matched on username because
@@ -212,7 +213,7 @@ export async function LeaderboardPageContent({
                 {rest.map((entry, i) => (
                   <LeaderboardRow
                     key={entry.buildId}
-                    rank={i + 4}
+                    rank={i + 6}
                     entry={entry}
                     showCategory={!initialCategory}
                     highlight={entry.buildId === viewerEntry?.buildId}
