@@ -30,11 +30,12 @@ export function printfulConfig() {
 }
 
 /** Whether decals can be sold right now: switched on (DECALS_ENABLED,
- * flipped once migration 0110 and Printful are set up), Stripe to take
- * the money and Printful to print. Never take a payment that can't be
- * fulfilled. */
-export function decalsEnabled(): boolean {
-  return process.env.DECALS_ENABLED === "true" && Boolean(process.env.STRIPE_SECRET_KEY && printfulConfig());
+ * flipped once migration 0110 and Printful are set up; admins can test
+ * before that), Stripe to take the money and Printful to print. Never
+ * take a payment that can't be fulfilled. */
+export function decalsEnabled(isAdmin = false): boolean {
+  const on = process.env.DECALS_ENABLED === "true" || isAdmin;
+  return on && Boolean(process.env.STRIPE_SECRET_KEY && printfulConfig());
 }
 
 /** Creates the Printful order and returns its id. */

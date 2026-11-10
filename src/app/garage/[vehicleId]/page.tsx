@@ -217,7 +217,7 @@ export default async function VehiclePage({
   // The owner's own rank decal, for an approved and rated car, while
   // decals can be printed (Stripe and Printful both set up).
   const decalTier =
-    decalsEnabled() &&
+    decalsEnabled(isOwner && (owner?.is_admin ?? false)) &&
     earnedDecalTier({
       ownerId: vehicle.owner_id,
       viewerId: user?.id ?? null,

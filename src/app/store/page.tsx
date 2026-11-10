@@ -56,7 +56,7 @@ export default async function StorePage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
-      {pointsPacksEnabled() && (
+      {pointsPacksEnabled(profile?.is_admin ?? false) && (
         <Suspense fallback={null}>
           <PointsPacks userId={user.id} />
         </Suspense>

@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getVehicleById } from "@/lib/db/vehicles";
+import { getProfileByUserId } from "@/lib/db/profiles";
 import { getActiveBuild } from "@/lib/db/builds";
 import { createDecalCheckoutSession } from "@/lib/billing/stripe";
 import { DECAL_PRICE_CENTS, earnedDecalTier } from "@/lib/decals/eligibility";
@@ -19,9 +20,10 @@ type Result = { ok: true; url: string } | { ok: false; error: string };
 export async function startDecalOrderAction(vehicleId: string): Promise<Result> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Log in to order a decal." };
-  if (!decalsEnabled()) return { ok: false, error: "Decals aren't available yet." };
-
   const supabase = await createClient();
+  const profile = await getProfileByUserId(supabase, user.id).catch(() => null);
+  if (!decalsEnabled(profile?.is_admin ?? false)) return { ok: false, error: "Decals aren't available yet." };
+
   const vehicle = await getVehicleById(supabase, vehicleId).catch(() => null);
   if (!vehicle) return { ok: false, error: "That car wasn't found." };
   const build = await getActiveBuild(supabase, vehicle.id).catch(() => null);

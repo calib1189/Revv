@@ -7,6 +7,13 @@ import { packById, pointsPacksEnabled } from "@/lib/points/packs";
 import { checkAppleTransaction, fetchAppleTransaction, appleIapConfig } from "@/lib/points/apple-iap";
 import { creditPointsPurchase } from "@/lib/points/credit";
 import { SITE_URL } from "@/lib/site-url";
+import { createClient } from "@/lib/supabase/server";
+import { getProfileByUserId } from "@/lib/db/profiles";
+
+async function isAdmin(userId: string): Promise<boolean> {
+  const profile = await getProfileByUserId(await createClient(), userId).catch(() => null);
+  return profile?.is_admin ?? false;
+}
 
 type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -14,7 +21,7 @@ type Result<T> = ({ ok: true } & T) | { ok: false; error: string };
 export async function startPointsCheckoutAction(packId: string): Promise<Result<{ url: string }>> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Log in to buy points." };
-  if (!pointsPacksEnabled()) return { ok: false, error: "Buying points isn't switched on yet." };
+  if (!pointsPacksEnabled(await isAdmin(user.id))) return { ok: false, error: "Buying points isn't switched on yet." };
   const pack = packById(packId);
   if (!pack) return { ok: false, error: "That pack isn't available." };
   if (!process.env.STRIPE_SECRET_KEY) return { ok: false, error: "Buying points isn't switched on yet." };
@@ -42,7 +49,7 @@ export async function confirmApplePurchaseAction(transactionId: string): Promise
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Log in to buy points." };
   const config = appleIapConfig();
-  if (!config || !pointsPacksEnabled()) return { ok: false, error: "In-app purchases aren't switched on yet." };
+  if (!config || !pointsPacksEnabled(await isAdmin(user.id))) return { ok: false, error: "In-app purchases aren't switched on yet." };
   try {
     const transaction = await fetchAppleTransaction(transactionId);
     if (!transaction) return { ok: false, error: "The App Store doesn't have that purchase." };

@@ -26,9 +26,10 @@ export const POINT_PACKS: PointPack[] = [
 /** The on-switch for selling points, flipped in the environment only
  * once everything behind it is set up (migration 0110, Stripe's refund
  * webhook, the App Store products and key). Off, the store shows no packs
- * and the server refuses any purchase. */
-export function pointsPacksEnabled(): boolean {
-  return process.env.POINTS_PACKS_ENABLED === "true";
+ * and the server refuses any purchase, except for admins, who can test
+ * real purchases end to end before anyone else sees them. */
+export function pointsPacksEnabled(isAdmin = false): boolean {
+  return process.env.POINTS_PACKS_ENABLED === "true" || isAdmin;
 }
 
 export function packById(id: string): PointPack | null {
