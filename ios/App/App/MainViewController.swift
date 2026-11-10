@@ -36,6 +36,105 @@ public class AppReviewPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
+/// Points packs through Apple's in-app purchase (StoreKit 2), called from
+/// src/lib/native/points-store.ts. Every purchase carries the buyer's
+/// SORZA user id as its appAccountToken; the server looks the transaction
+/// up with Apple and checks that token before crediting any points.
+///
+/// A transaction is only finished after the server has credited it, so a
+/// purchase interrupted between Apple and SORZA (the app closed, no
+/// signal) stays unfinished and is picked up by `unfinished` next time.
+@objc(PointsStorePlugin)
+public class PointsStorePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "PointsStorePlugin"
+    public let jsName = "PointsStore"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "products", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "finish", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "unfinished", returnType: CAPPluginReturnPromise)
+    ]
+
+    /// The packs' localized prices, as the App Store shows them.
+    @objc func products(_ call: CAPPluginCall) {
+        let ids = call.getArray("ids", String.self) ?? []
+        Task {
+            do {
+                let products = try await Product.products(for: ids)
+                call.resolve(["products": products.map { ["id": $0.id, "displayPrice": $0.displayPrice] }])
+            } catch {
+                call.reject("Couldn't load the App Store prices.")
+            }
+        }
+    }
+
+    @objc func purchase(_ call: CAPPluginCall) {
+        guard let productId = call.getString("productId"),
+              let token = call.getString("accountToken"),
+              let account = UUID(uuidString: token) else {
+            call.reject("Missing product or account.")
+            return
+        }
+        Task {
+            do {
+                guard let product = try await Product.products(for: [productId]).first else {
+                    call.reject("That pack isn't available right now.")
+                    return
+                }
+                let result = try await product.purchase(options: [.appAccountToken(account)])
+                switch result {
+                case .success(let verification):
+                    switch verification {
+                    case .verified(let transaction):
+                        call.resolve(["status": "purchased", "transactionId": String(transaction.id)])
+                    case .unverified:
+                        call.reject("The App Store couldn't verify that purchase.")
+                    }
+                case .userCancelled:
+                    call.resolve(["status": "cancelled"])
+                case .pending:
+                    // Waiting on Ask to Buy or a payment check; it arrives
+                    // later through `unfinished`.
+                    call.resolve(["status": "pending"])
+                @unknown default:
+                    call.resolve(["status": "cancelled"])
+                }
+            } catch {
+                call.reject(error.localizedDescription)
+            }
+        }
+    }
+
+    /// Called once the server has credited the points.
+    @objc func finish(_ call: CAPPluginCall) {
+        guard let idString = call.getString("transactionId"), let id = UInt64(idString) else {
+            call.reject("Missing transaction.")
+            return
+        }
+        Task {
+            for await result in Transaction.unfinished {
+                if case .verified(let transaction) = result, transaction.id == id {
+                    await transaction.finish()
+                }
+            }
+            call.resolve()
+        }
+    }
+
+    /// Points purchases the server hasn't confirmed yet.
+    @objc func unfinished(_ call: CAPPluginCall) {
+        Task {
+            var ids: [String] = []
+            for await result in Transaction.unfinished {
+                if case .verified(let transaction) = result, transaction.productType == .consumable {
+                    ids.append(String(transaction.id))
+                }
+            }
+            call.resolve(["transactionIds": ids])
+        }
+    }
+}
+
 /// Native-scrollview tweaks that make the wrapped WebView read as an app
 /// instead of a browser tab:
 /// - Disables rubber-band bounce (an overscroll past the top/bottom would
@@ -76,6 +175,7 @@ class MainViewController: CAPBridgeViewController {
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(AppReviewPlugin())
+        bridge?.registerPluginInstance(PointsStorePlugin())
     }
 
     override func viewDidLoad() {

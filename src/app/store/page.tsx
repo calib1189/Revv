@@ -5,7 +5,10 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { listCrewsOwnedBy } from "@/lib/db/crews";
+import { Suspense } from "react";
 import { StoreTabs, type OwnedCrewOption } from "@/features/store/store-tabs";
+import { PointsPacks } from "@/features/store/points-packs";
+import { pointsPacksEnabled } from "@/lib/points/packs";
 
 export default async function StorePage() {
   const user = await getCurrentUser();
@@ -53,7 +56,14 @@ export default async function StorePage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      {pointsPacksEnabled() && (
+        <Suspense fallback={null}>
+          <PointsPacks userId={user.id} />
+        </Suspense>
+      )}
+      {/* Keyed on the balance so bought points show the moment the page refreshes. */}
       <StoreTabs
+        key={balance}
         initialBalance={balance}
         initialOwnedItemIds={ownedItemIds}
         profilePreviewLabel={`@${profile?.username ?? user.id}`}

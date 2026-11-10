@@ -27,6 +27,9 @@ import { ReportButton } from "@/features/feed/report-button";
 import { LeaderboardStatus } from "@/features/garage/leaderboard-status";
 import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
 import { VehicleHeroPhoto } from "@/features/garage/vehicle-hero-photo";
+import { DecalCard } from "@/features/decals/decal-card";
+import { decalsEnabled } from "@/lib/decals/printful";
+import { DECAL_PRICE_CENTS, earnedDecalTier } from "@/lib/decals/eligibility";
 import { buildShareText, formatScore } from "@/lib/rating/share-text";
 import { VehicleTabs } from "@/features/garage/vehicle-tabs";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
@@ -85,10 +88,10 @@ export default async function VehiclePage({
    * lets Creator Studio attribute a garage visit back to the post that
    * drove it. Never present for a direct link or a garage-grid browse,
    * which is a real "unknown source", not an error. */
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; decal?: string }>;
 }) {
   const { vehicleId } = await params;
-  const { from: sourcePostId } = await searchParams;
+  const { from: sourcePostId, decal: decalParam } = await searchParams;
   const supabase = await createClient();
 
   const [vehicle, user] = await Promise.all([
@@ -211,6 +214,16 @@ export default async function VehiclePage({
     .filter(Boolean)
     .join(" · ");
   const score = activeBuild?.ai_rating_score ?? null;
+  // The owner's own rank decal, for an approved and rated car, while
+  // decals can be printed (Stripe and Printful both set up).
+  const decalTier =
+    decalsEnabled() &&
+    earnedDecalTier({
+      ownerId: vehicle.owner_id,
+      viewerId: user?.id ?? null,
+      verificationStatus: vehicle.ownership_verification_status,
+      score,
+    });
 
   return (
     <div className="flex-1 pb-16">
@@ -303,6 +316,10 @@ export default async function VehiclePage({
               />
             </div>
           )
+        )}
+
+        {decalTier && (
+          <DecalCard vehicleId={vehicle.id} tier={decalTier} priceCents={DECAL_PRICE_CENTS} justOrdered={decalParam === "ordered"} />
         )}
 
         <PeerRatingCard

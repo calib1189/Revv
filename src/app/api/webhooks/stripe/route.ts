@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { verifyStripeSignature } from "@/lib/billing/stripe";
+import { findCheckoutSessionByPaymentIntent, verifyStripeSignature } from "@/lib/billing/stripe";
+import { packById } from "@/lib/points/packs";
+import { creditPointsPurchase, refundPointsPurchase } from "@/lib/points/credit";
+import { fulfillDecalOrder } from "@/lib/decals/fulfill";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { SHOP_PROMOTION_DURATION_DAYS } from "@/lib/db/shop-promotions";
 import { applyPromotionPicture } from "@/lib/db/shop-pictures";
@@ -103,6 +106,58 @@ export async function POST(request: NextRequest) {
         }
       }
       return NextResponse.json({ received: true });
+    }
+
+    if (metadata?.type === "points_pack") {
+      // Credits the pack's points once. The pack, and so the points and
+      // price, come from our own table by id, never from the client, and
+      // the amount actually paid has to match it.
+      const pack = packById(metadata.pack_id ?? "");
+      if (pack && metadata.user_id && session.payment_status === "paid" && Number(session.amount_total) === pack.priceCents) {
+        try {
+          await creditPointsPurchase({
+            userId: metadata.user_id,
+            provider: "stripe",
+            providerRef: String(session.id),
+            pack,
+            amountCents: pack.priceCents,
+            currency: String(session.currency ?? "usd"),
+          });
+        } catch (creditError) {
+          console.error("Points pack not credited:", creditError);
+          return NextResponse.json({ error: "Not credited" }, { status: 500 });
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
+    if (metadata?.type === "rank_decal") {
+      if (metadata.order_id) {
+        try {
+          await fulfillDecalOrder(session, metadata.order_id);
+        } catch (decalError) {
+          console.error("Decal order not processed:", decalError);
+          return NextResponse.json({ error: "Not processed" }, { status: 500 });
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+  }
+
+  if (event.type === "charge.refunded") {
+    // A refunded points pack takes its points back. Other refunds are
+    // handled by hand.
+    // Only a full refund counts; the session it came from says what it was.
+    const charge = event.data.object;
+    const paymentIntent = typeof charge.payment_intent === "string" ? charge.payment_intent : null;
+    if (paymentIntent && charge.refunded === true) {
+      try {
+        const session = await findCheckoutSessionByPaymentIntent(paymentIntent);
+        if (session?.metadata?.type === "points_pack") await refundPointsPurchase("stripe", session.id);
+      } catch (refundError) {
+        console.error("Points refund not applied:", refundError);
+        return NextResponse.json({ error: "Not applied" }, { status: 500 });
+      }
     }
   }
 

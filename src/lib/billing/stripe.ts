@@ -177,3 +177,90 @@ export function verifyStripeSignature(
 
   return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
 }
+
+async function stripeGet<T>(path: string): Promise<T> {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) throw new Error("Stripe is not configured.");
+  const response = await fetch(`${STRIPE_API_BASE}${path}`, { headers: { Authorization: `Bearer ${secretKey}` } });
+  if (!response.ok) throw new Error(`Stripe request failed (${response.status}): ${await response.text()}`);
+  return response.json() as Promise<T>;
+}
+
+/** A points pack on the web. The pack (and so its price and points) is
+ * looked up server-side from its id; the webhook credits the points. */
+export async function createPointsCheckoutSession({
+  userId,
+  packId,
+  points,
+  priceCents,
+  customerEmail,
+  successUrl,
+  cancelUrl,
+}: {
+  userId: string;
+  packId: string;
+  points: number;
+  priceCents: number;
+  customerEmail: string | null;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ url: string | null }> {
+  return stripeRequest<{ url: string | null }>("/checkout/sessions", {
+    mode: "payment",
+    "line_items[0][price_data][currency]": "usd",
+    "line_items[0][price_data][product_data][name]": `${points.toLocaleString("en-US")} SORZA points`,
+    "line_items[0][price_data][unit_amount]": String(priceCents),
+    "line_items[0][quantity]": "1",
+    ...(customerEmail ? { customer_email: customerEmail } : {}),
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    "metadata[type]": "points_pack",
+    "metadata[user_id]": userId,
+    "metadata[pack_id]": packId,
+    "payment_intent_data[metadata][type]": "points_pack",
+  });
+}
+
+/** A printed rank decal: a physical product, shipped in the US. */
+export async function createDecalCheckoutSession({
+  orderId,
+  tierLabel,
+  priceCents,
+  imageUrl,
+  customerEmail,
+  successUrl,
+  cancelUrl,
+}: {
+  orderId: string;
+  tierLabel: string;
+  priceCents: number;
+  imageUrl: string;
+  customerEmail: string | null;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ id: string; url: string | null }> {
+  return stripeRequest<{ id: string; url: string | null }>("/checkout/sessions", {
+    mode: "payment",
+    "line_items[0][price_data][currency]": "usd",
+    "line_items[0][price_data][product_data][name]": `SORZA ${tierLabel} rank decal`,
+    "line_items[0][price_data][product_data][description]": "4 in. vinyl sticker. Free US shipping.",
+    "line_items[0][price_data][product_data][images][0]": imageUrl,
+    "line_items[0][price_data][unit_amount]": String(priceCents),
+    "line_items[0][quantity]": "1",
+    "shipping_address_collection[allowed_countries][0]": "US",
+    ...(customerEmail ? { customer_email: customerEmail } : {}),
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    "metadata[type]": "rank_decal",
+    "metadata[order_id]": orderId,
+  });
+}
+
+/** The Checkout session behind a payment, for tying a refund back to
+ * what was bought. */
+export async function findCheckoutSessionByPaymentIntent(paymentIntentId: string): Promise<{ id: string; metadata: Record<string, string> } | null> {
+  const list = await stripeGet<{ data: { id: string; metadata: Record<string, string> }[] }>(
+    `/checkout/sessions?payment_intent=${encodeURIComponent(paymentIntentId)}&limit=1`,
+  );
+  return list.data[0] ?? null;
+}
