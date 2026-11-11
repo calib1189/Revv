@@ -7,6 +7,7 @@ import { uploadImage, uploadErrorMessage } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { validateImageFile, MAX_IMAGE_BYTES } from "@/lib/validation/media";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
+import { setCoverPhotoAction } from "@/features/garage/actions";
 import { GroupedButtonRow, RowIcon } from "@/components/ui/grouped-list";
 import { CameraIcon, ChevronRightIcon } from "@/components/ui/icons";
 
@@ -44,11 +45,8 @@ export function CoverPhotoUploader({
         width: uploaded.width,
         height: uploaded.height,
       });
-      const { error: updateError } = await supabase
-        .from("vehicles")
-        .update({ hero_media_id: media.id })
-        .eq("id", vehicleId);
-      if (updateError) throw updateError;
+      const saved = await setCoverPhotoAction(vehicleId, media.id);
+      if (saved.error) throw new Error(saved.error);
 
       router.refresh();
     } catch (err) {

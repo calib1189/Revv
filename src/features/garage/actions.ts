@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createVehicle, updateVehicle, deleteVehicle } from "@/lib/db/vehicles";
 import { validateVehicleForm } from "@/lib/validation/vehicle";
@@ -15,6 +16,7 @@ import { listOwnedItemIds } from "@/lib/db/points";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleInsert } from "@/lib/db/vehicles";
+import { joinsApprovalQueue, notifyAdminsOfNewCar } from "@/lib/admin/notify-new-car";
 
 export interface VehicleFormState {
   error: string | null;
@@ -93,8 +95,42 @@ export async function createVehicleAction(
   await trackEvent(supabase, user.id, "vehicle_created", {
     vehicle_id: vehicle.id,
   });
+  // Added with a photo, it's in the approval queue now: tell the admins.
+  if (joinsApprovalQueue({ hadPhoto: false, hasPhoto: heroMediaId !== null, status: vehicle.ownership_verification_status })) {
+    after(() => notifyAdminsOfNewCar(vehicle));
+  }
 
   redirect(`/garage/${vehicle.id}`);
+}
+
+/** Sets a car's cover photo. On the server rather than straight from the
+ * browser so the moment a car gets its first photo (and so joins the
+ * approval queue) is seen here and the admins get told. */
+export async function setCoverPhotoAction(vehicleId: string, mediaId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in." };
+
+  const [{ data: vehicle }, { data: media }] = await Promise.all([
+    supabase.from("vehicles").select("*").eq("id", vehicleId).maybeSingle(),
+    supabase.from("media").select("id").eq("id", mediaId).eq("owner_id", user.id).eq("kind", "image").maybeSingle(),
+  ]);
+  if (!vehicle || vehicle.owner_id !== user.id) return { error: "Couldn't find that car." };
+  if (!media) return { error: "Couldn't use that photo. Try again." };
+
+  try {
+    await updateVehicle(supabase, vehicleId, { hero_media_id: media.id });
+  } catch {
+    return { error: "Couldn't save that photo. Try again." };
+  }
+
+  if (joinsApprovalQueue({ hadPhoto: vehicle.hero_media_id !== null, hasPhoto: true, status: vehicle.ownership_verification_status })) {
+    after(() => notifyAdminsOfNewCar(vehicle));
+  }
+  revalidatePath(`/garage/${vehicleId}`);
+  return { error: null };
 }
 
 export async function updateVehicleAction(
