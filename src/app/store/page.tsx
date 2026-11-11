@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getPointsBalance, listOwnedItemIds } from "@/lib/db/points";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
+import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
+import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { DECAL_PRICE_CENTS, earnedDecalTier } from "@/lib/decals/eligibility";
+import { decalsEnabled } from "@/lib/decals/printful";
+import type { DecalOffer } from "@/features/decals/decal-sheet";
 import { listCrewsOwnedBy } from "@/lib/db/crews";
 import { Suspense } from "react";
 import { StoreTabs, type OwnedCrewOption } from "@/features/store/store-tabs";
@@ -44,6 +49,42 @@ export default async function StorePage() {
     ? firstVehicle.nickname || `${firstVehicle.make} ${firstVehicle.model}`
     : "My Car";
 
+  // Rank decals for every car of theirs that can order one (approved,
+  // rated), while decals are switched on.
+  const showDecals = decalsEnabled(profile?.is_admin ?? false);
+  let decals: DecalOffer[] = [];
+  if (showDecals && vehicles.length > 0) {
+    try {
+      const builds = await listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id));
+      const eligible = vehicles.flatMap((v) => {
+        const score = builds.get(v.id)?.ai_rating_score ?? null;
+        const tier = earnedDecalTier({
+          ownerId: v.owner_id,
+          viewerId: user.id,
+          verificationStatus: v.ownership_verification_status,
+          score,
+        });
+        return tier && score != null ? [{ vehicle: v, tier, score }] : [];
+      });
+      const media = await getMediaByIds(
+        supabase,
+        eligible.map((e) => e.vehicle.hero_media_id).filter((id): id is string => Boolean(id)),
+      );
+      const urlById = new Map(media.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]));
+      decals = eligible
+        .map(({ vehicle, tier, score }) => ({
+          vehicleId: vehicle.id,
+          tier,
+          score,
+          carName: vehicle.nickname || `${vehicle.make} ${vehicle.model}`,
+          photoUrl: vehicle.hero_media_id ? (urlById.get(vehicle.hero_media_id) ?? null) : null,
+        }))
+        .sort((a, b) => b.score - a.score);
+    } catch (err) {
+      console.error("Store decal lookup failed:", err);
+    }
+  }
+
   const crews: OwnedCrewOption[] = ownedCrews.map((crew) => ({
     id: crew.id,
     name: crew.name,
@@ -77,6 +118,9 @@ export default async function StorePage() {
             vehicle_name_color: profile?.equipped_vehicle_name_color ?? null,
           }}
           crews={crews}
+          decals={decals}
+          showDecals={showDecals}
+          decalPriceCents={DECAL_PRICE_CENTS}
           isFounder={profile?.is_founder ?? false}
         />
       </Suspense>

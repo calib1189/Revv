@@ -27,7 +27,7 @@ import { ReportButton } from "@/features/feed/report-button";
 import { LeaderboardStatus } from "@/features/garage/leaderboard-status";
 import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
 import { VehicleHeroPhoto } from "@/features/garage/vehicle-hero-photo";
-import { DecalCard } from "@/features/decals/decal-card";
+import { DecalCard, DecalHeroButton } from "@/features/decals/decal-card";
 import { decalsEnabled } from "@/lib/decals/printful";
 import { DECAL_PRICE_CENTS, earnedDecalTier } from "@/lib/decals/eligibility";
 import { buildShareText, formatScore } from "@/lib/rating/share-text";
@@ -224,6 +224,10 @@ export default async function VehiclePage({
       verificationStatus: vehicle.ownership_verification_status,
       score,
     });
+  const decalOffer =
+    decalTier && score != null
+      ? { vehicleId: vehicle.id, tier: decalTier, score, carName: title, photoUrl: heroUrl }
+      : null;
 
   return (
     <div className="flex-1 pb-16">
@@ -245,6 +249,11 @@ export default async function VehiclePage({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/50 to-transparent" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
+        {decalOffer && decalParam !== "ordered" && (
+          <div className="absolute left-4 top-4 sm:left-6">
+            <DecalHeroButton offer={decalOffer} priceCents={DECAL_PRICE_CENTS} />
+          </div>
+        )}
         <div className="absolute right-4 top-4 sm:right-6">
           <VehicleShareButton vehicleId={vehicle.id} text={buildShareText({ title, score, isOwner })} />
         </div>
@@ -318,8 +327,8 @@ export default async function VehiclePage({
           )
         )}
 
-        {decalTier && (
-          <DecalCard vehicleId={vehicle.id} tier={decalTier} priceCents={DECAL_PRICE_CENTS} justOrdered={decalParam === "ordered"} />
+        {decalOffer && (
+          <DecalCard offer={decalOffer} priceCents={DECAL_PRICE_CENTS} justOrdered={decalParam === "ordered"} />
         )}
 
         <PeerRatingCard

@@ -15,6 +15,8 @@ import { FlagIcon, GemIcon, ChevronRightIcon, CheckIcon } from "@/components/ui/
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DecalCard, DecalTeaser } from "@/features/decals/decal-card";
+import type { DecalOffer } from "@/features/decals/decal-sheet";
 
 type Tab = "profile" | "garage" | "crew";
 type Equipped = Partial<Record<StoreCategory, string | null>>;
@@ -73,6 +75,9 @@ export function StoreTabs({
   userId,
   packsEnabled,
   week,
+  decals = [],
+  showDecals = false,
+  decalPriceCents = 0,
 }: {
   initialBalance: number;
   initialOwnedItemIds: string[];
@@ -89,6 +94,11 @@ export function StoreTabs({
   packsEnabled: boolean;
   /** Which week it is, for the featured items. */
   week: number;
+  /** Rank decals the viewer's cars can order, best score first. */
+  decals?: DecalOffer[];
+  /** Whether decals are on for this viewer (switched on, or an admin). */
+  showDecals?: boolean;
+  decalPriceCents?: number;
 }) {
   const [tab, setTab] = useState<Tab>("profile");
   const [balance, setBalance] = useState(initialBalance);
@@ -182,6 +192,16 @@ export function StoreTabs({
       </header>
 
       <PointsWallet balance={balance} userId={userId} packsEnabled={packsEnabled} open={walletOpen} onOpenChange={setWalletOpen} />
+
+      {showDecals && (
+        <section className="flex flex-col gap-3" aria-label="Rank decals">
+          {decals.length > 0 ? (
+            decals.map((offer) => <DecalCard key={offer.vehicleId} offer={offer} priceCents={decalPriceCents} />)
+          ) : (
+            <DecalTeaser />
+          )}
+        </section>
+      )}
 
       <SegmentedControl
         options={[
