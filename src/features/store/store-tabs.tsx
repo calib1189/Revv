@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { StorePageContent, CATEGORY_KIND } from "@/features/store/store-page-content";
+import { StoreGrid, CATEGORY_KIND, CATEGORY_TAB_LABEL } from "@/features/store/store-page-content";
 import { LookPreview, type Look, type LookScope } from "@/features/store/look-preview";
 import { PointsWallet } from "@/features/store/points-packs";
 import { purchaseItemAction, equipItemAction } from "@/features/store/actions";
@@ -113,6 +113,11 @@ export function StoreTabs({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState<StoreItem | null>(null);
   const [walletOpen, setWalletOpen] = useState(false);
+  const [section, setSection] = useState<Record<Tab, StoreCategory>>({
+    profile: PROFILE_CATEGORIES[0],
+    garage: GARAGE_CATEGORIES[0],
+    crew: CREW_CATEGORIES[0],
+  });
   const [, startTransition] = useTransition();
 
   const selectedCrew = crews.find((c) => c.id === selectedCrewId) ?? null;
@@ -183,15 +188,20 @@ export function StoreTabs({
   }
 
   const featured = tab === "crew" && !selectedCrew ? null : featuredItem(CATEGORIES[tab], week);
+  const categories = CATEGORIES[tab];
+  const activeCategory = categories.includes(section[tab]) ? section[tab] : categories[0];
+  const noCrew = tab === "crew" && crews.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">Store</h1>
-        <p className="mt-1 text-[0.9375rem] text-muted">Make your profile, cars and crew look like yours.</p>
-      </header>
-
-      <PointsWallet balance={balance} userId={userId} packsEnabled={packsEnabled} open={walletOpen} onOpenChange={setWalletOpen} />
+      <PointsWallet
+        title={<h1 className="text-[2.125rem] font-bold leading-none tracking-[-0.03em] sm:text-[2.75rem]">Store</h1>}
+        balance={balance}
+        userId={userId}
+        packsEnabled={packsEnabled}
+        open={walletOpen}
+        onOpenChange={setWalletOpen}
+      />
 
       {showDecals && (
         <section className="flex flex-col gap-3" aria-label="Rank decals">
@@ -213,9 +223,7 @@ export function StoreTabs({
         onChange={setTab}
       />
 
-      {error && <p className="rounded-[14px] bg-danger/10 px-4 py-2.5 text-[0.875rem] text-danger">{error}</p>}
-
-      {tab === "crew" && crews.length === 0 ? (
+      {noCrew ? (
         <EmptyState
           card
           icon={<FlagIcon />}
@@ -230,16 +238,15 @@ export function StoreTabs({
       ) : (
         <>
           {tab === "crew" && crews.length > 1 && (
-            <div className="no-scrollbar -mx-4 -mb-2 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <div className="no-scrollbar -mx-4 -my-2 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
               {crews.map((crew) => (
                 <button
                   key={crew.id}
                   type="button"
                   onClick={() => selectCrew(crew.id)}
                   className={`pressable flex-shrink-0 rounded-full px-3.5 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
-                    selectedCrewId === crew.id ? "bg-foreground text-background" : "text-foreground/80"
+                    selectedCrewId === crew.id ? "bg-foreground text-background" : "bg-foreground/[0.06] text-foreground/75"
                   }`}
-                  style={selectedCrewId === crew.id ? undefined : { background: "var(--segment-track)" }}
                 >
                   {crew.name}
                 </button>
@@ -247,64 +254,52 @@ export function StoreTabs({
             </div>
           )}
 
-          {featured && (
-            <button
-              type="button"
-              onClick={() => setViewing(featured)}
-              className="pressable group relative block w-full overflow-hidden rounded-[24px] text-left"
-              aria-label={`Featured this week: ${featured.name}`}
-            >
-              <LookPreview scope={tab as LookScope} label={labels[tab]} look={lookFor(tab, featured)} />
-              <span className="absolute left-4 top-3.5 flex flex-col items-start gap-1.5">
-                <span className="rounded-full bg-black/55 px-2.5 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.1em] text-white backdrop-blur-md">
-                  Featured this week
-                </span>
-                <span className="px-1 text-[1.0625rem] font-bold leading-tight text-white [text-shadow:0_1px_8px_rgb(0_0_0/0.6)]">
-                  {featured.name}
-                  <span
-                    className="ml-2 text-[0.6875rem] font-bold uppercase tracking-[0.1em]"
-                    style={{ color: RARITY_COLOR[rarityFor(featured.price, featured.founderOnly)] }}
+          {/* The mirror: how you look right now. Tapping an item below
+              tries it on in its sheet. */}
+          <LookPreview scope={tab as LookScope} label={labels[tab]} look={lookFor(tab)} />
+
+          <section className="flex flex-col gap-4">
+            <nav className="no-scrollbar -mx-4 flex gap-6 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:px-0" aria-label="Sections">
+              {categories.map((category) => {
+                const active = category === activeCategory;
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setSection((prev) => ({ ...prev, [tab]: category }))}
+                    aria-current={active ? "true" : undefined}
+                    className={`relative -mb-px flex-shrink-0 border-b-2 pb-2.5 text-[0.9375rem] font-semibold transition-colors ${
+                      active ? "border-foreground text-foreground" : "border-transparent text-muted hover:text-foreground"
+                    }`}
                   >
-                    {RARITY_LABEL[rarityFor(featured.price, featured.founderOnly)]}
-                  </span>
-                </span>
-              </span>
-              <span className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-[0.8125rem] font-bold text-black">
-                {owned.has(featured.id) ? (
-                  "Owned"
-                ) : (
-                  <>
-                    <GemIcon className="h-3.5 w-3.5 text-accent" />
-                    <span className="numeral">{featured.price}</span>
-                  </>
-                )}
-              </span>
-            </button>
-          )}
+                    {CATEGORY_TAB_LABEL[category]}
+                  </button>
+                );
+              })}
+              {tab === "garage" && (
+                <Link
+                  href="/garage/customize"
+                  className="-mb-px flex flex-shrink-0 items-center gap-1 border-b-2 border-transparent pb-2.5 text-[0.9375rem] font-semibold text-muted transition-colors hover:text-foreground"
+                >
+                  Backdrops
+                  <ChevronRightIcon className="h-3.5 w-3.5" />
+                </Link>
+              )}
+            </nav>
 
-          {tab === "garage" && (
-            <Link href="/garage/customize" className="pressable glass-raised elev-1 flex items-center gap-3.5 rounded-[20px] p-3.5">
-              <span
-                className="bg-ruby-anim h-11 w-11 flex-shrink-0 rounded-[12px]"
-                style={{ backgroundImage: "linear-gradient(150deg, #1a0004, #5c0014, #ff0a2e, #ff4d6d, #ff0a2e, #5c0014, #1a0004)" }}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-[0.9375rem] font-semibold">Garage backdrops</p>
-                <p className="text-[0.8125rem] leading-snug text-muted">Pick a scene for each car in the Garage Editor.</p>
-              </div>
-              <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
-            </Link>
-          )}
+            {error && <p className="rounded-[14px] bg-danger/10 px-4 py-2.5 text-[0.875rem] text-danger">{error}</p>}
 
-          <StorePageContent
-            key={tab === "crew" ? selectedCrew?.id : tab}
-            categories={CATEGORIES[tab]}
-            owned={owned}
-            equipped={equipped}
-            previewLabel={labels[tab]}
-            onOpen={setViewing}
-            isFounder={isFounder}
-          />
+            <StoreGrid
+              key={`${tab}-${activeCategory}-${selectedCrew?.id ?? ""}`}
+              category={activeCategory}
+              owned={owned}
+              equipped={equipped}
+              previewLabel={labels[tab]}
+              featuredId={featured?.category === activeCategory ? featured.id : null}
+              onOpen={setViewing}
+              isFounder={isFounder}
+            />
+          </section>
         </>
       )}
 
@@ -381,10 +376,6 @@ function ItemDetail({
           </p>
         )}
       </div>
-      <p className="text-[0.8125rem] text-muted">
-        {owned ? "You own this. Equip it to show it off, or take it off anytime." : "Previewed on you above. Once it's yours, it's yours for good."}
-      </p>
-
       {owned ? (
         <button
           type="button"

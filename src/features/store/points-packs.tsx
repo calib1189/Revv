@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { POINT_PACKS, formatUsd, type PointPack } from "@/lib/points/packs";
 import {
@@ -13,13 +13,13 @@ import {
 } from "@/lib/native/points-store";
 import { confirmApplePurchaseAction, startPointsCheckoutAction } from "@/features/store/points-actions";
 import { Sheet } from "@/components/ui/sheet";
-import { GemIcon } from "@/components/ui/icons";
+import { GemIcon, PlusIcon } from "@/components/ui/icons";
 
 type Message = { tone: "ok" | "error"; text: string };
 
 /**
- * The store's wallet: your points, and (once points packs are switched
- * on) a "Get points" sheet with the packs. Stripe on the web, Apple's
+ * The store's wallet: a points pill beside the page title, and (once
+ * points packs are switched on) a "Get points" sheet with the packs. Stripe on the web, Apple's
  * in-app purchase in the iPhone app (Apple requires it there for points).
  * Points only buy cosmetics, every one of which can be earned for free.
  */
@@ -29,7 +29,10 @@ export function PointsWallet({
   packsEnabled,
   open,
   onOpenChange,
+  title,
 }: {
+  /** What sits to the left of the points pill (the page title). */
+  title?: ReactNode;
   balance: number;
   userId: string;
   packsEnabled: boolean;
@@ -111,36 +114,43 @@ export function PointsWallet({
 
   const canBuy = packsEnabled && env !== null;
 
+  const pill = (
+    <>
+      <GemIcon className="h-4 w-4 text-accent" />
+      <span className="numeral text-[0.9375rem] font-bold">{balance.toLocaleString("en-US")}</span>
+    </>
+  );
+
   return (
     <>
-      <div className="relative overflow-hidden rounded-[24px] bg-[#0c0c0f] p-4 text-white ring-1 ring-white/[0.07]">
-        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(closest-side,rgba(255,68,51,0.22),transparent)]" />
-        <div className="relative flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="micro-label text-white/50">Your points</p>
-            <p className="mt-1 flex items-center gap-2">
-              <GemIcon className="h-5 w-5 text-accent" />
-              <span className="numeral text-[1.875rem] font-bold leading-none tracking-[-0.02em]">
-                {balance.toLocaleString("en-US")}
-              </span>
-            </p>
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          {title}
           {canBuy ? (
             <button
               type="button"
               onClick={() => onOpenChange(true)}
-              className="pressable flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 text-[0.875rem] font-semibold text-accent-foreground"
+              aria-label={`${balance.toLocaleString("en-US")} points. Get points`}
+              className="pressable flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.07] pl-3.5 pr-1 ring-1 ring-border"
             >
-              Get points
+              {pill}
+              <span className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                <PlusIcon className="h-4 w-4" />
+              </span>
             </button>
           ) : (
-            <p className="max-w-[13ch] text-right text-[0.75rem] leading-snug text-white/55">Earn more from Daily and challenges</p>
+            <span
+              aria-label={`${balance.toLocaleString("en-US")} points`}
+              className="flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.07] px-3.5 ring-1 ring-border"
+            >
+              {pill}
+            </span>
           )}
         </div>
         {message && (
           <p
             role="status"
-            className={`relative mt-3 rounded-[14px] px-3 py-2 text-[0.875rem] font-semibold ${
+            className={`rounded-[14px] px-3.5 py-2.5 text-[0.875rem] font-semibold ${
               message.tone === "error" ? "bg-danger/15 text-[#ff8a80]" : "bg-accent/15 text-accent"
             }`}
           >
