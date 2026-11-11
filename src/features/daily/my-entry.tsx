@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -134,19 +134,33 @@ function EnterForm({
   const [vehicleId, setVehicleId] = useState(entry?.vehicleId ?? garage.cars[0]?.id ?? "");
   const [caption, setCaption] = useState(entry?.caption ?? "");
   const [isUploading, setIsUploading] = useState(false);
+  // Upload problems show under the photo box, where the person is
+  // looking; submit problems show by the Submit button.
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const photo = source === "garage" ? selected : uploaded;
 
   async function handleFile(rawFile: File) {
-    const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
-    const fileError = validateImageFile(file);
-    if (fileError) return setError(fileError);
-    setError(null);
+    // Shows "Uploading…" and the picked photo before anything else:
+    // shrinking a big gallery photo can take a few seconds on a phone,
+    // and until now the sheet sat unchanged through all of it.
+    setPhotoError(null);
+    setUploaded(null);
     setIsUploading(true);
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return URL.createObjectURL(rawFile);
+    });
     try {
+      const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
+      const fileError = validateImageFile(file);
+      if (fileError) {
+        setPhotoError(fileError);
+        return;
+      }
       const supabase = createClient();
       const result = await uploadImage(supabase, userId, file, { moderate: true });
       const media = await createMedia(supabase, {
@@ -158,9 +172,13 @@ function EnterForm({
       });
       setUploaded({ mediaId: media.id, url: publicMediaUrl(supabase, result.storagePath) });
     } catch (err) {
-      setError(uploadErrorMessage(err, "Couldn't upload that photo. Try again."));
+      setPhotoError(uploadErrorMessage(err, "Couldn't upload that photo. Try again."));
     } finally {
       setIsUploading(false);
+      setPreview((old) => {
+        if (old) URL.revokeObjectURL(old);
+        return null;
+      });
     }
   }
 
@@ -226,32 +244,47 @@ function EnterForm({
         )
       ) : (
         <div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFile(file);
-              e.target.value = "";
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={isUploading}
-            className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-[18px] border border-dashed border-border bg-foreground/[0.04]"
+          {/* The input itself takes the tap (a label around it), rather
+           * than a hidden input clicked from code: inside the iPhone app's
+           * web view, a picked photo from a code-opened picker can fail to
+           * come back to the page at all. */}
+          <label
+            className={`relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-[18px] border border-dashed border-border bg-foreground/[0.04] ${
+              isUploading ? "pointer-events-none" : "pressable cursor-pointer"
+            }`}
           >
+            <input
+              type="file"
+              accept="image/*"
+              disabled={isUploading}
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleFile(file);
+                e.target.value = "";
+              }}
+            />
             {uploaded ? (
               <Image src={uploaded.url} alt="" fill sizes="480px" className="object-cover" />
-            ) : (
-              <span className="flex flex-col items-center gap-2 text-[0.875rem] text-muted">
+            ) : preview ? (
+              // The photo just picked, shown straight from the device while
+              // it uploads, so picking one visibly does something at once.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={preview} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
+            ) : null}
+            {!uploaded && (
+              <span className="relative flex flex-col items-center gap-2 rounded-full px-4 py-2 text-[0.875rem] text-muted">
                 <CameraIcon className="h-7 w-7" />
                 {isUploading ? "Uploading…" : "Choose a photo"}
               </span>
             )}
-          </button>
+            {uploaded && (
+              <span className="absolute bottom-2 right-2 rounded-full bg-black/60 px-3 py-1 text-[0.75rem] font-semibold text-white">
+                Change
+              </span>
+            )}
+          </label>
+          {photoError && <p className="mt-2 text-[0.8125rem] text-danger">{photoError}</p>}
         </div>
       )}
 

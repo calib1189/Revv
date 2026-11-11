@@ -8,15 +8,26 @@ const MAX_DIMENSION = 2500;
 const MIN_DIMENSION = 640;
 const MIN_JPEG_QUALITY = 0.35;
 
+// A huge photo under memory pressure in the iPhone app's web view can
+// leave an <img> decode hanging with neither onload nor onerror ever
+// firing. Past this, give up on re-encoding and fall back to the file.
+const DECODE_TIMEOUT_MS = 20_000;
+
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
+    const timer = setTimeout(() => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Timed out reading that image."));
+    }, DECODE_TIMEOUT_MS);
     img.onload = () => {
+      clearTimeout(timer);
       URL.revokeObjectURL(url);
       resolve(img);
     };
     img.onerror = () => {
+      clearTimeout(timer);
       URL.revokeObjectURL(url);
       reject(new Error("Could not read that image."));
     };
