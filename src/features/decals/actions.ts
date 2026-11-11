@@ -52,7 +52,7 @@ export async function startDecalOrderAction(vehicleId: string): Promise<Result> 
       orderId: order.id,
       tierLabel: RANK_LABELS[tier],
       priceCents: DECAL_PRICE_CENTS,
-      imageUrl: `${SITE_URL}/decals/${tier}.png`,
+      imageUrl: `${SITE_URL}/decals/sticker/${tier}.png`,
       customerEmail: user.email ?? null,
       successUrl: `${SITE_URL}/garage/${vehicle.id}?decal=ordered`,
       cancelUrl: `${SITE_URL}/garage/${vehicle.id}`,

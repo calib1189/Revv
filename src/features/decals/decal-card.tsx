@@ -8,7 +8,7 @@ import { RANK_LABELS } from "@/lib/rating/rank";
 import { formatUsd } from "@/lib/points/packs";
 import { ChevronRightIcon } from "@/components/ui/icons";
 
-/** "Diamond decal, $12.99": the printed sticker of the rank this car
+/** "Diamond decal, $14.99": the printed sticker of the rank this car
  * earned. Tapping it opens the full view and the order button. Only
  * rendered for the owner of an approved, rated car. */
 export function DecalCard({

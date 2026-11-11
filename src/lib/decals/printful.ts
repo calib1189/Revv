@@ -1,7 +1,8 @@
 // Server-only. Sends a paid rank-decal order to Printful, which prints
 // and ships it. Plain REST calls (no SDK). Configured with:
 //   PRINTFUL_API_TOKEN        a private token from Printful's developer portal
-//   PRINTFUL_DECAL_VARIANT_ID the sticker variant to print (4x4 in.)
+//   PRINTFUL_DECAL_VARIANT_ID the sticker variant to print: 24966, the
+//                             4x4 in. weatherproof Die-Cut Sticker
 //   PRINTFUL_STORE_ID         only if the token covers more than one store
 //   PRINTFUL_AUTO_CONFIRM     "true" sends orders straight to production;
 //                             otherwise they wait as drafts for approval

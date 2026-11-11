@@ -71,7 +71,9 @@ export async function fulfillDecalOrder(session: Record<string, unknown>, orderI
     const printerOrderId = await createPrintfulOrder({
       orderId: order.id,
       recipient,
-      fileUrl: `${SITE_URL}/decals/${order.tier}.png`,
+      // The badge print file (scripts/make-decal-print-files.py), not the
+      // bare emblem: the die-cut follows the badge's clean outline.
+      fileUrl: `${SITE_URL}/decals/print/${order.tier}.png`,
       previewName: `SORZA ${RANK_LABELS[order.tier as RankTier]} rank decal`,
     });
     await supabase

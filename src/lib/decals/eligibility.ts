@@ -1,7 +1,9 @@
 import { rankForScore, type RankTier } from "@/lib/rating/rank";
 
-/** What a rank decal costs, US shipping included. */
-export const DECAL_PRICE_CENTS = 1299;
+/** What a rank decal costs, US shipping included. Printful charges
+ * about $10.98 for the weatherproof die-cut sticker shipped in the US
+ * ($4.84 + $5.59 shipping + tax, Nov 2026). */
+export const DECAL_PRICE_CENTS = 1499;
 
 /**
  * The rank decal a viewer may order for a car: the rank the car actually

@@ -40,10 +40,10 @@ export function useDecalOrder(vehicleId: string) {
   return { busy, error, order };
 }
 
-/** The sticker as Printful prints it: the rank artwork on white vinyl,
- * kiss-cut with a white border around its shape. These are Printful's
- * own mockups (public/decals/sticker), not a drawing of ours, so what
- * people see is what arrives. `className` must position and size it. */
+/** The sticker as Printful prints it: the rank badge, die-cut with a
+ * thin white edge around it. These are Printful's own mockups of the
+ * print files (public/decals/sticker), so what people see is what
+ * arrives. `className` must position and size it. */
 export function DecalArt({ tier, className, sizes = "(min-width: 640px) 320px, 70vw" }: { tier: RankTier; className: string; sizes?: string }) {
   return (
     <span className={`block ${className}`}>
@@ -213,7 +213,7 @@ export function DecalSheet({
           <p className="numeral flex-shrink-0 text-[1.25rem] font-bold leading-tight">{formatUsd(priceCents)}</p>
         </div>
 
-        <p className="-mt-2 text-[0.8125rem] text-muted">4 × 4 in. kiss-cut vinyl · Free US shipping</p>
+        <p className="-mt-2 text-[0.8125rem] text-muted">4 × 4 in. weatherproof vinyl · Free US shipping</p>
 
         <div>
           <button
