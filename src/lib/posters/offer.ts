@@ -1,6 +1,7 @@
 import { earnedDecalTier } from "@/lib/decals/eligibility";
 import { POSTER_PRODUCTS, photoPrintsSharp, type PosterProductId } from "@/lib/posters/products";
 import type { RankTier } from "@/lib/rating/rank";
+import { posterSubscores } from "@/lib/posters/snapshot";
 
 /** A build poster the viewer can order for one of their cars, with each
  * size marked by whether the cover photo prints sharp at it. */
@@ -11,6 +12,9 @@ export interface PosterOffer {
   tier: RankTier;
   score: number;
   photoUrl: string;
+  /** Whether the rating has all five category scores to print. Ratings
+   * from before categories existed don't; a re-rate adds them. */
+  categoryScores: boolean;
   products: { id: PosterProductId; name: string; detail: string; priceCents: number; sharp: boolean }[];
 }
 
@@ -43,7 +47,7 @@ export function buildPosterOffer({
   photoUrl,
 }: {
   vehicle: OfferVehicle;
-  build: { ai_rating_score: number | null } | null;
+  build: { ai_rating_score: number | null; ai_rating_subscores?: unknown } | null;
   hero: { kind: string; storage_path: string; width: number | null; height: number | null } | null;
   viewerId: string | null;
   photoUrl: string | null;
@@ -62,6 +66,7 @@ export function buildPosterOffer({
     tier,
     score,
     photoUrl,
+    categoryScores: posterSubscores(build?.ai_rating_subscores) !== null,
     products: POSTER_PRODUCTS.map((p) => ({
       id: p.id,
       name: p.name,

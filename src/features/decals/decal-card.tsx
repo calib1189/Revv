@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { DecalArt, DecalSheet, rankGlow, type DecalOffer } from "@/features/decals/decal-sheet";
 import { RANK_LABELS } from "@/lib/rating/rank";
 import { formatUsd } from "@/lib/points/packs";
-import { ChevronRightIcon } from "@/components/ui/icons";
 
 /** "Diamond decal, $14.99": the printed sticker of the rank this car
  * earned. Tapping it opens the full view and the order button. Only
@@ -71,27 +69,5 @@ export function DecalHeroButton({ offer, priceCents }: { offer: DecalOffer; pric
       </button>
       <DecalSheet offer={offer} priceCents={priceCents} open={open} onClose={() => setOpen(false)} />
     </>
-  );
-}
-
-/** For someone with no car that can order a decal yet: what decals are
- * and how to get one, leading to their garage. */
-export function DecalTeaser() {
-  return (
-    <Link
-      href="/garage"
-      className="pressable flex items-center gap-4 rounded-[22px] bg-[#0c0c0f] p-3 pr-4 text-white ring-1 ring-white/[0.06]"
-    >
-      <span className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-[16px] bg-white/[0.03]" style={{ backgroundImage: rankGlow("diamond", 28) }}>
-        <DecalArt tier="diamond" sizes="160px" className="absolute inset-[6%]" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[1.0625rem] font-semibold leading-tight">Rank decals</span>
-        <span className="mt-1 block text-[0.8125rem] leading-snug text-white/55">
-          Get your car rated and approved to unlock yours
-        </span>
-      </span>
-      <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-white/40" />
-    </Link>
   );
 }

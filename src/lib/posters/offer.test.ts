@@ -24,6 +24,12 @@ describe("buildPosterOffer", () => {
     ]);
   });
 
+  it("says whether the rating has category scores to print", () => {
+    const subscores = { appearance: 94, performance: 90, wheelsFitment: 85, interior: 88, modifications: 93 };
+    expect(buildPosterOffer({ vehicle, build: { ai_rating_score: 91.25, ai_rating_subscores: subscores }, hero, viewerId: "u1", photoUrl: "x" })?.categoryScores).toBe(true);
+    expect(buildPosterOffer({ vehicle, build: { ai_rating_score: 68.5, ai_rating_subscores: null }, hero, viewerId: "u1", photoUrl: "x" })?.categoryScores).toBe(false);
+  });
+
   it("marks the sizes a small photo can't print sharp", () => {
     const offer = buildPosterOffer({ vehicle, build, hero: { ...hero, width: 1290, height: 1707 }, viewerId: "u1", photoUrl: "x" });
     expect(offer?.products.map((p) => p.sharp)).toEqual([false, true]);

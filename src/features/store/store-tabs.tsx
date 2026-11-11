@@ -15,9 +15,8 @@ import { FlagIcon, GemIcon, ChevronRightIcon, CheckIcon } from "@/components/ui/
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
-import { DecalCard, DecalTeaser } from "@/features/decals/decal-card";
 import type { DecalOffer } from "@/features/decals/decal-sheet";
-import { PosterCard } from "@/features/posters/poster-card";
+import { PrintsShelf } from "@/features/store/prints-shelf";
 import type { PosterOffer } from "@/lib/posters/offer";
 
 type Tab = "profile" | "garage" | "crew";
@@ -108,7 +107,11 @@ export function StoreTabs({
   /** Whether posters are on for this viewer (switched on, or an admin). */
   showPosters?: boolean;
 }) {
-  const [tab, setTab] = useState<Tab>("profile");
+  // Profile, Garage and Crew are the cosmetics shops; Prints is real,
+  // printed things for your car (decals, posters), bought with money.
+  const [view, setView] = useState<Tab | "prints">("profile");
+  const tab: Tab = view === "prints" ? "profile" : view;
+  const showPrints = showDecals || showPosters;
   const [balance, setBalance] = useState(initialBalance);
   const [owned, setOwned] = useState(new Set(initialOwnedItemIds));
   const [equipped, setEquipped] = useState<Equipped>({
@@ -211,25 +214,20 @@ export function StoreTabs({
         onOpenChange={setWalletOpen}
       />
 
-      {(showDecals || showPosters) && (
-        <section className="flex flex-col gap-3" aria-label="Prints for your car">
-          {showDecals && decals.map((offer) => <DecalCard key={offer.vehicleId} offer={offer} priceCents={decalPriceCents} />)}
-          {showPosters && posters.map((offer) => <PosterCard key={`poster-${offer.vehicleId}`} offer={offer} />)}
-          {showDecals && decals.length === 0 && posters.length === 0 && <DecalTeaser />}
-        </section>
-      )}
-
-      <SegmentedControl
+      <SegmentedControl<Tab | "prints">
         options={[
           { value: "profile", label: "Profile" },
           { value: "garage", label: "Garage" },
           { value: "crew", label: "Crew" },
+          ...(showPrints ? [{ value: "prints" as const, label: "Prints" }] : []),
         ]}
-        value={tab}
-        onChange={setTab}
+        value={view}
+        onChange={setView}
       />
 
-      {noCrew ? (
+      {view === "prints" ? (
+        <PrintsShelf decals={showDecals ? decals : []} posters={showPosters ? posters : []} decalPriceCents={decalPriceCents} />
+      ) : noCrew ? (
         <EmptyState
           card
           icon={<FlagIcon />}

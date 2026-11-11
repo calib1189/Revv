@@ -115,7 +115,9 @@ export async function renderPoster(data: PosterData, photo: string, size: { widt
         </div>
       </div>
 
-      <div style={{ position: "absolute", left: px(110), right: px(110), top: px(H - 970), display: "flex", flexDirection: "column" }}>
+      {/* Anchored to the bottom, so a rating without category scores
+          (from before they existed) closes up instead of leaving a gap. */}
+      <div style={{ position: "absolute", left: px(110), right: px(110), bottom: px(311), display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", alignItems: "center" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={gem} alt="" width={Math.round(px(300))} height={Math.round(px(300))} style={{ width: px(300), height: px(300) }} />

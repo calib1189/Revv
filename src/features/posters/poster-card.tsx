@@ -33,12 +33,7 @@ export function PosterCard({ offer, justOrdered = false }: { offer: PosterOffer;
         aria-label={`View your build poster for ${offer.carName}`}
       >
         <span className="relative flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-[16px] bg-white/[0.03]">
-          {/* A tiny poster: the car on top, the score on the dark band. */}
-          <span className="relative block h-[68px] w-[51px] overflow-hidden rounded-[3px] bg-[#08080a] shadow-[0_6px_14px_rgb(0_0_0/0.5)] ring-1 ring-white/10">
-            <Image src={offer.photoUrl} alt="" fill sizes="64px" className="object-cover object-[50%_40%]" />
-            <span className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#08080a] via-[#08080a]/90 to-transparent" />
-            <span className="numeral absolute bottom-[5px] left-[4px] text-[0.625rem] font-bold leading-none">{formatScore(offer.score)}</span>
-          </span>
+          <PosterThumb offer={offer} className="h-[68px] w-[51px]" scoreClassName="text-[0.625rem]" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-[1.0625rem] font-semibold leading-tight">{justOrdered ? "Poster ordered" : "Build poster"}</span>
@@ -55,9 +50,21 @@ export function PosterCard({ offer, justOrdered = false }: { offer: PosterOffer;
   );
 }
 
+/** A tiny poster: the car on top, the score on the dark band. Size it
+ * with `className` (3:4). */
+export function PosterThumb({ offer, className, scoreClassName }: { offer: PosterOffer; className: string; scoreClassName: string }) {
+  return (
+    <span className={`relative block overflow-hidden rounded-[3px] bg-[#08080a] shadow-[0_6px_14px_rgb(0_0_0/0.5)] ring-1 ring-white/10 ${className}`}>
+      <Image src={offer.photoUrl} alt="" fill sizes="160px" className="object-cover object-[50%_40%]" />
+      <span className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-[#08080a] via-[#08080a]/90 to-transparent" />
+      <span className={`numeral absolute bottom-[8%] left-[8%] font-bold leading-none text-white ${scoreClassName}`}>{formatScore(offer.score)}</span>
+    </span>
+  );
+}
+
 /** The poster as it will print (drawn by the same code that renders the
  * print file), the sizes, and the order button. */
-function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open: boolean; onClose: () => void }) {
+export function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open: boolean; onClose: () => void }) {
   const firstSharp = offer.products.find((p) => p.sharp) ?? null;
   const [productId, setProductId] = useState<PosterProductId | null>(firstSharp?.id ?? null);
   const [loaded, setLoaded] = useState<string | null>(null);
@@ -144,6 +151,12 @@ function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open: boole
             );
           })}
         </div>
+
+        {!offer.categoryScores && (
+          <p className="-mt-2 rounded-[14px] bg-foreground/[0.05] px-3.5 py-2.5 text-[0.8125rem] leading-snug text-muted">
+            This rating is from before category scores, so they aren&apos;t on the poster. Re-rate your car to add them.
+          </p>
+        )}
 
         {product ? (
           <div>
