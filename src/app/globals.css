@@ -2129,21 +2129,3 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   }
 }
 
-/* The rank decal in its viewer (decal-sheet.tsx): a slow float with a
-   slight tilt, like a sticker held up to the light. */
-@layer components {
-  .decal-float {
-    animation: decal-float-kf 6s ease-in-out infinite;
-  }
-
-  @keyframes decal-float-kf {
-    0%, 100% { transform: translateY(0) rotate(-2deg); }
-    50% { transform: translateY(-6px) rotate(2deg); }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .decal-float {
-      animation: none;
-    }
-  }
-}

@@ -188,7 +188,7 @@ export function DecalSheet({
         ) : (
           <div className="relative aspect-square w-full overflow-hidden rounded-[24px] bg-[#0c0c0f]">
             <div className="absolute inset-0" style={{ background: rankGlow(offer.tier) }} />
-            <DecalArt tier={offer.tier} className="decal-float absolute inset-[12%]" />
+            <DecalArt tier={offer.tier} className="absolute inset-[12%]" />
           </div>
         )}
 
