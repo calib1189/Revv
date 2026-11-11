@@ -9,6 +9,9 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { DECAL_PRICE_CENTS, earnedDecalTier } from "@/lib/decals/eligibility";
 import { decalsEnabled } from "@/lib/decals/printful";
 import type { DecalOffer } from "@/features/decals/decal-sheet";
+import { buildPosterOffer, type PosterOffer } from "@/lib/posters/offer";
+import { postersEnabled } from "@/lib/posters/products";
+import { rankForScore } from "@/lib/rating/rank";
 import { listCrewsOwnedBy } from "@/lib/db/crews";
 import { Suspense } from "react";
 import { StoreTabs, type OwnedCrewOption } from "@/features/store/store-tabs";
@@ -49,39 +52,61 @@ export default async function StorePage() {
     ? firstVehicle.nickname || `${firstVehicle.make} ${firstVehicle.model}`
     : "My Car";
 
-  // Rank decals for every car of theirs that can order one (approved,
-  // rated), while decals are switched on.
+  // Prints for every car of theirs that can order one (approved, rated;
+  // posters also need a cover photo), while each is switched on.
   const showDecals = decalsEnabled(profile?.is_admin ?? false);
+  const showPosters = postersEnabled(profile?.is_admin ?? false);
   let decals: DecalOffer[] = [];
-  if (showDecals && vehicles.length > 0) {
+  let posters: PosterOffer[] = [];
+  if ((showDecals || showPosters) && vehicles.length > 0) {
     try {
       const builds = await listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id));
-      const eligible = vehicles.flatMap((v) => {
-        const score = builds.get(v.id)?.ai_rating_score ?? null;
-        const tier = earnedDecalTier({
-          ownerId: v.owner_id,
-          viewerId: user.id,
-          verificationStatus: v.ownership_verification_status,
-          score,
-        });
-        return tier && score != null ? [{ vehicle: v, tier, score }] : [];
-      });
+      const scoreOf = (vehicleId: string) => builds.get(vehicleId)?.ai_rating_score ?? null;
+      const eligible = vehicles.filter(
+        (v) =>
+          earnedDecalTier({
+            ownerId: v.owner_id,
+            viewerId: user.id,
+            verificationStatus: v.ownership_verification_status,
+            score: scoreOf(v.id),
+          }) !== null,
+      );
       const media = await getMediaByIds(
         supabase,
-        eligible.map((e) => e.vehicle.hero_media_id).filter((id): id is string => Boolean(id)),
+        eligible.map((v) => v.hero_media_id).filter((id): id is string => Boolean(id)),
       );
-      const urlById = new Map(media.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]));
-      decals = eligible
-        .map(({ vehicle, tier, score }) => ({
-          vehicleId: vehicle.id,
-          tier,
-          score,
-          carName: vehicle.nickname || `${vehicle.make} ${vehicle.model}`,
-          photoUrl: vehicle.hero_media_id ? (urlById.get(vehicle.hero_media_id) ?? null) : null,
-        }))
-        .sort((a, b) => b.score - a.score);
+      const mediaById = new Map(media.map((m) => [m.id, m]));
+      const byScore = (a: { score: number }, b: { score: number }) => b.score - a.score;
+      const heroOf = (v: (typeof eligible)[number]) => (v.hero_media_id ? (mediaById.get(v.hero_media_id) ?? null) : null);
+      const urlOf = (v: (typeof eligible)[number]) => {
+        const hero = heroOf(v);
+        return hero ? publicMediaUrl(supabase, hero.storage_path) : null;
+      };
+
+      if (showDecals) {
+        decals = eligible
+          .map((vehicle) => {
+            const score = scoreOf(vehicle.id)!;
+            return {
+              vehicleId: vehicle.id,
+              tier: rankForScore(score),
+              score,
+              carName: vehicle.nickname || `${vehicle.make} ${vehicle.model}`,
+              photoUrl: urlOf(vehicle),
+            };
+          })
+          .sort(byScore);
+      }
+      if (showPosters) {
+        posters = eligible
+          .map((vehicle) =>
+            buildPosterOffer({ vehicle, build: builds.get(vehicle.id) ?? null, hero: heroOf(vehicle), viewerId: user.id, photoUrl: urlOf(vehicle) }),
+          )
+          .filter((o): o is PosterOffer => o !== null)
+          .sort(byScore);
+      }
     } catch (err) {
-      console.error("Store decal lookup failed:", err);
+      console.error("Store prints lookup failed:", err);
     }
   }
 
@@ -120,6 +145,8 @@ export default async function StorePage() {
           crews={crews}
           decals={decals}
           showDecals={showDecals}
+          posters={posters}
+          showPosters={showPosters}
           decalPriceCents={DECAL_PRICE_CENTS}
           isFounder={profile?.is_founder ?? false}
         />

@@ -28,6 +28,9 @@ import { LeaderboardStatus } from "@/features/garage/leaderboard-status";
 import { VehicleShareButton } from "@/features/garage/vehicle-share-button";
 import { VehicleHeroPhoto } from "@/features/garage/vehicle-hero-photo";
 import { DecalCard, DecalHeroButton } from "@/features/decals/decal-card";
+import { PosterCard } from "@/features/posters/poster-card";
+import { buildPosterOffer } from "@/lib/posters/offer";
+import { postersEnabled } from "@/lib/posters/products";
 import { decalsEnabled } from "@/lib/decals/printful";
 import { DECAL_PRICE_CENTS, earnedDecalTier } from "@/lib/decals/eligibility";
 import { buildShareText, formatScore } from "@/lib/rating/share-text";
@@ -88,10 +91,10 @@ export default async function VehiclePage({
    * lets Creator Studio attribute a garage visit back to the post that
    * drove it. Never present for a direct link or a garage-grid browse,
    * which is a real "unknown source", not an error. */
-  searchParams: Promise<{ from?: string; decal?: string }>;
+  searchParams: Promise<{ from?: string; decal?: string; poster?: string }>;
 }) {
   const { vehicleId } = await params;
-  const { from: sourcePostId, decal: decalParam } = await searchParams;
+  const { from: sourcePostId, decal: decalParam, poster: posterParam } = await searchParams;
   const supabase = await createClient();
 
   const [vehicle, user] = await Promise.all([
@@ -228,6 +231,11 @@ export default async function VehiclePage({
     decalTier && score != null
       ? { vehicleId: vehicle.id, tier: decalTier, score, carName: title, photoUrl: heroUrl }
       : null;
+  // The owner's build poster, for an approved, rated car with a cover
+  // photo, while posters can be printed (admins can test before that).
+  const posterOffer = postersEnabled(isOwner && (owner?.is_admin ?? false))
+    ? buildPosterOffer({ vehicle, build: activeBuild, hero: heroMedia, viewerId: user?.id ?? null, photoUrl: heroUrl })
+    : null;
 
   return (
     <div className="flex-1 pb-16">
@@ -330,6 +338,7 @@ export default async function VehiclePage({
         {decalOffer && (
           <DecalCard offer={decalOffer} priceCents={DECAL_PRICE_CENTS} justOrdered={decalParam === "ordered"} />
         )}
+        {posterOffer && <PosterCard offer={posterOffer} justOrdered={posterParam === "ordered"} />}
 
         <PeerRatingCard
           vehicleId={vehicle.id}

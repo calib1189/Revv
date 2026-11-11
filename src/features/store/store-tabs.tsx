@@ -17,6 +17,8 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DecalCard, DecalTeaser } from "@/features/decals/decal-card";
 import type { DecalOffer } from "@/features/decals/decal-sheet";
+import { PosterCard } from "@/features/posters/poster-card";
+import type { PosterOffer } from "@/lib/posters/offer";
 
 type Tab = "profile" | "garage" | "crew";
 type Equipped = Partial<Record<StoreCategory, string | null>>;
@@ -78,6 +80,8 @@ export function StoreTabs({
   decals = [],
   showDecals = false,
   decalPriceCents = 0,
+  posters = [],
+  showPosters = false,
 }: {
   initialBalance: number;
   initialOwnedItemIds: string[];
@@ -99,6 +103,10 @@ export function StoreTabs({
   /** Whether decals are on for this viewer (switched on, or an admin). */
   showDecals?: boolean;
   decalPriceCents?: number;
+  /** Build posters the viewer's cars can order, best score first. */
+  posters?: PosterOffer[];
+  /** Whether posters are on for this viewer (switched on, or an admin). */
+  showPosters?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("profile");
   const [balance, setBalance] = useState(initialBalance);
@@ -203,13 +211,11 @@ export function StoreTabs({
         onOpenChange={setWalletOpen}
       />
 
-      {showDecals && (
-        <section className="flex flex-col gap-3" aria-label="Rank decals">
-          {decals.length > 0 ? (
-            decals.map((offer) => <DecalCard key={offer.vehicleId} offer={offer} priceCents={decalPriceCents} />)
-          ) : (
-            <DecalTeaser />
-          )}
+      {(showDecals || showPosters) && (
+        <section className="flex flex-col gap-3" aria-label="Prints for your car">
+          {showDecals && decals.map((offer) => <DecalCard key={offer.vehicleId} offer={offer} priceCents={decalPriceCents} />)}
+          {showPosters && posters.map((offer) => <PosterCard key={`poster-${offer.vehicleId}`} offer={offer} />)}
+          {showDecals && decals.length === 0 && posters.length === 0 && <DecalTeaser />}
         </section>
       )}
 

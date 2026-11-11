@@ -155,6 +155,40 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["decal_orders"]["Insert"]>;
         Relationships: never[];
       };
+      poster_orders: {
+        Row: {
+          id: string;
+          user_id: string;
+          vehicle_id: string | null;
+          product: "poster_18x24" | "framed_12x18";
+          snapshot: Json;
+          status: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
+          amount_cents: number;
+          stripe_session_id: string | null;
+          print_file_path: string | null;
+          printer_order_id: string | null;
+          error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          vehicle_id?: string | null;
+          product: "poster_18x24" | "framed_12x18";
+          snapshot: Json;
+          status?: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
+          amount_cents: number;
+          stripe_session_id?: string | null;
+          print_file_path?: string | null;
+          printer_order_id?: string | null;
+          error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["poster_orders"]["Insert"]>;
+        Relationships: never[];
+      };
       store_items_owned: {
         Row: {
           id: string;

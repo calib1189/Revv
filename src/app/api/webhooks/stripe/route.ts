@@ -1,11 +1,16 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { findCheckoutSessionByPaymentIntent, verifyStripeSignature } from "@/lib/billing/stripe";
 import { packById } from "@/lib/points/packs";
 import { creditPointsPurchase, refundPointsPurchase } from "@/lib/points/credit";
 import { fulfillDecalOrder } from "@/lib/decals/fulfill";
+import { markPosterPaid, printPosterOrder } from "@/features/posters/fulfill";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { SHOP_PROMOTION_DURATION_DAYS } from "@/lib/db/shop-promotions";
 import { applyPromotionPicture } from "@/lib/db/shop-pictures";
+
+// A paid poster is rendered and sent to the printer after the webhook
+// has answered (posters/fulfill.ts); this is the time that work gets.
+export const maxDuration = 60;
 
 interface StripeEvent {
   type: string;
@@ -137,6 +142,22 @@ export async function POST(request: NextRequest) {
           await fulfillDecalOrder(session, metadata.order_id);
         } catch (decalError) {
           console.error("Decal order not processed:", decalError);
+          return NextResponse.json({ error: "Not processed" }, { status: 500 });
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
+    if (metadata?.type === "build_poster") {
+      const orderId = metadata.order_id;
+      if (orderId) {
+        try {
+          // Marked paid now, so a retried webhook doesn't print twice;
+          // the print file takes several seconds to render, so that part
+          // runs once Stripe has its answer.
+          if (await markPosterPaid(session, orderId)) after(() => printPosterOrder(session, orderId));
+        } catch (posterError) {
+          console.error("Poster order not processed:", posterError);
           return NextResponse.json({ error: "Not processed" }, { status: 500 });
         }
       }

@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "20mb",
     },
   },
+  // The build-poster renderer (features/posters/poster-art.tsx) reads its
+  // fonts and artwork from disk by name, which the tracer can't follow:
+  // ship them with the routes that render posters.
+  outputFileTracingIncludes: {
+    "/api/webhooks/stripe": ["./src/features/posters/fonts/*", "./src/features/posters/assets/*"],
+    "/api/posters/preview": ["./src/features/posters/fonts/*", "./src/features/posters/assets/*"],
+  },
   images: {
     // Next 16 defaults to only allowing quality=75 and silently coerces
     // any other value down to it — the login logo needs 100 to actually

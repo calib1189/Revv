@@ -256,6 +256,39 @@ export async function createDecalCheckoutSession({
   });
 }
 
+export async function createPosterCheckoutSession({
+  orderId,
+  name,
+  description,
+  priceCents,
+  customerEmail,
+  successUrl,
+  cancelUrl,
+}: {
+  orderId: string;
+  name: string;
+  description: string;
+  priceCents: number;
+  customerEmail: string | null;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ id: string; url: string | null }> {
+  return stripeRequest<{ id: string; url: string | null }>("/checkout/sessions", {
+    mode: "payment",
+    "line_items[0][price_data][currency]": "usd",
+    "line_items[0][price_data][product_data][name]": name,
+    "line_items[0][price_data][product_data][description]": description,
+    "line_items[0][price_data][unit_amount]": String(priceCents),
+    "line_items[0][quantity]": "1",
+    "shipping_address_collection[allowed_countries][0]": "US",
+    ...(customerEmail ? { customer_email: customerEmail } : {}),
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    "metadata[type]": "build_poster",
+    "metadata[order_id]": orderId,
+  });
+}
+
 /** The Checkout session behind a payment, for tying a refund back to
  * what was bought. */
 export async function findCheckoutSessionByPaymentIntent(paymentIntentId: string): Promise<{ id: string; metadata: Record<string, string> } | null> {

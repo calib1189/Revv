@@ -18,16 +18,27 @@ export interface DecalRecipient {
   email?: string | null;
 }
 
-export function printfulConfig() {
+/** The same shipping address shape serves every printed product. */
+export type PrintRecipient = DecalRecipient;
+
+/** The Printful account: token, store and whether orders skip the draft
+ * step. Shared by every printed product (decals, posters). */
+export function printfulAccount() {
   const token = process.env.PRINTFUL_API_TOKEN;
-  const variantId = Number(process.env.PRINTFUL_DECAL_VARIANT_ID);
-  if (!token || !Number.isInteger(variantId) || variantId <= 0) return null;
+  if (!token) return null;
   return {
     token,
-    variantId,
     storeId: process.env.PRINTFUL_STORE_ID || null,
     autoConfirm: process.env.PRINTFUL_AUTO_CONFIRM === "true",
   };
+}
+
+/** The account plus the decal's own sticker variant. */
+export function printfulConfig() {
+  const account = printfulAccount();
+  const variantId = Number(process.env.PRINTFUL_DECAL_VARIANT_ID);
+  if (!account || !Number.isInteger(variantId) || variantId <= 0) return null;
+  return { ...account, variantId };
 }
 
 /** Whether decals can be sold right now: switched on (DECALS_ENABLED,
@@ -39,15 +50,19 @@ export function decalsEnabled(isAdmin = false): boolean {
   return on && Boolean(process.env.STRIPE_SECRET_KEY && printfulConfig());
 }
 
-/** Creates the Printful order and returns its id. */
+/** Creates the Printful order and returns its id. `variantId` is the
+ * catalog variant to print; it defaults to the decal sticker. */
 export async function createPrintfulOrder(input: {
   orderId: string;
-  recipient: DecalRecipient;
+  recipient: PrintRecipient;
   fileUrl: string;
   previewName: string;
+  variantId?: number;
 }): Promise<string> {
-  const config = printfulConfig();
-  if (!config) throw new Error("Printful is not configured.");
+  const account = printfulAccount();
+  const variantId = input.variantId ?? printfulConfig()?.variantId;
+  if (!account || !variantId) throw new Error("Printful is not configured.");
+  const config = { ...account, variantId };
   const r = input.recipient;
   const res = await fetch(`https://api.printful.com/orders${config.autoConfirm ? "?confirm=true" : ""}`, {
     method: "POST",
