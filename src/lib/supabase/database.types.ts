@@ -78,7 +78,7 @@ export interface Database {
           id: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate";
           source_id: string;
           created_at: string;
         };
@@ -86,7 +86,7 @@ export interface Database {
           id?: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate";
           source_id: string;
           created_at?: string;
         };

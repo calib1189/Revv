@@ -23,8 +23,8 @@ import { listBuildParts } from "@/lib/db/build-parts";
 import { buildRatingSummary } from "@/lib/rating/build-summary";
 import { getRatingProvider } from "@/lib/providers/get-rating-provider";
 import type { RatingPhoto, BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
-
-const RATE_LIMIT_HOURS = 24;
+import { getPointsBalance } from "@/lib/db/points";
+import { INSTANT_RERATE_POINTS, formatWait, nextFreeRateAt } from "@/lib/rating/rerate";
 const MAX_PHOTOS = 4;
 
 async function requireOwner(vehicleId: string) {
@@ -61,6 +61,7 @@ export interface GenerateRatingResult {
 
 export async function generateBuildRatingAction(
   vehicleId: string,
+  options: { payWithPoints?: boolean } = {},
 ): Promise<GenerateRatingResult> {
   const { supabase, user, vehicle } = await requireOwner(vehicleId);
 
@@ -73,14 +74,55 @@ export async function generateBuildRatingAction(
   // never gets confirmed. Falling back to ai_rating_rated_at covers a
   // build whose last rating predates this column existing at all.
   // Admins aren't limited, so the app's own team can re-rate freely.
-  const lastAttempt = existingBuild?.ai_rating_last_attempt_at ?? existingBuild?.ai_rating_rated_at;
-  if (lastAttempt && !profile?.is_admin) {
-    const hoursSince = (Date.now() - new Date(lastAttempt).getTime()) / (1000 * 60 * 60);
-    if (hoursSince < RATE_LIMIT_HOURS) {
-      const hoursLeft = Math.ceil(RATE_LIMIT_HOURS - hoursSince);
-      return { error: `You can rate this build again in about ${hoursLeft}h.` };
+  const lastAttempt = existingBuild?.ai_rating_last_attempt_at ?? existingBuild?.ai_rating_rated_at ?? null;
+  const freeAt = profile?.is_admin ? null : nextFreeRateAt(lastAttempt);
+  // Inside the wait, the owner can skip it for points. The points are
+  // taken before the AI call and given back if it fails, so a rating is
+  // never paid for twice or got for free by a failed charge.
+  let chargeId: string | null = null;
+  if (freeAt) {
+    if (!options.payWithPoints) {
+      return { error: `You can rate this build again for free in about ${formatWait(freeAt)}.` };
+    }
+    const balance = await getPointsBalance(supabase, user.id);
+    if (balance < INSTANT_RERATE_POINTS) {
+      return { error: `You need ${INSTANT_RERATE_POINTS} points to re-rate now. You have ${balance}.` };
+    }
+    chargeId = crypto.randomUUID();
+    const { error: chargeError } = await createServiceRoleClient().from("points_ledger").insert({
+      user_id: user.id,
+      amount: -INSTANT_RERATE_POINTS,
+      source_type: "instant_rerate",
+      source_id: chargeId,
+    });
+    if (chargeError) {
+      // Most likely 0112 isn't applied yet, so the ledger refuses the type.
+      console.error("instant re-rate charge failed:", chargeError);
+      return { error: "Instant re-rates aren't available right now. Try again later." };
     }
   }
+  const result = await rateBuild(supabase, user.id, vehicle, existingBuild);
+  if (chargeId && result.error) {
+    const { error: refundError } = await createServiceRoleClient()
+      .from("points_ledger")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("source_type", "instant_rerate")
+      .eq("source_id", chargeId);
+    if (refundError) console.error("instant re-rate refund failed:", chargeId, refundError);
+  }
+  if (chargeId && !result.error) revalidatePath("/store");
+  return result;
+}
+
+/** The rating itself: photos, the AI call, and saving the result. */
+async function rateBuild(
+  supabase: Awaited<ReturnType<typeof requireOwner>>["supabase"],
+  userId: string,
+  vehicle: Awaited<ReturnType<typeof requireOwner>>["vehicle"],
+  existingBuild: Awaited<ReturnType<typeof getActiveBuild>>,
+): Promise<GenerateRatingResult> {
+  const vehicleId = vehicle.id;
 
   const [gallery, heroMedia, buildParts] = await Promise.all([
     listVehicleMedia(supabase, vehicleId),
@@ -134,7 +176,7 @@ export async function generateBuildRatingAction(
     await insertBuildRatingHistory(serviceRole, build.id, rating).catch((err) =>
       console.error("insertBuildRatingHistory failed:", err),
     );
-    after(() => notifyLeaderboardDisplacements(vehicleId, user.id, previousScore, rating.score));
+    after(() => notifyLeaderboardDisplacements(vehicleId, userId, previousScore, rating.score));
     revalidatePath(`/garage/${vehicleId}`);
     revalidatePath("/garage");
     revalidatePath("/leaderboard");

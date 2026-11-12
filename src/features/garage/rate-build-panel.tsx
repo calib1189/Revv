@@ -13,6 +13,8 @@ import { ShareScoreButton } from "@/features/garage/vehicle-share-button";
 import { RatingReveal } from "@/features/garage/rating-reveal";
 import { DecalSheet, type DecalOffer } from "@/features/decals/decal-sheet";
 import type { RankTier } from "@/lib/rating/rank";
+import { Sheet } from "@/components/ui/sheet";
+import { formatWait } from "@/lib/rating/rerate";
 import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
 import { RatingBreakdownTrigger, type RatingHistoryPoint } from "@/features/garage/rating-breakdown-modal";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,7 @@ export function RateBuildPanel({
   shareText,
   savedPending,
   hasPhotos,
+  rerate = null,
   decal = null,
 }: {
   vehicleId: string;
@@ -52,6 +55,9 @@ export function RateBuildPanel({
   savedPending: BuildRating | null;
   /** The AI rates from photos; without one, point at adding a photo. */
   hasPhotos: boolean;
+  /** When the next free re-rate opens (null if it's open now), the
+   * owner's points, and what skipping the wait costs. */
+  rerate?: { freeAt: string | null; balance: number; cost: number } | null;
   /** Set when this car can have a rank decal (the owner's, approved,
    * decals switched on): the reveal then offers the rank just earned. */
   decal?: { carName: string; photoUrl: string | null; priceCents: number } | null;
@@ -70,15 +76,25 @@ export function RateBuildPanel({
   const [isRevealing, setIsRevealing] = useState(false);
   const [revealResult, setRevealResult] = useState<BuildRating | null>(null);
   const [decalOffer, setDecalOffer] = useState<DecalOffer | null>(null);
+  const [rerateOpen, setRerateOpen] = useState(false);
 
-  async function handleGenerate() {
+  // Re-rate: free once the wait is over; inside it, offer skipping the
+  // wait for points instead of failing with "try again in 19h".
+  function handleRerate() {
+    const freeAt = rerate?.freeAt ? new Date(rerate.freeAt) : null;
+    if (freeAt && freeAt.getTime() > Date.now()) setRerateOpen(true);
+    else void handleGenerate();
+  }
+
+  async function handleGenerate(payWithPoints = false) {
+    setRerateOpen(false);
     setError(null);
     setPending(null);
     setRevealResult(null);
     setIsGenerating(true);
     setIsRevealing(true);
     try {
-      const result = await generateBuildRatingAction(vehicleId);
+      const result = await generateBuildRatingAction(vehicleId, { payWithPoints });
       if (result.error) {
         setError(result.error);
         setIsRevealing(false);
@@ -267,7 +283,7 @@ export function RateBuildPanel({
             <Button
               type="button"
               disabled={isGenerating}
-              onClick={handleGenerate}
+              onClick={handleRerate}
               className="h-11 flex-1 text-[0.9375rem] font-semibold"
             >
               {isGenerating ? "Rating…" : "Re-rate"}
@@ -275,6 +291,16 @@ export function RateBuildPanel({
           </div>
           <AiDisclosure className="mt-3" />
         </div>
+        {rerate && (
+          <RerateSheet
+            open={rerateOpen}
+            onClose={() => setRerateOpen(false)}
+            freeAt={rerate.freeAt}
+            balance={rerate.balance}
+            cost={rerate.cost}
+            onPay={() => void handleGenerate(true)}
+          />
+        )}
       </>
     );
   }
@@ -295,7 +321,7 @@ export function RateBuildPanel({
           <Button
             type="button"
             disabled={isGenerating}
-            onClick={handleGenerate}
+            onClick={() => void handleGenerate()}
             className="mt-6 h-12 w-full max-w-xs text-[1rem] font-semibold"
           >
             {isGenerating ? "Rating…" : "Rate my build"}
@@ -318,5 +344,59 @@ export function RateBuildPanel({
         )}
       </div>
     </>
+  );
+}
+
+/** Inside the 24h wait: skip it for points, or wait for the free one. */
+function RerateSheet({
+  open,
+  onClose,
+  freeAt,
+  balance,
+  cost,
+  onPay,
+}: {
+  open: boolean;
+  onClose: () => void;
+  freeAt: string | null;
+  balance: number;
+  cost: number;
+  onPay: () => void;
+}) {
+  const wait = freeAt ? formatWait(new Date(freeAt)) : null;
+  const canPay = balance >= cost;
+  return (
+    <Sheet open={open} onClose={onClose} title="Re-rate now">
+      <div className="flex flex-col gap-5">
+        <p className="text-[0.9375rem] leading-relaxed text-muted">
+          {wait ? `Your next free re-rate opens in ${wait}. ` : ""}
+          Changed something or got better photos? Skip the wait and see your new score now.
+        </p>
+        <div className="flex items-center justify-between rounded-[16px] bg-foreground/[0.05] px-4 py-3">
+          <span className="text-[0.875rem] text-muted">Your points</span>
+          <span className="numeral text-[0.9375rem] font-semibold">{balance.toLocaleString()}</span>
+        </div>
+        {canPay ? (
+          <Button type="button" onClick={onPay} className="h-12 w-full text-[0.9375rem] font-semibold">
+            Re-rate for <span className="numeral mx-1">{cost}</span> points
+          </Button>
+        ) : (
+          <>
+            <p className="text-center text-[0.8125rem] text-muted">
+              You need <span className="numeral">{cost - balance}</span> more points.
+            </p>
+            <Link
+              href="/store"
+              className="pressable flex h-12 w-full items-center justify-center rounded-full bg-accent text-[0.9375rem] font-semibold text-accent-foreground"
+            >
+              Get points
+            </Link>
+          </>
+        )}
+        <button type="button" onClick={onClose} className="h-10 text-[0.875rem] font-medium text-muted">
+          {wait ? `Wait ${wait} for a free one` : "Not now"}
+        </button>
+      </div>
+    </Sheet>
   );
 }
