@@ -313,6 +313,11 @@ export default async function VehiclePage({
             shareText={buildShareText({ title, score, isOwner })}
             savedPending={activeBuild ? pendingRatingFromBuild(activeBuild) : null}
             hasPhotos={Boolean(heroMedia) || gallery.some((g) => g.media.kind === "image")}
+            decal={
+              decalsEnabled(owner?.is_admin ?? false) && vehicle.ownership_verification_status === "approved"
+                ? { carName: title, photoUrl: heroUrl, priceCents: DECAL_PRICE_CENTS }
+                : null
+            }
           />
         ) : (
           score != null && (

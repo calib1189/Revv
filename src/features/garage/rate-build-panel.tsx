@@ -11,6 +11,8 @@ import {
 import { AiDisclosure } from "@/features/garage/ai-disclosure";
 import { ShareScoreButton } from "@/features/garage/vehicle-share-button";
 import { RatingReveal } from "@/features/garage/rating-reveal";
+import { DecalSheet, type DecalOffer } from "@/features/decals/decal-sheet";
+import type { RankTier } from "@/lib/rating/rank";
 import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
 import { RatingBreakdownTrigger, type RatingHistoryPoint } from "@/features/garage/rating-breakdown-modal";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,7 @@ export function RateBuildPanel({
   shareText,
   savedPending,
   hasPhotos,
+  decal = null,
 }: {
   vehicleId: string;
   /** What goes out with the link when the owner shares their score. */
@@ -49,6 +52,9 @@ export function RateBuildPanel({
   savedPending: BuildRating | null;
   /** The AI rates from photos; without one, point at adding a photo. */
   hasPhotos: boolean;
+  /** Set when this car can have a rank decal (the owner's, approved,
+   * decals switched on): the reveal then offers the rank just earned. */
+  decal?: { carName: string; photoUrl: string | null; priceCents: number } | null;
 }) {
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -63,6 +69,7 @@ export function RateBuildPanel({
   // resolves; the reveal component charges for as long as that takes.
   const [isRevealing, setIsRevealing] = useState(false);
   const [revealResult, setRevealResult] = useState<BuildRating | null>(null);
+  const [decalOffer, setDecalOffer] = useState<DecalOffer | null>(null);
 
   async function handleGenerate() {
     setError(null);
@@ -102,6 +109,20 @@ export function RateBuildPanel({
       requestAppReviewAfterRating(revealResult.score);
     }
   }
+
+  // From the reveal's decal row: close the reveal (saving the score's
+  // page refresh as usual) and open that rank's decal over the car page.
+  function handleRevealDecal(tier: RankTier) {
+    const score = revealResult?.score;
+    handleRevealDone();
+    if (!decal || score == null) return;
+    setDecalOffer({ vehicleId, tier, score, carName: decal.carName, photoUrl: decal.photoUrl });
+  }
+
+  const revealDecal = decal ? { priceCents: decal.priceCents, onOpen: handleRevealDecal } : null;
+  const decalSheet = decalOffer && decal && (
+    <DecalSheet offer={decalOffer} priceCents={decal.priceCents} open onClose={() => setDecalOffer(null)} />
+  );
 
   async function handleConfirm() {
     if (!pending) return;
@@ -193,7 +214,8 @@ export function RateBuildPanel({
   if (currentScore != null) {
     return (
       <>
-        {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} />}
+        {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} decal={revealDecal} />}
+        {decalSheet}
         <div className="glass-raised elev-2 rounded-[28px] p-5 sm:p-6">
           <RatingBreakdownTrigger
             score={currentScore}
@@ -259,7 +281,8 @@ export function RateBuildPanel({
 
   return (
     <>
-      {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} />}
+      {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} decal={revealDecal} />}
+      {decalSheet}
       <div className="glass-raised elev-2 flex flex-col items-center rounded-[28px] px-6 py-8 text-center">
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/12 text-accent">
           <GemIcon className="h-7 w-7" />

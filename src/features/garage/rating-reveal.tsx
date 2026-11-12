@@ -20,6 +20,8 @@ import {
   needsCorrection,
 } from "@/features/garage/climb-math";
 import { RevealSoundEngine } from "@/features/garage/reveal-sound";
+import { DecalArt, rankGlow } from "@/features/decals/decal-sheet";
+import { formatUsd } from "@/lib/points/packs";
 import { hapticTierUp, hapticLanding } from "@/lib/haptics";
 import type { BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 
@@ -96,10 +98,15 @@ export function RatingReveal({
   result,
   onDone,
   landedLabel,
+  decal,
 }: {
   /** Null while still awaiting the real rating call. */
   result: BuildRating | null;
   onDone: () => void;
+  /** The owner's rank decal for the score just landed, when their car can
+   * have one (approved, decals switched on). Tapping it leaves the reveal
+   * and opens the decal. */
+  decal?: { priceCents: number; onOpen: (tier: RankTier) => void } | null;
   /** Replaces "Your rating" once landed — for replaying someone else's
    * stored rating, e.g. in the first-time walkthrough. */
   landedLabel?: string;
@@ -650,6 +657,10 @@ export function RatingReveal({
             {/* Pinned to the bottom of the screen: with the breakdown and
                 the write-up above, it would otherwise sit below the fold on
                 a phone. The band behind it fades the text out under it. */}
+            {decal && !result.isMock && (
+              <DecalOfferRow tier={rankForScore(result.score)} priceCents={decal.priceCents} onOpen={decal.onOpen} />
+            )}
+
             <div className="sticky bottom-0 -mb-[calc(2rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-[#050506] from-60% to-transparent pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-8">
               <button
                 type="button"
@@ -674,5 +685,41 @@ export function RatingReveal({
         )}
       </div>
     </div>
+  );
+}
+
+/** Right after the score lands, the rank it earned as a real decal: the
+ * moment someone is proudest of the number is when they want it on the
+ * car. */
+function DecalOfferRow({
+  tier,
+  priceCents,
+  onOpen,
+}: {
+  tier: RankTier;
+  priceCents: number;
+  onOpen: (tier: RankTier) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(tier)}
+      className="reveal-rise pressable flex w-full items-center gap-4 rounded-[22px] bg-white/[0.04] p-3 pr-4 text-left ring-1 ring-inset ring-white/[0.07]"
+      style={{ "--delay": "750ms" } as React.CSSProperties}
+    >
+      <span
+        className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-[14px] bg-white/[0.03]"
+        style={{ backgroundImage: rankGlow(tier, 28) }}
+      >
+        <DecalArt tier={tier} sizes="128px" className="absolute inset-[8%]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[0.9375rem] font-semibold leading-tight">{RANK_LABELS[tier]} decal</span>
+        <span className="mt-1 block text-[0.8125rem] leading-snug text-white/50">Put your rank on your car</span>
+      </span>
+      <span className="numeral flex-shrink-0 rounded-full bg-white/[0.08] px-3 py-1.5 text-[0.8125rem] font-semibold">
+        {formatUsd(priceCents)}
+      </span>
+    </button>
   );
 }
