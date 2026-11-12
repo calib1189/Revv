@@ -20,10 +20,14 @@ export const RARITY_COLOR: Record<Rarity, string> = {
   legendary: "#f5b93c",
 };
 
+/** Where each band starts. Moved with the 4x repricing of Nov 2026 so
+ * every item kept the rarity it had. */
+export const RARITY_MIN_PRICE = { rare: 400, epic: 800, legendary: 1400 } as const;
+
 export function rarityFor(price: number, founderOnly = false): Rarity {
   if (founderOnly) return "founder";
-  if (price >= 350) return "legendary";
-  if (price >= 200) return "epic";
-  if (price >= 100) return "rare";
+  if (price >= RARITY_MIN_PRICE.legendary) return "legendary";
+  if (price >= RARITY_MIN_PRICE.epic) return "epic";
+  if (price >= RARITY_MIN_PRICE.rare) return "rare";
   return "common";
 }

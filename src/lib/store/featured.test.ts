@@ -6,7 +6,7 @@ describe("featuredItem", () => {
     for (let week = 0; week < 30; week++) {
       const item = featuredItem(["name_color", "profile_background", "showcase_frame"], week);
       expect(item).not.toBeNull();
-      expect(item!.price).toBeGreaterThanOrEqual(200);
+      expect(item!.price).toBeGreaterThanOrEqual(800);
       expect(item!.founderOnly).toBeFalsy();
       expect(["name_color", "profile_background", "showcase_frame"]).toContain(item!.category);
     }

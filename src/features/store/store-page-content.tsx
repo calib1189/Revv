@@ -104,7 +104,7 @@ function StoreItemCard({
         ) : (
           <span className="numeral flex flex-shrink-0 items-center gap-1 text-[0.8125rem] text-muted">
             <GemIcon className="h-3 w-3 text-accent" />
-            {item.price}
+            {item.price.toLocaleString()}
           </span>
         )}
       </span>
