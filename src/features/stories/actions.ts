@@ -31,6 +31,7 @@ import { QUESTION_ANSWER_MAX, isPlainDesign, parseStoryDesign, type StoryDesign 
 import { myCars, resolveStoryDesign, type StoryCar } from "@/lib/stories/resolve";
 import { searchProfilesByUsername } from "@/lib/db/profiles";
 import type { Json } from "@/lib/supabase/database.types";
+import { isReaction, type Reaction } from "@/lib/reactions";
 
 export interface StoryItem {
   id: string;
@@ -51,6 +52,8 @@ export interface StoryItem {
   polls: Record<string, { counts: [number, number]; mine: 0 | 1 | null }>;
   /** Only on your own stories: answers to its question. */
   answerCount?: number;
+  /** Your reaction to someone else's story. */
+  myReaction: Reaction | null;
 }
 
 export interface StoryGroup {
@@ -120,11 +123,20 @@ export async function loadStoryGroupsAction(authorIds: string[]): Promise<StoryG
   const designs = new Map(stories.map((s) => [s.id, s.design ? parseStoryDesign(s.design) : null]));
   const soundIds = [...new Set([...designs.values()].flatMap((d) => d?.layers.flatMap((l) => (l.kind === "music" ? [l.soundId] : [])) ?? []))];
   const pollStoryIds = stories.filter((s) => designs.get(s.id)?.layers.some((l) => l.kind === "poll")).map((s) => s.id);
-  const [sounds, pollCounts, myVotes, answerCounts] = await Promise.all([
+  const othersIds = stories.filter((s) => s.author_id !== user?.id).map((s) => s.id);
+  const [sounds, pollCounts, myVotes, answerCounts, myReactions] = await Promise.all([
     soundIds.length > 0 ? getSoundsByIds(supabase, soundIds).catch(() => []) : Promise.resolve([]),
     Promise.all(pollStoryIds.map((id) => getPollCounts(supabase, id).then((c) => [id, c] as const).catch(() => [id, new Map<string, [number, number]>()] as const))),
     user && pollStoryIds.length > 0 ? listMyPollVotes(supabase, user.id, pollStoryIds).catch(() => new Map<string, 0 | 1>()) : Promise.resolve(new Map<string, 0 | 1>()),
     getAnswerCounts(supabase, ownIds).catch(() => new Map<string, number>()),
+    user && othersIds.length > 0
+      ? supabase
+          .from("story_reactions")
+          .select("story_id, reaction")
+          .eq("user_id", user.id)
+          .in("story_id", othersIds)
+          .then(({ data }) => new Map((data ?? []).filter((r) => isReaction(r.reaction)).map((r) => [r.story_id, r.reaction as Reaction])), () => new Map<string, Reaction>())
+      : Promise.resolve(new Map<string, Reaction>()),
   ]);
   const soundUrlById = new Map(sounds.map((s) => [s.id, publicSoundUrl(supabase, s.storage_path)]));
   const countsByStory = new Map(pollCounts);
@@ -158,6 +170,7 @@ export async function loadStoryGroupsAction(authorIds: string[]): Promise<StoryG
         ...(isOwn ? { viewCount: viewCounts.get(story.id) ?? 0, answerCount: answerCounts.get(story.id) ?? 0 } : {}),
         music: musicFor(designs.get(story.id) ?? null, soundUrlById),
         polls: pollsFor(story.id, designs.get(story.id) ?? null, countsByStory.get(story.id), myVotes),
+        myReaction: myReactions.get(story.id) ?? null,
       });
     }
     if (items.length > 0) groups.push({ author, isOwn, stories: items });
@@ -179,21 +192,28 @@ export async function markStorySeenAction(storyId: string): Promise<void> {
   }
 }
 
-/** Who watched your story. */
-export async function listStoryViewersAction(storyId: string): Promise<(StoryPerson & { viewedAt: string })[]> {
+/** Who watched your story, and how they reacted. */
+export async function listStoryViewersAction(storyId: string): Promise<(StoryPerson & { viewedAt: string; reaction: Reaction | null })[]> {
   const user = await getCurrentUser();
   if (!user) return [];
   const supabase = await createClient();
   const story = await getStoryById(supabase, storyId);
   if (!story || story.author_id !== user.id) return [];
-  const views = await listStoryViews(supabase, storyId);
+  const [views, reactions] = await Promise.all([
+    listStoryViews(supabase, storyId),
+    supabase
+      .from("story_reactions")
+      .select("user_id, reaction")
+      .eq("story_id", storyId)
+      .then(({ data }) => new Map((data ?? []).filter((r) => isReaction(r.reaction)).map((r) => [r.user_id, r.reaction as Reaction])), () => new Map<string, Reaction>()),
+  ]);
   const people = await loadStoryPeople(supabase, views.map((v) => v.viewerId));
   return views
     .map((v) => {
       const person = people.get(v.viewerId);
-      return person ? { ...person, viewedAt: v.viewedAt } : null;
+      return person ? { ...person, viewedAt: v.viewedAt, reaction: reactions.get(v.viewerId) ?? null } : null;
     })
-    .filter((v): v is StoryPerson & { viewedAt: string } => v !== null);
+    .filter((v): v is StoryPerson & { viewedAt: string; reaction: Reaction | null } => v !== null);
 }
 
 export async function deleteStoryAction(storyId: string): Promise<{ ok: boolean }> {

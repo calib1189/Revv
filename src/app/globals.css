@@ -598,6 +598,30 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   animation: sticker-float 5s ease-in-out infinite;
 }
 
+/* A story reaction bursting up from the middle of the screen. */
+@keyframes react-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  45% {
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60%) scale(1.05);
+  }
+}
+
+.animate-react-burst {
+  display: block;
+  animation: react-burst 900ms var(--ease-ios) both;
+}
+
 @keyframes reaction-pop {
   0% {
     opacity: 0;
@@ -892,6 +916,7 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   .animate-panel-up,
   .animate-rise-in,
   .animate-reaction-pop,
+  .animate-react-burst,
   .animate-sticker-float,
   .animate-disc-spin,
   .animate-like-beat,

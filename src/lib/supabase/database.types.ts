@@ -243,6 +243,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["comment_reactions"]["Insert"]>;
         Relationships: never[];
       };
+      story_reactions: {
+        Row: {
+          story_id: string;
+          user_id: string;
+          reaction: string;
+          created_at: string;
+        };
+        Insert: {
+          story_id: string;
+          user_id: string;
+          reaction: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["story_reactions"]["Insert"]>;
+        Relationships: never[];
+      };
       story_poll_votes: {
         Row: {
           story_id: string;

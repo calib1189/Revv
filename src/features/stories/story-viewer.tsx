@@ -19,12 +19,15 @@ import {
   type StoryGroup,
 } from "@/features/stories/actions";
 import { PollCard, QuestionCard } from "@/features/stories/story-frame";
+import { ReactionIcon } from "@/features/reactions/reaction-picker";
+import { reactToStoryAction } from "@/features/reactions/actions";
+import { REACTIONS, REACTION_LABELS, type Reaction } from "@/lib/reactions";
 import { QUESTION_ANSWER_MAX, type StoryLayer } from "@/lib/stories/design";
 import type { StoryPerson } from "@/lib/stories/load";
 import { PHOTO_MUSIC_STORY_MS, PHOTO_STORY_MS, startIndex, storyAge } from "@/lib/stories/tray";
 import { isFeedMuted, setFeedMuted } from "@/features/feed/feed-sound";
 
-type Viewer = StoryPerson & { viewedAt: string };
+type Viewer = StoryPerson & { viewedAt: string; reaction: Reaction | null };
 
 /** Story ids of this person's that count as watched: already seen when
  * loaded, or watched since. */
@@ -70,6 +73,11 @@ export function StoryViewer({
   const [answerState, setAnswerState] = useState<"idle" | "sending" | "sent" | string>("idle");
   const [answers, setAnswers] = useState<{ answerId: string; username: string; avatarUrl: string | null; body: string; createdAt: string }[] | null>(null);
   const musicRef = useRef<HTMLAudioElement>(null);
+  // Reactions sent while watching (story id -> reaction), and the one
+  // bursting on screen right now.
+  const [reacted, setReacted] = useState<Record<string, Reaction | null>>({});
+  const [burst, setBurst] = useState<{ reaction: Reaction; key: number } | null>(null);
+  const burstSeq = useRef(0);
   const [viewers, setViewers] = useState<Viewer[] | null>(null);
   const [muted, setMuted] = useState(() => isFeedMuted());
   const [readyId, setReadyId] = useState<string | null>(null);
@@ -376,6 +384,16 @@ export function StoryViewer({
     return null;
   }
 
+  async function react(r: Reaction) {
+    if (!story) return;
+    const current = story.id in reacted ? reacted[story.id] : story.myReaction;
+    const next = current === r ? null : r;
+    setReacted((m) => ({ ...m, [story.id]: next }));
+    if (next) setBurst({ reaction: next, key: ++burstSeq.current });
+    const result = await reactToStoryAction(story.id, next).catch(() => ({ ok: false }));
+    if (!result.ok) setReacted((m) => ({ ...m, [story.id]: current }));
+  }
+
   async function removeStory() {
     if (!groups || !story) return;
     setDeleting(true);
@@ -548,6 +566,29 @@ export function StoryViewer({
             {story.caption && (
               <p className="text-center text-[1rem] font-medium leading-snug [text-shadow:0_1px_4px_rgb(0_0_0/0.6)]">{story.caption}</p>
             )}
+            {group && !group.isOwn && (
+              <div className="pointer-events-auto mt-4 flex justify-center">
+                <div className="flex items-center gap-0.5 rounded-full bg-black/35 p-1 ring-1 ring-white/15 backdrop-blur-md" role="group" aria-label="React to this story">
+                  {REACTIONS.map((r) => {
+                    const mine = (story.id in reacted ? reacted[story.id] : story.myReaction) === r;
+                    return (
+                      <button
+                        key={r}
+                        type="button"
+                        aria-label={REACTION_LABELS[r]}
+                        aria-pressed={mine}
+                        onClick={() => void react(r)}
+                        className={`flex h-11 w-11 items-center justify-center rounded-full transition-[transform,background-color] duration-150 active:scale-90 ${
+                          mine ? "scale-110 bg-white/25" : ""
+                        }`}
+                      >
+                        <ReactionIcon reaction={r} className="h-7 w-7" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {group?.isOwn && (
               <button
                 type="button"
@@ -559,6 +600,14 @@ export function StoryViewer({
               </button>
             )}
           </div>
+        )}
+
+        {burst && (
+          <span key={burst.key} aria-hidden className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center" onAnimationEnd={() => setBurst(null)}>
+            <span className="animate-react-burst">
+              <ReactionIcon reaction={burst.reaction} className="h-28 w-28 drop-shadow-[0_8px_24px_rgb(0_0_0/0.5)]" />
+            </span>
+          </span>
         )}
 
         <audio ref={musicRef} preload="none" loop />
@@ -652,6 +701,7 @@ export function StoryViewer({
                           <Link href={`/u/${v.username}`} onClick={close} className="flex items-center gap-3 rounded-xl px-1 py-2">
                             <Avatar username={v.username} avatarUrl={v.avatarUrl} className="h-10 w-10 text-sm" />
                             <span className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium">{v.username}</span>
+                            {v.reaction && <ReactionIcon reaction={v.reaction} className="h-6 w-6" />}
                             <span className="text-[0.8125rem] text-white/45">{storyAge(v.viewedAt)}</span>
                           </Link>
                         </li>

@@ -42,6 +42,7 @@ const KIND_VERB: Record<string, string> = {
   story_mention: "mentioned you in their story",
   story_answer: "answered your question",
   comment_reaction: "reacted to your comment",
+  story_reaction: "reacted to your story",
   // These four have no actor — an admin decision or an automated check,
   // never a specific person to attribute it to (see the triggers in
   // 0092_more_notification_kinds.sql, every one inserts actor_id: null).
@@ -69,6 +70,7 @@ const KIND_BADGE: Record<string, { icon: ReactNode; color: string }> = {
   story_mention: { icon: <PersonIcon className="h-2.5 w-2.5" />, color: "#e1141f" },
   story_answer: { icon: <CommentIcon className="h-2.5 w-2.5" />, color: "#e1141f" },
   comment_reaction: { icon: <HeartIcon className="h-2.5 w-2.5" />, color: "#ff375f" },
+  story_reaction: { icon: <HeartIcon className="h-2.5 w-2.5" />, color: "#e1141f" },
   meetup_approved: { icon: <CheckIcon className="h-2.5 w-2.5" />, color: "#30d158" },
   meetup_rejected: { icon: <CloseIcon className="h-2.5 w-2.5" />, color: "#8e8e93" },
   ad_approved: { icon: <CheckIcon className="h-2.5 w-2.5" />, color: "#30d158" },

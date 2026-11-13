@@ -2,9 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { summarizeReactions, type Reaction, type ReactionSummary } from "@/lib/reactions";
 
-type Target = "message" | "comment";
-const TABLE = { message: "message_reactions", comment: "comment_reactions" } as const;
-const KEY = { message: "message_id", comment: "comment_id" } as const;
+type Target = "message" | "comment" | "story";
+const TABLE = { message: "message_reactions", comment: "comment_reactions", story: "story_reactions" } as const;
+const KEY = { message: "message_id", comment: "comment_id", story: "story_id" } as const;
 
 /** Sets the viewer's reaction on a message or comment, or clears it (null). */
 export async function setReaction(

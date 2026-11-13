@@ -73,6 +73,33 @@ export async function reactToCommentAction(commentId: string, reaction: string |
   return { ok: true };
 }
 
+/** React to someone's story (or take it back with null). The story's
+ * author is the only one who sees it. */
+export async function reactToStoryAction(storyId: string, reaction: string | null): Promise<Result> {
+  const user = await getCurrentUser();
+  if (!user || (reaction !== null && !isReaction(reaction))) return { ok: false };
+  const supabase = await createClient();
+  const { data: story } = await supabase.from("stories").select("id, author_id").eq("id", storyId).maybeSingle();
+  if (!story || story.author_id === user.id) return { ok: false };
+  const { data: before } = await supabase
+    .from("story_reactions")
+    .select("reaction")
+    .eq("story_id", storyId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  try {
+    await setReaction(supabase, "story", storyId, user.id, reaction as Reaction | null);
+  } catch (err) {
+    console.error("Story reaction not saved:", err);
+    return { ok: false };
+  }
+  // The in-app notification comes from the database (0118).
+  if (reaction && !before) {
+    after(() => pushReaction(supabase, user.id, story.author_id, reaction as Reaction, "your story", `/stories/${storyId}`, "likes"));
+  }
+  return { ok: true };
+}
+
 async function pushReaction(
   supabase: Awaited<ReturnType<typeof createClient>>,
   actorId: string,
