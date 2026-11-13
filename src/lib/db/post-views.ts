@@ -29,6 +29,25 @@ export async function recordPostView(
   if (error) throw error;
 }
 
+/** Which of these posts the viewer had viewed before `before`, for
+ * putting unwatched posts first in their feed. */
+export async function getPostIdsViewedBy(
+  supabase: SupabaseClient<Database>,
+  viewerId: string,
+  postIds: string[],
+  before: string,
+): Promise<Set<string>> {
+  if (postIds.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from("post_views")
+    .select("post_id")
+    .eq("viewer_id", viewerId)
+    .in("post_id", postIds)
+    .lt("created_at", before);
+  if (error) throw error;
+  return new Set(data.map((row) => row.post_id));
+}
+
 export async function getViewCount(
   supabase: SupabaseClient<Database>,
   postId: string,

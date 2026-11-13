@@ -4,13 +4,14 @@ import type { Post } from "@/lib/db/posts";
 import { getLikeCountsForPosts } from "@/lib/db/likes";
 import { getCommentCountsForPosts } from "@/lib/db/comments";
 import { getSaveCountsForPosts } from "@/lib/db/saves";
-import { getViewCountsForPosts } from "@/lib/db/post-views";
+import { getPostIdsViewedBy, getViewCountsForPosts } from "@/lib/db/post-views";
 import { getShareCountsForPosts } from "@/lib/db/post-shares";
 import { getCompletionCountsForPosts } from "@/lib/db/post-view-completions";
 import { getViewerAffinity, EMPTY_AFFINITY } from "@/lib/ranking/viewer-affinity";
 import { computeHotScore, NO_AFFINITY, type ViewerAffinity } from "@/lib/ranking/feed-score";
 import { listFollowingIds } from "@/lib/db/follows";
 import { listBlockedEitherDirection } from "@/lib/db/blocks";
+import { compareForViewer, isAfterCursor } from "@/lib/ranking/seen-order";
 
 // Bounds the ranking computation to posts from the last month, capped at
 // a fixed count — the "For You" feed re-ranks live on every request
@@ -25,6 +26,12 @@ const CANDIDATE_MAX = 400;
 export interface RankedFeedCursor {
   score: number;
   postId: string;
+  /** Whether that post was in the already-seen group. */
+  seen: boolean;
+  /** When this scroll session's first page loaded: "seen" means viewed
+   * before then, so posts watched while scrolling don't move to the
+   * seen group mid-session and come round a second time. */
+  asOf: string;
 }
 
 export interface RankedFeedItem {
@@ -50,7 +57,12 @@ function decodeCursor(raw: string): RankedFeedCursor | null {
   try {
     const parsed = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as Partial<RankedFeedCursor>;
     if (typeof parsed.score === "number" && typeof parsed.postId === "string") {
-      return { score: parsed.score, postId: parsed.postId };
+      // Cursors from before the seen ordering have neither field.
+      const asOf =
+        typeof parsed.asOf === "string" && !Number.isNaN(Date.parse(parsed.asOf))
+          ? new Date(parsed.asOf).toISOString()
+          : new Date().toISOString();
+      return { score: parsed.score, postId: parsed.postId, seen: parsed.seen === true, asOf };
     }
     return null;
   } catch {
@@ -61,7 +73,8 @@ function decodeCursor(raw: string): RankedFeedCursor | null {
 /**
  * The main feed's actual ranking — replaces plain reverse-chronological
  * order with a per-viewer "hot score" (see feed-score.ts) computed live
- * from real engagement rows. No ranking state is ever stored: every
+ * from real engagement rows, with every post the viewer hasn't watched
+ * yet ahead of the ones they have (seen-order.ts). No ranking state is ever stored: every
  * request re-fetches the candidate window, re-counts engagement, and
  * re-scores, which is also why the score naturally drifts a little
  * between page loads as posts age and accumulate more engagement — the
@@ -79,6 +92,8 @@ export async function listRankedFeedPosts(
   }: { viewerId: string | null; cursor?: string | null; limit?: number; vehicleIds?: string[] },
 ): Promise<RankedFeedResult> {
   if (vehicleIds && vehicleIds.length === 0) return { items: [], hasMore: false };
+  const decoded = cursor ? decodeCursor(cursor) : null;
+  const asOf = decoded?.asOf ?? new Date().toISOString();
 
   const since = new Date(Date.now() - CANDIDATE_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
   let query = supabase
@@ -115,6 +130,7 @@ export async function listRankedFeedPosts(
     viewCounts,
     shareCounts,
     completionCounts,
+    seenIds,
     affinity,
     followingIds,
     vehicleRows,
@@ -125,6 +141,7 @@ export async function listRankedFeedPosts(
     getViewCountsForPosts(supabase, postIds),
     getShareCountsForPosts(supabase, postIds),
     getCompletionCountsForPosts(supabase, postIds),
+    viewerId ? getPostIdsViewedBy(supabase, viewerId, postIds, asOf) : Promise.resolve(new Set<string>()),
     viewerId ? getViewerAffinity(supabase, viewerId) : Promise.resolve(EMPTY_AFFINITY),
     viewerId ? listFollowingIds(supabase, viewerId) : Promise.resolve([] as string[]),
     candidateVehicleIds.length > 0
@@ -159,28 +176,21 @@ export async function listRankedFeedPosts(
       },
       postAffinity,
     );
-    return { post, score };
+    return { post, id: post.id, score, seen: seenIds.has(post.id) };
   });
 
-  // Descending score, tie-broken by id ascending — an arbitrary but
-  // stable order for the (practically never hit) case of two candidates
-  // scoring identically, so the cursor logic below has a strict total
-  // order to work with.
-  scored.sort((a, b) => b.score - a.score || (a.post.id < b.post.id ? -1 : 1));
+  // Posts the viewer hasn't watched first, then the ones they have, each
+  // by descending score, tie-broken by id so the cursor logic below has
+  // a strict total order to work with (seen-order.ts).
+  scored.sort(compareForViewer);
 
-  const decoded = cursor ? decodeCursor(cursor) : null;
-  const remaining = decoded
-    ? scored.filter(
-        (item) =>
-          item.score < decoded.score || (item.score === decoded.score && item.post.id > decoded.postId),
-      )
-    : scored;
+  const remaining = decoded ? scored.filter((item) => isAfterCursor(item, decoded)) : scored;
 
   const page = remaining.slice(0, limit);
   return {
     items: page.map((item) => ({
       post: item.post,
-      cursor: encodeCursor({ score: item.score, postId: item.post.id }),
+      cursor: encodeCursor({ score: item.score, postId: item.post.id, seen: item.seen, asOf }),
     })),
     hasMore: remaining.length > limit,
   };
