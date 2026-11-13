@@ -12,6 +12,9 @@ import { relativeTime } from "@/lib/format/relative-time";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { BackIcon, ChevronRightIcon } from "@/components/ui/icons";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
+import { ReactableMessage } from "@/features/reactions/reactable-message";
+import { getReactionSummaries } from "@/lib/db/reactions";
+import { NO_REACTIONS, type ReactionSummary } from "@/lib/reactions";
 
 export default async function ConversationPage({
   params,
@@ -49,6 +52,10 @@ export default async function ConversationPage({
     ? await getMediaById(supabase, otherProfile.avatar_media_id).catch(() => null)
     : null;
   const avatarUrl = avatarMedia ? publicMediaUrl(supabase, avatarMedia.storage_path) : null;
+  // Best-effort: messages still show if reactions can't load.
+  const reactions = await getReactionSummaries(supabase, "message", messages.map((m) => m.id), user.id).catch(
+    () => new Map<string, ReactionSummary>(),
+  );
   const username = otherProfile?.username ?? "unknown";
 
   return (
@@ -117,14 +124,18 @@ export default async function ConversationPage({
                     sameSenderAsPrev ? "mt-0.5" : "mt-2"
                   }`}
                 >
-                  <div
-                    className={`max-w-[78%] rounded-[20px] px-3.5 py-2 text-[0.9375rem] leading-snug ${
-                      isMine
-                        ? `bg-accent text-accent-foreground ${lastInRun ? "rounded-br-[6px]" : ""}`
-                        : `bg-foreground/[0.09] text-foreground ${lastInRun ? "rounded-bl-[6px]" : ""}`
-                    }`}
-                  >
-                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                  <div className="max-w-[78%]">
+                    <ReactableMessage messageId={message.id} isMine={isMine} text={message.body} initial={reactions.get(message.id) ?? NO_REACTIONS}>
+                      <div
+                        className={`select-none rounded-[20px] px-3.5 py-2 text-[0.9375rem] leading-snug ${
+                          isMine
+                            ? `bg-accent text-accent-foreground ${lastInRun ? "rounded-br-[6px]" : ""}`
+                            : `bg-foreground/[0.09] text-foreground ${lastInRun ? "rounded-bl-[6px]" : ""}`
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                      </div>
+                    </ReactableMessage>
                   </div>
                 </div>
               </div>

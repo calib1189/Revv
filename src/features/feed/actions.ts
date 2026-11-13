@@ -28,6 +28,8 @@ import type { PushCategory } from "@/lib/db/notification-preferences";
 import { isVehicleCategory, type VehicleCategory } from "@/lib/vehicles/category";
 import type { PostCardData } from "@/features/feed/post-card";
 import type { CommentWithAuthor } from "@/features/feed/comment-list";
+import { getReactionSummaries } from "@/lib/db/reactions";
+import { NO_REACTIONS, type ReactionSummary } from "@/lib/reactions";
 
 async function resolveCategoryVehicleIds(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -200,7 +202,11 @@ export async function listCommentsForSheetAction(postId: string): Promise<Commen
   const me = user ? authorById.get(user.id) : null;
 
   const avatarIds = authors.map((a) => a.avatar_media_id).filter((id): id is string => Boolean(id));
-  const avatarMedia = await getMediaByIds(supabase, avatarIds);
+  const [avatarMedia, reactions] = await Promise.all([
+    getMediaByIds(supabase, avatarIds),
+    // Best-effort: comments still show if reactions can't load.
+    getReactionSummaries(supabase, "comment", comments.map((c) => c.id), user?.id ?? null).catch(() => new Map<string, ReactionSummary>()),
+  ]);
   const avatarUrlByMediaId = new Map(
     avatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
@@ -217,6 +223,7 @@ export async function listCommentsForSheetAction(postId: string): Promise<Commen
           : null,
         authorIsVerified: author?.is_verified ?? false,
         authorRatingScore: authorScores.get(c.author_id) ?? null,
+        reactions: reactions.get(c.id) ?? NO_REACTIONS,
       };
     }),
     currentUserId: user?.id ?? null,

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactionSummary } from "@/lib/reactions";
+import { CommentReactions } from "@/features/reactions/comment-reactions";
 import Link from "next/link";
 import { Avatar } from "@/features/feed/avatar";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -23,6 +25,8 @@ export interface CommentWithAuthor extends Comment {
    * builds (see lib/rating/best-build-scores.ts) — null if they have no
    * rated build, in which case no ring is drawn. */
   authorRatingScore: number | null;
+  /** Everyone's reactions, and the viewer's own. */
+  reactions: ReactionSummary;
 }
 
 /** Replies shown under a comment before the rest fold behind "View more". */
@@ -206,6 +210,7 @@ function CommentRow({
           ) : (
             currentUserId && <ReportButton targetType="comment" targetId={comment.id} />
           )}
+          <CommentReactions commentId={comment.id} initial={comment.reactions} canReact={Boolean(currentUserId)} />
         </div>
       </div>
     </div>

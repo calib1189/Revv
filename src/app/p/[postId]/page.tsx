@@ -29,6 +29,8 @@ import { getPartsByIds } from "@/lib/db/parts";
 import { LikeButton } from "@/features/feed/like-button";
 import { SaveButton } from "@/features/feed/save-button";
 import { CommentList } from "@/features/feed/comment-list";
+import { getReactionSummaries } from "@/lib/db/reactions";
+import { NO_REACTIONS, type ReactionSummary } from "@/lib/reactions";
 import { CommentForm } from "@/features/feed/comment-form";
 import { DeletePostButton } from "@/features/feed/delete-post-button";
 import { ReportButton } from "@/features/feed/report-button";
@@ -90,6 +92,10 @@ export default async function PostPage({
     commentAuthorAvatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
 
+  // Best-effort: comments still show if reactions can't load.
+  const commentReactions = await getReactionSummaries(supabase, "comment", comments.map((c) => c.id), user?.id ?? null).catch(
+    () => new Map<string, ReactionSummary>(),
+  );
   const commentsWithAuthor = comments.map((c) => {
     const authorProfile = commentAuthorById.get(c.author_id);
     return {
@@ -101,6 +107,7 @@ export default async function PostPage({
         : null,
       authorIsVerified: authorProfile?.is_verified ?? false,
       authorRatingScore: commentAuthorScores.get(c.author_id) ?? null,
+      reactions: commentReactions.get(c.id) ?? NO_REACTIONS,
     };
   });
 
