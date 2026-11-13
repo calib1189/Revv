@@ -7,17 +7,23 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listSuggestedFollows } from "@/lib/ranking/suggested-follows";
 import { FriendsTabs } from "@/features/friends/friends-tabs";
 import { SuggestedFollowsRow } from "@/features/friends/suggested-follows-row";
+import { StoryTray } from "@/features/stories/story-tray";
+import { loadStoryPeople, loadStoryTray, type TrayPerson } from "@/lib/stories/load";
 
 export default async function FriendsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/friends");
 
   const supabase = await createClient();
-  const [followingIds, followerIds, suggestions] = await Promise.all([
+  const [followingIds, followerIds, suggestions, storyTray, people] = await Promise.all([
     listFollowingIds(supabase, user.id),
     listFollowerIds(supabase, user.id),
     listSuggestedFollows(supabase, user.id),
+    // Best-effort: the page still works if stories can't load.
+    loadStoryTray(supabase, user.id).catch(() => [] as TrayPerson[]),
+    loadStoryPeople(supabase, [user.id]).catch(() => new Map()),
   ]);
+  const me = people.get(user.id) ?? { id: user.id, username: "you", avatarUrl: null };
 
   const allIds = [...new Set([...followingIds, ...followerIds])];
   const profiles = await getProfilesByIds(supabase, allIds);
@@ -42,7 +48,10 @@ export default async function FriendsPage() {
 
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
-      <h1 className="mb-6 text-[2.125rem] font-bold leading-tight tracking-[-0.03em]">Friends</h1>
+      <h1 className="mb-5 text-[2.125rem] font-bold leading-tight tracking-[-0.03em]">Friends</h1>
+      <div className="mb-6">
+        <StoryTray tray={storyTray} me={me} />
+      </div>
       <SuggestedFollowsRow suggestions={suggestions} />
       <FriendsTabs following={following} followers={followers} avatarUrlById={avatarUrlById} />
     </div>

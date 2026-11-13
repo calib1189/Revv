@@ -11,6 +11,7 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { listVehiclesByOwnerIds } from "@/lib/db/vehicles";
 import { getSoundsByIds, publicSoundUrl } from "@/lib/db/sounds";
+import { loadStoryRings, type RingState } from "@/lib/stories/load";
 import { clampSoundStartMs } from "@/lib/validation/sound";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Profile } from "@/lib/db/profiles";
@@ -47,6 +48,7 @@ export async function composePostCards(
     vehicles,
     authorVehicles,
     sounds,
+    storyRings,
   ] = await Promise.all([
     listPostMediaForPosts(supabase, postIds),
     getLikeCountsForPosts(supabase, postIds),
@@ -73,6 +75,9 @@ export async function composePostCards(
     // ring almost never showed up in the feed.
     listVehiclesByOwnerIds(supabase, authorIds),
     getSoundsByIds(supabase, soundIds),
+    // Best-effort: a story ring is a nice-to-have on a feed card, never a
+    // reason for the feed itself to fail.
+    loadStoryRings(supabase, currentUserId, authorIds).catch(() => new Map<string, RingState>()),
   ]);
   const followingIdSet = new Set(followingIds);
 
@@ -124,6 +129,7 @@ export async function composePostCards(
     return {
       post,
       authorId: post.author_id,
+      authorStory: storyRings.get(post.author_id) ?? null,
       authorUsername: author?.username ?? "unknown",
       authorAvatarUrl: author?.avatar_media_id
         ? (avatarUrlByMediaId.get(author.avatar_media_id) ?? null)

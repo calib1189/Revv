@@ -5,6 +5,7 @@ import { Header } from "@/components/shell/header";
 import { LayoutFooter } from "@/components/shell/layout-footer";
 import { NativeAppBridge } from "@/components/shell/native-app-bridge";
 import { TabPagerProvider } from "@/components/shell/tab-pager-context";
+import { StoryViewerProvider } from "@/features/stories/story-viewer-provider";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { FirstRunGate } from "@/features/onboarding/first-run-gate";
 import { TimeZoneSync } from "@/features/push/time-zone-sync";
@@ -80,13 +81,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </Suspense>
         )}
         <TabPagerProvider>
-          <Header />
-          <div
-            className={`flex flex-1 flex-col ${user ? "pb-[calc(4rem_+_env(safe-area-inset-bottom))]" : ""}`}
-          >
-            <main className="flex flex-1 flex-col">{children}</main>
-            <LayoutFooter />
-          </div>
+          <StoryViewerProvider>
+            <Header />
+            <div
+              className={`flex flex-1 flex-col ${user ? "pb-[var(--bottom-nav-h)]" : ""}`}
+            >
+              <main className="flex flex-1 flex-col">{children}</main>
+              <LayoutFooter />
+            </div>
+          </StoryViewerProvider>
         </TabPagerProvider>
       </body>
     </html>

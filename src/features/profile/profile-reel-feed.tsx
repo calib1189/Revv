@@ -36,7 +36,7 @@ export function ProfileReelFeed({
   // notch; it's unset everywhere else, where the slide already starts
   // below the top bar.
   const bottomOffset = isAuthenticated
-    ? "bottom-[calc(4rem+env(safe-area-inset-bottom))]"
+    ? "bottom-[var(--bottom-nav-h)]"
     : "bottom-0";
 
   return (

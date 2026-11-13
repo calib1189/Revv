@@ -41,10 +41,13 @@ export function CategoryFilterBar({
   selected,
   onSelect,
   disabled,
+  leading,
 }: {
   selected: VehicleCategory | null;
   onSelect: (category: VehicleCategory | null) => void;
   disabled?: boolean;
+  /** Shown before the chips: the stories pill. */
+  leading?: React.ReactNode;
 }) {
   return (
     // This overlay floats as a sibling of the vertically-scrolling video
@@ -56,6 +59,7 @@ export function CategoryFilterBar({
     // gestures; vertical ones are left for whatever's actually meant to
     // handle them.
     <div className="no-scrollbar fade-edge-r flex touch-pan-x items-center gap-1.5 overflow-x-auto px-3 py-1.5">
+      {leading}
       <FilterChip active={selected === null} disabled={disabled} onClick={() => onSelect(null)}>
         All
       </FilterChip>

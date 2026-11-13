@@ -16,6 +16,8 @@ import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { Avatar } from "@/features/feed/avatar";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { RankFrame } from "@/features/garage/rank-frame";
+import { StoryRing } from "@/features/stories/story-ring";
+import { loadStoryRings, type RingState } from "@/lib/stories/load";
 import { ProfileMoreMenu } from "@/features/profile/profile-more-menu";
 import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
 import { ProfileTabs } from "@/features/profile/profile-tabs";
@@ -97,11 +99,16 @@ export default async function ProfilePage({
     .map((v) => v.hero_media_id)
     .filter((id): id is string => Boolean(id));
   const avatarIds = profile.avatar_media_id ? [profile.avatar_media_id] : [];
-  const [heroMedia, activeBuildByVehicle, avatarMedia] = await Promise.all([
+  const [heroMedia, activeBuildByVehicle, avatarMedia, storyRings] = await Promise.all([
     getMediaByIds(supabase, heroIds),
     listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id)),
     getMediaByIds(supabase, avatarIds),
+    // Best-effort: no ring rather than no profile.
+    amBlocking
+      ? Promise.resolve(new Map<string, RingState>())
+      : loadStoryRings(supabase, currentUser?.id ?? null, [profile.id]).catch(() => new Map<string, RingState>()),
   ]);
+  const storyRing = storyRings.get(profile.id) ?? null;
   const heroUrlById = new Map(
     heroMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
@@ -259,29 +266,37 @@ export default async function ProfilePage({
             Emerald–Ruby, starfield for Cosmic), so the profile photo
             reads as the same rank everywhere. Unrated profiles get a
             plain hairline. */}
-        {bestRatingScore != null ? (
-          <RankFrame
-            score={bestRatingScore}
-            hideBadge
-            className="h-[124px] w-[124px] rounded-full"
-          >
-            <Avatar
-              username={profile.username}
-              avatarUrl={avatarUrl}
-              className="h-full w-full text-4xl"
-              priority
-            />
-          </RankFrame>
-        ) : (
-          <div className="rounded-full p-[3px] ring-1 ring-border">
-            <Avatar
-              username={profile.username}
-              avatarUrl={avatarUrl}
-              className="h-[118px] w-[118px] text-4xl"
-              priority
-            />
-          </div>
-        )}
+        <StoryRing
+          authorId={profile.id}
+          state={storyRing}
+          label={isOwnProfile ? "Your story" : `@${profile.username}'s story`}
+          gap="var(--background)"
+          width={3}
+        >
+          {bestRatingScore != null ? (
+            <RankFrame
+              score={bestRatingScore}
+              hideBadge
+              className="h-[124px] w-[124px] rounded-full"
+            >
+              <Avatar
+                username={profile.username}
+                avatarUrl={avatarUrl}
+                className="h-full w-full text-4xl"
+                priority
+              />
+            </RankFrame>
+          ) : (
+            <div className="rounded-full p-[3px] ring-1 ring-border">
+              <Avatar
+                username={profile.username}
+                avatarUrl={avatarUrl}
+                className="h-[118px] w-[118px] text-4xl"
+                priority
+              />
+            </div>
+          )}
+        </StoryRing>
 
         <h1 className="mt-4 flex max-w-full items-center justify-center gap-1.5 text-[1.75rem] font-bold leading-tight tracking-[-0.025em]">
           {nameIsGradient ? (

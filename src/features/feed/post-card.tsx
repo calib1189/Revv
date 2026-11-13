@@ -21,6 +21,9 @@ export interface PostMediaItem {
 export interface PostCardData {
   post: Post;
   authorId: string;
+  /** Whether the author has a story up, and if so whether the viewer has
+   * watched all of it. */
+  authorStory?: "unseen" | "seen" | null;
   authorUsername: string;
   authorAvatarUrl: string | null;
   authorIsVerified: boolean;

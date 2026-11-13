@@ -218,7 +218,7 @@ export function CommentSheet({
           {composerFocused && (
             <div
               aria-hidden="true"
-              className="animate-fade-in absolute inset-0 z-10 bg-black/45"
+              className="animate-fade-in absolute inset-0 z-10 bg-black/30"
               onPointerDown={(e) => {
                 e.preventDefault();
                 composerRef.current?.blur();
@@ -229,7 +229,10 @@ export function CommentSheet({
 
         <div
           className={`flex-shrink-0 border-t border-border/60 bg-surface px-3 pt-2.5 ${
-            keyboardOpen ? "pb-2.5" : "pb-[calc(0.625rem+env(safe-area-inset-bottom))]"
+            // Typing, the box sits right on the keyboard: no home-indicator
+            // padding (the app's web view shrinks for the keyboard, so the
+            // safe area would otherwise leave a dead strip under the box).
+            keyboardOpen || composerFocused ? "pb-2" : "pb-[calc(0.625rem+env(safe-area-inset-bottom))]"
           }`}
         >
           {isAuthenticated ? (
@@ -239,6 +242,7 @@ export function CommentSheet({
               replyTo={replyTarget ? { id: replyTarget.id, username: replyTarget.authorUsername } : null}
               onCancelReply={() => setReplyTarget(null)}
               onFocusChange={setComposerFocused}
+              me={data?.currentUser ?? null}
               onPosted={() => {
                 setReplyTarget(null);
                 void refresh();

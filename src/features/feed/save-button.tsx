@@ -36,12 +36,11 @@ export function SaveButton({
   const isRail = variant === "rail";
 
   const icon = isRail ? (
-    <span className="flex h-11 w-11 items-center justify-center">
+    <span className="flex h-10 w-10 items-center justify-center">
       <BookmarkIcon
         key={beat}
-        filled={saved}
-        strokeWidth={1.9}
-        className={`h-[29px] w-[29px] transition-colors duration-150 ${saved ? "animate-like-beat text-[#ffd60a]" : "text-white"}`}
+        filled
+        className={`h-[26px] w-[26px] transition-colors duration-150 ${saved ? "animate-like-beat text-[#ffd60a]" : "text-white"}`}
       />
     </span>
   ) : (
@@ -49,12 +48,12 @@ export function SaveButton({
   );
   const countNode =
     initialCount !== undefined && count > 0 ? (
-      <span className={isRail ? "numeral text-[0.75rem] leading-none" : countClassName}>
+      <span className={isRail ? "numeral text-[0.6875rem] font-semibold leading-none" : countClassName}>
         {formatCompactNumber(count)}
       </span>
     ) : null;
   const railClassName =
-    "pressable flex flex-col items-center gap-1 text-white [filter:drop-shadow(0_1px_4px_rgb(0_0_0/0.55))]";
+    "pressable flex flex-col items-center gap-0.5 text-white [filter:drop-shadow(0_1px_4px_rgb(0_0_0/0.55))]";
 
   if (!isAuthenticated) {
     return (

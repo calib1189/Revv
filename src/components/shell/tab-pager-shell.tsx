@@ -111,7 +111,7 @@ export function TabPagerShell({
   }, []);
 
   const slotHeight = isAuthenticated
-    ? "h-[calc(100dvh-4rem-env(safe-area-inset-bottom))]"
+    ? "h-[calc(100dvh-var(--bottom-nav-h))]"
     : "h-[100dvh]";
 
   return (

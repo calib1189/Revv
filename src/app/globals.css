@@ -1,6 +1,12 @@
 @import "tailwindcss";
 
 :root {
+  /* The bottom tab bar: 3.25rem of tabs over the home indicator's safe
+     area, trimmed a little so the bar doesn't tower over it. Everything
+     that sits above the bar (page padding, the feed, sticky footers)
+     reads --bottom-nav-h, so the bar's size lives in one place. */
+  --bottom-nav-pad: max(0.25rem, calc(env(safe-area-inset-bottom) - 0.5rem));
+  --bottom-nav-h: calc(3.25rem + var(--bottom-nav-pad));
   --background: #0a0a0b;
   --surface: #141416;
   --surface-raised: #1c1c1f;

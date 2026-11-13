@@ -176,6 +176,8 @@ export async function toggleSaveAction(
 export interface CommentSheetData {
   comments: CommentWithAuthor[];
   currentUserId: string | null;
+  /** The viewer, for the avatar beside the comment box. */
+  currentUser: { username: string; avatarUrl: string | null } | null;
 }
 
 /** Loads a post's comments on demand for the feed's slide-up comment
@@ -189,11 +191,13 @@ export async function listCommentsForSheetAction(postId: string): Promise<Commen
   ]);
 
   const authorIds = [...new Set(comments.map((c) => c.author_id))];
+  const profileIds = user && !authorIds.includes(user.id) ? [...authorIds, user.id] : authorIds;
   const [authors, authorScores] = await Promise.all([
-    getProfilesByIds(supabase, authorIds),
+    getProfilesByIds(supabase, profileIds),
     getBestRatingScoresByOwnerIds(supabase, authorIds),
   ]);
   const authorById = new Map(authors.map((a) => [a.id, a]));
+  const me = user ? authorById.get(user.id) : null;
 
   const avatarIds = authors.map((a) => a.avatar_media_id).filter((id): id is string => Boolean(id));
   const avatarMedia = await getMediaByIds(supabase, avatarIds);
@@ -216,6 +220,9 @@ export async function listCommentsForSheetAction(postId: string): Promise<Commen
       };
     }),
     currentUserId: user?.id ?? null,
+    currentUser: me
+      ? { username: me.username, avatarUrl: me.avatar_media_id ? (avatarUrlByMediaId.get(me.avatar_media_id) ?? null) : null }
+      : null,
   };
 }
 

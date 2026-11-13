@@ -62,7 +62,7 @@ export async function Header() {
           useHideBottomNav and its rule in globals.css. */}
       <nav
         data-bottom-nav
-        className="glass-raised fixed inset-x-0 bottom-0 z-10 rounded-none border-x-0 border-b-0 pb-[env(safe-area-inset-bottom)]"
+        className="glass-raised fixed inset-x-0 bottom-0 z-10 rounded-none border-x-0 border-b-0 pb-[var(--bottom-nav-pad)]"
       >
         <BottomTabBar username={username} unreadInboxCount={messageCount + notificationCount} />
       </nav>

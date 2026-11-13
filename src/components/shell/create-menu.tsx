@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { PlusIcon, WheelIcon, CameraIcon, TimerIcon, FlagIcon, CloseIcon } from "@/components/ui/icons";
+import { PlusIcon, WheelIcon, CameraIcon, TimerIcon, FlagIcon, CloseIcon, StoryIcon } from "@/components/ui/icons";
 
 const ITEMS = [
   { href: "/garage/new", label: "Add Vehicle", subtitle: "Bring a car into your garage", icon: WheelIcon },
   { href: "/feed/new", label: "Post", subtitle: "Share a photo or video", icon: CameraIcon },
+  { href: "/stories/new", label: "Story", subtitle: "Share something for 24 hours", icon: StoryIcon },
   { href: "/discover", label: "Create Meet", subtitle: "Plan a car meet", icon: TimerIcon },
   { href: "/crews/new", label: "Create Crew", subtitle: "Start a community", icon: FlagIcon },
 ] as const;
@@ -34,9 +35,9 @@ export function CreateMenu() {
         // coloured drop shadow, which read as the glowing border the
         // house style rules out; this keeps a single shadow doing
         // honest elevation work and one inset highlight for the edge.
-        className="my-auto flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-[1.125rem] bg-accent text-accent-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255_/_0.25),0_8px_20px_-8px_rgb(0_0_0_/_0.6)] transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90"
+        className="my-auto flex h-10 w-10 items-center justify-center rounded-[0.875rem] bg-accent text-accent-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255_/_0.25),0_8px_20px_-8px_rgb(0_0_0_/_0.6)] transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90"
       >
-        <PlusIcon className="h-[1.625rem] w-[1.625rem]" strokeWidth={2.5} />
+        <PlusIcon className="h-[1.375rem] w-[1.375rem]" strokeWidth={2.5} />
       </button>
       </div>
 

@@ -8,6 +8,8 @@ import { SponsoredSlide, type SponsoredSlideData } from "@/features/feed/sponsor
 import { DailyFeedSlide } from "@/features/daily/daily-teaser-card";
 import type { DailyTeaser } from "@/lib/daily/teaser";
 import { CategoryFilterBar } from "@/features/feed/category-filter-bar";
+import { StoriesPeek } from "@/features/stories/stories-peek";
+import type { TrayPerson } from "@/lib/stories/load";
 import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 import { useTabPagerContext } from "@/components/shell/tab-pager-context";
 import type { VehicleCategory } from "@/lib/vehicles/category";
@@ -24,12 +26,16 @@ export function SwipeFeed({
   ad,
   daily = null,
   isAuthenticated,
+  storyTray = [],
 }: {
   initialPosts: PostCardData[];
   ad: SponsoredSlideData | null;
   /** Today's Sorza Daily challenge, shown as the first slide. */
   daily?: DailyTeaser | null;
   isAuthenticated: boolean;
+  /** Stories from you and people you follow, for the pill at the start
+   * of the filter row. */
+  storyTray?: TrayPerson[];
 }) {
   const [category, setCategory] = useState<VehicleCategory | null>(null);
   const [posts, setPosts] = useState(initialPosts);
@@ -124,6 +130,7 @@ export function SwipeFeed({
             selected={category}
             onSelect={handleCategoryChange}
             disabled={isLoading}
+            leading={storyTray.length > 0 ? <StoriesPeek tray={storyTray} /> : null}
           />
         </div>
       </div>

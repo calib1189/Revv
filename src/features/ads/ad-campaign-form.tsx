@@ -394,7 +394,7 @@ export function AdCampaignForm({ userId }: { userId: string }) {
 
         {/* Pinned just above the tab bar so the next step is always one
             thumb-reach away, however long the current one is. */}
-        <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-[5] -mx-4 mt-8 border-t border-border/60 bg-background/85 px-4 pb-3 pt-3 backdrop-blur-xl sm:mx-0 sm:rounded-[22px] sm:border sm:px-3">
+        <div className="sticky bottom-[var(--bottom-nav-h)] z-[5] -mx-4 mt-8 border-t border-border/60 bg-background/85 px-4 pb-3 pt-3 backdrop-blur-xl sm:mx-0 sm:rounded-[22px] sm:border sm:px-3">
           <div className="flex items-center gap-2.5">
             {stepIndex > 0 && (
               <button

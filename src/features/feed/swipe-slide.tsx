@@ -8,6 +8,7 @@ import { FollowBadge } from "@/features/feed/follow-badge";
 import { CommentSheet } from "@/features/feed/comment-sheet";
 import { Avatar } from "@/features/feed/avatar";
 import { RankFrame } from "@/features/garage/rank-frame";
+import { StoryRing } from "@/features/stories/story-ring";
 import { CaptionText } from "@/features/feed/caption-text";
 import { recordViewAction, recordViewCompletionAction, recordShareAction } from "@/features/feed/actions";
 import { usePostLike } from "@/features/feed/use-post-like";
@@ -15,12 +16,12 @@ import { useDoubleTap } from "@/features/feed/use-double-tap";
 import { useLongPress } from "@/features/feed/use-long-press";
 import { useSoundSegment } from "@/features/feed/use-sound-segment";
 import {
-  CommentIcon,
+  ChatBubbleIcon,
   EyeIcon,
   HeartIcon,
   MusicIcon,
   PlayIcon,
-  ShareIcon,
+  ShareArrowIcon,
   VolumeIcon,
   WheelIcon,
 } from "@/components/ui/icons";
@@ -79,7 +80,7 @@ function ShareAction({ postId }: { postId: string }) {
       label="Share"
       caption={status === "copied" ? "Copied" : status === "failed" ? "Failed" : "Share"}
     >
-      <ShareIcon className="h-[30px] w-[30px]" strokeWidth={1.9} />
+      <ShareArrowIcon className="h-[27px] w-[27px]" />
     </RailAction>
   );
 }
@@ -104,11 +105,11 @@ function RailAction({
 }) {
   const inner = (
     <>
-      <span className="flex h-11 w-11 items-center justify-center">{children}</span>
-      {caption && <span className="numeral text-[0.75rem] leading-none">{caption}</span>}
+      <span className="flex h-10 w-10 items-center justify-center">{children}</span>
+      {caption && <span className="numeral text-[0.6875rem] font-semibold leading-none">{caption}</span>}
     </>
   );
-  const className = `pressable flex flex-col items-center gap-1 text-white ${ON_VIDEO_SHADOW}`;
+  const className = `pressable flex flex-col items-center gap-0.5 text-white ${ON_VIDEO_SHADOW}`;
   if (href) {
     return (
       <Link href={href} aria-label={label} className={className}>
@@ -140,7 +141,7 @@ function LikeAction({
   burstKey: number;
 }) {
   const heart = (
-    <span className="relative flex h-11 w-11 items-center justify-center">
+    <span className="relative flex h-10 w-10 items-center justify-center">
       {liked && burstKey > 0 && (
         <span
           key={`ring-${burstKey}`}
@@ -150,19 +151,19 @@ function LikeAction({
       )}
       <HeartIcon
         key={`heart-${burstKey}`}
-        filled={liked}
-        className={`h-[34px] w-[34px] transition-colors duration-150 ${liked ? "animate-like-beat text-accent" : "text-white"}`}
+        filled
+        className={`h-[30px] w-[30px] transition-colors duration-150 ${liked ? "animate-like-beat text-accent" : "text-white"}`}
       />
     </span>
   );
   const caption = count > 0 ? formatCompactNumber(count) : null;
-  const className = `pressable flex flex-col items-center gap-1 text-white ${ON_VIDEO_SHADOW}`;
+  const className = `pressable flex flex-col items-center gap-0.5 text-white ${ON_VIDEO_SHADOW}`;
 
   if (!isAuthenticated) {
     return (
       <Link href="/login" aria-label="Log in to like" className={className}>
         {heart}
-        {caption && <span className="numeral text-[0.75rem] leading-none">{caption}</span>}
+        {caption && <span className="numeral text-[0.6875rem] font-semibold leading-none">{caption}</span>}
       </Link>
     );
   }
@@ -175,28 +176,35 @@ function LikeAction({
       className={className}
     >
       {heart}
-      {caption && <span className="numeral text-[0.75rem] leading-none">{caption}</span>}
+      {caption && <span className="numeral text-[0.6875rem] font-semibold leading-none">{caption}</span>}
     </button>
   );
 }
 
-/** The record that turns at the bottom of the rail while a post with a
- * sound plays — tap it to open that sound. Only ever shown for a post that
- * really has one. */
-function SoundDisc({ soundId, avatarUrl, username, spinning }: {
-  soundId: string;
+/** The record at the bottom of the rail: the poster's profile picture as
+ * the label, turning while the post plays. A sound from the library opens
+ * that sound; a video playing its own audio (its original sound) opens
+ * the poster's profile. */
+function SoundDisc({ sound, avatarUrl, username, postId, spinning }: {
+  sound: { id: string; title: string } | null;
   avatarUrl: string | null;
   username: string;
+  postId: string;
   spinning: boolean;
 }) {
   return (
     <Link
-      href={`/sounds/${soundId}`}
-      aria-label="Open this sound"
-      className={`pressable mt-1 flex h-11 w-11 items-center justify-center rounded-full bg-[#1a1a1c] ring-[7px] ring-inset ring-[#2a2a2d] ${ON_VIDEO_SHADOW} animate-disc-spin`}
-      style={{ animationPlayState: spinning ? "running" : "paused" }}
+      href={sound ? `/sounds/${sound.id}` : `/u/${username}?from=${postId}`}
+      aria-label={sound ? `Sound: ${sound.title}` : `Original sound by @${username}`}
+      className={`pressable mt-1.5 flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-white/10 ${ON_VIDEO_SHADOW} animate-disc-spin`}
+      style={{
+        animationPlayState: spinning ? "running" : "paused",
+        // A record: fine grooves, and a soft highlight across them.
+        background:
+          "conic-gradient(from 30deg, rgb(255 255 255 / 0.10), transparent 18%, transparent 50%, rgb(255 255 255 / 0.08) 62%, transparent 80%), repeating-radial-gradient(circle, #19191b 0 1.5px, #242427 1.5px 3px)",
+      }}
     >
-      <Avatar username={username} avatarUrl={avatarUrl} className="h-5 w-5 text-[0.5rem]" />
+      <Avatar username={username} avatarUrl={avatarUrl} className="h-[26px] w-[26px] text-[0.625rem] ring-2 ring-black/60" />
     </Link>
   );
 }
@@ -933,7 +941,7 @@ export function SwipeSlide({
 
       {/* Who, what car, what they said, what's playing. */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-5">
-        <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.75rem)] text-white [text-shadow:0_1px_3px_rgb(0_0_0/0.5)]">
+        <div className="pointer-events-auto min-w-0 max-w-[calc(100%-4.25rem)] text-white [text-shadow:0_1px_3px_rgb(0_0_0/0.5)]">
           <div className="flex items-center gap-1.5">
             <Link
               href={`/u/${data.authorUsername}?from=${data.post.id}`}
@@ -964,6 +972,15 @@ export function SwipeSlide({
           )}
 
           <div className="mt-2 flex items-center gap-3 text-[0.8125rem] text-white/85">
+            {isVideo && !data.soundId && (
+              <Link
+                href={`/u/${data.authorUsername}?from=${data.post.id}`}
+                className="flex min-w-0 max-w-[13rem] items-center gap-1.5"
+              >
+                <MusicIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">Original sound · {data.authorUsername}</span>
+              </Link>
+            )}
             {data.soundTitle && data.soundId ? (
               <div className="flex min-w-0 items-center gap-1.5">
                 {!isVideo && data.soundUrl ? (
@@ -995,17 +1012,26 @@ export function SwipeSlide({
       </div>
 
       {/* The action rail. */}
-      <div className="absolute bottom-5 right-2 flex w-14 flex-col items-center gap-3.5">
-        <div className="relative mb-2">
-          <Link href={`/u/${data.authorUsername}?from=${data.post.id}`} aria-label={`@${data.authorUsername}'s profile`}>
-            <RankFrame score={data.authorBestRatingScore} compact hideBadge className="rounded-full">
-              <Avatar
-                username={data.authorUsername}
-                avatarUrl={data.authorAvatarUrl}
-                className="h-12 w-12 border-[1.5px] border-white text-base"
-              />
-            </RankFrame>
-          </Link>
+      <div className="absolute bottom-5 right-1.5 flex w-12 flex-col items-center gap-2.5">
+        <div className="relative mb-1.5">
+          {data.authorStory ? (
+            // Has a story up: the avatar plays it, the way it does everywhere.
+            <StoryRing authorId={data.authorId} state={data.authorStory} label={`@${data.authorUsername}'s story`} width={2}>
+              <RankFrame score={data.authorBestRatingScore} compact hideBadge className="rounded-full">
+                <Avatar username={data.authorUsername} avatarUrl={data.authorAvatarUrl} className="h-10 w-10 text-[0.875rem]" />
+              </RankFrame>
+            </StoryRing>
+          ) : (
+            <Link href={`/u/${data.authorUsername}?from=${data.post.id}`} aria-label={`@${data.authorUsername}'s profile`}>
+              <RankFrame score={data.authorBestRatingScore} compact hideBadge className="rounded-full">
+                <Avatar
+                  username={data.authorUsername}
+                  avatarUrl={data.authorAvatarUrl}
+                  className="h-11 w-11 border-[1.5px] border-white text-[0.9375rem]"
+                />
+              </RankFrame>
+            </Link>
+          )}
           {data.isAuthenticated && !data.isOwnPost && data.isFollowingAuthor === false && (
             <FollowBadge
               authorId={data.authorId}
@@ -1028,7 +1054,7 @@ export function SwipeSlide({
           label="Comments"
           caption={commentCount > 0 ? formatCompactNumber(commentCount) : null}
         >
-          <CommentIcon className="h-[31px] w-[31px]" strokeWidth={1.9} />
+          <ChatBubbleIcon className="h-[28px] w-[28px]" />
         </RailAction>
 
         <SaveButton
@@ -1041,11 +1067,12 @@ export function SwipeSlide({
 
         <ShareAction postId={data.post.id} />
 
-        {data.soundId && (
+        {(isVideo || data.soundId) && (
           <SoundDisc
-            soundId={data.soundId}
+            sound={data.soundId ? { id: data.soundId, title: data.soundTitle ?? "Sound" } : null}
             avatarUrl={data.authorAvatarUrl}
             username={data.authorUsername}
+            postId={data.post.id}
             spinning={discSpinning}
           />
         )}

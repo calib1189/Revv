@@ -34,10 +34,10 @@ function TabItem({
       href={href}
       aria-label={badge ? `${label}, ${badge} unread` : label}
       aria-current={active ? "page" : undefined}
-      className="group flex w-[4.5rem] flex-col items-center gap-[3px] pt-1 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90"
+      className="group flex w-[4.5rem] flex-col items-center justify-center gap-0.5 transition-transform duration-150 ease-[var(--ease-ios)] active:scale-90"
     >
       <span
-        className={`relative flex h-8 w-[3.25rem] items-center justify-center rounded-full transition-colors duration-200 ${
+        className={`relative flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200 ${
           active ? "bg-accent/12 text-accent" : "text-muted"
         }`}
       >
@@ -74,13 +74,13 @@ export function BottomTabBar({
   const profileHref = username ? `/u/${username}` : "/settings/profile";
 
   return (
-    <div className="mx-auto flex h-16 max-w-5xl items-stretch justify-around px-2">
+    <div className="mx-auto flex h-[3.25rem] max-w-5xl items-stretch justify-around px-2">
       <TabItem href="/friends" label="Friends" active={isActive(pathname, "/friends")}>
-        <UsersIcon className="h-[1.375rem] w-[1.375rem]" />
+        <UsersIcon className="h-5 w-5" />
       </TabItem>
 
       <TabItem href="/crews" label="Crews" active={isActive(pathname, "/crews")}>
-        <FlagIcon className="h-[1.375rem] w-[1.375rem]" />
+        <FlagIcon className="h-5 w-5" />
       </TabItem>
 
       <CreateMenu />
@@ -91,11 +91,11 @@ export function BottomTabBar({
         active={isActive(pathname, "/messages") || isActive(pathname, "/notifications")}
         badge={unreadInboxCount}
       >
-        <CommentIcon className="h-[1.375rem] w-[1.375rem]" />
+        <CommentIcon className="h-5 w-5" />
       </TabItem>
 
       <TabItem href={profileHref} label="Profile" active={isActive(pathname, profileHref)}>
-        <PersonIcon className="h-[1.375rem] w-[1.375rem]" />
+        <PersonIcon className="h-5 w-5" />
       </TabItem>
     </div>
   );

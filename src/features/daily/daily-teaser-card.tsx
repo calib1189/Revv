@@ -46,7 +46,7 @@ export function DailyFeedSlide({ teaser, slideHeight }: { teaser: DailyTeaser; s
     <div className={`relative ${slideHeight} w-full flex-shrink-0 snap-start overflow-hidden bg-black`}>
       <ChallengeVisual icon={teaser.icon} coverUrl={teaser.coverUrl ?? teaser.entryPhotos[0] ?? null} priority />
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/30" />
-      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-5 pb-[calc(env(safe-area-inset-bottom)+5.5rem)]">
+      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-5 pb-[calc(var(--bottom-nav-h)+1.5rem)]">
         <p className="micro-label text-accent">Today on Sorza Daily</p>
         <h2 className="text-balance text-[2rem] font-bold leading-[1.05] tracking-[-0.02em] text-white">{teaser.title}</h2>
         {(teaser.sponsorName || teaser.prize) && (

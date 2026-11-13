@@ -63,6 +63,29 @@ export function CommentIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+/** Solid speech bubble with three dots cut through it, for the feed's
+ * action rail (solid shapes hold up over bright video better than
+ * outlines). */
+export function ChatBubbleIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path
+        fillRule="evenodd"
+        d="M12 3C6.75 3 2.5 6.6 2.5 11.05c0 2.5 1.33 4.73 3.43 6.2-.1 1.3-.62 2.55-1.5 3.6-.2.24 0 .6.3.55 1.95-.3 3.6-1.05 4.82-1.97.8.17 1.62.26 2.45.26 5.25 0 9.5-3.6 9.5-8.05S17.25 3 12 3ZM8.95 11.05a1.35 1.35 0 1 1-2.7 0 1.35 1.35 0 0 1 2.7 0Zm4.4 0a1.35 1.35 0 1 1-2.7 0 1.35 1.35 0 0 1 2.7 0Zm4.4 0a1.35 1.35 0 1 1-2.7 0 1.35 1.35 0 0 1 2.7 0Z"
+      />
+    </svg>
+  );
+}
+
+/** Solid forward arrow, for the feed's action rail. */
+export function ShareArrowIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M13.5 4.2v3.9C7.3 8.6 3.4 12.4 3 19.3c0 .37.45.55.7.27 2.2-2.75 5.3-4.15 9.8-4.2v3.93c0 .45.53.68.86.38l7.43-6.86a.75.75 0 0 0 0-1.1L14.36 3.82a.5.5 0 0 0-.86.38Z" />
+    </svg>
+  );
+}
+
 export function ShareIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
@@ -156,6 +179,17 @@ export function CompassIcon(props: SVGProps<SVGSVGElement>) {
         d="M15 9l-2 6-4 2 2-6 4-2Z"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+/** A story: a ring left open at the top, with a plus inside. */
+export function StoryIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" {...props}>
+      <path d="M14.6 3.35A9 9 0 1 1 6 4.95" />
+      <path d="M9.4 3.35a9 9 0 0 0-1.1.42" strokeDasharray="0.1 2.6" />
+      <path d="M12 8.5v7M8.5 12h7" />
     </svg>
   );
 }

@@ -72,7 +72,7 @@ export function TutorialHost({ startStep }: { startStep: number | null }) {
       {toast && (
         <div
           role="status"
-          className="animate-fade-in fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[95] flex justify-center px-6"
+          className="animate-fade-in fixed inset-x-0 bottom-[calc(var(--bottom-nav-h)+1rem)] z-[95] flex justify-center px-6"
         >
           <p className="glass-raised elev-2 rounded-full px-4 py-2.5 text-[0.8125rem] font-medium">{toast}</p>
         </div>
