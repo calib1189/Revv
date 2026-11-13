@@ -12,7 +12,7 @@ import { equipCrewItemAction } from "@/features/crews/actions";
 import { DecalSheet, type DecalOffer } from "@/features/decals/decal-sheet";
 import { PosterSheet } from "@/features/posters/poster-card";
 import { TeeSheet } from "@/features/shop/tee-sheet";
-import { FramedPoster, GlossySticker, TeeStill, stickerStage } from "@/features/shop/product-art";
+import { PRODUCT_STAGE, PosterPrint, StickerArt, TeeStill } from "@/features/shop/product-art";
 import type { PosterOffer } from "@/lib/posters/offer";
 import { TEE_DESIGNS, TEE_FROM_CENTS, type TeeDesign } from "@/lib/merch/products";
 import { listStoreItemsByCategory, getStoreItem, STORE_CATEGORY_LABELS, type StoreCategory, type StoreItem } from "@/lib/store/catalog";
@@ -337,7 +337,7 @@ export function ShopHome({
         )}
         {(decals.length > 0 || posters.length > 0) && (
           <Bubble label="Your car" hot onClick={() => goTo("car")}>
-            {bestDecal ? <GlossySticker tier={bestDecal.tier} className="h-[78%] w-[78%]" /> : <WheelIcon className="h-7 w-7 text-white/80" />}
+            {bestDecal ? <StickerArt tier={bestDecal.tier} className="h-[74%] w-[74%]" /> : <WheelIcon className="h-7 w-7 text-white/80" />}
           </Bubble>
         )}
         <Bubble label="Names" onClick={() => goTo("name")}>
@@ -398,13 +398,12 @@ export function ShopHome({
           <Promo eyebrow="Made for your car" title="Rank decals & posters" sub="Printed and shipped free in the US" tone="#ffd60a" onClick={() => goTo("car")}>
             {bestDecal && (
               <MiniTile label={formatUsd(decalPriceCents)} onClick={() => open({ kind: "decal", key: "d", offer: bestDecal })}>
-                <span className="absolute inset-0" style={stickerStage(bestDecal.tier)} />
-                <GlossySticker tier={bestDecal.tier} className="relative h-[80%] w-[80%]" />
+                <StickerArt tier={bestDecal.tier} className="h-[72%] w-[72%]" />
               </MiniTile>
             )}
             {posters[0] && (
               <MiniTile label="Poster" onClick={() => open({ kind: "poster", key: "p", offer: posters[0] })}>
-                <FramedPoster offer={posters[0]} className="aspect-[3/4] h-[78%]" />
+                <PosterPrint offer={posters[0]} width={300} className="h-[80%]" />
               </MiniTile>
             )}
           </Promo>
@@ -628,7 +627,7 @@ function ProductCard({
     aspect = "aspect-[4/5]";
     title = `${product.design.name} Tee`;
     media = (
-      <span className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(75%_60%_at_50%_35%,#3a3a42,#141417_78%)]">
+      <span className={`absolute inset-0 flex items-center justify-center ${PRODUCT_STAGE}`}>
         <TeeStill design={product.design.id} alt={title} className="h-[86%] w-[86%]" />
       </span>
     );
@@ -637,8 +636,8 @@ function ProductCard({
   } else if (product.kind === "decal") {
     title = `${RANK_LABELS[product.offer.tier]} rank decal · ${product.offer.carName}`;
     media = (
-      <span className="absolute inset-0 flex items-center justify-center" style={stickerStage(product.offer.tier)}>
-        <GlossySticker tier={product.offer.tier} className="h-[72%] w-[72%]" />
+      <span className={`absolute inset-0 flex items-center justify-center ${PRODUCT_STAGE}`}>
+        <StickerArt tier={product.offer.tier} className="h-[70%] w-[70%]" />
       </span>
     );
     price = <Price usd={decalPriceCents} />;
@@ -647,8 +646,8 @@ function ProductCard({
     aspect = "aspect-[4/5]";
     title = `Build poster · ${product.offer.carName}`;
     media = (
-      <span className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(180deg,#2a2a30,#121215)]">
-        <FramedPoster offer={product.offer} className="aspect-[3/4] h-[74%]" />
+      <span className={`absolute inset-0 flex items-center justify-center ${PRODUCT_STAGE}`}>
+        <PosterPrint offer={product.offer} className="h-[82%]" />
       </span>
     );
     const sharp = product.offer.products.filter((p) => p.sharp).map((p) => p.priceCents);

@@ -1,92 +1,51 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { PosterThumb } from "@/features/posters/poster-card";
 import type { PosterOffer } from "@/lib/posters/offer";
-import { RANK_TEXT_COLORS, type RankTier } from "@/lib/rating/rank";
+import type { RankTier } from "@/lib/rating/rank";
 import { teePhotos3d, type TeeDesignId } from "@/lib/merch/products";
 
-const maskFor = (src: string) => ({
-  WebkitMaskImage: `url(${src})`,
-  maskImage: `url(${src})`,
-  WebkitMaskSize: "contain",
-  maskSize: "contain",
-  WebkitMaskRepeat: "no-repeat",
-  maskRepeat: "no-repeat",
-  WebkitMaskPosition: "center",
-  maskPosition: "center",
-});
+/** The neutral stage every product sits on in the shop. */
+export const PRODUCT_STAGE = "bg-[radial-gradient(75%_60%_at_50%_35%,#3a3a42,#141417_78%)]";
 
-/**
- * The rank decal as the real thing: Printful's die-cut sticker (white
- * edge and all) with a glossy vinyl sheen. It tilts toward your finger
- * when `interactive`, and otherwise floats gently.
- */
-export function GlossySticker({ tier, interactive = false, className = "" }: { tier: RankTier; interactive?: boolean; className?: string }) {
-  const src = `/decals/sticker/${tier}.png`;
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-
-  function follow(e: React.PointerEvent) {
-    const r = ref.current?.getBoundingClientRect();
-    if (!r) return;
-    const nx = (e.clientX - r.left) / r.width - 0.5;
-    const ny = (e.clientY - r.top) / r.height - 0.5;
-    setTilt({ x: -ny * 22, y: nx * 26 });
-  }
-
-  const glossAt = 50 + tilt.y * 2.2;
+/** The rank decal as Printful prints it: the die-cut sticker, white edge
+ * and all, with a soft shadow. Nothing added on top. */
+export function StickerArt({ tier, className = "" }: { tier: RankTier; className?: string }) {
   return (
-    <div
-      ref={ref}
-      className={`relative ${className}`}
-      style={{ perspective: 700 }}
-      onPointerMove={interactive ? follow : undefined}
-      onPointerDown={interactive ? follow : undefined}
-      onPointerLeave={interactive ? () => setTilt({ x: 0, y: 0 }) : undefined}
-    >
-      <div
-        className={`relative h-full w-full transition-transform duration-200 ease-out ${interactive ? "" : "animate-sticker-float"}`}
-        style={interactive ? { transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`, transformStyle: "preserve-3d" } : undefined}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- the sticker art, contained in its box */}
-        <img src={src} alt="" draggable={false} className="h-full w-full object-contain drop-shadow-[0_10px_16px_rgb(0_0_0/0.45)]" />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            ...maskFor(src),
-            backgroundImage: `linear-gradient(115deg, transparent ${glossAt - 22}%, rgb(255 255 255 / 0.38) ${glossAt - 4}%, rgb(255 255 255 / 0.08) ${glossAt + 6}%, transparent ${glossAt + 20}%)`,
-          }}
-        />
-      </div>
-    </div>
+    <span className={`block ${className}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- the sticker art, contained in its box */}
+      <img src={`/decals/sticker/${tier}.png`} alt="" draggable={false} className="h-full w-full object-contain drop-shadow-[0_8px_14px_rgb(0_0_0/0.4)]" />
+    </span>
   );
 }
 
-/** A soft pool of the rank's own color behind its sticker. */
-export function stickerStage(tier: RankTier): React.CSSProperties {
-  return {
-    backgroundImage: `radial-gradient(60% 55% at 50% 45%, color-mix(in srgb, ${RANK_TEXT_COLORS[tier]} 26%, transparent), transparent 75%), linear-gradient(180deg, #17171b, #0b0b0d)`,
-  };
-}
-
-/** The build poster, framed and hung: black frame, white mat, a slight
- * angle and a shadow on the wall. */
-export function FramedPoster({ offer, className = "" }: { offer: PosterOffer; className?: string }) {
+/**
+ * The build poster exactly as it prints: the owner's own preview, drawn
+ * by the same code that renders the print file (photo, score, rank and
+ * every category score), small enough for a thumbnail. Shows the photo
+ * and score while it draws, and keeps those if it can't.
+ */
+export function PosterPrint({ offer, width = 420, className = "" }: { offer: PosterOffer; width?: number; className?: string }) {
+  const src = `/api/posters/preview?vehicle=${encodeURIComponent(offer.vehicleId)}&product=poster_18x24&w=${width}`;
+  const [state, setState] = useState<"loading" | "ready" | "failed">("loading");
   return (
-    <div className={`relative ${className}`} style={{ perspective: 900 }}>
-      <div
-        className="relative h-full w-full rounded-[3px] bg-[#0b0b0c] p-[5%] shadow-[18px_22px_30px_-8px_rgb(0_0_0/0.65)] ring-1 ring-white/10"
-        style={{ transform: "rotateY(-14deg) rotateX(3deg)", transformStyle: "preserve-3d" }}
-      >
-        <div className="h-full w-full bg-[#f3f1ec] p-[7%]">
-          <PosterThumb offer={offer} className="h-full w-full rounded-none shadow-none ring-0" scoreClassName="text-[0.75rem]" />
-        </div>
-        {/* Glass. */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,rgb(255_255_255/0.14),transparent_38%)]" />
-      </div>
-    </div>
+    <span className={`relative block aspect-[3/4] overflow-hidden rounded-[2px] bg-[#08080a] shadow-[0_14px_28px_-8px_rgb(0_0_0/0.6)] ${className}`}>
+      {state !== "ready" && (
+        <PosterThumb offer={offer} className={`absolute inset-0 h-full w-full rounded-none shadow-none ring-0 ${state === "loading" ? "animate-pulse" : ""}`} scoreClassName="text-[0.75rem]" />
+      )}
+      {state !== "failed" && (
+        // eslint-disable-next-line @next/next/no-img-element -- rendered on demand by the poster preview route
+        <img
+          src={src}
+          alt={`Build poster for ${offer.carName}`}
+          draggable={false}
+          onLoad={() => setState("ready")}
+          onError={() => setState("failed")}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${state === "ready" ? "opacity-100" : "opacity-0"}`}
+        />
+      )}
+    </span>
   );
 }
 

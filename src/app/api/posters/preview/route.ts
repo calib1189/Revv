@@ -12,8 +12,10 @@ import { fetchPosterPhoto } from "@/features/posters/poster-photo";
 
 export const runtime = "nodejs";
 
-/** Preview width in pixels; the height follows the product's shape. */
+/** Preview width in pixels (the height follows the product's shape). The
+ * shop's thumbnails ask for a smaller one with `w`, which draws faster. */
 const PREVIEW_WIDTH = 900;
+const MIN_WIDTH = 240;
 
 /**
  * The owner's own build poster, drawn by the same code that renders the
@@ -24,6 +26,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const product = posterProductById(url.searchParams.get("product") ?? "");
   const vehicleId = url.searchParams.get("vehicle") ?? "";
+  const asked = Number(url.searchParams.get("w"));
+  const width = Number.isFinite(asked) && asked > 0 ? Math.round(Math.min(PREVIEW_WIDTH, Math.max(MIN_WIDTH, asked))) : PREVIEW_WIDTH;
   if (!product || !vehicleId) return new Response("Not found", { status: 404 });
 
   const user = await getCurrentUser();
@@ -57,7 +61,7 @@ export async function GET(request: Request) {
         ratedAt: build.ai_rating_rated_at,
       },
       photo,
-      { width: PREVIEW_WIDTH, height: Math.round((PREVIEW_WIDTH * print.height) / print.width) },
+      { width, height: Math.round((width * print.height) / print.width) },
     );
     return new Response(png, {
       headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=600" },

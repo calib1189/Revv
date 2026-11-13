@@ -3,7 +3,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
 import { Sheet } from "@/components/ui/sheet";
-import { GlossySticker, stickerStage } from "@/features/shop/product-art";
+import { PRODUCT_STAGE, StickerArt } from "@/features/shop/product-art";
 import { startDecalOrderAction } from "@/features/decals/actions";
 import { RANK_LABELS, RANK_TEXT_COLORS, type RankTier } from "@/lib/rating/rank";
 import { formatScore } from "@/lib/rating/share-text";
@@ -185,12 +185,12 @@ export function DecalSheet({
   return (
     <Sheet open={open} onClose={onClose} title={`${label} decal`}>
       <div className="flex flex-col gap-5">
-        <div className="relative overflow-hidden rounded-[28px] p-4 pb-4" style={stickerStage(offer.tier)}>
+        <div className={`relative overflow-hidden rounded-[28px] p-4 pb-4 ${PRODUCT_STAGE}`}>
           {view === "car" && offer.photoUrl ? (
             <DecalOnCar tier={offer.tier} photoUrl={offer.photoUrl} carName={offer.carName} />
           ) : (
             <div className="flex aspect-square w-full items-center justify-center">
-              <GlossySticker tier={offer.tier} interactive className="h-[78%] w-[78%]" />
+              <StickerArt tier={offer.tier} className="h-[74%] w-[74%]" />
             </div>
           )}
           {offer.photoUrl && (
