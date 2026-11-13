@@ -3,7 +3,7 @@
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
 import { Sheet } from "@/components/ui/sheet";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { GlossySticker, stickerStage } from "@/features/shop/product-art";
 import { startDecalOrderAction } from "@/features/decals/actions";
 import { RANK_LABELS, RANK_TEXT_COLORS, type RankTier } from "@/lib/rating/rank";
 import { formatScore } from "@/lib/rating/share-text";
@@ -161,9 +161,10 @@ function DecalOnCar({ tier, photoUrl, carName }: { tier: RankTier; photoUrl: str
 }
 
 /**
- * A full look at the decal before buying it: the sticker as it's
- * printed, or placed on the car's own photo. Then one line of details,
- * the price and the order button.
+ * The decal before buying it, laid out like the shop's other sheets: the
+ * sticker on a stage glowing in its rank's color (tilt it with your
+ * finger), or placed on the car's own photo; then the name, the price,
+ * what it's made of, and Buy.
  */
 export function DecalSheet({
   offer,
@@ -179,51 +180,72 @@ export function DecalSheet({
   const [view, setView] = useState<"decal" | "car">("decal");
   const { busy, error, order } = useDecalOrder(offer.vehicleId);
   const label = RANK_LABELS[offer.tier];
+  const color = RANK_TEXT_COLORS[offer.tier];
 
   return (
     <Sheet open={open} onClose={onClose} title={`${label} decal`}>
       <div className="flex flex-col gap-5">
-        {view === "car" && offer.photoUrl ? (
-          <DecalOnCar tier={offer.tier} photoUrl={offer.photoUrl} carName={offer.carName} />
-        ) : (
-          <div className="relative aspect-square w-full overflow-hidden rounded-[24px] bg-[#0c0c0f]">
-            <div className="absolute inset-0" style={{ background: rankGlow(offer.tier) }} />
-            <DecalArt tier={offer.tier} className="absolute inset-[12%]" />
-          </div>
-        )}
-
-        {offer.photoUrl && (
-          <SegmentedControl
-            options={[
-              { value: "decal", label: "Decal" },
-              { value: "car", label: "On your car" },
-            ]}
-            value={view}
-            onChange={setView}
-          />
-        )}
-
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-[1.25rem] font-bold leading-tight tracking-[-0.02em]">{label} decal</p>
-            <p className="mt-1 truncate text-[0.875rem] text-muted">
-              Earned by {offer.carName} · <span className="numeral">{formatScore(offer.score)}</span>
-            </p>
-          </div>
-          <p className="numeral flex-shrink-0 text-[1.25rem] font-bold leading-tight">{formatUsd(priceCents)}</p>
+        <div className="relative overflow-hidden rounded-[28px] p-4 pb-4" style={stickerStage(offer.tier)}>
+          {view === "car" && offer.photoUrl ? (
+            <DecalOnCar tier={offer.tier} photoUrl={offer.photoUrl} carName={offer.carName} />
+          ) : (
+            <div className="flex aspect-square w-full items-center justify-center">
+              <GlossySticker tier={offer.tier} interactive className="h-[78%] w-[78%]" />
+            </div>
+          )}
+          {offer.photoUrl && (
+            <div className="mt-3 flex justify-center gap-1 rounded-full bg-black/35 p-1 backdrop-blur-md" role="radiogroup" aria-label="View">
+              {(
+                [
+                  ["decal", "Sticker"],
+                  ["car", "On your car"],
+                ] as const
+              ).map(([v, text]) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="radio"
+                  aria-checked={view === v}
+                  onClick={() => setView(v)}
+                  className={`pressable rounded-full px-4 py-1.5 text-[0.8125rem] font-semibold transition-colors ${
+                    view === v ? "bg-white text-black" : "text-white/70"
+                  }`}
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        <p className="-mt-2 text-[0.8125rem] text-muted">4 × 4 in. weatherproof vinyl · Free US shipping</p>
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-[1.375rem] font-bold tracking-[-0.02em]">{label} rank decal</p>
+            <p className="numeral flex-shrink-0 text-[1.25rem] font-bold">{formatUsd(priceCents)}</p>
+          </div>
+          <p className="mt-1 flex items-center gap-2 truncate text-[0.8125rem] text-muted">
+            <span className="h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: color }} />
+            Earned by {offer.carName} · <span className="numeral">{formatScore(offer.score)}</span>
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {["4 × 4 in.", "Die-cut", "Weatherproof vinyl"].map((spec) => (
+              <span key={spec} className="rounded-full bg-foreground/[0.06] px-3 py-1 text-[0.75rem] font-semibold text-foreground/80 ring-1 ring-border">
+                {spec}
+              </span>
+            ))}
+          </div>
+        </div>
 
         <div>
           <button
             type="button"
             onClick={() => void order()}
             disabled={busy}
-            className="pressable h-12 w-full rounded-full bg-accent text-[0.9375rem] font-semibold text-accent-foreground disabled:opacity-60"
+            className="pressable h-[52px] w-full rounded-full bg-accent text-[1rem] font-semibold text-accent-foreground disabled:opacity-55"
           >
-            {busy ? "Opening checkout…" : "Order decal"}
+            {busy ? "Opening checkout…" : `Buy now · ${formatUsd(priceCents)}`}
           </button>
+          <p className="mt-2 text-center text-[0.75rem] text-muted">Printed to order · Free US shipping</p>
           {error && <p className="mt-2 text-center text-[0.8125rem] text-danger">{error}</p>}
         </div>
       </div>

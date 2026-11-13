@@ -30,12 +30,9 @@ export function PointsWallet({
   open,
   onOpenChange,
   title,
-  onAccent = false,
 }: {
   /** What sits to the left of the points pill (the page title). */
   title?: ReactNode;
-  /** Drawn on the shop's red header: white glass instead of grey. */
-  onAccent?: boolean;
   balance: number;
   userId: string;
   packsEnabled: boolean;
@@ -134,21 +131,17 @@ export function PointsWallet({
               type="button"
               onClick={() => onOpenChange(true)}
               aria-label={`${balance.toLocaleString("en-US")} points. Get points`}
-              className={`pressable flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full pl-3.5 pr-1 ring-1 ${
-                onAccent ? "bg-white/15 text-white ring-white/25 [&_svg]:text-white" : "bg-foreground/[0.07] ring-border"
-              }`}
+              className="pressable flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.07] pl-3.5 pr-1 ring-1 ring-border"
             >
               {pill}
-              <span className={`ml-1 flex h-8 w-8 items-center justify-center rounded-full ${onAccent ? "bg-white text-accent [&_svg]:!text-accent" : "bg-accent text-accent-foreground"}`}>
+              <span className="ml-1 flex h-8 w-8 items-center justify-center rounded-full bg-accent text-accent-foreground">
                 <PlusIcon className="h-4 w-4" />
               </span>
             </button>
           ) : (
             <span
               aria-label={`${balance.toLocaleString("en-US")} points`}
-              className={`flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full px-3.5 ring-1 ${
-                onAccent ? "bg-white/15 text-white ring-white/25 [&_svg]:text-white" : "bg-foreground/[0.07] ring-border"
-              }`}
+              className="flex h-10 flex-shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.07] px-3.5 ring-1 ring-border"
             >
               {pill}
             </span>
@@ -158,7 +151,7 @@ export function PointsWallet({
           <p
             role="status"
             className={`rounded-[14px] px-3.5 py-2.5 text-[0.875rem] font-semibold ${
-              onAccent ? "bg-white/15 text-white" : message.tone === "error" ? "bg-danger/15 text-[#ff8a80]" : "bg-accent/15 text-accent"
+              message.tone === "error" ? "bg-danger/15 text-[#ff8a80]" : "bg-accent/15 text-accent"
             }`}
           >
             {message.text}

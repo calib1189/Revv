@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Sheet } from "@/components/ui/sheet";
-import { CheckIcon } from "@/components/ui/icons";
 import { startPosterOrderAction } from "@/features/posters/actions";
 import type { PosterOffer } from "@/lib/posters/offer";
 import type { PosterProductId } from "@/lib/posters/products";
@@ -62,8 +61,12 @@ export function PosterThumb({ offer, className, scoreClassName }: { offer: Poste
   );
 }
 
-/** The poster as it will print (drawn by the same code that renders the
- * print file), the sizes, and the order button. */
+/**
+ * The poster before buying it, laid out like the shop's other sheets:
+ * the real print (drawn by the same code that renders the print file)
+ * hanging on a wall, framed if you pick the framed one; then the two
+ * sizes side by side, and Buy.
+ */
 export function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open: boolean; onClose: () => void }) {
   const firstSharp = offer.products.find((p) => p.sharp) ?? null;
   const [productId, setProductId] = useState<PosterProductId | null>(firstSharp?.id ?? null);
@@ -73,6 +76,7 @@ export function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open
   const [error, setError] = useState<string | null>(null);
   const product = offer.products.find((p) => p.id === productId) ?? null;
   const previewId = product?.id ?? offer.products[0].id;
+  const framed = previewId === "framed_12x18";
   const src = `/api/posters/preview?vehicle=${encodeURIComponent(offer.vehicleId)}&product=${previewId}`;
 
   async function order() {
@@ -91,36 +95,57 @@ export function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open
   return (
     <Sheet open={open} onClose={onClose} title="Build poster">
       <div className="flex flex-col gap-5">
-        <div className="flex justify-center rounded-[24px] bg-[#0c0c0f] px-8 py-6">
-          <div className={`relative w-full max-w-[210px] overflow-hidden rounded-[6px] bg-[#08080a] shadow-[0_18px_40px_rgb(0_0_0/0.6)] ring-1 ring-white/10 ${SHAPE[previewId]}`}>
-            {failed === src ? (
-              <p className="absolute inset-0 flex items-center justify-center p-4 text-center text-[0.8125rem] text-white/60">
-                Couldn&apos;t draw your poster. Close this and try again.
-              </p>
-            ) : (
-              <>
-                {loaded !== src && (
-                  <span className="absolute inset-0 flex animate-pulse items-center justify-center text-[0.8125rem] text-white/50">
-                    Making your poster…
-                  </span>
+        {/* The wall. */}
+        <div className="relative flex justify-center overflow-hidden rounded-[28px] bg-[radial-gradient(80%_70%_at_50%_30%,#4a4a52,#1b1b1f_75%)] px-10 py-8">
+          <div
+            className={`relative w-full max-w-[200px] transition-[padding,background-color] duration-300 ${
+              framed ? "bg-[#0b0b0c] p-[6%] shadow-[0_26px_44px_-12px_rgb(0_0_0/0.75)] ring-1 ring-white/10" : "shadow-[0_22px_40px_-14px_rgb(0_0_0/0.7)]"
+            }`}
+          >
+            <div className={framed ? "bg-[#f3f1ec] p-[7%]" : ""}>
+              <div className={`relative w-full overflow-hidden bg-[#08080a] ${SHAPE[previewId]}`}>
+                {failed === src ? (
+                  <p className="absolute inset-0 flex items-center justify-center p-4 text-center text-[0.8125rem] text-white/60">
+                    Couldn&apos;t draw your poster. Close this and try again.
+                  </p>
+                ) : (
+                  <>
+                    {loaded !== src && (
+                      <span className="absolute inset-0 flex animate-pulse items-center justify-center text-[0.8125rem] text-white/50">
+                        Making your poster…
+                      </span>
+                    )}
+                    <Image
+                      key={src}
+                      src={src}
+                      alt={`Your build poster for ${offer.carName}`}
+                      fill
+                      unoptimized
+                      sizes="200px"
+                      onLoad={() => setLoaded(src)}
+                      onError={() => setFailed(src)}
+                      className={`object-cover transition-opacity duration-300 ${loaded === src ? "opacity-100" : "opacity-0"}`}
+                    />
+                  </>
                 )}
-                <Image
-                  key={src}
-                  src={src}
-                  alt={`Your build poster for ${offer.carName}`}
-                  fill
-                  unoptimized
-                  sizes="210px"
-                  onLoad={() => setLoaded(src)}
-                  onError={() => setFailed(src)}
-                  className={`object-cover transition-opacity duration-300 ${loaded === src ? "opacity-100" : "opacity-0"}`}
-                />
-              </>
-            )}
+              </div>
+            </div>
+            {/* Glass, on the framed one. */}
+            {framed && <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(125deg,rgb(255_255_255/0.12),transparent_40%)]" />}
           </div>
         </div>
 
-        <div className="flex flex-col gap-2" role="radiogroup" aria-label="Poster size">
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-[1.375rem] font-bold tracking-[-0.02em]">Build poster</p>
+            {product && <p className="numeral flex-shrink-0 text-[1.25rem] font-bold">{formatUsd(product.priceCents)}</p>}
+          </div>
+          <p className="mt-1 truncate text-[0.8125rem] text-muted">
+            {offer.carName} · <span className="numeral">{formatScore(offer.score)}</span> SORZA score
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Poster size">
           {offer.products.map((p) => {
             const selected = p.id === productId;
             return (
@@ -131,22 +156,21 @@ export function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open
                 aria-checked={selected}
                 disabled={!p.sharp}
                 onClick={() => setProductId(p.id)}
-                className={`pressable flex items-center gap-3 rounded-[18px] px-4 py-3 text-left ring-1 transition-colors disabled:opacity-50 ${
-                  selected ? "bg-foreground/[0.07] ring-2 ring-accent" : "bg-foreground/[0.03] ring-border"
+                className={`pressable flex flex-col items-start gap-2 rounded-[18px] p-3 text-left ring-1 transition-colors disabled:opacity-45 ${
+                  selected ? "bg-foreground/[0.07] ring-2 ring-foreground" : "bg-foreground/[0.03] ring-border"
                 }`}
               >
-                <span
-                  className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full ${selected ? "bg-accent text-white" : "ring-1 ring-border"}`}
-                >
-                  {selected && <CheckIcon className="h-3 w-3" />}
+                <span className="flex h-9 items-end">
+                  <span
+                    className={`block ${p.id === "framed_12x18" ? "h-9 w-6 border-[3px] border-foreground/80" : "h-9 w-[27px] bg-foreground/25"} rounded-[2px]`}
+                    aria-hidden
+                  />
                 </span>
-                <span className="min-w-0 flex-1">
+                <span>
                   <span className="block text-[0.9375rem] font-semibold">{p.name}</span>
-                  <span className="block text-[0.8125rem] text-muted">
-                    {p.sharp ? p.detail : "Your cover photo is too small to print sharp at this size"}
-                  </span>
+                  <span className="block text-[0.75rem] leading-snug text-muted">{p.sharp ? p.detail : "Your cover photo is too small for this size"}</span>
                 </span>
-                <span className="numeral flex-shrink-0 text-[0.9375rem] font-bold">{formatUsd(p.priceCents)}</span>
+                <span className="numeral text-[0.9375rem] font-bold">{formatUsd(p.priceCents)}</span>
               </button>
             );
           })}
@@ -164,9 +188,9 @@ export function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open
               type="button"
               onClick={() => void order()}
               disabled={busy}
-              className="pressable h-12 w-full rounded-full bg-accent text-[0.9375rem] font-semibold text-accent-foreground disabled:opacity-60"
+              className="pressable h-[52px] w-full rounded-full bg-accent text-[1rem] font-semibold text-accent-foreground disabled:opacity-55"
             >
-              {busy ? "Opening checkout…" : `Order · ${formatUsd(product.priceCents)}`}
+              {busy ? "Opening checkout…" : `Buy now · ${formatUsd(product.priceCents)}`}
             </button>
             <p className="mt-2 text-center text-[0.75rem] text-muted">Printed as rated · Free US shipping</p>
             {error && <p className="mt-2 text-center text-[0.8125rem] text-danger">{error}</p>}
