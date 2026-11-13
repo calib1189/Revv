@@ -1,15 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database, Json } from "@/lib/supabase/database.types";
 
 export type Story = Database["public"]["Tables"]["stories"]["Row"];
 
 export async function createStory(
   supabase: SupabaseClient<Database>,
-  input: { authorId: string; mediaId: string; caption: string | null },
+  input: { authorId: string; mediaId: string; design: Json | null },
 ): Promise<Story> {
   const { data, error } = await supabase
     .from("stories")
-    .insert({ author_id: input.authorId, media_id: input.mediaId, caption: input.caption })
+    .insert({ author_id: input.authorId, media_id: input.mediaId, design: input.design })
     .select("*")
     .single();
   if (error) throw error;
@@ -98,4 +98,85 @@ export async function getStoryViewCounts(
 export async function deleteStory(supabase: SupabaseClient<Database>, id: string): Promise<void> {
   const { error } = await supabase.from("stories").delete().eq("id", id);
   if (error) throw error;
+}
+
+/** A viewer's vote on a story poll; voting again is ignored. */
+export async function votePoll(
+  supabase: SupabaseClient<Database>,
+  input: { storyId: string; layerId: string; voterId: string; option: 0 | 1 },
+): Promise<void> {
+  const { error } = await supabase
+    .from("story_poll_votes")
+    .upsert(
+      { story_id: input.storyId, layer_id: input.layerId, voter_id: input.voterId, option: input.option },
+      { onConflict: "story_id,layer_id,voter_id", ignoreDuplicates: true },
+    );
+  if (error) throw error;
+}
+
+/** Vote tallies for a story's polls: layer id -> [option 0, option 1]. */
+export async function getPollCounts(supabase: SupabaseClient<Database>, storyId: string): Promise<Map<string, [number, number]>> {
+  const untyped = supabase as unknown as SupabaseClient;
+  const { data, error } = await untyped.rpc("story_poll_counts", { p_story: storyId });
+  if (error) throw error;
+  const counts = new Map<string, [number, number]>();
+  for (const row of (data ?? []) as { layer_id: string; option: number; votes: number }[]) {
+    const c = counts.get(row.layer_id) ?? [0, 0];
+    c[row.option === 1 ? 1 : 0] = Number(row.votes);
+    counts.set(row.layer_id, c);
+  }
+  return counts;
+}
+
+/** The viewer's own votes on these stories: "storyId:layerId" -> option. */
+export async function listMyPollVotes(
+  supabase: SupabaseClient<Database>,
+  voterId: string,
+  storyIds: string[],
+): Promise<Map<string, 0 | 1>> {
+  const votes = new Map<string, 0 | 1>();
+  if (storyIds.length === 0) return votes;
+  const { data, error } = await supabase
+    .from("story_poll_votes")
+    .select("story_id, layer_id, option")
+    .eq("voter_id", voterId)
+    .in("story_id", storyIds);
+  if (error) throw error;
+  for (const row of data) votes.set(`${row.story_id}:${row.layer_id}`, row.option === 1 ? 1 : 0);
+  return votes;
+}
+
+export async function createQuestionAnswer(
+  supabase: SupabaseClient<Database>,
+  input: { storyId: string; layerId: string; responderId: string; body: string },
+): Promise<void> {
+  const { error } = await supabase
+    .from("story_question_answers")
+    .insert({ story_id: input.storyId, layer_id: input.layerId, responder_id: input.responderId, body: input.body });
+  if (error) throw error;
+}
+
+/** Answers to the question on your story, newest first (RLS: author only). */
+export async function listQuestionAnswers(
+  supabase: SupabaseClient<Database>,
+  storyId: string,
+): Promise<{ id: string; responderId: string; body: string; createdAt: string }[]> {
+  const { data, error } = await supabase
+    .from("story_question_answers")
+    .select("id, responder_id, body, created_at")
+    .eq("story_id", storyId)
+    .order("created_at", { ascending: false })
+    .limit(300);
+  if (error) throw error;
+  return data.map((r) => ({ id: r.id, responderId: r.responder_id, body: r.body, createdAt: r.created_at }));
+}
+
+/** How many answers each of your stories' questions got. */
+export async function getAnswerCounts(supabase: SupabaseClient<Database>, storyIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (storyIds.length === 0) return counts;
+  const { data, error } = await supabase.from("story_question_answers").select("story_id").in("story_id", storyIds);
+  if (error) throw error;
+  for (const row of data) counts.set(row.story_id, (counts.get(row.story_id) ?? 0) + 1);
+  return counts;
 }

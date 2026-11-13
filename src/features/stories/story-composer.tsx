@@ -10,8 +10,10 @@ import { MAX_IMAGE_BYTES, validateImageFile, validateVideoFile } from "@/lib/val
 import { checkImage } from "@/features/moderation/check-image";
 import { captureVideoFrame } from "@/features/moderation/capture-video-frame";
 import { createStoryAction } from "@/features/stories/actions";
-import { STORY_CAPTION_MAX, STORY_MAX_VIDEO_SECONDS } from "@/lib/stories/tray";
-import { CloseIcon, GalleryIcon } from "@/components/ui/icons";
+import { STORY_MAX_VIDEO_SECONDS } from "@/lib/stories/tray";
+import type { StoryDesign } from "@/lib/stories/design";
+import { StoryEditor } from "@/features/stories/editor/story-editor";
+import { GalleryIcon } from "@/components/ui/icons";
 
 interface Picked {
   file: File;
@@ -43,13 +45,12 @@ function readVideoSeconds(file: File): Promise<number> {
   });
 }
 
-/** Post a story: pick a photo or video, add a line of text if you like,
+/** Post a story: pick a photo or video, dress it up in the story editor,
  * share it for 24 hours. It's checked by the same moderation as posts
  * before anything uploads. */
-export function StoryComposer({ userId }: { userId: string }) {
+export function StoryComposer({ userId, me }: { userId: string; me: { username: string; avatarUrl: string | null } }) {
   const router = useRouter();
   const [picked, setPicked] = useState<Picked | null>(null);
-  const [caption, setCaption] = useState("");
   const [stage, setStage] = useState<"idle" | "checking" | "uploading" | "sharing">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +81,7 @@ export function StoryComposer({ userId }: { userId: string }) {
     }
   }
 
-  async function share() {
+  async function share(design: StoryDesign) {
     if (!picked) return;
     setError(null);
     try {
@@ -113,7 +114,7 @@ export function StoryComposer({ userId }: { userId: string }) {
       }
 
       setStage("sharing");
-      const result = await createStoryAction(mediaId, caption);
+      const result = await createStoryAction(mediaId, design);
       if (!result.ok) {
         setStage("idle");
         return setError(result.error);
@@ -127,8 +128,6 @@ export function StoryComposer({ userId }: { userId: string }) {
     }
   }
 
-  const busy = stage !== "idle";
-
   if (!picked) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 py-16 text-center">
@@ -139,7 +138,12 @@ export function StoryComposer({ userId }: { userId: string }) {
         <label className="pressable flex h-12 cursor-pointer items-center gap-2 rounded-full bg-accent px-6 text-[0.9375rem] font-semibold text-accent-foreground">
           <GalleryIcon className="h-5 w-5" />
           Choose a photo or video
-          <input type="file" accept="image/*,video/*" className="sr-only" onChange={(e) => void handleFile(e.target.files?.[0])} />
+          <input type="file" accept="image/*,video/*" className="sr-only" onChange={(e) => {
+              void handleFile(e.target.files?.[0]);
+              // Picking the same file again after backing out still opens it.
+              e.target.value = "";
+            }}
+          />
         </label>
         <p className="text-[0.8125rem] text-muted">Videos up to {STORY_MAX_VIDEO_SECONDS} seconds.</p>
         {error && <p className="text-[0.875rem] text-danger">{error}</p>}
@@ -148,53 +152,16 @@ export function StoryComposer({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-4 px-4 pb-8 pt-4">
-      <div className="relative aspect-[9/16] max-h-[68dvh] w-full self-center overflow-hidden rounded-[22px] bg-black">
-        {picked.kind === "image" ? (
-          // eslint-disable-next-line @next/next/no-img-element -- local preview of the picked file
-          <img src={picked.previewUrl} alt="Your story" className="h-full w-full object-contain" />
-        ) : (
-          <video src={picked.previewUrl} className="h-full w-full object-contain" autoPlay loop muted playsInline />
-        )}
-        {caption.trim() && (
-          <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-5 pb-6 pt-12 text-center text-[1rem] font-medium text-white [text-shadow:0_1px_4px_rgb(0_0_0/0.6)]">
-            {caption.trim()}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={() => {
-            setPicked(null);
-            setCaption("");
-            setError(null);
-          }}
-          disabled={busy}
-          aria-label="Choose a different photo or video"
-          className="pressable absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md"
-        >
-          <CloseIcon className="h-5 w-5" />
-        </button>
-      </div>
-
-      <input
-        type="text"
-        value={caption}
-        onChange={(e) => setCaption(e.target.value.slice(0, STORY_CAPTION_MAX))}
-        placeholder="Add a caption (optional)"
-        disabled={busy}
-        enterKeyHint="done"
-        className="h-12 w-full rounded-2xl bg-foreground/[0.06] px-4 text-[1rem] outline-none ring-1 ring-border placeholder:text-muted focus:ring-accent"
-      />
-
-      <button
-        type="button"
-        onClick={() => void share()}
-        disabled={busy}
-        className="pressable h-12 w-full rounded-full bg-accent text-[0.9375rem] font-semibold text-accent-foreground disabled:opacity-60"
-      >
-        {stage === "checking" ? "Checking…" : stage === "uploading" ? "Uploading…" : stage === "sharing" ? "Sharing…" : "Share to your story"}
-      </button>
-      {error && <p className="text-center text-[0.875rem] text-danger">{error}</p>}
-    </div>
+    <StoryEditor
+      media={{ url: picked.previewUrl, kind: picked.kind }}
+      me={me}
+      sharing={stage === "checking" ? "Checking…" : stage === "uploading" ? "Uploading…" : stage === "sharing" ? "Sharing…" : null}
+      error={error}
+      onCancel={() => {
+        setPicked(null);
+        setError(null);
+      }}
+      onShare={(design) => void share(design)}
+    />
   );
 }

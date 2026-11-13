@@ -195,6 +195,7 @@ export interface Database {
           author_id: string;
           media_id: string;
           caption: string | null;
+          design: Json | null;
           created_at: string;
           expires_at: string;
         };
@@ -203,10 +204,81 @@ export interface Database {
           author_id: string;
           media_id: string;
           caption?: string | null;
+          design?: Json | null;
           created_at?: string;
           expires_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["stories"]["Insert"]>;
+        Relationships: never[];
+      };
+      message_reactions: {
+        Row: {
+          message_id: string;
+          user_id: string;
+          reaction: string;
+          created_at: string;
+        };
+        Insert: {
+          message_id: string;
+          user_id: string;
+          reaction: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["message_reactions"]["Insert"]>;
+        Relationships: never[];
+      };
+      comment_reactions: {
+        Row: {
+          comment_id: string;
+          user_id: string;
+          reaction: string;
+          created_at: string;
+        };
+        Insert: {
+          comment_id: string;
+          user_id: string;
+          reaction: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["comment_reactions"]["Insert"]>;
+        Relationships: never[];
+      };
+      story_poll_votes: {
+        Row: {
+          story_id: string;
+          layer_id: string;
+          voter_id: string;
+          option: number;
+          created_at: string;
+        };
+        Insert: {
+          story_id: string;
+          layer_id: string;
+          voter_id: string;
+          option: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["story_poll_votes"]["Insert"]>;
+        Relationships: never[];
+      };
+      story_question_answers: {
+        Row: {
+          id: string;
+          story_id: string;
+          layer_id: string;
+          responder_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          story_id: string;
+          layer_id: string;
+          responder_id: string;
+          body: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["story_question_answers"]["Insert"]>;
         Relationships: never[];
       };
       story_views: {

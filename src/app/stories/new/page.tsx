@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { StoryComposer } from "@/features/stories/story-composer";
+import { loadStoryPeople } from "@/lib/stories/load";
 
 export const metadata = { title: "New story" };
 
@@ -19,5 +20,6 @@ export default async function NewStoryPage() {
       </div>
     );
   }
-  return <StoryComposer userId={user.id} />;
+  const me = (await loadStoryPeople(supabase, [user.id]).catch(() => null))?.get(user.id);
+  return <StoryComposer userId={user.id} me={{ username: me?.username ?? profile?.username ?? "you", avatarUrl: me?.avatarUrl ?? null }} />;
 }

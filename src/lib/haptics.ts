@@ -31,3 +31,9 @@ export function hapticTierUp() {
 export function hapticLanding() {
   void fireHaptic(({ Haptics, NotificationType }) => Haptics.notification({ type: NotificationType.Success }));
 }
+
+/** The faintest tick: something snapped into place (a story sticker
+ * lining up with the center, or reaching the bin). */
+export function hapticSnap() {
+  void fireHaptic(({ Haptics, ImpactStyle }) => Haptics.impact({ style: ImpactStyle.Light }));
+}

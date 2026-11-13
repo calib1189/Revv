@@ -2,9 +2,10 @@
 
 /** How long a photo story stays on screen. */
 export const PHOTO_STORY_MS = 5000;
+/** A photo story with a song plays for the length of its clip. */
+export const PHOTO_MUSIC_STORY_MS = 15000;
 /** The longest a video story can be. */
 export const STORY_MAX_VIDEO_SECONDS = 60;
-export const STORY_CAPTION_MAX = 200;
 
 export interface StoryLite {
   id: string;
@@ -52,12 +53,6 @@ export function buildTray(stories: StoryLite[], seenIds: Set<string>, viewerId: 
 export function startIndex(storyIds: string[], seenIds: Set<string>): number {
   const i = storyIds.findIndex((id) => !seenIds.has(id));
   return i === -1 ? 0 : i;
-}
-
-export function validateStoryCaption(raw: string): { ok: true; caption: string | null } | { ok: false; error: string } {
-  const caption = raw.trim();
-  if (caption.length > STORY_CAPTION_MAX) return { ok: false, error: `Keep it under ${STORY_CAPTION_MAX} characters.` };
-  return { ok: true, caption: caption || null };
 }
 
 /** "now", "12m", "3h": how long ago a story went up, for its header. */

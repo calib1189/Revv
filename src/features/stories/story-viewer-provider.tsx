@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { StoryViewer } from "@/features/stories/story-viewer";
 
 interface StoriesContext {
-  /** Plays these people's stories in this order, starting at `startAuthorId`. */
-  openStories: (authorIds: string[], startAuthorId?: string) => void;
+  /** Plays these people's stories in this order, starting at
+   * `startAuthorId` (and at `startStoryId`, if given). */
+  openStories: (authorIds: string[], startAuthorId?: string, startStoryId?: string) => void;
   /** People whose stories were watched to the end since the page loaded,
    * so their rings go quiet without a reload. */
   caughtUp: ReadonlySet<string>;
@@ -18,12 +19,12 @@ const Ctx = createContext<StoriesContext | null>(null);
  * avatar with a story ring can open it. */
 export function StoryViewerProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [session, setSession] = useState<{ authorIds: string[]; start: string | undefined; key: number } | null>(null);
+  const [session, setSession] = useState<{ authorIds: string[]; start: string | undefined; storyId: string | undefined; key: number } | null>(null);
   const [caughtUp, setCaughtUp] = useState<ReadonlySet<string>>(new Set());
 
-  const openStories = useCallback((authorIds: string[], startAuthorId?: string) => {
+  const openStories = useCallback((authorIds: string[], startAuthorId?: string, startStoryId?: string) => {
     if (authorIds.length === 0) return;
-    setSession({ authorIds, start: startAuthorId, key: Date.now() });
+    setSession({ authorIds, start: startAuthorId, storyId: startStoryId, key: Date.now() });
   }, []);
 
   const markCaughtUp = useCallback((authorId: string) => {
@@ -40,6 +41,7 @@ export function StoryViewerProvider({ children }: { children: React.ReactNode })
           key={session.key}
           authorIds={session.authorIds}
           startAuthorId={session.start}
+          startStoryId={session.storyId}
           onCaughtUp={markCaughtUp}
           onClose={(changed) => {
             setSession(null);

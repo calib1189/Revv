@@ -20,6 +20,11 @@ export default function PrivacyPage() {
               Who has watched each story, so the person who posted it can see their viewers
             </li>
             <li>
+              Your votes on story polls and your answers to story questions. Answers go only to
+              the person who posted the story, and they can see who voted and how; other viewers
+              only ever see the vote totals
+            </li>
+            <li>
               For physical orders (rank decals, build posters, shirts): your name, shipping
               address, and email, collected at checkout so the order can be printed and delivered
             </li>

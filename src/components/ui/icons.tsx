@@ -2140,3 +2140,96 @@ export function InstagramIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/* Story editor tools. */
+
+export function StickerPeelIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" {...props}>
+      <path d="M20 13.5V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h6.5L20 13.5Z" />
+      <path d="M13.5 20v-3.5a3 3 0 0 1 3-3H20" />
+    </svg>
+  );
+}
+
+export function WandIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="m4 20 11-11M13 7l2-2 4 4-2 2" />
+      <path d="M8 3.5v3M6.5 5h3M19 14.5v3M17.5 16h3" />
+    </svg>
+  );
+}
+
+export function UndoIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M9 5 4.5 9.5 9 14" />
+      <path d="M5 9.5h9.5a5 5 0 0 1 0 10H11" />
+    </svg>
+  );
+}
+
+export function AlignIcon({ align, ...props }: SVGProps<SVGSVGElement> & { align: "left" | "center" | "right" }) {
+  const lines = { left: ["M4 6h16", "M4 10h10", "M4 14h16", "M4 18h10"], center: ["M4 6h16", "M7 10h10", "M4 14h16", "M7 18h10"], right: ["M4 6h16", "M10 10h10", "M4 14h16", "M10 18h10"] }[align];
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" {...props}>
+      {lines.map((d) => (
+        <path key={d} d={d} />
+      ))}
+    </svg>
+  );
+}
+
+export function TextBackgroundIcon({ mode, ...props }: SVGProps<SVGSVGElement> & { mode: "none" | "solid" | "soft" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinejoin="round" {...props}>
+      <rect x="3" y="3.5" width="18" height="17" rx="4" fill={mode === "solid" ? "currentColor" : mode === "soft" ? "currentColor" : "none"} fillOpacity={mode === "soft" ? 0.35 : 1} />
+      <path d="m8 16 4-9 4 9M9.6 13h4.8" stroke={mode === "solid" ? "#111114" : "currentColor"} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PenToolIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M15.5 4.5 19.5 8.5 9 19H5v-4L15.5 4.5Z" />
+    </svg>
+  );
+}
+
+export function MarkerToolIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="m14 5 5 5-7 7H7v-5l7-7Z" />
+      <path d="M7 17 4 20h6" />
+    </svg>
+  );
+}
+
+export function NeonToolIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M15.5 4.5 19.5 8.5 9 19H5v-4L15.5 4.5Z" />
+      <path d="M3 3.5l1.5 1.5M8 2v2M2 8h2" />
+    </svg>
+  );
+}
+
+export function EraserIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="m14.5 4.5 5 5L10 19H5.5l-2-2a1.5 1.5 0 0 1 0-2.1L14.5 4.5Z" />
+      <path d="M9 10l5 5M10 19h10" />
+    </svg>
+  );
+}
+
+export function ClockIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
+  );
+}

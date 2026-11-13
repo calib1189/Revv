@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { StoryFrame, fitStoryFrame, useBoxSize } from "@/features/stories/story-frame";
+import { DEFAULT_DESIGN } from "@/lib/stories/design";
 import { Avatar } from "@/features/feed/avatar";
 import { CloseIcon, EyeIcon, MoreIcon, VolumeIcon } from "@/components/ui/icons";
 import {
@@ -10,10 +13,15 @@ import {
   listStoryViewersAction,
   loadStoryGroupsAction,
   markStorySeenAction,
+  votePollAction,
+  answerQuestionAction,
+  listQuestionAnswersAction,
   type StoryGroup,
 } from "@/features/stories/actions";
+import { PollCard, QuestionCard } from "@/features/stories/story-frame";
+import { QUESTION_ANSWER_MAX, type StoryLayer } from "@/lib/stories/design";
 import type { StoryPerson } from "@/lib/stories/load";
-import { PHOTO_STORY_MS, startIndex, storyAge } from "@/lib/stories/tray";
+import { PHOTO_MUSIC_STORY_MS, PHOTO_STORY_MS, startIndex, storyAge } from "@/lib/stories/tray";
 import { isFeedMuted, setFeedMuted } from "@/features/feed/feed-sound";
 
 type Viewer = StoryPerson & { viewedAt: string };
@@ -24,6 +32,8 @@ function seenIn(g: StoryGroup, watched: Set<string>): Set<string> {
   return new Set(g.stories.filter((s) => s.seen || watched.has(s.id)).map((s) => s.id));
 }
 
+const subscribeNever = () => () => {};
+
 /**
  * Full-screen stories: segmented progress along the top, tap the right
  * side for the next story and the left for the one before, hold to
@@ -33,27 +43,42 @@ function seenIn(g: StoryGroup, watched: Set<string>): Set<string> {
 export function StoryViewer({
   authorIds,
   startAuthorId,
+  startStoryId,
   onCaughtUp,
   onClose,
 }: {
   authorIds: string[];
   startAuthorId?: string;
+  /** Open at this story (from a notification), rather than the first unwatched one. */
+  startStoryId?: string;
   onCaughtUp: (authorId: string) => void;
   /** `changed`: a story was watched or deleted, so server-rendered rings
    * and rows are stale. */
   onClose: (changed: boolean) => void;
 }) {
+  // Portalled, so only once there's a document to portal into.
+  const isClient = useSyncExternalStore(subscribeNever, () => true, () => false);
   const [groups, setGroups] = useState<StoryGroup[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [pos, setPos] = useState({ g: 0, s: 0 });
   const [held, setHeld] = useState(false);
-  const [panel, setPanel] = useState<"viewers" | "menu" | null>(null);
+  const [panel, setPanel] = useState<"viewers" | "menu" | "answer" | "answers" | null>(null);
+  // Poll results after voting here: "storyId:layerId" -> tallies and vote.
+  const [voted, setVoted] = useState<Record<string, { counts: [number, number]; mine: 0 | 1 }>>({});
+  const [answering, setAnswering] = useState<{ layerId: string; prompt: string } | null>(null);
+  const [answerText, setAnswerText] = useState("");
+  const [answerState, setAnswerState] = useState<"idle" | "sending" | "sent" | string>("idle");
+  const [answers, setAnswers] = useState<{ answerId: string; username: string; avatarUrl: string | null; body: string; createdAt: string }[] | null>(null);
+  const musicRef = useRef<HTMLAudioElement>(null);
   const [viewers, setViewers] = useState<Viewer[] | null>(null);
   const [muted, setMuted] = useState(() => isFeedMuted());
   const [readyId, setReadyId] = useState<string | null>(null);
   const [dragY, setDragY] = useState(0);
   const [deleting, setDeleting] = useState(false);
 
+  const router = useRouter();
+  const [surfaceRef, surface] = useBoxSize<HTMLDivElement>();
+  const frame = fitStoryFrame(surface.w, surface.h);
   const changedRef = useRef(false);
   const seenRef = useRef(new Set<string>());
   const fillRef = useRef<HTMLSpanElement>(null);
@@ -85,8 +110,9 @@ export function StoryViewer({
         }
         const g = Math.max(0, startAuthorId ? loaded.findIndex((x) => x.author.id === startAuthorId) : 0);
         const first = loaded[g];
+        const at = startStoryId ? first.stories.findIndex((x) => x.id === startStoryId) : -1;
         setGroups(loaded);
-        setPos({ g, s: startIndex(first.stories.map((s) => s.id), new Set(first.stories.filter((s) => s.seen).map((s) => s.id))) });
+        setPos({ g, s: at >= 0 ? at : startIndex(first.stories.map((s) => s.id), new Set(first.stories.filter((s) => s.seen).map((s) => s.id))) });
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
@@ -158,7 +184,7 @@ export function StoryViewer({
       let p: number;
       if (story.kind === "image") {
         if (!paused) elapsedRef.current.ms += dt;
-        p = elapsedRef.current.ms / PHOTO_STORY_MS;
+        p = elapsedRef.current.ms / (story.music ? PHOTO_MUSIC_STORY_MS : PHOTO_STORY_MS);
       } else {
         const v = videoRef.current;
         p = v && v.duration ? v.currentTime / v.duration : 0;
@@ -179,7 +205,8 @@ export function StoryViewer({
   useEffect(() => {
     const v = videoRef.current;
     if (!v || story?.kind !== "video") return;
-    v.muted = muted;
+    // A story's song replaces the video's own sound.
+    v.muted = muted || Boolean(story.music);
     if (held || panel !== null) {
       v.pause();
       return;
@@ -192,6 +219,35 @@ export function StoryViewer({
       }
     });
   }, [story, held, panel, muted]);
+
+  // The story's song: from its start point, paused and muted with the story.
+  useEffect(() => {
+    const a = musicRef.current;
+    if (!a) return;
+    if (!story?.music) {
+      a.pause();
+      return;
+    }
+    if (a.dataset.storyId !== story.id) {
+      a.dataset.storyId = story.id;
+      a.src = story.music.url;
+      a.currentTime = story.music.startMs / 1000;
+    }
+    a.muted = muted;
+    if (held || panel !== null) {
+      a.pause();
+      return;
+    }
+    a.play().catch(() => {
+      if (!a.muted) {
+        a.muted = true;
+        setMuted(true);
+        a.play().catch(() => {});
+      }
+    });
+  }, [story, held, panel, muted]);
+
+  useEffect(() => () => musicRef.current?.pause(), []);
 
   function toggleMute() {
     const nextMuted = !muted;
@@ -256,6 +312,70 @@ export function StoryViewer({
       .catch(() => setViewers([]));
   }
 
+  function openAnswer(layerId: string, prompt: string) {
+    setAnswering({ layerId, prompt });
+    setAnswerText("");
+    setAnswerState("idle");
+    setPanel("answer");
+  }
+
+  async function sendAnswer() {
+    if (!story || !answering || !answerText.trim()) return;
+    setAnswerState("sending");
+    const result = await answerQuestionAction(story.id, answering.layerId, answerText).catch(() => ({ ok: false, error: "Couldn't send that. Try again." }));
+    if (result.ok) {
+      setAnswerState("sent");
+      window.setTimeout(() => setPanel(null), 700);
+    } else setAnswerState(result.error ?? "Couldn't send that. Try again.");
+  }
+
+  function openAnswers() {
+    if (!story) return;
+    setPanel("answers");
+    setAnswers(null);
+    listQuestionAnswersAction(story.id)
+      .then(setAnswers)
+      .catch(() => setAnswers([]));
+  }
+
+  async function vote(layerId: string, option: 0 | 1) {
+    if (!story) return;
+    const key = `${story.id}:${layerId}`;
+    const before = story.polls[layerId]?.counts ?? [0, 0];
+    // Show the result right away; the server's tally replaces it.
+    const optimistic: [number, number] = option === 0 ? [before[0] + 1, before[1]] : [before[0], before[1] + 1];
+    setVoted((v) => ({ ...v, [key]: { counts: optimistic, mine: option } }));
+    const result = await votePollAction(story.id, layerId, option).catch(() => null);
+    if (result) setVoted((v) => ({ ...v, [key]: { counts: result.counts, mine: option } }));
+  }
+
+  /** Live polls and questions in the viewer. */
+  function renderLayer(layer: StoryLayer) {
+    if (!story || !group) return null;
+    if (layer.kind === "poll") {
+      const local = voted[`${story.id}:${layer.id}`];
+      const server = story.polls[layer.id];
+      const mine = local?.mine ?? server?.mine ?? null;
+      const showResults = group.isOwn || mine !== null;
+      return (
+        <PollCard
+          layer={layer}
+          results={showResults ? (local?.counts ?? server?.counts ?? [0, 0]) : null}
+          myVote={mine}
+          onVote={!group.isOwn && mine === null ? (o) => void vote(layer.id, o) : undefined}
+        />
+      );
+    }
+    if (layer.kind === "question") {
+      if (group.isOwn) {
+        const n = story.answerCount ?? 0;
+        return <QuestionCard layer={layer} onOpen={openAnswers} footer={n === 1 ? "1 response" : `${n} responses`} />;
+      }
+      return <QuestionCard layer={layer} onOpen={() => openAnswer(layer.id, layer.prompt)} />;
+    }
+    return null;
+  }
+
   async function removeStory() {
     if (!groups || !story) return;
     setDeleting(true);
@@ -293,6 +413,7 @@ export function StoryViewer({
       <div className="relative mx-auto h-full w-full max-w-[480px] overflow-hidden">
         {/* The story itself, and the tap/hold/swipe surface over it. */}
         <div
+          ref={surfaceRef}
           className="absolute inset-0 touch-none select-none"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -300,33 +421,55 @@ export function StoryViewer({
           onPointerCancel={onPointerCancel}
           onContextMenu={(e) => e.preventDefault()}
         >
-          {story &&
-            (story.kind === "image" ? (
-              // eslint-disable-next-line @next/next/no-img-element -- full-size story photo, shown as uploaded
-              <img
-                key={story.id}
-                src={story.url}
-                alt=""
-                draggable={false}
-                onLoad={() => setReadyId(story.id)}
-                onError={() => setReadyId(story.id)}
-                className="h-full w-full object-contain"
+          {story && frame.width > 0 && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <StoryFrame
+                design={story.design ?? DEFAULT_DESIGN}
+                width={frame.width}
+                height={frame.height}
+                blurUrl={story.kind === "image" && story.design ? story.url : null}
+                className="rounded-[12px]"
+                renderLayer={renderLayer}
+                onStickerTap={(layer) => {
+                  if (layer.kind === "location") {
+                    window.open(`https://maps.apple.com/?q=${encodeURIComponent(layer.name)}`, "_blank", "noopener");
+                    return;
+                  }
+                  const href =
+                    layer.kind === "mention" ? `/u/${layer.username}` : layer.kind === "car" ? `/garage/${layer.vehicleId}` : null;
+                  if (!href) return;
+                  close();
+                  router.push(href);
+                }}
+                media={
+                  story.kind === "image" ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- full-size story photo, shown as uploaded
+                    <img
+                      key={story.id}
+                      src={story.url}
+                      alt=""
+                      draggable={false}
+                      onLoad={() => setReadyId(story.id)}
+                      onError={() => setReadyId(story.id)}
+                    />
+                  ) : (
+                    <video
+                      key={story.id}
+                      ref={videoRef}
+                      src={story.url}
+                      playsInline
+                      autoPlay
+                      muted={muted}
+                      preload="auto"
+                      onLoadedData={() => setReadyId(story.id)}
+                      onError={() => setReadyId(story.id)}
+                      onEnded={next}
+                    />
+                  )
+                }
               />
-            ) : (
-              <video
-                key={story.id}
-                ref={videoRef}
-                src={story.url}
-                playsInline
-                autoPlay
-                muted={muted}
-                preload="auto"
-                onLoadedData={() => setReadyId(story.id)}
-                onError={() => setReadyId(story.id)}
-                onEnded={next}
-                className="h-full w-full object-contain"
-              />
-            ))}
+            </div>
+          )}
           {nextStory?.kind === "image" && (
             // eslint-disable-next-line @next/next/no-img-element -- preloads the next story
             <img src={nextStory.url} alt="" aria-hidden className="hidden" />
@@ -378,7 +521,7 @@ export function StoryViewer({
                 </span>
               </Link>
               <span className="flex-1" />
-              {story.kind === "video" && (
+              {(story.kind === "video" || story.music) && (
                 <button type="button" onClick={toggleMute} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="pressable flex h-9 w-9 items-center justify-center">
                   <VolumeIcon muted={muted} className="h-6 w-6" />
                 </button>
@@ -418,6 +561,8 @@ export function StoryViewer({
           </div>
         )}
 
+        <audio ref={musicRef} preload="none" loop />
+
         {panel && (
           <div className="absolute inset-0 z-10 flex items-end" onClick={() => setPanel(null)}>
             <div className="absolute inset-0 bg-black/50" />
@@ -426,7 +571,60 @@ export function StoryViewer({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-white/20" />
-              {panel === "menu" ? (
+              {panel === "answer" && answering ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void sendAnswer();
+                  }}
+                  className="flex flex-col gap-3"
+                >
+                  <p className="text-center text-[0.9375rem] font-semibold">{answering.prompt}</p>
+                  <textarea
+                    autoFocus
+                    value={answerText}
+                    onChange={(e) => setAnswerText(e.target.value.slice(0, QUESTION_ANSWER_MAX))}
+                    placeholder={`Reply to ${group?.author.username ?? "them"}…`}
+                    rows={3}
+                    className="w-full resize-none rounded-2xl bg-white/[0.07] px-4 py-3 text-[1rem] outline-none placeholder:text-white/40"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!answerText.trim() || answerState === "sending" || answerState === "sent"}
+                    className="pressable h-12 rounded-full bg-white text-[0.9375rem] font-semibold text-black disabled:opacity-50"
+                  >
+                    {answerState === "sending" ? "Sending…" : answerState === "sent" ? "Sent" : "Send"}
+                  </button>
+                  <p className="text-center text-[0.75rem] text-white/45">Only {group?.author.username ?? "they"} will see your answer.</p>
+                  {answerState !== "idle" && answerState !== "sending" && answerState !== "sent" && (
+                    <p className="text-center text-[0.8125rem] text-danger">{answerState}</p>
+                  )}
+                </form>
+              ) : panel === "answers" ? (
+                <>
+                  <p className="mb-2 text-center text-[0.9375rem] font-semibold">Responses</p>
+                  {answers === null ? (
+                    <p className="py-6 text-center text-[0.875rem] text-white/50">Loading…</p>
+                  ) : answers.length === 0 ? (
+                    <p className="py-6 text-center text-[0.875rem] text-white/50">No answers yet.</p>
+                  ) : (
+                    <ul className="flex flex-col gap-2">
+                      {answers.map((a) => (
+                        <li key={a.answerId} className="flex gap-3 rounded-2xl bg-white/[0.05] p-3">
+                          <Avatar username={a.username} avatarUrl={a.avatarUrl} className="h-9 w-9 flex-shrink-0 text-xs" />
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="truncate text-[0.875rem] font-semibold">{a.username}</span>
+                              <span className="flex-shrink-0 text-[0.75rem] text-white/40">{storyAge(a.createdAt)}</span>
+                            </span>
+                            <span className="mt-0.5 block whitespace-pre-wrap break-words text-[0.9375rem] leading-snug text-white/90">{a.body}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              ) : panel === "menu" ? (
                 <div className="flex flex-col gap-2">
                   <button
                     type="button"
@@ -469,5 +667,5 @@ export function StoryViewer({
     </div>
   );
 
-  return typeof document === "undefined" ? null : createPortal(body, document.body);
+  return isClient ? createPortal(body, document.body) : null;
 }

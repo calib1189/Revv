@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTray, startIndex, storyAge, validateStoryCaption, type StoryLite } from "@/lib/stories/tray";
+import { buildTray, startIndex, storyAge, type StoryLite } from "@/lib/stories/tray";
 
 const s = (id: string, authorId: string, createdAt: string): StoryLite => ({ id, authorId, createdAt });
 
@@ -40,14 +40,6 @@ describe("startIndex", () => {
   });
   it("starts from the beginning once you've watched them all", () => {
     expect(startIndex(ids, new Set(ids))).toBe(0);
-  });
-});
-
-describe("validateStoryCaption", () => {
-  it("trims, allows empty, and caps the length", () => {
-    expect(validateStoryCaption("  hi  ")).toEqual({ ok: true, caption: "hi" });
-    expect(validateStoryCaption("   ")).toEqual({ ok: true, caption: null });
-    expect(validateStoryCaption("x".repeat(201)).ok).toBe(false);
   });
 });
 
