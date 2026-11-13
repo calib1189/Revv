@@ -289,7 +289,7 @@ export function RateBuildPanel({
               {isGenerating ? "Rating…" : "Re-rate"}
             </Button>
           </div>
-          <AiDisclosure className="mt-3" />
+          <AiDisclosure kind="rating" className="mt-3" />
         </div>
         {rerate && (
           <RerateSheet
@@ -336,7 +336,7 @@ export function RateBuildPanel({
             <p className="mt-2 max-w-xs text-[0.8125rem] text-muted">The AI rates your car from its photos.</p>
           </>
         )}
-        <AiDisclosure className="mt-3 max-w-xs" />
+        <AiDisclosure kind="rating" className="mt-3 max-w-xs" />
         {error && (
           <div className="mt-4 w-full">
             <Callout tone="danger">{error}</Callout>

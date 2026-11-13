@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
-import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { deleteMedia, getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listBlockedEitherDirection } from "@/lib/db/blocks";
 import {
   createStory,
@@ -142,6 +142,17 @@ export async function deleteStoryAction(storyId: string): Promise<{ ok: boolean 
   const story = await getStoryById(supabase, storyId);
   if (!story || story.author_id !== user.id) return { ok: false };
   await deleteStory(supabase, storyId);
+  // The photo or video goes too: a story's media is never used anywhere
+  // else. Best-effort, the story itself is already gone.
+  try {
+    const media = await getMediaById(supabase, story.media_id);
+    if (media && media.owner_id === user.id) {
+      await supabase.storage.from("media").remove([media.storage_path]);
+      await deleteMedia(supabase, media.id);
+    }
+  } catch (err) {
+    console.error("Story media not removed:", err);
+  }
   revalidatePath("/friends");
   revalidatePath("/feed");
   return { ok: true };

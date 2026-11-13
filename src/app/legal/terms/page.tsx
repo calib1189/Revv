@@ -7,7 +7,7 @@ export default function TermsPage() {
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-5 pb-16 pt-8 sm:px-6 sm:pt-12">
       <h1 className="mb-2 text-balance text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">Terms of Service</h1>
-      <p className="mb-1 text-[0.875rem] text-muted">Last updated: October 16, 2026.</p>
+      <p className="mb-1 text-[0.875rem] text-muted">Last updated: November 13, 2026.</p>
       <LegalDisclaimer />
 
       <div className="prose-doc">
@@ -57,10 +57,12 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold">5. AI-assisted features</h2>
           <p>
-            Some features use AI to make suggestions — identifying a vehicle from a photo, or
-            scoring a build&apos;s overall quality. AI output is always shown as a suggestion with
-            its confidence level, never written directly to your garage or build. Nothing is saved
-            as fact until you review and confirm it. Photos and captions you post may also be
+            Some features use AI — identifying a vehicle from a photo, and scoring a build&apos;s
+            overall quality. A vehicle identification is shown as a suggestion with its confidence
+            level and is only saved to your garage if you confirm it. A build rating is SORZA&apos;s
+            automated opinion of the build, not a statement of fact about your car: it is saved and
+            shown on the car&apos;s page as soon as it is produced, and you can rate the car again.
+            Photos and captions you post, including stories, may also be
             screened by an automated moderation check before or after they go live. AI suggestions
             and moderation calls can be wrong; verify anything that matters before relying on it,
             and report anything that slips through.

@@ -12,12 +12,17 @@ import Link from "next/link";
  * that nobody reads before tapping.
  *
  * Kept in one component so the wording and the recipient can't drift
- * between the rating panel and the vehicle-identification panel. */
-export function AiDisclosure({ className = "" }: { className?: string }) {
+ * between the rating panel and the vehicle-identification panel. What
+ * happens to the result differs, so each says its own: a vehicle guess
+ * waits for you to confirm it, a build rating saves as soon as it's made
+ * (CLAUDE.md invariant 5's exception). */
+export function AiDisclosure({ kind, className = "" }: { kind: "identify" | "rating"; className?: string }) {
   return (
     <p className={`text-[0.75rem] leading-snug text-muted ${className}`}>
-      Tapping this sends your photos to Google&apos;s Gemini AI to produce the result. Nothing is
-      saved to your account until you confirm it.{" "}
+      Tapping this sends your photos to Google&apos;s Gemini AI.{" "}
+      {kind === "identify"
+        ? "Its guess is only saved to your garage if you confirm it."
+        : "The score it gives is saved to your car right away and shows on its page."}{" "}
       <Link href="/legal/privacy" className="underline underline-offset-2">
         Privacy Policy
       </Link>

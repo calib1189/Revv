@@ -120,7 +120,7 @@ export function AiIdentifyPanel({
         </span>
         <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
       </button>
-      <AiDisclosure className="-mt-1 px-4 pb-4" />
+      <AiDisclosure kind="identify" className="-mt-1 px-4 pb-4" />
       <div className="px-4 pb-4 empty:hidden">
 
       {error && <Callout tone="danger">{error}</Callout>}
