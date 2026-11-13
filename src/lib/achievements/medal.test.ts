@@ -4,11 +4,11 @@ import { medalDesign, medalMark, medalPattern, medalShape } from "@/lib/achievem
 
 describe("achievement medals", () => {
   it("climbs the hardware ladder with difficulty", () => {
-    expect(medalShape(10)).toBe("cap");
-    expect(medalShape(20)).toBe("shield");
-    expect(medalShape(35)).toBe("nut");
-    expect(medalShape(60)).toBe("gear");
-    expect(medalShape(100)).toBe("crest");
+    expect(medalShape(2)).toBe("cap");
+    expect(medalShape(4)).toBe("shield");
+    expect(medalShape(7)).toBe("nut");
+    expect(medalShape(12)).toBe("gear");
+    expect(medalShape(20)).toBe("crest");
   });
 
   it("reads the milestone off the id", () => {

@@ -17,11 +17,12 @@ import type { AchievementCategory, AchievementDef } from "@/lib/achievements/cat
 export type MedalShape = "cap" | "shield" | "nut" | "gear" | "crest";
 export type MedalPattern = "rays" | "checker" | "carbon" | "rings" | "knurl";
 
+// The achievement ladder (2/4/7/12/20, lib/points/values.ts).
 const SHAPE_BY_POINTS: [number, MedalShape][] = [
-  [100, "crest"],
-  [60, "gear"],
-  [35, "nut"],
-  [20, "shield"],
+  [20, "crest"],
+  [12, "gear"],
+  [7, "nut"],
+  [4, "shield"],
   [0, "cap"],
 ];
 

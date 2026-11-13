@@ -24,8 +24,8 @@ describe("ACHIEVEMENTS catalog", () => {
     }
   });
 
-  it("every non-tier achievement has an explicit points value on the 10/20/35/60/100 ladder", () => {
-    const VALID_POINTS = new Set([10, 20, 35, 60, 100]);
+  it("every non-tier achievement has an explicit points value on the 2/4/7/12/20 ladder", () => {
+    const VALID_POINTS = new Set([2, 4, 7, 12, 20]);
     for (const achievement of ACHIEVEMENTS) {
       if (achievement.tier) continue;
       expect(VALID_POINTS.has(achievement.points ?? -1)).toBe(true);
