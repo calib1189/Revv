@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { SearchIcon, BellIcon } from "@/components/ui/icons";
+import { SearchIcon, ShoppingBagIcon } from "@/components/ui/icons";
 import { useTabPagerContext } from "@/components/shell/tab-pager-context";
 import { TAB_HREFS } from "@/components/shell/tab-order";
 
@@ -19,7 +19,9 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationCount?: number }) {
+// Notifications live in Inbox (its Notifications tab, counted in the
+// Inbox badge), so this corner holds the shop instead.
+export function TopTabBar() {
   const pathname = usePathname();
   const { activeIndex, requestScrollToIndex, requestRefresh } = useTabPagerContext();
   // Once the swipeable pager (tab-pager-shell.tsx) is mounted, it's the
@@ -166,22 +168,15 @@ export function TopTabBar({ unreadNotificationCount = 0 }: { unreadNotificationC
             <SearchIcon className="h-[1.125rem] w-[1.125rem]" />
           </Link>
           <Link
-            href="/notifications"
-            aria-label={
-              unreadNotificationCount > 0
-                ? `Notifications, ${unreadNotificationCount} unread`
-                : "Notifications"
-            }
+            href="/store"
+            aria-label="Shop"
             className={`pressable relative flex h-9 w-9 items-center justify-center rounded-full ${
               isImmersive
                 ? "text-white/85 [filter:drop-shadow(0_1px_3px_rgb(0_0_0_/_0.7))] hover:text-white"
                 : "text-muted hover:text-foreground"
             }`}
           >
-            <BellIcon className="h-[1.125rem] w-[1.125rem]" />
-            {unreadNotificationCount > 0 && (
-              <span className="absolute right-1.5 top-1.5 h-[7px] w-[7px] rounded-full bg-accent ring-2 ring-[var(--glass-solid-raised)]" />
-            )}
+            <ShoppingBagIcon className="h-[1.125rem] w-[1.125rem]" />
           </Link>
         </div>
       </div>

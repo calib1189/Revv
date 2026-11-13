@@ -286,10 +286,9 @@ export function ShopHome({
   return (
     <div className="flex flex-col">
       {/* The header: title and points, search, shortcuts. */}
-      <header className="-mx-4 -mt-6 bg-accent px-4 pb-20 pt-6 text-white sm:-mx-6 sm:rounded-b-[32px] sm:px-6">
+      <header>
         <PointsWallet
-          onAccent
-          title={<h1 className="text-[2rem] font-extrabold leading-none tracking-[-0.03em]">Shop</h1>}
+          title={<h1 className="text-[2.125rem] font-bold leading-none tracking-[-0.03em] sm:text-[2.75rem]">Shop</h1>}
           balance={balance}
           userId={userId}
           packsEnabled={packsEnabled}
@@ -303,64 +302,59 @@ export function ShopHome({
             e.preventDefault();
             tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
-          className="mt-4 flex h-[52px] items-center gap-2 rounded-full bg-white pl-4 pr-1.5 text-black shadow-[0_8px_24px_-10px_rgb(0_0_0/0.4)]"
+          className="mt-4 flex h-12 items-center gap-2.5 rounded-full bg-foreground/[0.06] pl-4 pr-1.5 ring-1 ring-border transition-shadow focus-within:ring-2 focus-within:ring-foreground/25"
         >
-          <SearchIcon className="h-5 w-5 flex-shrink-0 text-black/60" />
+          <SearchIcon className="h-[18px] w-[18px] flex-shrink-0 text-muted" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tees, decals, name colors…"
+            placeholder="Search tees, decals, colors"
             aria-label="Search the shop"
             enterKeyHint="search"
-            className="min-w-0 flex-1 bg-transparent text-[1rem] font-medium outline-none placeholder:text-black/40"
+            className="min-w-0 flex-1 bg-transparent text-[1rem] outline-none placeholder:text-muted"
           />
           {query && (
-            <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="flex h-8 w-8 items-center justify-center text-black/40">
+            <button type="button" onClick={() => setQuery("")} aria-label="Clear search" className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:text-foreground">
               <CloseIcon className="h-4 w-4" />
             </button>
           )}
-          <button type="submit" className="pressable h-10 flex-shrink-0 rounded-full bg-black px-5 text-[0.9375rem] font-bold text-white">
-            Search
-          </button>
         </form>
 
-        <div className="no-scrollbar -mx-4 mt-3.5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <Shortcut label="Orders" dot={activeOrders > 0} onClick={() => setOrdersOpen(true)} icon={<ShoppingBagIcon className="h-[18px] w-[18px]" />} />
-          <Shortcut label="My items" onClick={() => goTo("owned")} icon={<CheckIcon className="h-[18px] w-[18px]" />} />
-          {packsEnabled && <Shortcut label="Get points" onClick={() => setWalletOpen(true)} icon={<GemIcon className="h-[18px] w-[18px]" />} />}
-          <Shortcut label="Earn free" href="/daily" icon={<StarIcon className="h-[18px] w-[18px]" />} />
+        <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <Shortcut label="Orders" dot={activeOrders > 0} onClick={() => setOrdersOpen(true)} icon={<ShoppingBagIcon className="h-4 w-4" />} />
+          <Shortcut label="My items" onClick={() => goTo("owned")} icon={<CheckIcon className="h-4 w-4" />} />
+          {packsEnabled && <Shortcut label="Get points" onClick={() => setWalletOpen(true)} icon={<GemIcon className="h-4 w-4" />} />}
+          <Shortcut label="Earn free" href="/daily" icon={<StarIcon className="h-4 w-4" />} />
         </div>
       </header>
 
       {/* Shop by: one bubble per kind of thing. */}
-      <div className="relative z-10 -mt-14 rounded-[24px] bg-surface p-3 pb-2.5 shadow-[0_14px_40px_-16px_rgb(0_0_0/0.55)] ring-1 ring-border">
-        <div className="no-scrollbar flex gap-1 overflow-x-auto">
-          {showTees && (
-            <Bubble label="Tees" hot onClick={() => goTo("tees")}>
-              <TeeStill design="big-s" alt="" className="h-[86%] w-[86%] translate-y-[4%]" />
-            </Bubble>
-          )}
-          {(decals.length > 0 || posters.length > 0) && (
-            <Bubble label="Your car" hot onClick={() => goTo("car")}>
-              {bestDecal ? <GlossySticker tier={bestDecal.tier} className="h-[78%] w-[78%]" /> : <WheelIcon className="h-7 w-7 text-white/80" />}
-            </Bubble>
-          )}
-          <Bubble label="Names" onClick={() => goTo("name")}>
-            <span className="bg-[linear-gradient(135deg,#ffd60a,#ff375f_45%,#bf5af2)] bg-clip-text text-[1.375rem] font-extrabold text-transparent">Aa</span>
+      <div className="no-scrollbar -mx-4 mt-6 flex gap-1 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+        {showTees && (
+          <Bubble label="Tees" hot onClick={() => goTo("tees")}>
+            <TeeStill design="big-s" alt="" className="h-[86%] w-[86%] translate-y-[4%]" />
           </Bubble>
-          <Bubble label="Backgrounds" onClick={() => goTo("background")}>
-            <span className="h-full w-full bg-[linear-gradient(135deg,#0a84ff,#bf5af2_55%,#ff375f)]" />
+        )}
+        {(decals.length > 0 || posters.length > 0) && (
+          <Bubble label="Your car" hot onClick={() => goTo("car")}>
+            {bestDecal ? <GlossySticker tier={bestDecal.tier} className="h-[78%] w-[78%]" /> : <WheelIcon className="h-7 w-7 text-white/80" />}
           </Bubble>
-          <Bubble label="Frames" onClick={() => goTo("frame")}>
-            <span className="h-[62%] w-[62%] rounded-full ring-[3px] ring-[#ffd60a] ring-offset-2 ring-offset-[#16161a]" />
-          </Bubble>
-          <Bubble label="Crew" onClick={() => goTo("crew")}>
-            <FlagIcon className="h-6 w-6 text-white/85" />
-          </Bubble>
-          <Bubble label="Owned" onClick={() => goTo("owned")}>
-            <CheckIcon className="h-6 w-6 text-white/85" />
-          </Bubble>
-        </div>
+        )}
+        <Bubble label="Names" onClick={() => goTo("name")}>
+          <span className="bg-[linear-gradient(135deg,#ffd60a,#ff375f_45%,#bf5af2)] bg-clip-text text-[1.375rem] font-extrabold text-transparent">Aa</span>
+        </Bubble>
+        <Bubble label="Backgrounds" onClick={() => goTo("background")}>
+          <span className="h-full w-full bg-[linear-gradient(135deg,#0a84ff,#bf5af2_55%,#ff375f)]" />
+        </Bubble>
+        <Bubble label="Frames" onClick={() => goTo("frame")}>
+          <span className="h-[62%] w-[62%] rounded-full ring-[3px] ring-[#ffd60a] ring-offset-2 ring-offset-[#16161a]" />
+        </Bubble>
+        <Bubble label="Crew" onClick={() => goTo("crew")}>
+          <FlagIcon className="h-6 w-6 text-white/85" />
+        </Bubble>
+        <Bubble label="Owned" onClick={() => goTo("owned")}>
+          <CheckIcon className="h-6 w-6 text-white/85" />
+        </Bubble>
       </div>
 
       {teeOrdered && (
@@ -531,12 +525,12 @@ export function ShopHome({
 }
 
 function Shortcut({ label, icon, onClick, href, dot }: { label: string; icon: React.ReactNode; onClick?: () => void; href?: string; dot?: boolean }) {
-  const cls = "pressable relative flex h-10 flex-shrink-0 items-center gap-2 rounded-[12px] bg-white/15 px-3.5 text-[0.875rem] font-bold text-white ring-1 ring-white/20";
+  const cls = "pressable relative flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full bg-foreground/[0.05] px-3.5 text-[0.8125rem] font-semibold ring-1 ring-border";
   const inner = (
     <>
       {icon}
       {label}
-      {dot && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-white ring-2 ring-accent" />}
+      {dot && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-accent ring-2 ring-background" />}
     </>
   );
   return href ? (
@@ -554,7 +548,7 @@ function Bubble({ label, hot, onClick, children }: { label: string; hot?: boolea
   return (
     <button type="button" onClick={onClick} className="pressable flex w-[4.75rem] flex-shrink-0 flex-col items-center gap-1.5">
       <span className={`rounded-full p-[2.5px] ${hot ? "bg-accent" : "bg-foreground/15"}`}>
-        <span className="block rounded-full bg-surface p-[2px]">
+        <span className="block rounded-full bg-background p-[2px]">
           <span className="flex h-[3.75rem] w-[3.75rem] items-center justify-center overflow-hidden rounded-full bg-[#16161a]">{children}</span>
         </span>
       </span>

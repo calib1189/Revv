@@ -4,20 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Degrees per pixel of drag. */
 const DRAG = 0.55;
-/** The idle spin: one turn in about 24 seconds. */
-const SPIN = 360 / 24000;
-/** How long after you let go before it starts turning on its own again. */
-const RESUME_MS = 2600;
-/** The shirt's depth, as a share of its width, and how many layers make
- * it up: side-on it reads as a solid shirt, not a flat picture. */
-const DEPTH = 0.15;
-const LAYERS = 14;
+/** The idle sway either side of the face you're looking at, and its pace. */
+const SWAY_DEG = 18;
+const SWAY_MS = 1700;
+/** How long after you let go before it starts swaying again. */
+const RESUME_MS = 1800;
 
 /**
- * The tee in 3D: its front and back cut-outs back to back, turning slowly
- * on their own. Drag sideways to spin it (it carries on with a flick and
- * eases to a stop); scrolling up and down still scrolls the page. Light
- * catches it as it turns, and its shadow narrows when it's side-on.
+ * The tee, front and back, as one shirt you can turn. At rest it sways
+ * gently either side of whichever side faces you. Drag sideways to turn
+ * it (a flick carries on and eases off); when you let go it settles on
+ * the nearest side, so it never rests edge-on. Scrolling up and down
+ * still scrolls the page.
  */
 export function TeeTurntable({
   front,
@@ -30,28 +28,19 @@ export function TeeTurntable({
   front: string;
   back: string;
   alt: string;
-  /** Snap to a side (the Front / Back buttons); `n` changes on every tap. */
+  /** Turn to a side (the Front / Back buttons); `n` changes on every tap. */
   snapTo?: { side: "front" | "back"; n: number } | null;
   onSideChange?: (side: "front" | "back") => void;
   className?: string;
 }) {
-  const [angle, setAngle] = useState(-24);
-  const angleRef = useRef(-24);
+  const [angle, setAngle] = useState(-SWAY_DEG);
+  const angleRef = useRef(-SWAY_DEG);
   const velocity = useRef(0);
-  const target = useRef<number | null>(null);
   const drag = useRef<{ x: number; y: number; start: number; lastX: number; lastT: number; decided: boolean; horizontal: boolean } | null>(null);
-  const idleUntil = useRef(0);
+  const idleFrom = useRef(0);
   const [hinted, setHinted] = useState(false);
-  const reduced = useRef(false);
-  const [width, setWidth] = useState(0);
-  const box = useCallback((el: HTMLDivElement | null) => {
-    if (!el) return;
-    setWidth(el.offsetWidth);
-    const ro = new ResizeObserver(() => setWidth(el.offsetWidth));
-    ro.observe(el);
-  }, []);
-
   const facingRef = useRef<"front" | "back">("front");
+
   const set = useCallback(
     (a: number) => {
       angleRef.current = a;
@@ -65,26 +54,26 @@ export function TeeTurntable({
     [onSideChange],
   );
 
-  // One loop for the idle spin, the flick's coast, and snapping to a side.
+  // One loop: a flick's coast, then easing to the nearest side and
+  // swaying gently around it.
   useEffect(() => {
-    reduced.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let raf = 0;
     let last = performance.now();
     const tick = (t: number) => {
       const dt = Math.min(48, t - last);
       last = t;
       if (!drag.current) {
-        if (target.current !== null) {
-          const diff = target.current - angleRef.current;
-          if (Math.abs(diff) < 0.3) {
-            set(target.current);
-            target.current = null;
-          } else set(angleRef.current + diff * Math.min(1, dt / 90));
-        } else if (Math.abs(velocity.current) > 0.004) {
+        if (Math.abs(velocity.current) > 0.02) {
           set(angleRef.current + velocity.current * dt);
-          velocity.current *= Math.pow(0.94, dt / 16);
-        } else if (!reduced.current && t > idleUntil.current) {
-          set(angleRef.current + SPIN * dt);
+          velocity.current *= Math.pow(0.92, dt / 16);
+          idleFrom.current = t + RESUME_MS;
+        } else {
+          velocity.current = 0;
+          const face = Math.round(angleRef.current / 180) * 180;
+          const sway = reduced || t < idleFrom.current ? 0 : SWAY_DEG * Math.sin((t - idleFrom.current) / SWAY_MS);
+          const goal = face + sway;
+          set(angleRef.current + (goal - angleRef.current) * Math.min(1, dt / 220));
         }
       }
       raf = requestAnimationFrame(tick);
@@ -93,59 +82,44 @@ export function TeeTurntable({
     return () => cancelAnimationFrame(raf);
   }, [set]);
 
-  // Snap when a side is asked for: the nearest turn that shows it.
+  // Front / Back: turn toward the nearest rotation that shows that side.
+  // Nudging it past halfway is enough; the loop eases the rest.
   useEffect(() => {
     if (!snapTo) return;
     const base = snapTo.side === "front" ? 0 : 180;
     const a = angleRef.current;
-    target.current = base + Math.round((a - base) / 360) * 360;
+    const goal = base + Math.round((a - base) / 360) * 360;
     velocity.current = 0;
-    idleUntil.current = performance.now() + RESUME_MS * 2;
-  }, [snapTo]);
+    idleFrom.current = performance.now() + RESUME_MS;
+    set(goal + (a - goal) * 0.4);
+  }, [snapTo, set]);
 
   const rad = (angle * Math.PI) / 180;
   const edge = Math.abs(Math.sin(rad));
-  // A soft band of light that slides across as it turns.
-  const sheen = 50 + Math.sin(rad) * 60;
 
-  const depth = width * DEPTH;
   const face = (src: string, flipped: boolean) => (
-    <div
-      className="absolute inset-0"
+    // eslint-disable-next-line @next/next/no-img-element -- transparent cut-out, sized by its box
+    <img
+      src={src}
+      alt={flipped ? "" : alt}
+      draggable={false}
+      className="absolute inset-0 h-full w-full object-contain"
       style={{
-        transform: `${flipped ? "rotateY(180deg) " : ""}translateZ(${depth / 2}px)`,
+        transform: flipped ? "rotateY(180deg)" : undefined,
         backfaceVisibility: "hidden",
         WebkitBackfaceVisibility: "hidden",
+        filter: `brightness(${1 - edge * 0.22})`,
       }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element -- transparent cut-out, sized by its box */}
-      <img src={src} alt={flipped ? "" : alt} draggable={false} className="h-full w-full object-contain" style={{ filter: `brightness(${1 - edge * 0.3})` }} />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage: `linear-gradient(105deg, transparent ${sheen - 18}%, rgb(255 255 255 / 0.16) ${sheen}%, transparent ${sheen + 18}%)`,
-          WebkitMaskImage: `url(${src})`,
-          maskImage: `url(${src})`,
-          WebkitMaskSize: "contain",
-          maskSize: "contain",
-          WebkitMaskRepeat: "no-repeat",
-          maskRepeat: "no-repeat",
-          WebkitMaskPosition: "center",
-          maskPosition: "center",
-        }}
-      />
-    </div>
+    />
   );
 
   return (
     <div
       className={`relative select-none ${className}`}
-      style={{ perspective: 1100, touchAction: "pan-y" }}
+      style={{ perspective: 1200, touchAction: "pan-y" }}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         velocity.current = 0;
-        target.current = null;
         drag.current = { x: e.clientX, y: e.clientY, start: angleRef.current, lastX: e.clientX, lastT: performance.now(), decided: false, horizontal: false };
       }}
       onPointerMove={(e) => {
@@ -167,43 +141,26 @@ export function TeeTurntable({
       }}
       onPointerUp={() => {
         drag.current = null;
-        idleUntil.current = performance.now() + RESUME_MS;
+        idleFrom.current = performance.now() + RESUME_MS;
       }}
       onPointerCancel={() => {
         drag.current = null;
-        idleUntil.current = performance.now() + RESUME_MS;
+        idleFrom.current = performance.now() + RESUME_MS;
       }}
     >
-      {/* The shadow it casts, narrowing when it's side-on. */}
+      {/* Its shadow, narrowing as it turns side-on. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-[1%] left-1/2 h-[5%] w-[62%] -translate-x-1/2 rounded-[50%] bg-black/55 blur-[10px]"
+        className="pointer-events-none absolute bottom-[1%] left-1/2 h-[5%] w-[62%] rounded-[50%] bg-black/55 blur-[10px]"
         style={{ transform: `translateX(-50%) scaleX(${0.45 + 0.55 * Math.abs(Math.cos(rad))})` }}
       />
-      <div ref={box} className="relative mx-auto aspect-[823/979] w-full" style={{ transformStyle: "preserve-3d", transform: `rotateY(${angle}deg)` }}>
-        {/* The body: the shirt's outline, in shade, layered through its depth. */}
-        {depth > 0 &&
-          Array.from({ length: LAYERS - 1 }, (_, i) => {
-            const z = -depth / 2 + ((i + 1) * depth) / LAYERS;
-            return (
-              // eslint-disable-next-line @next/next/no-img-element -- a shaded slice of the cut-out
-              <img
-                key={i}
-                src={front}
-                alt=""
-                aria-hidden
-                draggable={false}
-                className="absolute inset-0 h-full w-full object-contain"
-                style={{ transform: `translateZ(${z}px) scale(0.985)`, filter: "brightness(0.32) saturate(0.6)" }}
-              />
-            );
-          })}
+      <div className="relative mx-auto aspect-[823/979] w-full" style={{ transformStyle: "preserve-3d", transform: `rotateY(${angle}deg)` }}>
         {face(front, false)}
         {face(back, true)}
       </div>
       {!hinted && (
         <span className="pointer-events-none absolute bottom-[-4px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/45 px-3 py-1 text-[0.6875rem] font-semibold text-white/85 backdrop-blur-md">
-          Drag to spin
+          Drag to turn it
         </span>
       )}
     </div>

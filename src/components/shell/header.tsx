@@ -57,7 +57,7 @@ export async function Header() {
 
   return (
     <>
-      <TopTabBar unreadNotificationCount={notificationCount} />
+      <TopTabBar />
       {/* data-bottom-nav: slid out of the way while a sheet is up — see
           useHideBottomNav and its rule in globals.css. */}
       <nav
