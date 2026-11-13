@@ -10,6 +10,7 @@ const SIZES = {
   sm: "h-10 w-10 rounded-[11px]",
   md: "h-12 w-12 rounded-[13px]",
   lg: "h-14 w-14 rounded-[15px]",
+  xl: "h-[6.5rem] w-[6.5rem] rounded-[24px]",
 } as const;
 
 /** A sound's tile. Sounds carry no artwork, so each gets a quiet tint of

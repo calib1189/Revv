@@ -24,7 +24,15 @@ function PlayGlyph() {
   );
 }
 
-export function PostThumbnailGrid({ posts }: { posts: PostThumbnail[] }) {
+export function PostThumbnailGrid({
+  posts,
+  hrefFor,
+}: {
+  posts: PostThumbnail[];
+  /** Where a tile opens; by default a video plays in its author's reel
+   * and a photo opens its own page. */
+  hrefFor?: (post: PostThumbnail) => string;
+}) {
   if (posts.length === 0) return null;
 
   return (
@@ -33,9 +41,11 @@ export function PostThumbnailGrid({ posts }: { posts: PostThumbnail[] }) {
         <Link
           key={post.postId}
           href={
-            post.kind === "video"
-              ? `/u/${post.authorUsername}/reel/${post.postId}`
-              : `/p/${post.postId}`
+            hrefFor
+              ? hrefFor(post)
+              : post.kind === "video"
+                ? `/u/${post.authorUsername}/reel/${post.postId}`
+                : `/p/${post.postId}`
           }
           className="relative aspect-square overflow-hidden bg-surface"
         >
