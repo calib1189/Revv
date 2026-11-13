@@ -15,7 +15,8 @@ import { merchEnabled } from "@/lib/merch/products";
 import { rankForScore } from "@/lib/rating/rank";
 import { listCrewsOwnedBy } from "@/lib/db/crews";
 import { Suspense } from "react";
-import { StoreTabs, type OwnedCrewOption } from "@/features/store/store-tabs";
+import { ShopHome, type OwnedCrewOption } from "@/features/shop/shop-home";
+import { listMyShopOrders, type ShopOrder } from "@/lib/db/shop-orders";
 import { pointsPacksEnabled } from "@/lib/points/packs";
 import { storeWeek } from "@/lib/store/featured";
 
@@ -42,10 +43,11 @@ export default async function StorePage() {
     console.error("Store data fetch failed:", err);
   }
 
-  const [profile, vehicles, ownedCrews] = await Promise.all([
+  const [profile, vehicles, ownedCrews, orders] = await Promise.all([
     getProfileByUserId(supabase, user.id),
     listVehiclesByOwner(supabase, user.id),
     listCrewsOwnedBy(supabase, user.id),
+    listMyShopOrders(supabase, user.id).catch(() => [] as ShopOrder[]),
   ]);
 
   const firstVehicle = vehicles[0];
@@ -122,11 +124,11 @@ export default async function StorePage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
+    <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-6 sm:px-6">
       {/* Keyed on the balance so bought points show the moment the page
           refreshes. Suspense: the wallet reads ?points=added. */}
       <Suspense fallback={null}>
-        <StoreTabs
+        <ShopHome
           key={balance}
           userId={user.id}
           packsEnabled={pointsPacksEnabled(profile?.is_admin ?? false)}
@@ -144,12 +146,11 @@ export default async function StorePage() {
             vehicle_name_color: profile?.equipped_vehicle_name_color ?? null,
           }}
           crews={crews}
-          decals={decals}
-          showDecals={showDecals}
-          posters={posters}
-          showPosters={showPosters}
-          showTees={merchEnabled(profile?.is_admin ?? false)}
+          decals={showDecals ? decals : []}
+          posters={showPosters ? posters : []}
           decalPriceCents={DECAL_PRICE_CENTS}
+          showTees={merchEnabled(profile?.is_admin ?? false)}
+          orders={orders}
           isFounder={profile?.is_founder ?? false}
         />
       </Suspense>

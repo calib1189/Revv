@@ -583,6 +583,21 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
 /* Anything that should slide up from below and settle — a published
    post's toast, a list row arriving. */
 /* The reaction picker springs out of the message or comment it's on. */
+/* A shop sticker drifting gently, like it's resting on a breeze. */
+@keyframes sticker-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-4%) rotate(2deg);
+  }
+}
+
+.animate-sticker-float {
+  animation: sticker-float 5s ease-in-out infinite;
+}
+
 @keyframes reaction-pop {
   0% {
     opacity: 0;
@@ -877,6 +892,7 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   .animate-panel-up,
   .animate-rise-in,
   .animate-reaction-pop,
+  .animate-sticker-float,
   .animate-disc-spin,
   .animate-like-beat,
   .animate-like-ring,

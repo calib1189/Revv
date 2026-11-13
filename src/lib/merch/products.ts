@@ -78,6 +78,12 @@ export function teePrintFiles(designId: TeeDesignId, siteUrl: string): { type: "
   return (["front", "back"] as const).map((type) => ({ type, url: `${siteUrl}/merch/print/${designId}-${type}.png` }));
 }
 
+/** Transparent cut-outs of the shirt (front and back, aligned), for the
+ * shop's 3D turntable. Made from Printful's own Gildan 5000 template. */
+export function teePhotos3d(designId: TeeDesignId): { front: string; back: string } {
+  return { front: `/merch/3d/${designId}-front.webp`, back: `/merch/3d/${designId}-back.webp` };
+}
+
 /** The shop photos of a design. */
 export function teePhotos(designId: TeeDesignId): { front: string; back: string } {
   return { front: `/merch/${designId}-front.jpg`, back: `/merch/${designId}-back.jpg` };
