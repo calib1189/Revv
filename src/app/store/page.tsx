@@ -11,6 +11,7 @@ import { decalsEnabled } from "@/lib/decals/printful";
 import type { DecalOffer } from "@/features/decals/decal-sheet";
 import { buildPosterOffer, type PosterOffer } from "@/lib/posters/offer";
 import { postersEnabled } from "@/lib/posters/products";
+import { merchEnabled } from "@/lib/merch/products";
 import { rankForScore } from "@/lib/rating/rank";
 import { listCrewsOwnedBy } from "@/lib/db/crews";
 import { Suspense } from "react";
@@ -147,6 +148,7 @@ export default async function StorePage() {
           showDecals={showDecals}
           posters={posters}
           showPosters={showPosters}
+          showTees={merchEnabled(profile?.is_admin ?? false)}
           decalPriceCents={DECAL_PRICE_CENTS}
           isFounder={profile?.is_founder ?? false}
         />

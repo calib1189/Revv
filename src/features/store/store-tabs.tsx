@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { StoreGrid, CATEGORY_KIND, CATEGORY_TAB_LABEL } from "@/features/store/store-page-content";
 import { LookPreview, type Look, type LookScope } from "@/features/store/look-preview";
@@ -81,6 +82,7 @@ export function StoreTabs({
   decalPriceCents = 0,
   posters = [],
   showPosters = false,
+  showTees = false,
 }: {
   initialBalance: number;
   initialOwnedItemIds: string[];
@@ -106,12 +108,16 @@ export function StoreTabs({
   posters?: PosterOffer[];
   /** Whether posters are on for this viewer (switched on, or an admin). */
   showPosters?: boolean;
+  /** Whether SORZA tees are on for this viewer (switched on, or an admin). */
+  showTees?: boolean;
 }) {
   // Profile, Garage and Crew are the cosmetics shops; Prints is real,
-  // printed things for your car (decals, posters), bought with money.
-  const [view, setView] = useState<Tab | "prints">("profile");
+  // printed things (decals and posters for your car, tees), bought with
+  // money. Back from a tee checkout, it opens on Prints.
+  const teeOrdered = useSearchParams().get("tee") === "ordered";
+  const showPrints = showDecals || showPosters || showTees;
+  const [view, setView] = useState<Tab | "prints">(teeOrdered && showPrints ? "prints" : "profile");
   const tab: Tab = view === "prints" ? "profile" : view;
-  const showPrints = showDecals || showPosters;
   const [balance, setBalance] = useState(initialBalance);
   const [owned, setOwned] = useState(new Set(initialOwnedItemIds));
   const [equipped, setEquipped] = useState<Equipped>({
@@ -226,7 +232,14 @@ export function StoreTabs({
       />
 
       {view === "prints" ? (
-        <PrintsShelf decals={showDecals ? decals : []} posters={showPosters ? posters : []} decalPriceCents={decalPriceCents} />
+        <PrintsShelf
+          decals={showDecals ? decals : []}
+          posters={showPosters ? posters : []}
+          decalPriceCents={decalPriceCents}
+          showCarPrints={showDecals || showPosters}
+          showTees={showTees}
+          teeOrdered={teeOrdered}
+        />
       ) : noCrew ? (
         <EmptyState
           card

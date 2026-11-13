@@ -189,6 +189,72 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["poster_orders"]["Insert"]>;
         Relationships: never[];
       };
+      stories: {
+        Row: {
+          id: string;
+          author_id: string;
+          media_id: string;
+          caption: string | null;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          media_id: string;
+          caption?: string | null;
+          created_at?: string;
+          expires_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["stories"]["Insert"]>;
+        Relationships: never[];
+      };
+      story_views: {
+        Row: {
+          story_id: string;
+          viewer_id: string;
+          viewed_at: string;
+        };
+        Insert: {
+          story_id: string;
+          viewer_id: string;
+          viewed_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["story_views"]["Insert"]>;
+        Relationships: never[];
+      };
+      tee_orders: {
+        Row: {
+          id: string;
+          user_id: string;
+          design: "big-s" | "built-rated-ranked" | "wordmark";
+          size: "S" | "M" | "L" | "XL" | "2XL" | "3XL";
+          variant_id: number;
+          status: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
+          amount_cents: number;
+          stripe_session_id: string | null;
+          printer_order_id: string | null;
+          error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          design: "big-s" | "built-rated-ranked" | "wordmark";
+          size: "S" | "M" | "L" | "XL" | "2XL" | "3XL";
+          variant_id: number;
+          status?: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
+          amount_cents: number;
+          stripe_session_id?: string | null;
+          printer_order_id?: string | null;
+          error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tee_orders"]["Insert"]>;
+        Relationships: never[];
+      };
       store_items_owned: {
         Row: {
           id: string;

@@ -51,14 +51,19 @@ export function decalsEnabled(isAdmin = false): boolean {
 }
 
 /** Creates the Printful order and returns its id. `variantId` is the
- * catalog variant to print; it defaults to the decal sticker. */
+ * catalog variant to print; it defaults to the decal sticker. One
+ * `fileUrl` prints in the product's default spot; a tee passes `files`
+ * instead, one per placement (front, back). */
 export async function createPrintfulOrder(input: {
   orderId: string;
   recipient: PrintRecipient;
-  fileUrl: string;
+  fileUrl?: string;
+  files?: { type: string; url: string }[];
   previewName: string;
   variantId?: number;
 }): Promise<string> {
+  const files = input.files ?? (input.fileUrl ? [{ url: input.fileUrl }] : []);
+  if (files.length === 0) throw new Error("No print file for the order.");
   const account = printfulAccount();
   const variantId = input.variantId ?? printfulConfig()?.variantId;
   if (!account || !variantId) throw new Error("Printful is not configured.");
@@ -84,7 +89,7 @@ export async function createPrintfulOrder(input: {
         zip: r.zip,
         ...(r.email ? { email: r.email } : {}),
       },
-      items: [{ variant_id: config.variantId, quantity: 1, name: input.previewName, files: [{ url: input.fileUrl }] }],
+      items: [{ variant_id: config.variantId, quantity: 1, name: input.previewName, files }],
     }),
   });
   const body = (await res.json().catch(() => null)) as { result?: { id?: number }; error?: { message?: string } } | null;

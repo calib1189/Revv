@@ -10,6 +10,7 @@ import { RANK_LABELS, RANK_TEXT_COLORS, type RankTier } from "@/lib/rating/rank"
 import { formatScore } from "@/lib/rating/share-text";
 import { formatUsd } from "@/lib/points/packs";
 import { ChevronRightIcon } from "@/components/ui/icons";
+import { TeeShelf } from "@/features/merch/tee-shelf";
 
 interface PrintCar {
   vehicleId: string;
@@ -94,26 +95,38 @@ function CarPrints({ car, decalPriceCents }: { car: PrintCar; decalPriceCents: n
   );
 }
 
-/** The store's Prints tab: real things for your car, printed and shipped,
- * grouped by car. Only cars that earned them (approved and rated) show
- * up; anyone without one yet gets told how to unlock them. */
-export function PrintsShelf({ decals, posters, decalPriceCents }: { decals: DecalOffer[]; posters: PosterOffer[]; decalPriceCents: number }) {
+/** The store's Prints tab: SORZA tees for anyone, and real things for
+ * your car, printed and shipped, grouped by car. Only cars that earned
+ * them (approved and rated) show up; anyone without one yet gets told
+ * how to unlock them. */
+export function PrintsShelf({
+  decals,
+  posters,
+  decalPriceCents,
+  showCarPrints,
+  showTees,
+  teeOrdered = false,
+}: {
+  decals: DecalOffer[];
+  posters: PosterOffer[];
+  decalPriceCents: number;
+  /** Whether decals or posters are on for this viewer. */
+  showCarPrints: boolean;
+  /** Whether tees are on for this viewer. */
+  showTees: boolean;
+  /** Back from a tee checkout. */
+  teeOrdered?: boolean;
+}) {
   const cars = byCar(decals, posters);
+  const tees = showTees ? <TeeShelf justOrdered={teeOrdered} /> : null;
+  if (!showCarPrints) return tees;
 
   if (cars.length === 0) {
     return (
-      <Link href="/garage" className="pressable flex items-center gap-4 rounded-[22px] bg-[#0c0c0f] p-3 pr-4 text-white ring-1 ring-white/[0.06]">
-        <span className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-[16px] bg-white/[0.03]" style={{ backgroundImage: rankGlow("diamond", 28) }}>
-          <DecalArt tier="diamond" sizes="160px" className="absolute inset-[6%]" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[1.0625rem] font-semibold leading-tight">Prints for your car</span>
-          <span className="mt-1 block text-[0.8125rem] leading-snug text-white/55">
-            Get your car rated and approved to unlock its rank decal and build poster
-          </span>
-        </span>
-        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-white/40" />
-      </Link>
+      <div className="flex flex-col gap-8">
+        {tees}
+        <UnlockCarPrints />
+      </div>
     );
   }
 
@@ -123,6 +136,25 @@ export function PrintsShelf({ decals, posters, decalPriceCents }: { decals: Deca
       {cars.map((car) => (
         <CarPrints key={car.vehicleId} car={car} decalPriceCents={decalPriceCents} />
       ))}
+      {tees}
     </div>
+  );
+}
+
+/** For anyone with no car that's earned prints yet: how to unlock them. */
+function UnlockCarPrints() {
+  return (
+    <Link href="/garage" className="pressable flex items-center gap-4 rounded-[22px] bg-[#0c0c0f] p-3 pr-4 text-white ring-1 ring-white/[0.06]">
+      <span className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-[16px] bg-white/[0.03]" style={{ backgroundImage: rankGlow("diamond", 28) }}>
+        <DecalArt tier="diamond" sizes="160px" className="absolute inset-[6%]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[1.0625rem] font-semibold leading-tight">Prints for your car</span>
+        <span className="mt-1 block text-[0.8125rem] leading-snug text-white/55">
+          Get your car rated and approved to unlock its rank decal and build poster
+        </span>
+      </span>
+      <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-white/40" />
+    </Link>
   );
 }

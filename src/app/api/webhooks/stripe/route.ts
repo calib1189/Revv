@@ -4,6 +4,7 @@ import { packById } from "@/lib/points/packs";
 import { creditPointsPurchase, refundPointsPurchase } from "@/lib/points/credit";
 import { fulfillDecalOrder } from "@/lib/decals/fulfill";
 import { markPosterPaid, printPosterOrder } from "@/features/posters/fulfill";
+import { fulfillTeeOrder } from "@/features/merch/fulfill";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { SHOP_PROMOTION_DURATION_DAYS } from "@/lib/db/shop-promotions";
 import { applyPromotionPicture } from "@/lib/db/shop-pictures";
@@ -158,6 +159,18 @@ export async function POST(request: NextRequest) {
           if (await markPosterPaid(session, orderId)) after(() => printPosterOrder(session, orderId));
         } catch (posterError) {
           console.error("Poster order not processed:", posterError);
+          return NextResponse.json({ error: "Not processed" }, { status: 500 });
+        }
+      }
+      return NextResponse.json({ received: true });
+    }
+
+    if (metadata?.type === "sorza_tee") {
+      if (metadata.order_id) {
+        try {
+          await fulfillTeeOrder(session, metadata.order_id);
+        } catch (teeError) {
+          console.error("Tee order not processed:", teeError);
           return NextResponse.json({ error: "Not processed" }, { status: 500 });
         }
       }
