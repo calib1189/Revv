@@ -48,6 +48,7 @@ export const MEDAL_COLORS: Record<AchievementCategory, string> = {
   profile: "#e5e7eb",
   challenges: "#84cc16",
   daily: "#ff4433",
+  invites: "#30d158",
 };
 
 const PATTERNS: MedalPattern[] = ["rays", "checker", "carbon", "rings", "knurl"];

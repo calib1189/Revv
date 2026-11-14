@@ -243,6 +243,22 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["comment_reactions"]["Insert"]>;
         Relationships: never[];
       };
+      referrals: {
+        Row: {
+          invitee_id: string;
+          referrer_id: string;
+          source: "link" | "username";
+          created_at: string;
+        };
+        Insert: {
+          invitee_id: string;
+          referrer_id: string;
+          source: "link" | "username";
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["referrals"]["Insert"]>;
+        Relationships: never[];
+      };
       story_reactions: {
         Row: {
           story_id: string;

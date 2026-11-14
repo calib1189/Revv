@@ -1,4 +1,5 @@
 import { RANK_TIERS } from "@/lib/rating/rank";
+import { INVITE_TIERS } from "@/lib/invites/tiers";
 
 export interface SubscoreMax {
   appearance: number;
@@ -82,6 +83,9 @@ export interface AchievementStats {
   dailyVoteDays: number;
   dailyWins: number;
   dailyLongestStreak: number;
+
+  // Invites: people you invited who went on to add a car
+  countedInviteCount: number;
 }
 
 /** Every count-based achievement family shares this shape: unlock at or
@@ -318,6 +322,14 @@ export function evaluateAchievements(stats: AchievementStats): string[] {
       { id: "daily_streak_7", min: 7 },
       { id: "daily_streak_30", min: 30 },
     ]),
+  );
+
+  // Invites
+  unlocked.push(
+    ...thresholdIds(
+      stats.countedInviteCount,
+      INVITE_TIERS.map((t) => ({ id: t.achievementId, min: t.count })),
+    ),
   );
 
   return unlocked;

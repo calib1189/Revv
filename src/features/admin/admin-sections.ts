@@ -10,6 +10,7 @@ import {
   SpeedIcon,
   LockIcon,
   ReceiptIcon,
+  PersonPlusIcon,
 } from "@/components/ui/icons";
 import type { AdminQueueCounts } from "@/lib/admin/queue-counts";
 
@@ -120,6 +121,13 @@ export const ADMIN_SECTION_GROUPS: AdminSectionGroup[] = [
         description: "Everything bought with real money",
         icon: ReceiptIcon,
         color: "#30d158",
+      },
+      {
+        href: "/admin/invites",
+        label: "Invites",
+        description: "Who brings new people to SORZA",
+        icon: PersonPlusIcon,
+        color: "#64d2ff",
       },
       {
         href: "/admin/analytics",

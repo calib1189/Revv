@@ -2243,3 +2243,13 @@ export function ReceiptIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function PersonPlusIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} {...props}>
+      <circle cx="10" cy="8" r="3.75" />
+      <path d="M3 20c0-3.9 3.1-7 7-7 1.5 0 2.9.5 4 1.3" strokeLinecap="round" />
+      <path d="M18.5 13.5v6M15.5 16.5h6" strokeLinecap="round" />
+    </svg>
+  );
+}

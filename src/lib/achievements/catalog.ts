@@ -53,7 +53,8 @@ export type AchievementCategory =
   | "maintenance"
   | "profile"
   | "challenges"
-  | "daily";
+  | "daily"
+  | "invites";
 
 export interface AchievementDef {
   id: string;
@@ -91,7 +92,7 @@ function tierMilestones(): AchievementDef[] {
     }));
 }
 
-/** The fixed, code-defined achievement catalog — 105 real, computable
+/** The fixed, code-defined achievement catalog — 109 real, computable
  * milestones tied to the core loop, never a fabricated or arbitrary
  * list. See lib/achievements/evaluate.ts for how a user's real stats
  * get checked against these. A count-based achievement always unlocks
@@ -225,6 +226,13 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "daily_winner", name: "Daily Champion", description: "Won a Sorza Daily challenge", category: "daily", icon: StarIcon, points: 12 },
   { id: "daily_streak_7", name: "7-Day Participant", description: "Took part in Sorza Daily 7 days running", category: "daily", icon: TimerIcon, points: 7 },
   { id: "daily_streak_30", name: "30-Day Participant", description: "Took part in Sorza Daily 30 days running", category: "daily", icon: TimerIcon, points: 20 },
+
+  // ---- Invites (lib/invites/tiers.ts) ----
+  // An invite counts once the person has added a car.
+  { id: "invites_3", name: "Early Supporter", description: "Invited 3 people who added their car", category: "invites", icon: UsersIcon, points: 7 },
+  { id: "invites_5", name: "Featured Builder", description: "Invited 5 people who added their car", category: "invites", icon: StarIcon, points: 12 },
+  { id: "invites_10", name: "SORZA OG", description: "Invited 10 people who added their car", category: "invites", icon: BadgeIcon, points: 20 },
+  { id: "invites_25", name: "Founding Circle", description: "Invited 25 people who added their car", category: "invites", icon: GemIcon, points: 20 },
 
   // ---- Membership ----
   { id: "member_30_days", name: "One Month In", description: "Been on SORZA for 30 days", category: "profile", icon: TimerIcon, points: 2 },

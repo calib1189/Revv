@@ -31,6 +31,8 @@ import { listDailyActivity, STREAK_KINDS } from "@/lib/db/daily-activity";
 import { countDailyWins } from "@/lib/db/daily";
 import { computeStreak } from "@/lib/daily/streak";
 import { dailyDateKey } from "@/lib/daily/day";
+import { listOwnersWithCars, listReferralsByReferrer } from "@/lib/db/referrals";
+import { countedInvites } from "@/lib/invites/tiers";
 
 const SUBSCORE_KEYS = ["appearance", "performance", "wheelsFitment", "interior", "modifications"] as const;
 
@@ -281,6 +283,8 @@ export async function checkAndUnlockAchievements(
     hadPerfectWeek,
 
     ...(await getDailyStats(supabase, userId)),
+
+    countedInviteCount: await getCountedInviteCount(supabase, userId),
   });
 
   const newIds = qualifiedIds.filter((id) => !unlockedIds.has(id));
@@ -324,5 +328,17 @@ async function getDailyStats(
     };
   } catch {
     return { dailyEntryDays: 0, dailyVoteDays: 0, dailyWins: 0, dailyLongestStreak: 0 };
+  }
+}
+
+/** People this user invited who went on to add a car. Zero when the
+ * referrals table doesn't exist yet (before 0121). */
+async function getCountedInviteCount(supabase: SupabaseClient<Database>, userId: string): Promise<number> {
+  try {
+    const referrals = await listReferralsByReferrer(supabase, userId);
+    const withCars = await listOwnersWithCars(supabase, referrals.map((r) => r.invitee_id));
+    return countedInvites(referrals.map((r) => ({ hasCar: withCars.has(r.invitee_id) })));
+  } catch {
+    return 0;
   }
 }

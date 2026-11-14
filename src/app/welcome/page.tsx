@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId, markProfileOnboarded } from "@/lib/db/profiles";
 import { PlusIcon, UsersIcon, HomeIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
+import { InviterSection } from "@/features/invites/inviter-section";
 
 const STEPS = [
   {
@@ -40,6 +41,9 @@ export default async function WelcomePage() {
     // best-effort — never block the welcome screen on this write
   }
 
+  // eslint-disable-next-line react-hooks/purity -- server component, rendered per request
+  const now = Date.now();
+
   // Google and Apple signups pick their username first, on the
   // full-screen step the root layout shows (FirstRunGate), so by the
   // time this page is visible the name greeting them is their own.
@@ -53,6 +57,12 @@ export default async function WelcomePage() {
       <p className="mt-3 text-center text-[1rem] text-muted">
         {profile?.username ? `You're in, @${profile.username}. ` : ""}Here&apos;s where to start.
       </p>
+
+      {profile && (
+        <div className="animate-section-rise mt-8" style={{ animationDelay: "80ms" }}>
+          <InviterSection supabase={supabase} profile={profile} now={now} />
+        </div>
+      )}
 
       <div className="mt-10 flex flex-col gap-7">
         {STEPS.map(({ href, icon: Icon, title, description }, i) => (

@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { ACHIEVEMENTS } from "./catalog";
 
 describe("ACHIEVEMENTS catalog", () => {
-  it("has exactly 105 achievements", () => {
-    expect(ACHIEVEMENTS.length).toBe(105);
+  it("has exactly 109 achievements", () => {
+    expect(ACHIEVEMENTS.length).toBe(109);
   });
 
   it("has no duplicate ids", () => {

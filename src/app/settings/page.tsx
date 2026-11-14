@@ -28,6 +28,7 @@ import {
   FlagIcon,
   GlobeIcon,
   PersonIcon,
+  PersonPlusIcon,
 } from "@/components/ui/icons";
 
 export default async function SettingsPage() {
@@ -78,6 +79,15 @@ export default async function SettingsPage() {
             <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
           </Link>
         )}
+
+        <GroupedList>
+          <GroupedRow
+            href="/invite"
+            label="Invite friends"
+            detail="Earn badges and OG status"
+            icon={<RowIcon color="#30d158"><PersonPlusIcon /></RowIcon>}
+          />
+        </GroupedList>
 
         {/* First for whoever runs the place, with what's waiting. */}
         {profile?.is_admin && (

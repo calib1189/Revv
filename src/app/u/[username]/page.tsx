@@ -34,7 +34,7 @@ import { getStoreItem } from "@/lib/store/catalog";
 import { getPointsBalance } from "@/lib/db/points";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { SettingsIcon, GemIcon } from "@/components/ui/icons";
+import { SettingsIcon, GemIcon, PersonPlusIcon } from "@/components/ui/icons";
 import { VerifiedSeal } from "@/features/profile/verified-credential";
 import { AccountSwitcherButton } from "@/features/auth/account-switcher";
 import { listOtherAccounts } from "@/features/auth/other-accounts";
@@ -249,13 +249,22 @@ export default async function ProfilePage({
             others={otherAccounts?.accounts ?? []}
             canAdd={otherAccounts?.canAdd ?? false}
           />
-          <Link
-            href="/settings"
-            aria-label="Settings"
-            className="pressable glass-raised elev-1 flex h-10 w-10 items-center justify-center rounded-full text-foreground"
-          >
-            <SettingsIcon className="h-5 w-5" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/invite"
+              aria-label="Invite friends"
+              className="pressable glass-raised elev-1 flex h-10 w-10 items-center justify-center rounded-full text-foreground"
+            >
+              <PersonPlusIcon className="h-5 w-5" />
+            </Link>
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              className="pressable glass-raised elev-1 flex h-10 w-10 items-center justify-center rounded-full text-foreground"
+            >
+              <SettingsIcon className="h-5 w-5" />
+            </Link>
+          </div>
         </div>
       )}
 

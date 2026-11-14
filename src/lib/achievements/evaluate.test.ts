@@ -48,6 +48,7 @@ function stats(overrides: Partial<AchievementStats> = {}): AchievementStats {
     dailyVoteDays: 0,
     dailyWins: 0,
     dailyLongestStreak: 0,
+    countedInviteCount: 0,
     ...overrides,
   };
 }
@@ -108,6 +109,7 @@ describe("evaluateAchievements", () => {
         dailyVoteDays: 40,
         dailyWins: 3,
         dailyLongestStreak: 30,
+        countedInviteCount: 25,
       }),
     );
     for (const id of everything) {
@@ -212,5 +214,15 @@ describe("Sorza Daily achievements", () => {
     expect(ids).toEqual(expect.arrayContaining(["daily_first_entry", "daily_first_vote", "daily_winner", "daily_streak_7"]));
     expect(ids).not.toContain("daily_streak_30");
     expect(evaluateAchievements(stats({ dailyLongestStreak: 30 }))).toContain("daily_streak_30");
+  });
+});
+
+describe("Invite achievements", () => {
+  it("unlock each rung at its count, and only then", () => {
+    expect(evaluateAchievements(stats({ countedInviteCount: 2 }))).not.toContain("invites_3");
+    const five = evaluateAchievements(stats({ countedInviteCount: 5 }));
+    expect(five).toEqual(expect.arrayContaining(["invites_3", "invites_5"]));
+    expect(five).not.toContain("invites_10");
+    expect(evaluateAchievements(stats({ countedInviteCount: 25 }))).toContain("invites_25");
   });
 });
