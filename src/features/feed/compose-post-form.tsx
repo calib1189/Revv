@@ -22,7 +22,8 @@ import { checkImage } from "@/features/moderation/check-image";
 import { captureVideoFrame } from "@/features/moderation/capture-video-frame";
 import { Callout } from "@/components/ui/callout";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
-import { publicSoundUrl } from "@/lib/db/sounds";
+import { deleteSound, publicSoundUrl } from "@/lib/db/sounds";
+import { createOriginalSound, extractOriginalSound } from "@/features/sounds/original-sound";
 import { SoundPickerSheet } from "@/features/sounds/sound-picker-sheet";
 import { VideoEditor } from "@/features/editor/video-editor";
 import { PhotoEditor } from "@/features/editor/photo-editor";
@@ -44,6 +45,15 @@ interface SelectedVideo {
 }
 
 type Step = "camera" | "compose";
+
+/** How long publishing waits on pulling a video's own audio out before
+ * posting without it. The first time it loads ffmpeg, which is the slow
+ * part; usually the upload alone takes longer. */
+const ORIGINAL_SOUND_TIMEOUT_MS = 25000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
+}
 
 /** Runs one file through the server-side moderation check — a photo
  * directly, or (for video) one captured frame, since there's no
@@ -401,6 +411,14 @@ export function ComposePostForm({
 
       const supabase = createClient();
 
+      // A video with its own audio, rather than a library sound, gets
+      // that audio turned into a sound others can use. Pulled out while
+      // the video uploads; anything going wrong just posts it without one.
+      const originalAudio =
+        mode === "video" && video && !sound
+          ? withTimeout(extractOriginalSound(video.file), ORIGINAL_SOUND_TIMEOUT_MS).catch(() => null)
+          : Promise.resolve(null);
+
       // Every byte is uploaded and every media row created BEFORE the
       // post row exists. The order used to be the other way round, which
       // meant a failure partway through publishing — one photo of three
@@ -438,14 +456,22 @@ export function ComposePostForm({
       }
 
       setPublish({ stage: "publishing", done: total, total });
+      const audio = await originalAudio;
+      const originalSound = audio
+        ? await createOriginalSound(supabase, userId, username, audio).catch(() => null)
+        : null;
       const post = await createPost(supabase, {
         author_id: userId,
         vehicle_id: vehicleId || null,
         crew_id: crewId || null,
-        sound_id: sound?.id || null,
+        sound_id: sound?.id || originalSound?.id || null,
         sound_start_ms: sound ? clampSoundStartMs(soundStartMs, sound.duration_ms) : 0,
         post_type: mode!,
         caption: finalCaption || null,
+      }).catch(async (err: unknown) => {
+        // No post to hold it, so no sound either.
+        if (originalSound) await deleteSound(supabase, originalSound.id).catch(() => {});
+        throw err;
       });
 
       for (let position = 0; position < mediaIds.length; position += 1) {

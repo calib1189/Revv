@@ -13,6 +13,9 @@ const UNDEFINED_COLUMN = "42703";
  * don't filter. */
 const HIDDEN_SOURCE = "original";
 
+/** A video's own audio, made a sound when it was posted. */
+const POST_AUDIO_SOURCE = "post_audio";
+
 export type Sound = Database["public"]["Tables"]["sounds"]["Row"];
 export type SoundInsert = Database["public"]["Tables"]["sounds"]["Insert"];
 
@@ -113,15 +116,18 @@ export async function getSoundUsageCounts(
   const counts = new Map<string, number>();
   if (soundIds.length === 0) return counts;
 
-  const { data, error } = await supabase
-    .from("posts")
-    .select("sound_id")
-    .in("sound_id", soundIds);
+  // Chunked so the id list never makes the request URL too long.
+  for (let i = 0; i < soundIds.length; i += 150) {
+    const { data, error } = await supabase
+      .from("posts")
+      .select("sound_id")
+      .in("sound_id", soundIds.slice(i, i + 150));
 
-  if (error) throw error;
-  for (const row of data) {
-    if (!row.sound_id) continue;
-    counts.set(row.sound_id, (counts.get(row.sound_id) ?? 0) + 1);
+    if (error) throw error;
+    for (const row of data) {
+      if (!row.sound_id) continue;
+      counts.set(row.sound_id, (counts.get(row.sound_id) ?? 0) + 1);
+    }
   }
   return counts;
 }
@@ -136,7 +142,10 @@ export async function listTrendingSounds(
   limit = 30,
   genre: SoundGenre | null = null,
 ): Promise<Sound[]> {
-  let request = supabase.from("sounds").select("*").neq("source", HIDDEN_SOURCE);
+  let request = supabase
+    .from("sounds")
+    .select("*")
+    .not("source", "in", `(${HIDDEN_SOURCE},${POST_AUDIO_SOURCE})`);
   if (genre) request = request.eq("genre", genre);
   const { data, error } = await request.order("created_at", { ascending: false }).limit(200);
 
@@ -144,10 +153,29 @@ export async function listTrendingSounds(
     if (genre && error.code === UNDEFINED_COLUMN) return [];
     throw error;
   }
-  if (data.length === 0) return [];
 
-  const counts = await getSoundUsageCounts(supabase, data.map((s) => s.id));
-  return [...data]
+  // Every video posted with its own audio makes one of these, so they're
+  // their own pool (they'd crowd the library out of the one above), and
+  // trend only once someone besides the original post has used one. They
+  // have no genre, so a genre filter leaves them out.
+  let postAudio: Sound[] = [];
+  if (!genre) {
+    const { data: rows, error: postAudioError } = await supabase
+      .from("sounds")
+      .select("*")
+      .eq("source", POST_AUDIO_SOURCE)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (postAudioError) throw postAudioError;
+    postAudio = rows;
+  }
+
+  const candidates = [...data, ...postAudio];
+  if (candidates.length === 0) return [];
+
+  const counts = await getSoundUsageCounts(supabase, candidates.map((s) => s.id));
+  return candidates
+    .filter((s) => s.source !== POST_AUDIO_SOURCE || (counts.get(s.id) ?? 0) >= 2)
     .sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0))
     .slice(0, limit);
 }

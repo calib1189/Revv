@@ -703,7 +703,7 @@ export interface Database {
           artist_name: string | null;
           storage_path: string;
           duration_ms: number;
-          source: "original" | "licensed" | "user_upload";
+          source: "original" | "licensed" | "user_upload" | "post_audio";
           license_label: string | null;
           license_url: string | null;
           genre: string | null;
@@ -717,7 +717,7 @@ export interface Database {
           artist_name?: string | null;
           storage_path: string;
           duration_ms: number;
-          source?: "original" | "licensed" | "user_upload";
+          source?: "original" | "licensed" | "user_upload" | "post_audio";
           license_label?: string | null;
           license_url?: string | null;
           genre?: string | null;
