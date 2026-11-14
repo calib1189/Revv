@@ -7,6 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "The social platform for your build.",
     start_url: "/feed",
     display: "standalone",
+    orientation: "portrait",
     background_color: "#0a0a0b",
     theme_color: "#0a0a0b",
     icons: [
