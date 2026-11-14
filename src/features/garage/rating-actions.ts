@@ -24,7 +24,7 @@ import { buildRatingSummary } from "@/lib/rating/build-summary";
 import { getRatingProvider } from "@/lib/providers/get-rating-provider";
 import type { RatingPhoto, BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 import { getPointsBalance } from "@/lib/db/points";
-import { INSTANT_RERATE_POINTS, formatWait, nextFreeRateAt } from "@/lib/rating/rerate";
+import { nextFreeRateAt, rerateCost } from "@/lib/rating/rerate";
 const MAX_PHOTOS = 4;
 
 async function requireOwner(vehicleId: string) {
@@ -61,7 +61,9 @@ export interface GenerateRatingResult {
 
 export async function generateBuildRatingAction(
   vehicleId: string,
-  options: { payWithPoints?: boolean } = {},
+  /** The points price the owner saw and agreed to; a rating that costs
+   * more than this (or anything, when it's missing) isn't run. */
+  options: { pointsShown?: number } = {},
 ): Promise<GenerateRatingResult> {
   const { supabase, user, vehicle } = await requireOwner(vehicleId);
 
@@ -73,32 +75,37 @@ export async function generateBuildRatingAction(
   // completes) is the actual gate — it's recorded even if the result
   // never gets confirmed. Falling back to ai_rating_rated_at covers a
   // build whose last rating predates this column existing at all.
-  // Admins aren't limited, so the app's own team can re-rate freely.
+  // The first rating is free; every re-rate costs points, more inside
+  // the 24 hours after the last (rerateCost). Admins aren't charged, so
+  // the app's own team can re-rate freely.
   const lastAttempt = existingBuild?.ai_rating_last_attempt_at ?? existingBuild?.ai_rating_rated_at ?? null;
-  const freeAt = profile?.is_admin ? null : nextFreeRateAt(lastAttempt);
-  // Inside the wait, the owner can skip it for points. The points are
-  // taken before the AI call and given back if it fails, so a rating is
-  // never paid for twice or got for free by a failed charge.
+  const cost = profile?.is_admin
+    ? 0
+    : rerateCost({ rated: existingBuild?.ai_rating_score != null, freeAt: nextFreeRateAt(lastAttempt) });
+  // The points are taken before the AI call and given back if it fails,
+  // so a rating is never paid for twice or got for free by a failed charge.
   let chargeId: string | null = null;
-  if (freeAt) {
-    if (!options.payWithPoints) {
-      return { error: `You can rate this build again for free in about ${formatWait(freeAt)}.` };
+  if (cost > 0) {
+    if (options.pointsShown == null || cost > options.pointsShown) {
+      return { error: `Re-rating this build costs ${cost} points.` };
     }
     const balance = await getPointsBalance(supabase, user.id);
-    if (balance < INSTANT_RERATE_POINTS) {
-      return { error: `You need ${INSTANT_RERATE_POINTS} points to re-rate now. You have ${balance}.` };
+    if (balance < cost) {
+      return { error: `You need ${cost} points to re-rate. You have ${balance}.` };
     }
     chargeId = crypto.randomUUID();
+    // Every paid re-rate is an 'instant_rerate' ledger row (0112), at
+    // either price, so the ledger needs no new type.
     const { error: chargeError } = await createServiceRoleClient().from("points_ledger").insert({
       user_id: user.id,
-      amount: -INSTANT_RERATE_POINTS,
+      amount: -cost,
       source_type: "instant_rerate",
       source_id: chargeId,
     });
     if (chargeError) {
       // Most likely 0112 isn't applied yet, so the ledger refuses the type.
       console.error("instant re-rate charge failed:", chargeError);
-      return { error: "Instant re-rates aren't available right now. Try again later." };
+      return { error: "Re-rates aren't available right now. Try again later." };
     }
   }
   const result = await rateBuild(supabase, user.id, vehicle, existingBuild);

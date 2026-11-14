@@ -47,7 +47,7 @@ import { recordVehicleView } from "@/lib/db/vehicle-views";
 import { getPartClickCountsForBuildParts } from "@/lib/db/part-clicks";
 import type { Metadata } from "next";
 import { getPointsBalance } from "@/lib/db/points";
-import { INSTANT_RERATE_POINTS, nextFreeRateAt } from "@/lib/rating/rerate";
+import { nextFreeRateAt, rerateCost } from "@/lib/rating/rerate";
 
 export async function generateMetadata({
   params,
@@ -219,13 +219,14 @@ export default async function VehiclePage({
     .filter(Boolean)
     .join(" · ");
   const score = activeBuild?.ai_rating_score ?? null;
-  // The owner's next free re-rate, and their points for skipping the wait.
-  // Admins re-rate freely, so they never wait.
+  // What the owner's next re-rate costs (rerateCost), when the cheaper
+  // one opens, and their points. Admins re-rate for free.
   const freeRateAt =
     isOwner && !owner?.is_admin
       ? nextFreeRateAt(activeBuild?.ai_rating_last_attempt_at ?? activeBuild?.ai_rating_rated_at ?? null)
       : null;
-  const pointsBalance = freeRateAt && user ? await getPointsBalance(supabase, user.id).catch(() => 0) : 0;
+  const rerateCostNow = isOwner && !owner?.is_admin ? rerateCost({ rated: score != null, freeAt: freeRateAt }) : 0;
+  const pointsBalance = rerateCostNow > 0 && user ? await getPointsBalance(supabase, user.id).catch(() => 0) : 0;
   // The owner's own rank decal, for an approved and rated car, while
   // decals can be printed (Stripe and Printful both set up).
   const decalTier =
@@ -322,7 +323,7 @@ export default async function VehiclePage({
             shareText={buildShareText({ title, score, isOwner })}
             savedPending={activeBuild ? pendingRatingFromBuild(activeBuild) : null}
             hasPhotos={Boolean(heroMedia) || gallery.some((g) => g.media.kind === "image")}
-            rerate={{ freeAt: freeRateAt?.toISOString() ?? null, balance: pointsBalance, cost: INSTANT_RERATE_POINTS }}
+            rerate={{ freeAt: freeRateAt?.toISOString() ?? null, balance: pointsBalance, cost: rerateCostNow }}
             decal={
               decalsEnabled(owner?.is_admin ?? false) && vehicle.ownership_verification_status === "approved"
                 ? { carName: title, photoUrl: heroUrl, priceCents: DECAL_PRICE_CENTS }

@@ -1,10 +1,23 @@
-/** How long an owner waits between free ratings of the same car. */
+/** How long after a rating the cheaper re-rate opens. */
 export const RATE_LIMIT_HOURS = 24;
 
-/** What skipping that wait costs, in points. 100 points is the $0.99
- * pack, comfortably above what one rating costs to run, and points
- * earned in the app count too. */
+/** A re-rate once a day has passed since the last rating, in points. */
+export const RERATE_POINTS = 50;
+
+/** A re-rate sooner than that. 100 points is the $0.99 pack, comfortably
+ * above what one rating costs to run, and points earned in the app count
+ * too. */
 export const INSTANT_RERATE_POINTS = 100;
+
+/** What rating a car costs its owner, in points: the first rating is
+ * free, every re-rate costs RERATE_POINTS, or INSTANT_RERATE_POINTS
+ * inside the 24 hours after the last attempt. (A car with no saved score
+ * but a recent attempt pays the instant price too, as before.) Admins
+ * aren't charged; the caller decides that. */
+export function rerateCost({ rated, freeAt }: { rated: boolean; freeAt: Date | null }): number {
+  if (freeAt) return INSTANT_RERATE_POINTS;
+  return rated ? RERATE_POINTS : 0;
+}
 
 const HOUR_MS = 60 * 60 * 1000;
 

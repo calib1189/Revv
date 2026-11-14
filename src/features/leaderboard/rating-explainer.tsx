@@ -1,11 +1,12 @@
 import { CheckIcon } from "@/components/ui/icons";
+import { INSTANT_RERATE_POINTS, RERATE_POINTS } from "@/lib/rating/rerate";
 
 const POINTS = [
   "Photos are the primary evidence. Custom paint, bodywork, and widebody kits count as much as bolt-on parts, even mods you haven't logged yet.",
   "The AI weighs how coherent and well executed the build looks, not just how many parts are listed.",
   "A stock car isn't penalized unfairly. It just naturally scores lower than a thoughtfully modified one.",
   "90+ is reserved for genuinely exceptional builds. A perfect 100 is rare.",
-  "Re-rate anytime from your garage as you add mods or photos, and the score updates.",
+  `Your first rating is free. Re-rate from your garage as you add mods or photos for ${RERATE_POINTS} points, or ${INSTANT_RERATE_POINTS} within a day of your last rating.`,
 ];
 
 export function RatingExplainer() {
