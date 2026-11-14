@@ -2,15 +2,19 @@
  * The printed build posters: the car's own cover photo with its SORZA
  * score, rank and category scores, printed and shipped by Printful.
  * Prices are what the buyer pays, US shipping included. Printful's
- * costs, shipped to a US address (Nov 2026 quotes): $23.92 for the
- * 18x24 luster poster and $47.76 for the framed 12x18.
+ * costs, before sales tax, with its flat $4.99 US shipping (Nov 2026
+ * catalog): $16.10 for the 12x16 matte, $18.14 for the 18x24 matte,
+ * and $43.66 for the framed 12x18 (its shipping is $10.89).
  */
-export type PosterProductId = "poster_18x24" | "framed_12x18";
+export type PosterProductId = "poster_12x16" | "poster_18x24" | "framed_12x18";
 
 export interface PosterProduct {
   id: PosterProductId;
+  /** Short, for the size picker. */
   name: string;
   detail: string;
+  /** In full, for checkout, orders and receipts. */
+  label: string;
   /** Printful catalog variant. */
   variantId: number;
   priceCents: number;
@@ -20,20 +24,32 @@ export interface PosterProduct {
 
 export const POSTER_PRODUCTS: PosterProduct[] = [
   {
+    id: "poster_12x16",
+    name: "12 × 16",
+    detail: "Matte poster",
+    label: "12 × 16 in. matte poster",
+    variantId: 1349,
+    priceCents: 2499,
+    widthIn: 12,
+    heightIn: 16,
+  },
+  {
     id: "poster_18x24",
-    name: "Poster",
-    detail: "18 × 24 in. · luster photo paper",
-    variantId: 6880,
-    priceCents: 3999,
+    name: "18 × 24",
+    detail: "Matte poster",
+    label: "18 × 24 in. matte poster",
+    variantId: 1,
+    priceCents: 2999,
     widthIn: 18,
     heightIn: 24,
   },
   {
     id: "framed_12x18",
-    name: "Framed poster",
-    detail: "12 × 18 in. · black frame, ready to hang",
+    name: "Framed",
+    detail: "12 × 18, black frame",
+    label: "12 × 18 in. framed poster, black frame",
     variantId: 4398,
-    priceCents: 6999,
+    priceCents: 5999,
     widthIn: 12,
     heightIn: 18,
   },

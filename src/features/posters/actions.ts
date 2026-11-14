@@ -75,7 +75,7 @@ export async function startPosterOrderAction(vehicleId: string, productId: strin
     const session = await createPosterCheckoutSession({
       orderId: order.id,
       name: `SORZA build poster: ${snapshot.carName}`,
-      description: `${product.name}, ${product.detail}. Free US shipping.`,
+      description: `${product.label}. Free US shipping.`,
       priceCents: product.priceCents,
       customerEmail: user.email ?? null,
       successUrl: `${SITE_URL}/garage/${vehicle.id}?poster=ordered`,

@@ -42,7 +42,7 @@ export async function listMyShopOrders(supabase: SupabaseClient<Database>, userI
   for (const o of posters) {
     const status = STATUS[o.status];
     const product = posterProductById(o.product);
-    if (status) out.push({ id: o.id, kind: "poster", title: product?.name ?? "Build poster", detail: product?.detail ?? "", status, amountCents: o.amount_cents, createdAt: o.created_at });
+    if (status) out.push({ id: o.id, kind: "poster", title: "Build poster", detail: product?.label ?? "", status, amountCents: o.amount_cents, createdAt: o.created_at });
   }
   for (const o of tees) {
     const status = STATUS[o.status];

@@ -52,7 +52,7 @@ export function teeSale(row: { design: string; size: string }): SaleItem {
 
 export function posterSale(row: { product: string }): SaleItem {
   const product = posterProductById(row.product);
-  return { kind: "poster", title: product?.name ?? "Build poster", detail: product?.detail ?? "" };
+  return { kind: "poster", title: "Build poster", detail: product?.label ?? "" };
 }
 
 export function decalSale(row: { tier: string }): SaleItem {

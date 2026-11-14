@@ -160,7 +160,7 @@ export interface Database {
           id: string;
           user_id: string;
           vehicle_id: string | null;
-          product: "poster_18x24" | "framed_12x18";
+          product: "poster_12x16" | "poster_18x24" | "framed_12x18";
           snapshot: Json;
           status: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
           amount_cents: number;
@@ -175,7 +175,7 @@ export interface Database {
           id?: string;
           user_id: string;
           vehicle_id?: string | null;
-          product: "poster_18x24" | "framed_12x18";
+          product: "poster_12x16" | "poster_18x24" | "framed_12x18";
           snapshot: Json;
           status?: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
           amount_cents: number;

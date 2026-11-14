@@ -10,8 +10,16 @@ import { formatUsd } from "@/lib/points/packs";
 import { formatScore } from "@/lib/rating/share-text";
 
 const SHAPE: Record<PosterProductId, string> = {
+  poster_12x16: "aspect-[3/4]",
   poster_18x24: "aspect-[3/4]",
   framed_12x18: "aspect-[2/3]",
+};
+
+/** Each size drawn to scale against the others, in the size picker. */
+const ICON: Record<PosterProductId, string> = {
+  poster_12x16: "h-7 w-[21px] bg-foreground/25",
+  poster_18x24: "h-9 w-[27px] bg-foreground/25",
+  framed_12x18: "h-9 w-6 border-[3px] border-foreground/80",
 };
 
 /** "Build poster": the owner's car on a printed poster with its SORZA
@@ -145,7 +153,7 @@ export function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Poster size">
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Poster size">
           {offer.products.map((p) => {
             const selected = p.id === productId;
             return (
@@ -162,7 +170,7 @@ export function PosterSheet({ offer, open, onClose }: { offer: PosterOffer; open
               >
                 <span className="flex h-9 items-end">
                   <span
-                    className={`block ${p.id === "framed_12x18" ? "h-9 w-6 border-[3px] border-foreground/80" : "h-9 w-[27px] bg-foreground/25"} rounded-[2px]`}
+                    className={`block ${ICON[p.id]} rounded-[2px]`}
                     aria-hidden
                   />
                 </span>
