@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Sheet } from "@/components/ui/sheet";
+import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 import { PointsWallet } from "@/features/store/points-packs";
 import { LookPreview, StyledName, type Look, type LookScope } from "@/features/store/look-preview";
 import { ItemTile, CATEGORY_KIND } from "@/features/store/item-tile";
@@ -411,7 +412,12 @@ export function ShopHome({
       </div>
 
       {/* Category tabs, pinned while you scroll the grid. */}
-      <div ref={tabsRef} className="sticky top-0 z-20 -mx-4 mt-5 scroll-mt-0 border-b border-border bg-background/92 px-4 backdrop-blur-xl sm:mx-0 sm:px-0">
+      <div
+        ref={tabsRef}
+        className="sticky z-[5] -mx-4 mt-5 border-b border-border bg-background/92 px-4 backdrop-blur-xl sm:mx-0 sm:px-0"
+        // Pinned just under the app's top bar, not behind it.
+        style={{ top: HEADER_HEIGHT, scrollMarginTop: HEADER_HEIGHT }}
+      >
         <nav className="no-scrollbar flex gap-6 overflow-x-auto" aria-label="Shop sections">
           {SECTIONS.filter((s) => (s.id === "tees" ? showTees : s.id === "car" ? decals.length > 0 || posters.length > 0 : true)).map((s) => {
             const active = !query && section === s.id;
