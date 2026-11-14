@@ -16,24 +16,27 @@ const LINK_SECONDS = 60 * 60 * 24 * 30;
 
 /** Marks the order paid. Stripe retries webhooks, so only the first call
  * for an order gets past the awaiting_payment check; returns whether
- * this call did, i.e. whether the poster still needs printing. */
-export async function markPosterPaid(session: Record<string, unknown>, orderId: string): Promise<boolean> {
-  if (session.payment_status !== "paid") return false;
+ * this call did (the order, which still needs printing) or null. */
+export async function markPosterPaid(
+  session: Record<string, unknown>,
+  orderId: string,
+): Promise<{ user_id: string; product: string; amount_cents: number } | null> {
+  if (session.payment_status !== "paid") return null;
   const supabase = createServiceRoleClient();
   const { data: order, error } = await supabase
     .from("poster_orders")
     .update({ status: "paid", stripe_session_id: String(session.id), updated_at: new Date().toISOString() })
     .eq("id", orderId)
     .eq("status", "awaiting_payment")
-    .select("id, amount_cents")
+    .select("id, user_id, product, amount_cents")
     .maybeSingle();
   if (error) throw error;
-  if (!order) return false;
+  if (!order) return null;
   if (Number(session.amount_total) !== order.amount_cents) {
     await failOrder(orderId, `Paid ${String(session.amount_total)}, expected ${order.amount_cents}.`);
-    return false;
+    return null;
   }
-  return true;
+  return order;
 }
 
 async function failOrder(orderId: string, message: string) {

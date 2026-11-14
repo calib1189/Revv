@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createPointsCheckoutSession } from "@/lib/billing/stripe";
 import { packById, pointsPacksEnabled } from "@/lib/points/packs";
@@ -9,6 +10,8 @@ import { creditPointsPurchase } from "@/lib/points/credit";
 import { SITE_URL } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { notifyAdminsOfSale } from "@/lib/admin/notify-sale";
+import { pointsSale } from "@/lib/sales/sale";
 
 async function isAdmin(userId: string): Promise<boolean> {
   const profile = await getProfileByUserId(await createClient(), userId).catch(() => null);
@@ -58,7 +61,7 @@ export async function confirmApplePurchaseAction(transactionId: string): Promise
       console.error("Apple purchase refused:", check.reason, transactionId);
       return { ok: false, error: "That purchase couldn't be added to this account." };
     }
-    await creditPointsPurchase({
+    const credited = await creditPointsPurchase({
       userId: user.id,
       provider: "apple",
       providerRef: check.transactionId,
@@ -66,6 +69,10 @@ export async function confirmApplePurchaseAction(transactionId: string): Promise
       amountCents: check.pack.priceCents,
       currency: "usd",
     });
+    if (credited.isNew) {
+      const { pack } = check;
+      after(() => notifyAdminsOfSale({ buyerId: user.id, amountCents: pack.priceCents, item: pointsSale({ points: pack.points, provider: "apple" }) }));
+    }
     revalidatePath("/store");
     return { ok: true, points: check.pack.points };
   } catch (err) {

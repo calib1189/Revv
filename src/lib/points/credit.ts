@@ -14,7 +14,7 @@ export async function creditPointsPurchase(input: {
   pack: PointPack;
   amountCents: number;
   currency: string;
-}): Promise<{ purchaseId: string }> {
+}): Promise<{ purchaseId: string; isNew: boolean }> {
   const supabase = createServiceRoleClient();
   const inserted = await supabase
     .from("points_purchases")
@@ -36,6 +36,7 @@ export async function creditPointsPurchase(input: {
 
   // Already recorded (a retry): use that row, and only ever for its own
   // buyer, so a replayed id can't move points to someone else.
+  const isNew = Boolean(inserted.data);
   let purchase = inserted.data;
   if (!purchase) {
     const existing = await supabase
@@ -54,7 +55,7 @@ export async function creditPointsPurchase(input: {
     { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true },
   );
   if (ledger.error) throw ledger.error;
-  return { purchaseId: purchase.id };
+  return { purchaseId: purchase.id, isNew };
 }
 
 /** Takes a refunded purchase's points back (once). The balance can go

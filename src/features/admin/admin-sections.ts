@@ -9,6 +9,7 @@ import {
   WrenchIcon,
   SpeedIcon,
   LockIcon,
+  ReceiptIcon,
 } from "@/components/ui/icons";
 import type { AdminQueueCounts } from "@/lib/admin/queue-counts";
 
@@ -113,6 +114,13 @@ export const ADMIN_SECTION_GROUPS: AdminSectionGroup[] = [
   {
     title: "Insights",
     sections: [
+      {
+        href: "/admin/sales",
+        label: "Sales",
+        description: "Everything bought with real money",
+        icon: ReceiptIcon,
+        color: "#30d158",
+      },
       {
         href: "/admin/analytics",
         label: "Analytics",

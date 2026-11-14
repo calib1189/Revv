@@ -2233,3 +2233,13 @@ export function ClockIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** A receipt: money that came in. */
+export function ReceiptIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M6 3.5h12v17l-2-1.25-2 1.25-2-1.25-2 1.25-2-1.25-2 1.25Z" />
+      <path d="M9 8.5h6M9 12h6M9 15.5h3.5" />
+    </svg>
+  );
+}

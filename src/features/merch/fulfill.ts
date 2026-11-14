@@ -8,9 +8,11 @@ import { SITE_URL } from "@/lib/site-url";
 /** Marks the order paid and sends it to the printer. Stripe retries
  * webhooks, so only the first call for an order gets past the
  * awaiting_payment check; a printer failure is saved on the order for an
- * admin to follow up rather than retried blindly: the customer has paid. */
-export async function fulfillTeeOrder(session: Record<string, unknown>, orderId: string): Promise<void> {
-  if (session.payment_status !== "paid") return;
+ * admin to follow up rather than retried blindly: the customer has paid.
+ * Returns the order when this call recorded the payment, null for a
+ * retry or an unpaid session. */
+export async function fulfillTeeOrder(session: Record<string, unknown>, orderId: string): Promise<{ user_id: string; amount_cents: number; design: string; size: string } | null> {
+  if (session.payment_status !== "paid") return null;
   const supabase = createServiceRoleClient();
   const { data: order, error } = await supabase
     .from("tee_orders")
@@ -20,13 +22,14 @@ export async function fulfillTeeOrder(session: Record<string, unknown>, orderId:
     .select("*")
     .maybeSingle();
   if (error) throw error;
-  if (!order) return;
+  if (!order) return null;
 
   const fail = async (message: string) => {
     await supabase
       .from("tee_orders")
       .update({ status: "failed", error: message.slice(0, 500), updated_at: new Date().toISOString() })
       .eq("id", order.id);
+    return order;
   };
 
   if (Number(session.amount_total) !== order.amount_cents) return fail(`Paid ${String(session.amount_total)}, expected ${order.amount_cents}.`);
@@ -51,4 +54,5 @@ export async function fulfillTeeOrder(session: Record<string, unknown>, orderId:
     console.error("Tee order not sent to the printer:", err);
     await fail(err instanceof Error ? err.message : String(err));
   }
+  return order;
 }

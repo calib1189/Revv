@@ -8,6 +8,8 @@ import { fulfillTeeOrder } from "@/features/merch/fulfill";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { SHOP_PROMOTION_DURATION_DAYS } from "@/lib/db/shop-promotions";
 import { applyPromotionPicture } from "@/lib/db/shop-pictures";
+import { notifyAdminsOfSale } from "@/lib/admin/notify-sale";
+import { adSale, decalSale, meetSale, pointsSale, posterSale, shopPromotionSale, teeSale } from "@/lib/sales/sale";
 
 // A paid poster is rendered and sent to the printer after the webhook
 // has answered (posters/fulfill.ts); this is the time that work gets.
@@ -45,15 +47,23 @@ export async function POST(request: NextRequest) {
       // card" and something actually appearing in the public feed.
       const campaignId = metadata.campaign_id;
       if (campaignId) {
-        const { error } = await supabase
+        // Only from pending_payment: a retried webhook mustn't pull an
+        // ad an admin already approved back into review, or push twice.
+        const { data: campaign, error } = await supabase
           .from("ad_campaigns")
           .update({
             status: "pending_review",
             stripe_checkout_session_id: (session.id as string) ?? null,
           })
-          .eq("id", campaignId);
+          .eq("id", campaignId)
+          .eq("status", "pending_payment")
+          .select("advertiser_id, tier, headline, price_cents")
+          .maybeSingle();
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+        if (campaign) {
+          after(() => notifyAdminsOfSale({ buyerId: campaign.advertiser_id, amountCents: campaign.price_cents, item: adSale(campaign) }));
         }
       }
       return NextResponse.json({ received: true });
@@ -65,15 +75,21 @@ export async function POST(request: NextRequest) {
       // doesn't mean the listing's content has actually been looked at.
       const meetupId = metadata.meetup_id;
       if (meetupId) {
-        const { error } = await supabase
+        const { data: meetup, error } = await supabase
           .from("meetups")
           .update({
             status: "pending_review",
             stripe_checkout_session_id: (session.id as string) ?? null,
           })
-          .eq("id", meetupId);
+          .eq("id", meetupId)
+          .eq("status", "pending_payment")
+          .select("host_id, tier, title, price_cents")
+          .maybeSingle();
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+        if (meetup) {
+          after(() => notifyAdminsOfSale({ buyerId: meetup.host_id, amountCents: meetup.price_cents, item: meetSale(meetup) }));
         }
       }
       return NextResponse.json({ received: true });
@@ -96,6 +112,7 @@ export async function POST(request: NextRequest) {
             stripe_checkout_session_id: (session.id as string) ?? null,
           })
           .eq("id", promotionId)
+          .eq("status", "pending_payment")
           .select("*")
           .maybeSingle();
         if (error) {
@@ -109,6 +126,9 @@ export async function POST(request: NextRequest) {
           } catch (pictureError) {
             console.error("Shop promotion picture not applied:", pictureError);
           }
+          after(() =>
+            notifyAdminsOfSale({ buyerId: promotion.promoter_id, amountCents: promotion.price_cents, item: shopPromotionSale(promotion) }),
+          );
         }
       }
       return NextResponse.json({ received: true });
@@ -121,7 +141,7 @@ export async function POST(request: NextRequest) {
       const pack = packById(metadata.pack_id ?? "");
       if (pack && metadata.user_id && session.payment_status === "paid" && Number(session.amount_total) === pack.priceCents) {
         try {
-          await creditPointsPurchase({
+          const credited = await creditPointsPurchase({
             userId: metadata.user_id,
             provider: "stripe",
             providerRef: String(session.id),
@@ -129,6 +149,10 @@ export async function POST(request: NextRequest) {
             amountCents: pack.priceCents,
             currency: String(session.currency ?? "usd"),
           });
+          const buyerId = metadata.user_id;
+          if (credited.isNew) {
+            after(() => notifyAdminsOfSale({ buyerId, amountCents: pack.priceCents, item: pointsSale({ points: pack.points, provider: "stripe" }) }));
+          }
         } catch (creditError) {
           console.error("Points pack not credited:", creditError);
           return NextResponse.json({ error: "Not credited" }, { status: 500 });
@@ -140,7 +164,8 @@ export async function POST(request: NextRequest) {
     if (metadata?.type === "rank_decal") {
       if (metadata.order_id) {
         try {
-          await fulfillDecalOrder(session, metadata.order_id);
+          const order = await fulfillDecalOrder(session, metadata.order_id);
+          if (order) after(() => notifyAdminsOfSale({ buyerId: order.user_id, amountCents: order.amount_cents, item: decalSale(order) }));
         } catch (decalError) {
           console.error("Decal order not processed:", decalError);
           return NextResponse.json({ error: "Not processed" }, { status: 500 });
@@ -156,7 +181,11 @@ export async function POST(request: NextRequest) {
           // Marked paid now, so a retried webhook doesn't print twice;
           // the print file takes several seconds to render, so that part
           // runs once Stripe has its answer.
-          if (await markPosterPaid(session, orderId)) after(() => printPosterOrder(session, orderId));
+          const order = await markPosterPaid(session, orderId);
+          if (order) {
+            after(() => printPosterOrder(session, orderId));
+            after(() => notifyAdminsOfSale({ buyerId: order.user_id, amountCents: order.amount_cents, item: posterSale(order) }));
+          }
         } catch (posterError) {
           console.error("Poster order not processed:", posterError);
           return NextResponse.json({ error: "Not processed" }, { status: 500 });
@@ -168,7 +197,8 @@ export async function POST(request: NextRequest) {
     if (metadata?.type === "sorza_tee") {
       if (metadata.order_id) {
         try {
-          await fulfillTeeOrder(session, metadata.order_id);
+          const order = await fulfillTeeOrder(session, metadata.order_id);
+          if (order) after(() => notifyAdminsOfSale({ buyerId: order.user_id, amountCents: order.amount_cents, item: teeSale(order) }));
         } catch (teeError) {
           console.error("Tee order not processed:", teeError);
           return NextResponse.json({ error: "Not processed" }, { status: 500 });
