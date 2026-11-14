@@ -833,6 +833,31 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   animation: verified-sheen 1.15s var(--ease-ios) 0.9s both;
 }
 
+/* ---- Invite badges ---------------------------------------------------
+   A band of light crosses an earned invite badge every few seconds, like
+   a polished piece catching the light as it turns (an SVG rect, so px
+   are viewBox units). Still for anyone who asks for less motion. */
+@keyframes invite-badge-shine {
+  0%,
+  62% {
+    transform: translateX(-60px) skewX(-22deg);
+  }
+  100% {
+    transform: translateX(60px) skewX(-22deg);
+  }
+}
+
+.animate-invite-badge-shine {
+  transform: translateX(-60px) skewX(-22deg);
+  animation: invite-badge-shine 4.4s var(--ease-ios) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-invite-badge-shine {
+    animation: none;
+  }
+}
+
 /* The check stroke drawing itself in (path has pathLength="1"). */
 @keyframes seal-check-draw {
   from {

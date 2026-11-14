@@ -8,6 +8,9 @@ import { tutorialStartStep } from "@/lib/tutorial/steps";
 import { isPlaceholderUsername, suggestUsernameBases, usernameCandidates } from "@/lib/validation/username";
 import { TutorialHost } from "@/features/tutorial/tutorial-host";
 import { ChooseUsernameScreen } from "@/features/onboarding/choose-username-screen";
+import { InvitePromo } from "@/features/invites/invite-promo";
+import { hasSeenAnnouncement } from "@/lib/db/announcement-views";
+import { INVITE_ANNOUNCEMENT, isAnnouncementAgeReady } from "@/lib/announcements";
 
 /** A free username built from what Google or Apple shared, or null. */
 async function suggestFreeUsername(supabase: SupabaseClient<Database>, user: User): Promise<string | null> {
@@ -29,6 +32,8 @@ async function suggestFreeUsername(supabase: SupabaseClient<Database>, user: Use
  *    box on /welcome that most people skipped, which left them unfindable
  *    and unrecognisable in the feed.
  * 2. After that, the first-time walkthrough.
+ * 3. Once that's done, a one-time announcement (the invite program) for
+ *    accounts at least a day old.
  *
  * Only for confirmed accounts (only they can save either), and nothing is
  * shown when the reads fail, so neither can end up on every launch.
@@ -48,5 +53,27 @@ export async function FirstRunGate({ user }: { user: User }) {
     const suggestion = await suggestFreeUsername(supabase, user).catch(() => null);
     return <ChooseUsernameScreen suggestion={suggestion} />;
   }
+  if (startStep === null && profile && (await shouldShowInvitePromo(supabase, profile.id, profile.created_at))) {
+    return (
+      <>
+        <TutorialHost startStep={startStep} />
+        <InvitePromo />
+      </>
+    );
+  }
   return <TutorialHost startStep={startStep} />;
+}
+
+/** Not yet seen on any device. False when it can't be read (before 0122),
+ * so a failed read never shows it on every launch. */
+async function shouldShowInvitePromo(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  createdAt: string,
+): Promise<boolean> {
+  if (!isAnnouncementAgeReady(createdAt, Date.now())) return false;
+  return hasSeenAnnouncement(supabase, userId, INVITE_ANNOUNCEMENT).then(
+    (seen) => !seen,
+    () => false,
+  );
 }

@@ -1,6 +1,7 @@
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import type { AchievementDef } from "@/lib/achievements/catalog";
 import { medalDesign, type MedalPattern, type MedalShape } from "@/lib/achievements/medal";
+import { InviteBadge, inviteBadgeRung } from "@/features/invites/invite-badge";
 
 // Every medal is drawn on a 64x64 grid, centred on (32, 32).
 const C = 32;
@@ -140,6 +141,9 @@ export function AchievementMedal({
     const TierIcon = RANK_MATERIAL_ICONS[achievement.tier];
     return <TierIcon className={className} />;
   }
+  // The invite rewards have their own drawn set (bronze to obsidian).
+  const inviteRung = inviteBadgeRung(achievement.id);
+  if (inviteRung) return <InviteBadge rung={inviteRung} className={className} compact={compact} />;
 
   const { shape, color, pattern, mark } = medalDesign(achievement);
   const Icon = achievement.icon;

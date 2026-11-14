@@ -5,6 +5,7 @@ import { SITE_URL } from "@/lib/site-url";
 import { relativeTime } from "@/lib/format/relative-time";
 import { Avatar } from "@/features/feed/avatar";
 import { InviteLinkCard } from "@/features/invites/invite-link-card";
+import { InviteBadge, inviteBadgeRung } from "@/features/invites/invite-badge";
 import { SectionTitle } from "@/components/ui/grouped-list";
 import { CheckIcon, UsersIcon } from "@/components/ui/icons";
 
@@ -72,15 +73,27 @@ export function InviteView({
           <ul className="glass-raised elev-1 overflow-hidden rounded-[22px]">
             {INVITE_TIERS.map((tier, i) => {
               const reached = counted >= tier.count;
+              const rung = inviteBadgeRung(tier.achievementId);
               return (
-                <li key={tier.count} className="relative flex items-center gap-4 px-4 py-3.5">
-                  {i > 0 && <span className="absolute left-[4.25rem] right-0 top-0 h-px bg-border" />}
-                  <span
-                    className={`numeral flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-[0.9375rem] font-bold ${
-                      reached ? "bg-success text-white" : "bg-foreground/[0.07] text-muted"
-                    }`}
-                  >
-                    {reached ? <CheckIcon className="h-4.5 w-4.5" /> : tier.count}
+                <li key={tier.count} className="relative flex items-center gap-4 px-4 py-3">
+                  {i > 0 && <span className="absolute left-[5.5rem] right-0 top-0 h-px bg-border" />}
+                  {/* Unearned badges show their art in grey, like the
+                      achievements case. */}
+                  <span className="relative flex-shrink-0">
+                    {rung && (
+                      <InviteBadge
+                        rung={rung}
+                        className={`h-16 w-16 ${reached ? "" : "opacity-40 grayscale"}`}
+                        shine={reached}
+                        shineDelay={i * 0.5}
+                        compact
+                      />
+                    )}
+                    {reached && (
+                      <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-success text-white ring-2 ring-background">
+                        <CheckIcon className="h-3 w-3" />
+                      </span>
+                    )}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[0.9375rem] font-semibold">{tier.name}</span>
