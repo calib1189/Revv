@@ -31,6 +31,8 @@ INK = (17, 17, 20)  # near-black for the white shirt
 RED = (225, 20, 31)  # #E1141F, the logo's red
 GREY = (160, 160, 164)  # the App Store line: solid grey, not translucent white
 
+TAG_GREY = (110, 110, 116)  # the App Store line on the white shirt
+
 
 def s(v: float) -> int:
     return round(v * K)
@@ -91,6 +93,18 @@ def chest_mark(tmp: Path, tone: str) -> Image.Image:
     return c
 
 
+def app_store_tag(back: Image.Image, d: ImageDraw.ImageDraw, tmp: Path, y: float, tone: str, line_fill) -> None:
+    """The SORZA wordmark with NOW ON THE APP STORE under it, the two the
+    same width, at the foot of a back."""
+    f = font("Geist-Medium", 34)
+    text = "NOW ON THE APP STORE"
+    tracking = 12
+    width = (sum(d.textlength(c, font=f) for c in text) + s(tracking) * (len(text) - 1)) / K
+    word = logo(tmp, "word", tone, width)
+    centered(back, word, y)
+    spaced(d, 731, y + word.height / K + 30, text, f, line_fill, tracking)
+
+
 def big_s(tmp: Path) -> tuple[Image.Image, Image.Image]:
     front = canvas()
     centered(front, logo(tmp, "word", "white", 600), 280)
@@ -104,7 +118,7 @@ def big_s(tmp: Path) -> tuple[Image.Image, Image.Image]:
     f = font("Geist-Medium", 70)
     spaced(d, 731, y + 70, "THE SOCIAL NETWORK", f, WHITE, 22)
     spaced(d, 731, y + 170, "FOR CAR ENTHUSIASTS", f, WHITE, 22)
-    spaced(d, 731, y + 330, "AVAILABLE ON THE APP STORE", font("GeistMono-Regular", 46), GREY, 18)
+    app_store_tag(back, d, tmp, y + 320, "white", GREY)
     return front, back
 
 
@@ -112,11 +126,11 @@ def built_rated_ranked(tmp: Path) -> tuple[Image.Image, Image.Image]:
     front = chest_mark(tmp, "ink")
     back = canvas()
     d = ImageDraw.Draw(back)
-    centered(back, logo(tmp, "mark", "ink", 980), 400)
+    centered(back, logo(tmp, "mark", "ink", 980), 340)
     f = font("Geist-Bold", 190)
     for i, (word, color) in enumerate((("BUILT.", INK), ("RATED.", INK), ("RANKED.", RED))):
-        spaced(d, 731, 1100 + i * 230, word, f, color, 6)
-    spaced(d, 731, 1870, "SORZA.NET", font("GeistMono-Regular", 46), INK, 22)
+        spaced(d, 731, 1030 + i * 230, word, f, color, 6)
+    app_store_tag(back, d, tmp, 1785, "ink", TAG_GREY)
     return front, back
 
 
