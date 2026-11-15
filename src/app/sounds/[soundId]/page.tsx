@@ -6,7 +6,25 @@ import { listPostsBySound } from "@/lib/db/posts";
 import { composeThumbnails } from "@/lib/feed/compose-thumbnails";
 import { PostThumbnailGrid } from "@/features/profile/post-thumbnail-grid";
 import { SoundCredit } from "@/features/sounds/sound-credit";
-import { SoundBackButton, SoundPreview } from "@/features/sounds/sound-preview";
+import { SoundBackButton, SoundPreview, type SoundOwner } from "@/features/sounds/sound-preview";
+import { getProfileByUserId } from "@/lib/db/profiles";
+import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+
+type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
+
+/** Who posted an original sound, for its record cover. Their current
+ * username, so a rename shows here too. Best-effort: no record, just the
+ * plain cover, if it can't be read. */
+async function loadOwner(supabase: ServerSupabase, ownerId: string): Promise<SoundOwner | null> {
+  try {
+    const profile = await getProfileByUserId(supabase, ownerId);
+    if (!profile) return null;
+    const [avatar] = profile.avatar_media_id ? await getMediaByIds(supabase, [profile.avatar_media_id]) : [];
+    return { username: profile.username, avatarUrl: avatar ? publicMediaUrl(supabase, avatar.storage_path) : null };
+  } catch {
+    return null;
+  }
+}
 import { MusicIcon } from "@/components/ui/icons";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 
@@ -23,9 +41,10 @@ export default async function SoundPage({ params }: { params: Promise<{ soundId:
   const sound = await getSoundById(supabase, soundId);
   if (!sound) notFound();
 
-  const [posts, usageCount] = await Promise.all([
+  const [posts, usageCount, owner] = await Promise.all([
     listPostsBySound(supabase, sound.id, { limit: 60 }),
     getSoundUsageCount(supabase, sound.id),
+    sound.source === "post_audio" && sound.owner_id ? loadOwner(supabase, sound.owner_id) : Promise.resolve(null),
   ]);
   const thumbnails = await composeThumbnails(supabase, posts);
 
@@ -35,10 +54,21 @@ export default async function SoundPage({ params }: { params: Promise<{ soundId:
         <SoundBackButton />
 
         <header className="mt-2 flex items-center gap-4">
-          <SoundPreview soundId={sound.id} url={publicSoundUrl(supabase, sound.storage_path)} title={sound.title} />
+          <SoundPreview
+            soundId={sound.id}
+            url={publicSoundUrl(supabase, sound.storage_path)}
+            title={sound.title}
+            owner={owner}
+          />
           <div className="min-w-0">
             <h1 className="line-clamp-2 text-[1.375rem] font-bold leading-tight tracking-[-0.02em]">{sound.title}</h1>
-            <p className="mt-0.5 truncate text-[0.9375rem] text-muted">{sound.artist_name || "Unknown artist"}</p>
+            {owner ? (
+              <Link href={`/u/${owner.username}`} className="mt-0.5 block truncate text-[0.9375rem] text-muted">
+                {owner.username}
+              </Link>
+            ) : (
+              <p className="mt-0.5 truncate text-[0.9375rem] text-muted">{sound.artist_name || "Unknown artist"}</p>
+            )}
             <p className="mt-1.5 text-[0.8125rem] text-muted">
               <span className="numeral font-semibold text-foreground">{formatCompactNumber(usageCount)}</span>{" "}
               {usageCount === 1 ? "video" : "videos"}
