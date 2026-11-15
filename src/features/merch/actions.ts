@@ -5,22 +5,22 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { createTeeCheckoutSession } from "@/lib/billing/stripe";
-import { merchEnabled, teeOrderLine } from "@/lib/merch/products";
+import { merchEnabled, teeOrderLine, TEE_COLOR_INFO } from "@/lib/merch/products";
 import { SITE_URL } from "@/lib/site-url";
 
 type Result = { ok: true; url: string } | { ok: false; error: string };
 
-/** Starts a tee order: the design, size, variant and price are looked up
+/** Starts a tee order: the design, size, colour, variant and price are looked up
  * here (never trusted from the page), then Stripe's checkout collects
  * payment and the shipping address. */
-export async function startTeeOrderAction(designId: string, size: string): Promise<Result> {
+export async function startTeeOrderAction(designId: string, size: string, color: string): Promise<Result> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "Log in to order a shirt." };
   const supabase = await createClient();
   const profile = await getProfileByUserId(supabase, user.id).catch(() => null);
   if (!merchEnabled(profile?.is_admin ?? false)) return { ok: false, error: "Shirts aren't available yet." };
-  const line = teeOrderLine(designId, size);
-  if (!line) return { ok: false, error: "Pick a size." };
+  const line = teeOrderLine(designId, size, color);
+  if (!line) return { ok: false, error: "Pick a size and colour." };
 
   const service = createServiceRoleClient();
   const { data: order, error } = await service
@@ -43,7 +43,7 @@ export async function startTeeOrderAction(designId: string, size: string): Promi
     const session = await createTeeCheckoutSession({
       orderId: order.id,
       name: `SORZA tee: ${line.design.name}`,
-      description: `${line.design.color}, size ${line.size}. Gildan 5000 heavy cotton. Free US shipping.`,
+      description: `${TEE_COLOR_INFO[line.color].label}, size ${line.size}. Gildan 5000 heavy cotton. Free US shipping.`,
       priceCents: line.priceCents,
       customerEmail: user.email ?? null,
       successUrl: `${SITE_URL}/store?tee=ordered`,

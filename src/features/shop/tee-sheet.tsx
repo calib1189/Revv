@@ -3,31 +3,40 @@
 import { useState } from "react";
 import { Sheet } from "@/components/ui/sheet";
 import { TeeTurntable } from "@/features/shop/tee-turntable";
+import { TeeZoomViewer } from "@/features/shop/tee-zoom-viewer";
+import { ExpandIcon } from "@/components/ui/icons";
 import { startTeeOrderAction } from "@/features/merch/actions";
-import { TEE_FROM_CENTS, TEE_SIZES, teePhotos3d, teePriceCents, type TeeDesign, type TeeSize } from "@/lib/merch/products";
+import {
+  TEE_COLORS,
+  TEE_COLOR_INFO,
+  TEE_FROM_CENTS,
+  TEE_SIZES,
+  teePhotos3d,
+  teePhotos4k,
+  teePriceCents,
+  type TeeColor,
+  type TeeDesign,
+  type TeeSize,
+} from "@/lib/merch/products";
 import { formatUsd } from "@/lib/points/packs";
 
-const COLOR: Record<TeeDesign["color"], { label: string; swatch: string }> = {
-  Black: { label: "Black", swatch: "#141313" },
-  White: { label: "White", swatch: "#fffefa" },
-  "Dark Heather": { label: "Dark heather grey", swatch: "#595959" },
-};
-
-/** One tee: spin it in 3D, pick a size, order. */
+/** One tee: spin it in 3D, pick a colour and a size, order. */
 export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: boolean; onClose: () => void }) {
   const [side, setSide] = useState<"front" | "back">("front");
   const [snap, setSnap] = useState<{ side: "front" | "back"; n: number } | null>(null);
   const [size, setSize] = useState<TeeSize | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const photos = teePhotos3d(design.id);
-  const color = COLOR[design.color];
+  const [zoomSide, setZoomSide] = useState<"front" | "back" | null>(null);
+  const [colorId, setColorId] = useState<TeeColor>(design.defaultColor);
+  const photos = teePhotos3d(design.id, colorId);
+  const color = TEE_COLOR_INFO[colorId];
 
   async function order() {
     if (!size) return;
     setBusy(true);
     setError(null);
-    const result = await startTeeOrderAction(design.id, size);
+    const result = await startTeeOrderAction(design.id, size, colorId);
     if (!result.ok) {
       setError(result.error);
       setBusy(false);
@@ -38,14 +47,33 @@ export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: b
 
   return (
     <Sheet open={open} onClose={onClose} title={design.name}>
+      {zoomSide && (
+        <TeeZoomViewer
+          name={`${design.name}, ${color.label.toLowerCase()}`}
+          photos={teePhotos4k(design.id, colorId)}
+          previews={photos}
+          initialSide={zoomSide}
+          onClose={() => setZoomSide(null)}
+        />
+      )}
       <div className="flex flex-col gap-5">
         <div className="relative overflow-hidden rounded-[28px] bg-[radial-gradient(70%_60%_at_50%_38%,#5a5a64,#1e1e23_72%)] px-6 pb-5 pt-4">
+          <button
+            type="button"
+            onClick={() => setZoomSide(side)}
+            aria-label={`View the ${side} in 4K, full screen`}
+            className="pressable absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 text-[0.75rem] font-bold text-white backdrop-blur-md"
+          >
+            <ExpandIcon className="h-3.5 w-3.5" />
+            4K
+          </button>
           <TeeTurntable
             front={photos.front}
             back={photos.back}
             alt={`${design.name} tee`}
             snapTo={snap}
             onSideChange={setSide}
+            onTap={setZoomSide}
             className="mx-auto w-full max-w-[290px]"
           />
           <div className="mt-3 flex justify-center gap-1 rounded-full bg-black/35 p-1 backdrop-blur-md" role="radiogroup" aria-label="Side">
@@ -76,6 +104,35 @@ export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: b
             {color.label} · Gildan 5000 heavy cotton
           </p>
           <p className="mt-2 text-[0.875rem] leading-snug text-muted">{design.detail}.</p>
+        </div>
+
+        <div>
+          <p className="mb-2 text-[0.8125rem] font-semibold">Color</p>
+          <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Color">
+            {TEE_COLORS.map((c) => {
+              const info = TEE_COLOR_INFO[c];
+              const selected = c === colorId;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setColorId(c)}
+                  className={`pressable flex h-12 items-center justify-center gap-2 rounded-[14px] text-[0.875rem] font-semibold ring-1 transition-colors ${
+                    selected ? "bg-foreground text-background ring-foreground" : "bg-foreground/[0.04] ring-border"
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className={`h-4 w-4 rounded-full ring-1 ${selected ? "ring-background/40" : "ring-white/30"}`}
+                    style={{ background: info.swatch }}
+                  />
+                  {info.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div>

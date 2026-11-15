@@ -87,7 +87,7 @@ type Product =
 
 const searchText = (p: Product): string =>
   p.kind === "tee"
-    ? `${p.design.name} tee shirt ${p.design.color}`
+    ? `${p.design.name} tee shirt black grey gray white`
     : p.kind === "decal"
       ? `${RANK_LABELS[p.offer.tier]} rank decal sticker ${p.offer.carName}`
       : p.kind === "poster"

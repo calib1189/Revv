@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PosterThumb } from "@/features/posters/poster-card";
 import type { PosterOffer } from "@/lib/posters/offer";
 import type { RankTier } from "@/lib/rating/rank";
-import { teePhotos3d, type TeeDesignId } from "@/lib/merch/products";
+import { teePhotos3d, teeById, type TeeDesignId } from "@/lib/merch/products";
 
 /** The neutral stage every product sits on in the shop. */
 export const PRODUCT_STAGE = "bg-[radial-gradient(75%_60%_at_50%_35%,#3a3a42,#141417_78%)]";
@@ -51,7 +51,7 @@ export function PosterPrint({ offer, width = 420, className = "" }: { offer: Pos
 
 /** A tee's front, floating with its shadow, for the shop grid. */
 export function TeeStill({ design, alt, className = "" }: { design: TeeDesignId; alt: string; className?: string }) {
-  const { front } = teePhotos3d(design);
+  const { front } = teePhotos3d(design, teeById(design)?.defaultColor ?? "black");
   return (
     <div className={`relative ${className}`}>
       <div aria-hidden className="absolute bottom-[3%] left-1/2 h-[5%] w-[58%] -translate-x-1/2 rounded-[50%] bg-black/50 blur-[8px]" />

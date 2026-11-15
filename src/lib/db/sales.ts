@@ -37,7 +37,7 @@ export async function listRecentSales(supabase: SupabaseClient<Database>, days =
       .then((r) => r.data ?? [], none),
     supabase
       .from("tee_orders")
-      .select("id, user_id, design, size, status, amount_cents, error, created_at")
+      .select("id, user_id, design, size, variant_id, status, amount_cents, error, created_at")
       .in("status", PAID_ORDER)
       .gte("created_at", since)
       .order("created_at", { ascending: false })

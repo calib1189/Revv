@@ -42,6 +42,8 @@ describe("formatSaleAmount", () => {
 
 describe("salePush", () => {
   it("says who bought what, for how much, and opens Sales", () => {
+    expect(teeSale({ design: "big-s", size: "L", variant_id: 15845 }).detail).toBe("Grey · size L");
+    expect(teeSale({ design: "big-s", size: "L" }).detail).toBe("Size L");
     expect(salePush(teeSale({ design: "big-s", size: "L" }), 2999, "s55")).toEqual({
       title: "New sale · $29.99",
       body: "@s55 bought a Big S tee",

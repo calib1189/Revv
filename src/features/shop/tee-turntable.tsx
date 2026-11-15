@@ -23,6 +23,7 @@ export function TeeTurntable({
   alt,
   snapTo,
   onSideChange,
+  onTap,
   className = "",
 }: {
   front: string;
@@ -31,6 +32,8 @@ export function TeeTurntable({
   /** Turn to a side (the Front / Back buttons); `n` changes on every tap. */
   snapTo?: { side: "front" | "back"; n: number } | null;
   onSideChange?: (side: "front" | "back") => void;
+  /** A tap (not a drag) on the shirt, with the side facing you. */
+  onTap?: (side: "front" | "back") => void;
   className?: string;
 }) {
   const [angle, setAngle] = useState(-SWAY_DEG);
@@ -140,8 +143,11 @@ export function TeeTurntable({
         if (!hinted) setHinted(true);
       }}
       onPointerUp={() => {
+        const d = drag.current;
         drag.current = null;
         idleFrom.current = performance.now() + RESUME_MS;
+        // Barely moved and quick: a tap, not the start of a turn.
+        if (d && !d.decided && performance.now() - d.lastT < 400) onTap?.(facingRef.current);
       }}
       onPointerCancel={() => {
         drag.current = null;

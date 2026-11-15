@@ -3,6 +3,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import { RANK_LABELS, type RankTier } from "@/lib/rating/rank";
 import { posterProductById } from "@/lib/posters/products";
 import { teeById } from "@/lib/merch/products";
+import { teeSale } from "@/lib/sales/sale";
 
 /** One printed order, for the shop's Orders list. */
 export interface ShopOrder {
@@ -32,7 +33,7 @@ export async function listMyShopOrders(supabase: SupabaseClient<Database>, userI
   const [decals, posters, tees] = await Promise.all([
     supabase.from("decal_orders").select("id, tier, status, amount_cents, created_at").eq("user_id", userId).gte("created_at", since).then((r) => r.data ?? [], () => []),
     supabase.from("poster_orders").select("id, product, status, amount_cents, created_at").eq("user_id", userId).gte("created_at", since).then((r) => r.data ?? [], () => []),
-    supabase.from("tee_orders").select("id, design, size, status, amount_cents, created_at").eq("user_id", userId).gte("created_at", since).then((r) => r.data ?? [], () => []),
+    supabase.from("tee_orders").select("id, design, size, variant_id, status, amount_cents, created_at").eq("user_id", userId).gte("created_at", since).then((r) => r.data ?? [], () => []),
   ]);
   const out: ShopOrder[] = [];
   for (const o of decals) {
@@ -47,7 +48,7 @@ export async function listMyShopOrders(supabase: SupabaseClient<Database>, userI
   for (const o of tees) {
     const status = STATUS[o.status];
     const design = teeById(o.design);
-    if (status) out.push({ id: o.id, kind: "tee", title: `${design?.name ?? "SORZA"} tee`, detail: `Size ${o.size}`, status, amountCents: o.amount_cents, createdAt: o.created_at });
+    if (status) out.push({ id: o.id, kind: "tee", title: `${design?.name ?? "SORZA"} tee`, detail: teeSale(o).detail, status, amountCents: o.amount_cents, createdAt: o.created_at });
   }
   return out.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }

@@ -1,6 +1,6 @@
 import { RANK_LABELS, type RankTier } from "@/lib/rating/rank";
 import { posterProductById } from "@/lib/posters/products";
-import { teeById } from "@/lib/merch/products";
+import { teeById, teeColorForVariant, TEE_COLOR_INFO } from "@/lib/merch/products";
 import { AD_TIERS, type AdTier } from "@/lib/db/ad-campaigns";
 import { MEETUP_TIERS, type MeetupTier } from "@/lib/db/meetups";
 import { SHOP_PROMOTION_TIERS, type ShopPromotionTier } from "@/lib/db/shop-promotions";
@@ -46,8 +46,10 @@ export function pointsSale(row: { points: number; provider: string }): SaleItem 
   };
 }
 
-export function teeSale(row: { design: string; size: string }): SaleItem {
-  return { kind: "tee", title: `${teeById(row.design)?.name ?? "SORZA"} tee`, detail: `Size ${row.size}` };
+export function teeSale(row: { design: string; size: string; variant_id?: number }): SaleItem {
+  const color = row.variant_id != null ? teeColorForVariant(row.variant_id) : null;
+  const detail = color ? `${TEE_COLOR_INFO[color].label} · size ${row.size}` : `Size ${row.size}`;
+  return { kind: "tee", title: `${teeById(row.design)?.name ?? "SORZA"} tee`, detail };
 }
 
 export function posterSale(row: { product: string }): SaleItem {

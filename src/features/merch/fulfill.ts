@@ -2,7 +2,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { createPrintfulOrder } from "@/lib/decals/printful";
 import { recipientFromSession } from "@/lib/decals/fulfill";
-import { teeById, teePrintFiles } from "@/lib/merch/products";
+import { teeById, teeColorForVariant, teePrintFiles } from "@/lib/merch/products";
 import { SITE_URL } from "@/lib/site-url";
 
 /** Marks the order paid and sends it to the printer. Stripe retries
@@ -11,7 +11,7 @@ import { SITE_URL } from "@/lib/site-url";
  * admin to follow up rather than retried blindly: the customer has paid.
  * Returns the order when this call recorded the payment, null for a
  * retry or an unpaid session. */
-export async function fulfillTeeOrder(session: Record<string, unknown>, orderId: string): Promise<{ user_id: string; amount_cents: number; design: string; size: string } | null> {
+export async function fulfillTeeOrder(session: Record<string, unknown>, orderId: string): Promise<{ user_id: string; amount_cents: number; design: string; size: string; variant_id: number } | null> {
   if (session.payment_status !== "paid") return null;
   const supabase = createServiceRoleClient();
   const { data: order, error } = await supabase
@@ -35,6 +35,10 @@ export async function fulfillTeeOrder(session: Record<string, unknown>, orderId:
   if (Number(session.amount_total) !== order.amount_cents) return fail(`Paid ${String(session.amount_total)}, expected ${order.amount_cents}.`);
   const design = teeById(order.design);
   if (!design) return fail(`Unknown design ${order.design}.`);
+  // The colour is the Printful variant saved on the order, which also
+  // picks the ink: dark on white, white on black and grey.
+  const color = teeColorForVariant(order.variant_id);
+  if (!color) return fail(`Unknown shirt variant ${order.variant_id}.`);
   const recipient = recipientFromSession(session);
   if (!recipient) return fail("No complete shipping address on the Stripe session.");
 
@@ -42,7 +46,7 @@ export async function fulfillTeeOrder(session: Record<string, unknown>, orderId:
     const printerOrderId = await createPrintfulOrder({
       orderId: order.id,
       recipient,
-      files: teePrintFiles(design.id, SITE_URL),
+      files: teePrintFiles(design.id, color, SITE_URL),
       previewName: `SORZA tee: ${design.name} (${order.size})`,
       variantId: order.variant_id,
     });

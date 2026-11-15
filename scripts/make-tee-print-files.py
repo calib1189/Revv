@@ -7,7 +7,8 @@ Logos are the official vectors (src/features/posters/assets), rasterized
 by sharp; type is Geist (src/features/posters/fonts). Inks are solid
 colors, no partial transparency, so DTG prints them clean.
 
-Writes public/merch/print/{design}-{front,back}.png.
+Writes public/merch/print/{design}-{front,back}-{ink,white}.png: ink for
+the white shirt, white for the black and dark heather grey ones.
 
     python scripts/make-tee-print-files.py
 """
@@ -105,40 +106,56 @@ def app_store_tag(back: Image.Image, d: ImageDraw.ImageDraw, tmp: Path, y: float
     spaced(d, 731, y + word.height / K + 30, text, f, line_fill, tracking)
 
 
-def big_s(tmp: Path) -> tuple[Image.Image, Image.Image]:
+# Every design comes in two inks: "ink" (near-black) for the white shirt,
+# "white" for the black and dark heather grey ones. The red stays red.
+TONES = ("ink", "white")
+
+
+def fg(tone: str):
+    return INK if tone == "ink" else WHITE
+
+
+def muted(tone: str):
+    return TAG_GREY if tone == "ink" else GREY
+
+
+def big_s(tmp: Path, tone: str) -> tuple[Image.Image, Image.Image]:
     front = canvas()
-    centered(front, logo(tmp, "word", "white", 600), 280)
+    centered(front, logo(tmp, "word", tone, 600), 280)
 
     back = canvas()
     d = ImageDraw.Draw(back)
-    m = logo(tmp, "mark", "white", 900)
+    m = logo(tmp, "mark", tone, 900)
     centered(back, m, 470)
     y = 470 + m.height / K + 110
     d.rectangle([s(731 - 60), s(y), s(731 + 60), s(y + 8)], fill=RED)
     f = font("Geist-Medium", 70)
-    spaced(d, 731, y + 70, "THE SOCIAL NETWORK", f, WHITE, 22)
-    spaced(d, 731, y + 170, "FOR CAR ENTHUSIASTS", f, WHITE, 22)
-    app_store_tag(back, d, tmp, y + 320, "white", GREY)
+    spaced(d, 731, y + 70, "THE SOCIAL NETWORK", f, fg(tone), 22)
+    spaced(d, 731, y + 170, "FOR CAR ENTHUSIASTS", f, fg(tone), 22)
+    app_store_tag(back, d, tmp, y + 320, tone, muted(tone))
     return front, back
 
 
-def built_rated_ranked(tmp: Path) -> tuple[Image.Image, Image.Image]:
-    front = chest_mark(tmp, "ink")
+def built_rated_ranked(tmp: Path, tone: str) -> tuple[Image.Image, Image.Image]:
+    front = chest_mark(tmp, tone)
     back = canvas()
     d = ImageDraw.Draw(back)
-    centered(back, logo(tmp, "mark", "ink", 980), 340)
+    centered(back, logo(tmp, "mark", tone, 980), 340)
     f = font("Geist-Bold", 190)
-    for i, (word, color) in enumerate((("BUILT.", INK), ("RATED.", INK), ("RANKED.", RED))):
+    for i, (word, color) in enumerate((("BUILT.", fg(tone)), ("RATED.", fg(tone)), ("RANKED.", RED))):
         spaced(d, 731, 1030 + i * 230, word, f, color, 6)
-    app_store_tag(back, d, tmp, 1785, "ink", TAG_GREY)
+    app_store_tag(back, d, tmp, 1785, tone, muted(tone))
     return front, back
 
 
-def wordmark(tmp: Path) -> tuple[Image.Image, Image.Image]:
-    front = chest_mark(tmp, "white")
+def wordmark(tmp: Path, tone: str) -> tuple[Image.Image, Image.Image]:
+    front = chest_mark(tmp, tone)
     back = canvas()
-    centered(back, logo(tmp, "word", "white", 1402), 540)
+    centered(back, logo(tmp, "word", tone, 1402), 540)
     return front, back
+
+
+DESIGNS = (("big-s", big_s), ("built-rated-ranked", built_rated_ranked), ("wordmark", wordmark))
 
 
 def main() -> None:
@@ -146,16 +163,15 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
         rasterize_logos(tmp)
-        for design, (front, back) in (
-            ("big-s", big_s(tmp)),
-            ("built-rated-ranked", built_rated_ranked(tmp)),
-            ("wordmark", wordmark(tmp)),
-        ):
-            for side, im in (("front", front), ("back", back)):
-                bbox = im.getbbox()
-                assert bbox and bbox[3] <= H and bbox[2] <= W, (design, side, bbox)
-                im.save(OUT / f"{design}-{side}.png", optimize=True, dpi=(150, 150))
-                print(f"{design}-{side}.png", im.size, "art", bbox)
+        for design, make in DESIGNS:
+            for tone in TONES:
+                front, back = make(tmp, tone)
+                for side, im in (("front", front), ("back", back)):
+                    bbox = im.getbbox()
+                    assert bbox and bbox[3] <= H and bbox[2] <= W, (design, tone, side, bbox)
+                    name = f"{design}-{side}-{tone}.png"
+                    im.save(OUT / name, optimize=True, dpi=(150, 150))
+                    print(name, im.size, "art", bbox)
 
 
 if __name__ == "__main__":
