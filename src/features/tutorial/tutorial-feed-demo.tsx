@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { isOptimizableMediaUrl } from "@/components/ui/media-img";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { TutorialShowcase } from "@/lib/tutorial/showcase";
 import { CheckIcon, CommentIcon, HeartIcon, PlusIcon } from "@/components/ui/icons";
@@ -123,7 +124,7 @@ export function TutorialFeedDemo({ posts }: { posts: TutorialShowcase["posts"] }
                   <video src={p.mediaUrl} muted loop playsInline autoPlay preload="metadata" className="h-full w-full object-cover" />
                 ) : null
               ) : (
-                <Image src={p.mediaUrl} alt="" fill unoptimized sizes="300px" className="object-cover" draggable={false} />
+                <Image src={p.mediaUrl} alt="" fill unoptimized={!isOptimizableMediaUrl(p.mediaUrl)} sizes="300px" className="object-cover" draggable={false} />
               )}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4 pr-16">
@@ -143,7 +144,7 @@ export function TutorialFeedDemo({ posts }: { posts: TutorialShowcase["posts"] }
                   className="relative mb-1 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white/15 ring-2 ring-white"
                 >
                   {p.authorAvatarUrl ? (
-                    <Image src={p.authorAvatarUrl} alt="" fill unoptimized sizes="40px" className="object-cover" />
+                    <Image src={p.authorAvatarUrl} alt="" fill unoptimized={!isOptimizableMediaUrl(p.authorAvatarUrl)} sizes="40px" className="object-cover" />
                   ) : (
                     <span className="text-[0.875rem] font-semibold uppercase">{p.authorUsername[0]}</span>
                   )}

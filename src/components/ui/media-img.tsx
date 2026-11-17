@@ -2,6 +2,12 @@ import { getImageProps } from "next/image";
 
 const SUPABASE_PUBLIC_STORAGE = /^https:\/\/[^/]+\.supabase\.co\/storage\/v1\/object\/public\//;
 
+/** True for SORZA's own uploads, the only remote host next.config.ts lets
+ * Next's image optimizer fetch. Anything else has to stay `unoptimized`. */
+export function isOptimizableMediaUrl(src: string): boolean {
+  return SUPABASE_PUBLIC_STORAGE.test(src);
+}
+
 /** A plain <img> for places where next/image's `fill` layout doesn't fit
  * (full-bleed feed slides, tiny list thumbnails). For SORZA's own uploads
  * it still goes through Next's image optimizer: the browser picks a

@@ -560,11 +560,11 @@ export function RatingReveal({
                 stack one under the other mid-crossfade. */}
             {OutgoingIcon && outgoingTier && (
               <div key={`out-${levelUpKey}`} className="reveal-badge-out absolute inset-0">
-                <OutgoingIcon className="h-full w-full" />
+                <OutgoingIcon className="h-full w-full" sizes="256px" />
               </div>
             )}
             <div key={`in-${displayedTier}`} className="reveal-badge-in absolute inset-0">
-              <Icon className="h-full w-full" style={{ filter: "drop-shadow(0 10px 28px rgb(0 0 0 / 0.5))" }} />
+              <Icon className="h-full w-full" sizes="256px" style={{ filter: "drop-shadow(0 10px 28px rgb(0 0 0 / 0.5))" }} />
             </div>
             {/* A shine across the badge as it lands — masked to the badge's
                 own silhouette, so it only ever lights the emblem itself. */}

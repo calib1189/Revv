@@ -11,33 +11,36 @@ import type { SponsoredSlideData } from "@/features/feed/sponsored-slide";
 
 export async function FeedPageContent() {
   const supabase = await createClient();
-  const [user, activeCampaigns] = await Promise.all([
-    getCurrentUser(),
-    listActiveCampaigns(supabase),
-  ]);
-  const [{ items }, dailyTeaser, storyTray] = await Promise.all([
-    listRankedFeedPosts(supabase, { viewerId: user?.id ?? null, limit: 8 }),
-    loadDailyTeaser(user?.id ?? null),
-    user ? loadStoryTray(supabase, user.id).catch(() => [] as TrayPerson[]) : Promise.resolve([] as TrayPerson[]),
-  ]);
-  const cards = await composePostCards(supabase, items.map((item) => item.post), user?.id ?? null);
-  const cardsWithCursor = cards.map((card, i) => ({ ...card, rankCursor: items[i].cursor }));
-
   // One ad slot, not a real rotation/pacing system — picking whichever
   // active campaign happens to be first is an honest reflection of that
-  // rather than pretending there's inventory management behind it.
-  const campaign = activeCampaigns[0] ?? null;
-  let ad: SponsoredSlideData | null = null;
-  if (campaign) {
+  // rather than pretending there's inventory management behind it. It
+  // doesn't depend on the viewer or the posts, so it loads alongside them
+  // instead of after them.
+  const adPromise = listActiveCampaigns(supabase).then(async (campaigns): Promise<SponsoredSlideData | null> => {
+    const campaign = campaigns[0] ?? null;
+    if (!campaign) return null;
     const media = await getMediaById(supabase, campaign.media_id);
-    ad = {
+    return {
       campaignId: campaign.id,
       headline: campaign.headline,
       caption: campaign.caption,
       destinationUrl: campaign.destination_url,
       photoUrl: media ? publicMediaUrl(supabase, media.storage_path) : null,
     };
-  }
+  // Best-effort, and caught here rather than at the await: an ad failing
+  // to load is never a reason for the feed itself to fail.
+  }).catch(() => null);
+  const user = await getCurrentUser();
+  const [{ items }, dailyTeaser, storyTray] = await Promise.all([
+    listRankedFeedPosts(supabase, { viewerId: user?.id ?? null, limit: 8 }),
+    loadDailyTeaser(user?.id ?? null),
+    user ? loadStoryTray(supabase, user.id).catch(() => [] as TrayPerson[]) : Promise.resolve([] as TrayPerson[]),
+  ]);
+  const [cards, ad] = await Promise.all([
+    composePostCards(supabase, items.map((item) => item.post), user?.id ?? null),
+    adPromise,
+  ]);
+  const cardsWithCursor = cards.map((card, i) => ({ ...card, rankCursor: items[i].cursor }));
 
   // Today's challenge leads the feed until you've taken part today.
   const daily = dailyTeaser && !dailyTeaser.tookPartToday ? dailyTeaser : null;

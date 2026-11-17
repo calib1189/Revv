@@ -89,10 +89,18 @@ export async function composePostCards(
   );
   const soundById = new Map(sounds.map((s) => [s.id, s]));
 
-  const authorActiveBuildByVehicle = await listActiveBuildsByVehicleIds(
-    supabase,
-    authorVehicles.map((v) => v.id),
-  );
+  const avatarMediaIds = (authors.data ?? [])
+    .map((a: Profile) => a.avatar_media_id)
+    .filter((id): id is string => Boolean(id));
+  // Both depend only on the batch above, not on each other: one round
+  // trip instead of two, on every feed page and every infinite-scroll page.
+  const [authorActiveBuildByVehicle, avatarMedia] = await Promise.all([
+    listActiveBuildsByVehicleIds(
+      supabase,
+      authorVehicles.map((v) => v.id),
+    ),
+    getMediaByIds(supabase, avatarMediaIds),
+  ]);
   const bestScoreByAuthor = new Map<string, number | null>();
   for (const vehicle of authorVehicles) {
     const score = authorActiveBuildByVehicle.get(vehicle.id)?.ai_rating_score ?? null;
@@ -103,10 +111,6 @@ export async function composePostCards(
     }
   }
 
-  const avatarMediaIds = (authors.data ?? [])
-    .map((a: Profile) => a.avatar_media_id)
-    .filter((id): id is string => Boolean(id));
-  const avatarMedia = await getMediaByIds(supabase, avatarMediaIds);
   const avatarUrlByMediaId = new Map(
     avatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );

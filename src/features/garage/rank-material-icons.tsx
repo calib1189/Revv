@@ -27,21 +27,26 @@ function RankIcon({
   tier,
   className,
   style,
+  sizes = "64px",
 }: {
   tier: RankTier;
   className?: string;
   style?: React.CSSProperties;
+  /** How wide the badge is drawn. Most places draw it at 12-40px, so the
+   * default lets Next serve a small resized copy instead of the full
+   * 1024px file (~90KB per tier); the rating reveal passes its own. */
+  sizes?: string;
 }) {
   return (
     <span className={`relative inline-block ${className ?? ""}`} style={style}>
-      <Image src={RANK_ICON_SRC[tier]} alt="" fill unoptimized className="object-contain" />
+      <Image src={RANK_ICON_SRC[tier]} alt="" fill sizes={sizes} className="object-contain" />
     </span>
   );
 }
 
 export const RANK_MATERIAL_ICONS: Record<
   RankTier,
-  (props: { className?: string; style?: React.CSSProperties }) => React.JSX.Element
+  (props: { className?: string; style?: React.CSSProperties; sizes?: string }) => React.JSX.Element
 > = {
   bronze: (props) => <RankIcon tier="bronze" {...props} />,
   copper: (props) => <RankIcon tier="copper" {...props} />,

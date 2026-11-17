@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import type { TutorialShowcase } from "@/lib/tutorial/showcase";
 import { RANK_LABELS, RANK_TEXT_COLORS, RANK_TIERS, rankForScore } from "@/lib/rating/rank";
 import { RANK_ICON_SRC } from "@/features/garage/rank-material-icons";
+import { isOptimizableMediaUrl } from "@/components/ui/media-img";
 import { SHOP_CATEGORIES } from "@/lib/shops/categories";
 import { formatDateTime } from "@/lib/format/date";
 import {
@@ -82,7 +83,7 @@ function Segmented<T extends string>({
 function Photo({ src, sizes, className = "" }: { src: string | null; sizes: string; className?: string }) {
   return (
     <div className={`relative overflow-hidden bg-white/[0.06] ${className}`}>
-      {src && <Image src={src} alt="" fill unoptimized sizes={sizes} className="object-cover" />}
+      {src && <Image src={src} alt="" fill unoptimized={!isOptimizableMediaUrl(src)} sizes={sizes} className="object-cover" />}
     </div>
   );
 }
@@ -219,7 +220,7 @@ export function RatingDemo({
           {ASCENDING_TIERS.map(({ tier, min }, i) => (
             <div key={tier} className="animate-tour-in flex w-14 flex-shrink-0 flex-col items-center gap-1" style={{ "--delay": `${120 + i * 45}ms` } as React.CSSProperties}>
               <div className="relative h-12 w-12">
-                <Image src={RANK_ICON_SRC[tier]} alt="" fill unoptimized sizes="48px" className="object-contain" />
+                <Image src={RANK_ICON_SRC[tier]} alt="" fill sizes="48px" className="object-contain" />
               </div>
               <span className="text-[0.625rem] font-semibold" style={{ color: RANK_TEXT_COLORS[tier] }}>
                 {RANK_LABELS[tier]}
@@ -252,7 +253,7 @@ function RatedBuildCard({
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-4">
           <div className="relative h-14 w-14 flex-shrink-0">
-            <Image src={RANK_ICON_SRC[tier]} alt="" fill unoptimized sizes="56px" className="object-contain" />
+            <Image src={RANK_ICON_SRC[tier]} alt="" fill sizes="56px" className="object-contain" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em]" style={{ color }}>
@@ -359,7 +360,7 @@ export function LeaderboardDemo({ podium, loading }: { podium: TutorialShowcase[
       </div>
       <Panel className="flex items-center gap-3 px-4 py-3">
         <div className="relative h-9 w-9 flex-shrink-0">
-          <Image src={RANK_ICON_SRC[pickTier]} alt="" fill unoptimized sizes="36px" className="object-contain" />
+          <Image src={RANK_ICON_SRC[pickTier]} alt="" fill sizes="36px" className="object-contain" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[0.9375rem] font-semibold">{pick.vehicleTitle}</p>
@@ -482,7 +483,7 @@ export function ConnectDemo({ viewer, loading }: { viewer: TutorialShowcase["vie
           <Panel className="flex items-center gap-3 p-3.5">
             <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-white/10">
               {viewer.avatarUrl ? (
-                <Image src={viewer.avatarUrl} alt="" fill unoptimized sizes="48px" className="object-cover" />
+                <Image src={viewer.avatarUrl} alt="" fill unoptimized={!isOptimizableMediaUrl(viewer.avatarUrl)} sizes="48px" className="object-cover" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-[1.125rem] font-semibold uppercase">{viewer.username[0]}</span>
               )}
