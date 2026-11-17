@@ -44,6 +44,11 @@ export function SwipeFeed({
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { registerRefreshHandler } = useTabPagerContext();
+  // Bumped whenever the list is replaced (refresh, category change). A
+  // response that comes back for an older list is dropped — otherwise a
+  // "load more" still in flight when the viewer refreshed would append
+  // the old list's next page onto the fresh one.
+  const generationRef = useRef(0);
 
   // Tapping the already-active "For You" tab (top-tab-bar.tsx) is a
   // refresh gesture — back to the unfiltered view, latest posts, top of
@@ -52,15 +57,19 @@ export function SwipeFeed({
   // it doesn't need to depend on `category`.
   useEffect(() => {
     registerRefreshHandler("/feed", () => {
+      const generation = ++generationRef.current;
       setCategory(null);
       setIsLoading(true);
       loadFeedByCategoryAction(null)
         .then((fresh) => {
+          if (generation !== generationRef.current) return;
           setPosts(fresh);
           setHasMore(fresh.length > 0);
           scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
         })
-        .finally(() => setIsLoading(false));
+        .finally(() => {
+          if (generation === generationRef.current) setIsLoading(false);
+        });
     });
     return () => registerRefreshHandler("/feed", null);
   }, [registerRefreshHandler]);
@@ -78,12 +87,21 @@ export function SwipeFeed({
             setIsLoading(false);
             return;
           }
+          const generation = generationRef.current;
           loadMoreFeedPostsAction(last.rankCursor, category)
             .then((next) => {
-              setPosts((prev) => [...prev, ...next]);
+              if (generation !== generationRef.current) return;
+              // The ranking can shift between pages, so a post can come
+              // back twice; a duplicate would also be a duplicate React key.
+              setPosts((prev) => {
+                const seen = new Set(prev.map((p) => p.post.id));
+                return [...prev, ...next.filter((p) => !seen.has(p.post.id))];
+              });
               setHasMore(next.length > 0);
             })
-            .finally(() => setIsLoading(false));
+            .finally(() => {
+              if (generation === generationRef.current) setIsLoading(false);
+            });
         }
       },
       { threshold: 0.1 },
@@ -102,14 +120,18 @@ export function SwipeFeed({
 
   function handleCategoryChange(next: VehicleCategory | null) {
     if (next === category) return;
+    const generation = ++generationRef.current;
     setCategory(next);
     setIsLoading(true);
     loadFeedByCategoryAction(next)
       .then((fresh) => {
+        if (generation !== generationRef.current) return;
         setPosts(fresh);
         setHasMore(fresh.length > 0);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        if (generation === generationRef.current) setIsLoading(false);
+      });
   }
 
   // Full-bleed: the video fills whatever box the tab pager slot gives

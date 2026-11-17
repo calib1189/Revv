@@ -130,8 +130,10 @@ export async function toggleLikeAction(
   if (isLiked) {
     await unlikePost(supabase, user.id, postId);
   } else {
-    await likePost(supabase, user.id, postId);
-    after(() => notifyPostAuthor(supabase, postId, user.id, "liked your post", "likes"));
+    // Only a new like notifies the author: a repeat (stale client state)
+    // would otherwise send them the same "liked your post" twice.
+    const added = await likePost(supabase, user.id, postId);
+    if (added) after(() => notifyPostAuthor(supabase, postId, user.id, "liked your post", "likes"));
   }
   revalidatePath(`/p/${postId}`);
   revalidatePath("/feed");

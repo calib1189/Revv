@@ -2,15 +2,22 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { Post } from "@/lib/db/posts";
 
+/** Likes a post. Returns false when it was already liked: a device whose
+ * "not liked" state was stale (liked elsewhere, a cached page). That's
+ * not an error, the like is in place, and throwing would make the client
+ * roll its heart back to unliked. */
 export async function likePost(
   supabase: SupabaseClient<Database>,
   userId: string,
   postId: string,
-): Promise<void> {
+): Promise<boolean> {
   const { error } = await supabase
     .from("likes")
     .insert({ user_id: userId, post_id: postId });
+  // 23505: unique_violation on the (user_id, post_id) primary key.
+  if (error?.code === "23505") return false;
   if (error) throw error;
+  return true;
 }
 
 export async function unlikePost(

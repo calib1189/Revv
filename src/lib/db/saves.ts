@@ -10,7 +10,9 @@ export async function savePost(
   const { error } = await supabase
     .from("saves")
     .insert({ user_id: userId, post_id: postId });
-  if (error) throw error;
+  // 23505: already saved (stale client state). The save is in place, so
+  // it isn't a failure the client should roll back.
+  if (error && error.code !== "23505") throw error;
 }
 
 export async function unsavePost(

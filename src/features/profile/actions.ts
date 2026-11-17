@@ -25,8 +25,8 @@ export async function toggleFollowAction(
   if (isFollowing) {
     await unfollowUser(supabase, user.id, followeeId);
   } else {
-    await followUser(supabase, user.id, followeeId);
-    after(async () => {
+    const added = await followUser(supabase, user.id, followeeId);
+    if (added) after(async () => {
       const actor = await getProfileByUserId(supabase, user.id);
       await sendPushToUser(followeeId, {
         title: "SORZA",

@@ -278,6 +278,8 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const progressFillRef = useRef<HTMLDivElement>(null);
+  const scrubCleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => scrubCleanupRef.current?.(), []);
   const lastTapRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isPaused, setIsPaused] = useState(false);
   const [scrub, setScrub] = useState<{ time: number; duration: number } | null>(null);
@@ -518,6 +520,13 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
+    // If the slide unmounts mid-scrub (the feed list is replaced), the
+    // window listeners would otherwise outlive it.
+    scrubCleanupRef.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
   }
 
   return (

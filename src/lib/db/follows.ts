@@ -5,11 +5,15 @@ export async function followUser(
   supabase: SupabaseClient<Database>,
   followerId: string,
   followeeId: string,
-): Promise<void> {
+): Promise<boolean> {
   const { error } = await supabase
     .from("follows")
     .insert({ follower_id: followerId, followee_id: followeeId });
+  // 23505: already following (stale client state). Not a failure, and not
+  // a new follow either: false tells the caller not to notify again.
+  if (error?.code === "23505") return false;
   if (error) throw error;
+  return true;
 }
 
 export async function unfollowUser(
