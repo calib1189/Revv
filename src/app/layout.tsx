@@ -8,6 +8,7 @@ import { TabPagerProvider } from "@/components/shell/tab-pager-context";
 import { StoryViewerProvider } from "@/features/stories/story-viewer-provider";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { FirstRunGate } from "@/features/onboarding/first-run-gate";
+import { CaptureInviteRef } from "@/features/invites/capture-invite-ref";
 import { TimeZoneSync } from "@/features/push/time-zone-sync";
 import { SITE_URL } from "@/lib/site-url";
 import { APP_STORE_ID } from "@/lib/app-store";
@@ -74,6 +75,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <NativeAppBridge isSignedIn={Boolean(user)} />
+        {!user && <CaptureInviteRef />}
         {user && <TimeZoneSync />}
         {user && (
           <Suspense fallback={null}>

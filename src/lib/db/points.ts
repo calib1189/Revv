@@ -44,6 +44,25 @@ export async function insertPointsEarned(
   if (error) throw error;
 }
 
+/** Referral rewards (lib/invites/rewards.ts). Service-role client only:
+ * the ledger has no client insert policy (0081). Returns how many rows
+ * were actually new, so a re-run that pays nothing can say so. */
+export async function insertReferralPoints(
+  supabase: SupabaseClient<Database>,
+  grants: { userId: string; sourceId: string; amount: number }[],
+): Promise<number> {
+  if (grants.length === 0) return 0;
+  const { data, error } = await supabase
+    .from("points_ledger")
+    .upsert(
+      grants.map((g) => ({ user_id: g.userId, amount: g.amount, source_type: "referral" as const, source_id: g.sourceId })),
+      { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true },
+    )
+    .select("user_id");
+  if (error) throw error;
+  return data.length;
+}
+
 export async function listOwnedItemIds(
   supabase: SupabaseClient<Database>,
   userId: string,

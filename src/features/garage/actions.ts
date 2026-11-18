@@ -17,6 +17,7 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import type { VehicleIdentification } from "@/lib/providers/vision-provider";
 import type { VehicleInsert } from "@/lib/db/vehicles";
 import { joinsApprovalQueue, notifyAdminsOfNewCar } from "@/lib/admin/notify-new-car";
+import { payReferralIfEarned } from "@/features/invites/pay";
 
 export interface VehicleFormState {
   error: string | null;
@@ -99,6 +100,8 @@ export async function createVehicleAction(
   if (joinsApprovalQueue({ hadPhoto: false, hasPhoto: heroMediaId !== null, status: vehicle.ownership_verification_status })) {
     after(() => notifyAdminsOfNewCar(vehicle));
   }
+  // Their first car is what makes an invite pay out (lib/invites/rewards).
+  after(() => payReferralIfEarned(user.id));
 
   redirect(`/garage/${vehicle.id}`);
 }

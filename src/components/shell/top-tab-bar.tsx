@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { SearchIcon, ShoppingBagIcon } from "@/components/ui/icons";
+import { SearchIcon, StorefrontIcon } from "@/components/ui/icons";
 import { useTabPagerContext } from "@/components/shell/tab-pager-context";
 import { TAB_HREFS } from "@/components/shell/tab-order";
 
@@ -176,7 +176,7 @@ export function TopTabBar() {
                 : "text-muted hover:text-foreground"
             }`}
           >
-            <ShoppingBagIcon className="h-[1.125rem] w-[1.125rem]" />
+            <StorefrontIcon className="h-5 w-5" />
           </Link>
         </div>
       </div>

@@ -12,12 +12,14 @@ type ShareStatus = "idle" | "copied" | "failed";
  * with the car's photo and score, not a bare URL. `text` goes out with
  * the link (see lib/rating/share-text.ts): a score and a dare get far
  * more taps than a URL on its own. */
-function useShareBuild(vehicleId: string, text: string, cardUrl?: string) {
+function useShareBuild(vehicleId: string, text: string, cardUrl?: string, refUsername?: string) {
   const [status, setStatus] = useState<ShareStatus>("idle");
   const card = useCardFile(cardUrl);
 
   async function share() {
-    const url = `${SITE_URL}/garage/${vehicleId}`;
+    // The owner's own share carries ?ref= (features/invites/capture-invite-ref),
+    // so it works as their invite link too.
+    const url = `${SITE_URL}/garage/${vehicleId}${refUsername ? `?ref=${encodeURIComponent(refUsername)}` : ""}`;
     // The build's trading card (garage/[vehicleId]/card) goes with the
     // link when this device can share images. Loaded ahead of time: iOS
     // only opens the share sheet right after the tap, and drawing the card
@@ -80,8 +82,8 @@ function statusLabel(status: ShareStatus): string {
 }
 
 /** The round Share button on the build page's photo. */
-export function VehicleShareButton({ vehicleId, text }: { vehicleId: string; text: string }) {
-  const { status, share } = useShareBuild(vehicleId, text);
+export function VehicleShareButton({ vehicleId, text, refUsername }: { vehicleId: string; text: string; refUsername?: string }) {
+  const { status, share } = useShareBuild(vehicleId, text, undefined, refUsername);
 
   return (
     <button
@@ -106,8 +108,18 @@ export function VehicleShareButton({ vehicleId, text }: { vehicleId: string; tex
 
 /** "Share my score", under the owner's own rating: the moment someone
  * has just seen their score is when they're most likely to post it. */
-export function ShareScoreButton({ vehicleId, text, cardUrl }: { vehicleId: string; text: string; cardUrl?: string }) {
-  const { status, share } = useShareBuild(vehicleId, text, cardUrl);
+export function ShareScoreButton({
+  vehicleId,
+  text,
+  cardUrl,
+  refUsername,
+}: {
+  vehicleId: string;
+  text: string;
+  cardUrl?: string;
+  refUsername?: string;
+}) {
+  const { status, share } = useShareBuild(vehicleId, text, cardUrl, refUsername);
 
   return (
     <div className="flex flex-col items-center gap-1.5">

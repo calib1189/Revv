@@ -5,6 +5,8 @@ import { getProfileByUserId, getProfileByUsername } from "@/lib/db/profiles";
 import { getReferralForInvitee, insertReferral, type Referral } from "@/lib/db/referrals";
 import { canNameInviter, parseInviterInput } from "@/lib/invites/tiers";
 import { sendPushToUser } from "@/lib/push/send";
+import { payReferralIfEarned } from "@/features/invites/pay";
+import { REFERRAL_POINTS } from "@/lib/invites/rewards";
 
 export type RecordInviteResult = { ok: true; inviterUsername: string } | { ok: false; error: string };
 
@@ -43,11 +45,13 @@ export async function recordInvite(
       inviter.id,
       {
         title: "Your invite worked",
-        body: `@${invitee.username} joined SORZA from your invite. It counts once they add their car.`,
+        body: `@${invitee.username} joined SORZA from your invite. Once they add their car, you each get ${REFERRAL_POINTS} points.`,
         url: `/u/${invitee.username}`,
       },
       "follows",
     ),
   );
+  // Someone who already has a car is paid now; otherwise when they add one.
+  after(() => payReferralIfEarned(inviteeId));
   return { ok: true, inviterUsername: inviter.username };
 }

@@ -274,7 +274,11 @@ export default async function VehiclePage({
           </div>
         )}
         <div className="absolute right-4 top-4 sm:right-6">
-          <VehicleShareButton vehicleId={vehicle.id} text={buildShareText({ title, score, isOwner })} />
+          <VehicleShareButton
+            vehicleId={vehicle.id}
+            text={buildShareText({ title, score, isOwner })}
+            refUsername={isOwner ? owner?.username : undefined}
+          />
         </div>
 
         <div className="absolute inset-x-0 bottom-0">
@@ -327,6 +331,7 @@ export default async function VehiclePage({
                 ? `/garage/${vehicle.id}/card?v=${encodeURIComponent(`${activeBuild?.ai_rating_rated_at ?? ""}:${heroMedia.id}`)}`
                 : undefined
             }
+            refUsername={owner?.username}
             savedPending={activeBuild ? pendingRatingFromBuild(activeBuild) : null}
             hasPhotos={Boolean(heroMedia) || gallery.some((g) => g.media.kind === "image")}
             rerate={{ freeAt: freeRateAt?.toISOString() ?? null, balance: pointsBalance, cost: rerateCostNow }}

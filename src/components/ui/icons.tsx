@@ -725,6 +725,20 @@ export function ShoppingBagIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+/** A shopfront: scalloped awning over a storefront with a door. The top
+ * bar's Shop button; reads as "store" at a glance where a bag didn't. */
+export function StorefrontIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M3.5 9.5 5.2 4h13.6l1.7 5.5" />
+      <path d="M3.5 9.5a2.125 2.125 0 0 0 4.25 0 2.125 2.125 0 0 0 4.25 0 2.125 2.125 0 0 0 4.25 0 2.125 2.125 0 0 0 4.25 0" />
+      <path d="M9.4 4 8.5 9.5M14.6 4l.9 5.5" />
+      <path d="M5 12.2V20h14v-7.8" />
+      <path d="M10 20v-4.5h4V20" />
+    </svg>
+  );
+}
+
 export function SpeedIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg

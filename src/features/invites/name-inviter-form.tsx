@@ -1,5 +1,6 @@
 "use client";
 
+import { REFERRAL_POINTS } from "@/lib/invites/rewards";
 import { useActionState } from "react";
 import { nameInviterAction, type NameInviterState } from "@/features/invites/actions";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ export function NameInviterForm({ defaultValue = "" }: { defaultValue?: string }
         Did someone invite you?
       </label>
       <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted">
-        Add their username so it counts toward their invite rewards.
+        Add their username and you each get {REFERRAL_POINTS} points once you add your car.
       </p>
       <div className="mt-3 flex gap-2">
         <Input
@@ -56,6 +57,9 @@ export function InvitedBy({ username }: { username: string }) {
       </span>
       <p className="min-w-0 text-[0.9375rem] leading-snug">
         Invited by <span className="font-semibold">@{username}</span>
+        <span className="block text-[0.8125rem] text-muted">
+          You each get {REFERRAL_POINTS} points once you&apos;ve added your car.
+        </span>
       </p>
     </div>
   );

@@ -1,6 +1,8 @@
 /** One-time announcements, shown once per account when the app opens
  * (0122). A new id shows to everyone again; reusing one never does. */
-export const INVITE_ANNOUNCEMENT = "invites_2026_11";
+// A new id when the program changes: points per invite (0125) shows again
+// to members who saw the badge-only version.
+export const INVITE_ANNOUNCEMENT = "invites_points_2026_11";
 
 const DAY = 24 * 60 * 60 * 1000;
 

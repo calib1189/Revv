@@ -36,6 +36,7 @@ export function RateBuildPanel({
   rankPosition,
   shareText,
   cardUrl,
+  refUsername,
   savedPending,
   hasPhotos,
   rerate = null,
@@ -46,6 +47,8 @@ export function RateBuildPanel({
   shareText: string;
   /** The build's trading card image, shared along with the link. */
   cardUrl?: string;
+  /** The owner's username: their shares count as invites. */
+  refUsername?: string;
   currentScore: number | null;
   currentStrengths: string | null;
   currentLimitingFactors: string | null;
@@ -287,7 +290,7 @@ export function RateBuildPanel({
           )}
 
           <div className="mt-5">
-            <ShareScoreButton vehicleId={vehicleId} text={shareText} cardUrl={cardUrl} />
+            <ShareScoreButton vehicleId={vehicleId} text={shareText} cardUrl={cardUrl} refUsername={refUsername} />
           </div>
           <div className="mt-2.5 flex gap-2.5">
             {/* Never narrower than its label: min-w-0 here let a phone

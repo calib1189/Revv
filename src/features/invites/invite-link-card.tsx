@@ -1,5 +1,6 @@
 "use client";
 
+import { REFERRAL_POINTS } from "@/lib/invites/rewards";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { LinkIcon, ShareIcon } from "@/components/ui/icons";
@@ -9,7 +10,7 @@ type CopyStatus = "idle" | "copied" | "failed";
 /** Your invite link, with Share (the native sheet) and Copy. */
 export function InviteLinkCard({ url, username }: { url: string; username: string }) {
   const [status, setStatus] = useState<CopyStatus>("idle");
-  const text = `Join me on SORZA. Log your build and get it rated out of 100. Sign up with my link, or enter @${username} as who invited you.`;
+  const text = `Join me on SORZA and get your car rated out of 100. Sign up with my link, or enter @${username} as who invited you, and we both get ${REFERRAL_POINTS} points when you add your car.`;
   const displayUrl = url.replace(/^https?:\/\//, "");
 
   async function copy() {
@@ -47,7 +48,7 @@ export function InviteLinkCard({ url, username }: { url: string; username: strin
       </div>
       <p className="mt-3 text-[0.8125rem] leading-snug text-muted">
         Friends who join through the app can enter <span className="font-semibold text-foreground">@{username}</span> when
-        it asks who invited them.
+        it asks who invited them. You each get {REFERRAL_POINTS} points once they add their car.
       </p>
     </div>
   );

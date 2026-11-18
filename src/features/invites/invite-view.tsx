@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { INVITE_TIERS, countedInvites, invitePath, inviteProgress } from "@/lib/invites/tiers";
 import { SITE_URL } from "@/lib/site-url";
+import { REFERRAL_POINTS } from "@/lib/invites/rewards";
 import { relativeTime } from "@/lib/format/relative-time";
 import { Avatar } from "@/features/feed/avatar";
 import { InviteLinkCard } from "@/features/invites/invite-link-card";
@@ -39,7 +40,9 @@ export function InviteView({
   return (
     <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
       <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em]">Invite friends</h1>
-      <p className="mt-1 text-[0.9375rem] text-muted">Bring your crew to SORZA and build your reputation.</p>
+      <p className="mt-1 text-[0.9375rem] text-muted">
+        <span className="font-semibold text-foreground">+{REFERRAL_POINTS} points</span> for every friend who joins and adds their car. They get {REFERRAL_POINTS} too.
+      </p>
 
       <div className="mt-6 flex flex-col gap-8">
         <InviteLinkCard url={`${SITE_URL}${invitePath(username)}`} username={username} />
