@@ -51,6 +51,34 @@ export async function addVehicleMedia(
   return data;
 }
 
+/** Moves a photo to the front of the gallery, which is what puts it in
+ * the set the AI rates (lib/rating/rated-photos.ts). It takes a position
+ * one before the current first, so nothing else has to be renumbered. */
+export async function moveVehicleMediaToFront(
+  supabase: SupabaseClient<Database>,
+  vehicleId: string,
+  id: string,
+): Promise<void> {
+  const { data: first, error: firstError } = await supabase
+    .from("vehicle_media")
+    .select("position")
+    .eq("vehicle_id", vehicleId)
+    .order("position", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (firstError) throw firstError;
+  // RLS turns an update the caller isn't allowed to make into "0 rows";
+  // selecting the row back tells a real move from one that did nothing.
+  const { data, error } = await supabase
+    .from("vehicle_media")
+    .update({ position: (first?.position ?? 0) - 1 })
+    .eq("id", id)
+    .eq("vehicle_id", vehicleId)
+    .select("id");
+  if (error) throw error;
+  if (data.length === 0) throw new Error("Photo not moved.");
+}
+
 export async function removeVehicleMedia(
   supabase: SupabaseClient<Database>,
   id: string,

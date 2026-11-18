@@ -9,6 +9,7 @@ import { getVehicleById } from "@/lib/db/vehicles";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
+import { ratedGalleryIds } from "@/lib/rating/rated-photos";
 import {
   getActiveBuild,
   getOrCreateActiveBuild,
@@ -25,7 +26,6 @@ import { getRatingProvider } from "@/lib/providers/get-rating-provider";
 import type { RatingPhoto, BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 import { getPointsBalance } from "@/lib/db/points";
 import { nextFreeRateAt, rerateCost } from "@/lib/rating/rerate";
-const MAX_PHOTOS = 4;
 
 async function requireOwner(vehicleId: string) {
   const { supabase, user } = await requireConfirmedUser();
@@ -137,12 +137,17 @@ async function rateBuild(
     existingBuild ? listBuildParts(supabase, existingBuild.id) : Promise.resolve([]),
   ]);
 
+  // Same selection the gallery marks as "Rated" (lib/rating/rated-photos).
+  const rated = new Set(
+    ratedGalleryIds(
+      gallery.map((g) => ({ id: g.id, mediaId: g.media_id, kind: g.media.kind })),
+      heroMedia?.id ?? null,
+    ),
+  );
   const photoUrls = [
     ...(heroMedia ? [publicMediaUrl(supabase, heroMedia.storage_path)] : []),
-    ...gallery
-      .filter((g) => g.media.kind === "image")
-      .map((g) => publicMediaUrl(supabase, g.media.storage_path)),
-  ].slice(0, MAX_PHOTOS);
+    ...gallery.filter((g) => rated.has(g.id)).map((g) => publicMediaUrl(supabase, g.media.storage_path)),
+  ];
 
   if (photoUrls.length === 0) {
     return { error: "Add at least one photo before rating this build." };

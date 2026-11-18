@@ -7,6 +7,7 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { getStoreItem } from "@/lib/store/catalog";
 import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
+import { ratedGalleryIds } from "@/lib/rating/rated-photos";
 import { getActiveBuild, listAllRatingScores, pendingRatingFromBuild } from "@/lib/db/builds";
 import { listBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { computeTopPercent } from "@/lib/rating/percentile";
@@ -321,6 +322,11 @@ export default async function VehiclePage({
             ratingHistory={ratingHistory}
             rankPosition={rankPosition}
             shareText={buildShareText({ title, score, isOwner })}
+            cardUrl={
+              score != null && heroMedia?.kind === "image"
+                ? `/garage/${vehicle.id}/card?v=${encodeURIComponent(`${activeBuild?.ai_rating_rated_at ?? ""}:${heroMedia.id}`)}`
+                : undefined
+            }
             savedPending={activeBuild ? pendingRatingFromBuild(activeBuild) : null}
             hasPhotos={Boolean(heroMedia) || gallery.some((g) => g.media.kind === "image")}
             rerate={{ freeAt: freeRateAt?.toISOString() ?? null, balance: pointsBalance, cost: rerateCostNow }}
@@ -438,6 +444,11 @@ export default async function VehiclePage({
             vehicleMediaId: g.id,
             url: publicMediaUrl(supabase, g.media.storage_path),
           }))}
+          ratedPhotoIds={ratedGalleryIds(
+            gallery.map((g) => ({ id: g.id, mediaId: g.media_id, kind: g.media.kind })),
+            heroMedia?.id ?? null,
+          )}
+          hasCover={Boolean(heroMedia)}
           posts={postThumbnails}
           maintenanceRecords={maintenanceRecords}
         />

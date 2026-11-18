@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ShareIcon } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { SITE_URL } from "@/lib/site-url";
@@ -12,11 +12,25 @@ type ShareStatus = "idle" | "copied" | "failed";
  * with the car's photo and score, not a bare URL. `text` goes out with
  * the link (see lib/rating/share-text.ts): a score and a dare get far
  * more taps than a URL on its own. */
-function useShareBuild(vehicleId: string, text: string) {
+function useShareBuild(vehicleId: string, text: string, cardUrl?: string) {
   const [status, setStatus] = useState<ShareStatus>("idle");
+  const card = useCardFile(cardUrl);
 
   async function share() {
     const url = `${SITE_URL}/garage/${vehicleId}`;
+    // The build's trading card (garage/[vehicleId]/card) goes with the
+    // link when this device can share images. Loaded ahead of time: iOS
+    // only opens the share sheet right after the tap, and drawing the card
+    // can take a few seconds. Not ready, or no image sharing: the link.
+    if (card && navigator.canShare?.({ files: [card] })) {
+      try {
+        // Some apps drop `url` when a file is attached, so it rides in the text.
+        await navigator.share({ files: [card], text: `${text} ${url}` });
+      } catch {
+        // User dismissed the native share sheet — not an error.
+      }
+      return;
+    }
     if (navigator.share) {
       try {
         await navigator.share({ text, url });
@@ -39,6 +53,26 @@ function useShareBuild(vehicleId: string, text: string) {
   }
 
   return { status, share };
+}
+
+/** The card image as a File, fetched once in the background. Null until
+ * it's ready, or if it can't be drawn (the share falls back to the link). */
+function useCardFile(cardUrl: string | undefined): File | null {
+  const [file, setFile] = useState<File | null>(null);
+  useEffect(() => {
+    if (!cardUrl) return;
+    let cancelled = false;
+    fetch(cardUrl)
+      .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+      .then((blob) => {
+        if (!cancelled) setFile(new File([blob], "sorza-card.png", { type: "image/png" }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [cardUrl]);
+  return file;
 }
 
 function statusLabel(status: ShareStatus): string {
@@ -72,8 +106,8 @@ export function VehicleShareButton({ vehicleId, text }: { vehicleId: string; tex
 
 /** "Share my score", under the owner's own rating: the moment someone
  * has just seen their score is when they're most likely to post it. */
-export function ShareScoreButton({ vehicleId, text }: { vehicleId: string; text: string }) {
-  const { status, share } = useShareBuild(vehicleId, text);
+export function ShareScoreButton({ vehicleId, text, cardUrl }: { vehicleId: string; text: string; cardUrl?: string }) {
+  const { status, share } = useShareBuild(vehicleId, text, cardUrl);
 
   return (
     <div className="flex flex-col items-center gap-1.5">

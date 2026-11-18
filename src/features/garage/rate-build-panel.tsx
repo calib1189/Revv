@@ -16,6 +16,7 @@ import type { RankTier } from "@/lib/rating/rank";
 import { Sheet } from "@/components/ui/sheet";
 import { RERATE_POINTS, formatWait } from "@/lib/rating/rerate";
 import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
+import { MissingShotsPrompt } from "@/features/garage/missing-shots-prompt";
 import { RatingBreakdownTrigger, type RatingHistoryPoint } from "@/features/garage/rating-breakdown-modal";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
@@ -34,6 +35,7 @@ export function RateBuildPanel({
   ratingHistory,
   rankPosition,
   shareText,
+  cardUrl,
   savedPending,
   hasPhotos,
   rerate = null,
@@ -42,6 +44,8 @@ export function RateBuildPanel({
   vehicleId: string;
   /** What goes out with the link when the owner shares their score. */
   shareText: string;
+  /** The build's trading card image, shared along with the link. */
+  cardUrl?: string;
   currentScore: number | null;
   currentStrengths: string | null;
   currentLimitingFactors: string | null;
@@ -256,6 +260,7 @@ export function RateBuildPanel({
           </RatingBreakdownTrigger>
 
           <ScoreReasons strengths={currentStrengths} limitingFactors={currentLimitingFactors} />
+          <MissingShotsPrompt limitingFactors={currentLimitingFactors} />
 
           {rankPosition && (
             <Link
@@ -282,7 +287,7 @@ export function RateBuildPanel({
           )}
 
           <div className="mt-5">
-            <ShareScoreButton vehicleId={vehicleId} text={shareText} />
+            <ShareScoreButton vehicleId={vehicleId} text={shareText} cardUrl={cardUrl} />
           </div>
           <div className="mt-2.5 flex gap-2.5">
             {/* Never narrower than its label: min-w-0 here let a phone

@@ -19,7 +19,7 @@ const SUBSCORE_LABELS: [keyof PosterSubscores, string][] = [
 const ASSETS = join(process.cwd(), "src", "features", "posters");
 let fontsPromise: Promise<{ name: string; data: Buffer; weight: 400 | 500 | 700; style: "normal" }[]> | null = null;
 
-function loadFonts() {
+export function loadFonts() {
   fontsPromise ??= Promise.all([
     readFile(join(ASSETS, "fonts", "Geist-Regular.ttf")).then((data) => ({ name: "Geist", data, weight: 400 as const, style: "normal" as const })),
     readFile(join(ASSETS, "fonts", "Geist-Medium.ttf")).then((data) => ({ name: "Geist", data, weight: 500 as const, style: "normal" as const })),
@@ -29,7 +29,7 @@ function loadFonts() {
   return fontsPromise;
 }
 
-async function asset(name: string, type: string): Promise<string> {
+export async function asset(name: string, type: string): Promise<string> {
   const data = await readFile(join(ASSETS, "assets", name));
   return `data:${type};base64,${data.toString("base64")}`;
 }

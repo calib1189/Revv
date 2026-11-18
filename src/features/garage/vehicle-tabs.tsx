@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { SectionTitle } from "@/components/ui/grouped-list";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,6 +8,7 @@ import { BudgetCard } from "@/features/builds/budget-card";
 import { ModificationList } from "@/features/builds/modification-list";
 import { GalleryUploader } from "@/features/garage/gallery-uploader";
 import { GalleryGrid, type GalleryPhoto } from "@/features/garage/gallery-grid";
+import { OPEN_PHOTOS_EVENT } from "@/features/garage/vehicle-tabs-events";
 import { PostThumbnailGrid, type PostThumbnail } from "@/features/profile/post-thumbnail-grid";
 import { MaintenanceList } from "@/features/maintenance/maintenance-list";
 import type { BuildPart } from "@/lib/db/build-parts";
@@ -35,6 +36,8 @@ export function VehicleTabs({
   partMediaUrlById,
   clickCountsByBuildPart,
   photos,
+  ratedPhotoIds,
+  hasCover,
   posts,
   maintenanceRecords,
 }: {
@@ -48,10 +51,23 @@ export function VehicleTabs({
   partMediaUrlById: Map<string, string>;
   clickCountsByBuildPart: Map<string, number>;
   photos: GalleryPhoto[];
+  /** Gallery rows the AI rates (lib/rating/rated-photos.ts). */
+  ratedPhotoIds: string[];
+  hasCover: boolean;
   posts: PostThumbnail[];
   maintenanceRecords: MaintenanceRecord[];
 }) {
   const [tab, setTab] = useState<Tab>("mods");
+
+  useEffect(() => {
+    function openPhotos() {
+      setTab("photos");
+      document.getElementById("vehicle-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (window.location.hash === "#photos") openPhotos();
+    window.addEventListener(OPEN_PHOTOS_EVENT, openPhotos);
+    return () => window.removeEventListener(OPEN_PHOTOS_EVENT, openPhotos);
+  }, []);
 
   const options: { value: Tab; label: string }[] = [
     { value: "mods", label: "Mods" },
@@ -61,7 +77,7 @@ export function VehicleTabs({
   ];
 
   return (
-    <div className="mt-10">
+    <div id="vehicle-tabs" className="mt-10 scroll-mt-20">
       <SegmentedControl options={options} value={tab} onChange={setTab} className="mb-6" />
 
       <div key={tab} className="animate-tab-content-in">
@@ -98,7 +114,13 @@ export function VehicleTabs({
               body={isOwner ? "Add shots of the car from every angle." : "The owner hasn't added any photos."}
             />
           ) : (
-            <GalleryGrid photos={photos} isOwner={isOwner} />
+            <GalleryGrid
+              photos={photos}
+              isOwner={isOwner}
+              vehicleId={vehicleId}
+              ratedIds={isOwner ? ratedPhotoIds : []}
+              hasCover={hasCover}
+            />
           )}
         </div>
       )}
