@@ -4,110 +4,132 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
 import { listConversationsForUser, otherParticipant } from "@/lib/db/conversations";
 import { getLastMessageForConversations } from "@/lib/db/messages";
-import { getProfileByUserId } from "@/lib/db/profiles";
+import { getProfileByUserId, getProfilesByIds } from "@/lib/db/profiles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
-import { Avatar } from "@/features/feed/avatar";
-import { InboxTabs } from "@/features/shell/inbox-tabs";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ChevronRightIcon, CommentIcon } from "@/components/ui/icons";
-import { VerifiedBadge } from "@/components/ui/verified-badge";
-import { relativeTime } from "@/lib/format/relative-time";
+import { listNotifications } from "@/lib/db/notifications";
+import { loadStoryTray, type TrayPerson } from "@/lib/stories/load";
+import { NOTIFICATION_VERBS } from "@/lib/notifications/verbs";
+import { conversationStatus, summarizeNotifications } from "@/lib/inbox/summary";
+import { StoryTray } from "@/features/stories/story-tray";
+import { BellIcon, BoltIcon, SearchIcon } from "@/components/ui/icons";
+import { Chip, ConversationRow, PinnedRow } from "@/features/inbox/inbox-rows";
 
-export default async function MessagesInboxPage() {
+type Filter = "all" | "unread";
+
+/**
+ * The inbox: stories along the top, All / Unread, the two pinned rows
+ * (activity from people, and system notices), then every conversation,
+ * newest first, each saying where it stands ("Seen", "Sent 2h").
+ */
+export default async function MessagesInboxPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/messages");
+  const filter: Filter = (await searchParams).filter === "unread" ? "unread" : "all";
 
   const supabase = await createClient();
-  const conversations = await listConversationsForUser(supabase, user.id);
-  const lastMessageByConversation = await getLastMessageForConversations(
-    supabase,
-    conversations.map((c) => c.id),
-  );
+  const [conversations, notifications, me, tray] = await Promise.all([
+    listConversationsForUser(supabase, user.id),
+    listNotifications(supabase, user.id).catch(() => []),
+    getProfileByUserId(supabase, user.id),
+    loadStoryTray(supabase, user.id).catch(() => [] as TrayPerson[]),
+  ]);
+  const { activity, system } = summarizeNotifications(notifications);
 
-  const otherProfiles = await Promise.all(
-    conversations.map((c) => getProfileByUserId(supabase, otherParticipant(c, user.id))),
-  );
-  const profileByConversation = new Map(
-    conversations.map((c, i) => [c.id, otherProfiles[i]]),
-  );
+  const otherIds = conversations.map((c) => otherParticipant(c, user.id));
+  const [lastByConversation, people] = await Promise.all([
+    getLastMessageForConversations(
+      supabase,
+      conversations.map((c) => c.id),
+    ),
+    getProfilesByIds(supabase, [...new Set([...otherIds, ...(activity.latest?.actor_id ? [activity.latest.actor_id] : [])])]).catch(() => []),
+  ]);
+  const personById = new Map(people.map((p) => [p.id, p]));
   // Best-effort: a missing avatar just falls back to the initial.
   const avatarMedia = await getMediaByIds(
     supabase,
-    otherProfiles.map((p) => p?.avatar_media_id).filter((id): id is string => Boolean(id)),
+    [...people.map((p) => p.avatar_media_id), me?.avatar_media_id].filter((id): id is string => Boolean(id)),
   ).catch(() => []);
-  const avatarUrlByMediaId = new Map(
-    avatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
-  );
+  const avatarUrl = new Map(avatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]));
+  const avatarOf = (mediaId: string | null | undefined) => (mediaId ? (avatarUrl.get(mediaId) ?? null) : null);
+
+  const rows = conversations.map((c, i) => {
+    const last = lastByConversation.get(c.id);
+    return { conversation: c, person: personById.get(otherIds[i]), last, status: conversationStatus(last, user.id) };
+  });
+  const unreadCount = rows.filter((r) => r.status.unread).length;
+  const shown = filter === "unread" ? rows.filter((r) => r.status.unread) : rows;
+
+  const actor = activity.latest?.actor_id ? personById.get(activity.latest.actor_id) : null;
+  const activityLine = activity.latest
+    ? `${actor ? actor.username : "SORZA"} ${NOTIFICATION_VERBS[activity.latest.kind] ?? "sent you a notification"}`
+    : "Likes, comments and new followers show up here";
+  const systemLine = system.latest ? `SORZA ${NOTIFICATION_VERBS[system.latest.kind] ?? "sent you a notice"}` : null;
 
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
-      <h1 className="mb-5 text-[2.125rem] font-bold leading-tight tracking-[-0.03em]">Inbox</h1>
-      <InboxTabs current="messages" />
+    <div className="mx-auto w-full max-w-lg flex-1 pb-16 pt-3 sm:pt-8">
+      <header className="flex h-12 items-center justify-between px-4">
+        <span className="h-9 w-9" aria-hidden />
+        <h1 className="text-[1.0625rem] font-bold">Inbox</h1>
+        <Link href="/search" aria-label="Search" className="pressable flex h-9 w-9 items-center justify-center rounded-full text-foreground">
+          <SearchIcon className="h-5 w-5" />
+        </Link>
+      </header>
 
-      {conversations.length === 0 ? (
-        <EmptyState
-          card
-          icon={<CommentIcon />}
-          title="No messages yet"
-          body="Start a conversation from anyone's profile."
-        />
-      ) : (
-        <ul className="glass-raised elev-1 overflow-hidden rounded-[22px]">
-          {conversations.map((conversation, i) => {
-            const profile = profileByConversation.get(conversation.id);
-            const lastMessage = lastMessageByConversation.get(conversation.id);
-            const isUnread =
-              lastMessage &&
-              !lastMessage.read_at &&
-              lastMessage.sender_id !== user.id;
-            const avatarUrl = profile?.avatar_media_id
-              ? (avatarUrlByMediaId.get(profile.avatar_media_id) ?? null)
-              : null;
+      {me && (
+        <div className="px-4 pb-3 pt-2">
+          <StoryTray tray={tray} me={{ id: me.id, username: me.username, avatarUrl: avatarOf(me.avatar_media_id) }} />
+        </div>
+      )}
 
-            return (
-              <li key={conversation.id} className="relative">
-                {i > 0 && <span className="absolute left-[5.25rem] right-0 top-0 h-px bg-border" />}
-                <Link
-                  href={`/messages/${conversation.id}`}
-                  className="flex items-center gap-3 py-3 pl-2 pr-4 transition-colors active:bg-foreground/[0.06]"
-                >
-                  <span
-                    aria-label={isUnread ? "Unread" : undefined}
-                    className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${isUnread ? "bg-accent" : ""}`}
-                  />
-                  <Avatar
-                    username={profile?.username ?? "unknown"}
-                    avatarUrl={avatarUrl}
-                    className="h-[52px] w-[52px] text-lg"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
-                      <p className="flex min-w-0 flex-1 items-center gap-1 text-[1rem] font-semibold">
-                        <span className="truncate">{profile?.display_name || profile?.username || "unknown"}</span>
-                        {profile?.is_verified && <VerifiedBadge className="h-4 w-4" />}
-                      </p>
-                      {lastMessage && (
-                        <span className="flex flex-shrink-0 items-center gap-0.5 text-[0.8125rem] text-muted" suppressHydrationWarning>
-                          {relativeTime(lastMessage.created_at)}
-                          <ChevronRightIcon className="h-3.5 w-3.5 text-muted/60" />
-                        </span>
-                      )}
-                    </div>
-                    <p
-                      className={`mt-0.5 line-clamp-2 text-[0.875rem] leading-snug ${
-                        isUnread ? "text-foreground" : "text-muted"
-                      }`}
-                    >
-                      {lastMessage
-                        ? `${lastMessage.sender_id === user.id ? "You: " : ""}${lastMessage.body}`
-                        : `@${profile?.username ?? "unknown"}`}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      <nav className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-2" aria-label="Filter conversations">
+        <Chip href="/messages" active={filter === "all"} label="All" count={0} />
+        <Chip href="/messages?filter=unread" active={filter === "unread"} label="Unread" count={unreadCount} />
+      </nav>
+
+      <ul className="mt-1">
+        {filter === "all" && (
+          <>
+            <PinnedRow
+              href="/notifications"
+              icon={<BoltIcon className="h-6 w-6" />}
+              iconClass="bg-accent text-accent-foreground"
+              title="Activity & new followers"
+              line={activityLine}
+              unread={activity.unread}
+              at={activity.latest?.created_at ?? null}
+            />
+            {systemLine && (
+              <PinnedRow
+                href="/notifications"
+                icon={<BellIcon className="h-6 w-6" />}
+                iconClass="bg-foreground/[0.07] text-muted"
+                title="System notifications"
+                line={systemLine}
+                unread={system.unread}
+                at={system.latest?.created_at ?? null}
+              />
+            )}
+          </>
+        )}
+
+        {shown.map(({ conversation, person, last, status }) => (
+          <ConversationRow
+            key={conversation.id}
+            href={`/messages/${conversation.id}`}
+            username={person?.username ?? "unknown"}
+            name={person?.display_name || person?.username || "unknown"}
+            verified={Boolean(person?.is_verified)}
+            avatarUrl={avatarOf(person?.avatar_media_id)}
+            status={status}
+            at={last?.created_at ?? null}
+          />
+        ))}
+      </ul>
+
+      {shown.length === 0 && (
+        <p className="px-6 pt-8 text-center text-[0.9375rem] text-muted">
+          {filter === "unread" ? "You're all caught up." : "No messages yet. Start one from anyone's profile."}
+        </p>
       )}
     </div>
   );

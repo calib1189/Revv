@@ -27,33 +27,9 @@ import {
 import { relativeTime } from "@/lib/format/relative-time";
 import { getShopReviewPlaceIds } from "@/lib/db/shop-reviews";
 import { groupNotifications, groupedVerb } from "@/lib/notifications/group";
+import { NOTIFICATION_VERBS } from "@/lib/notifications/verbs";
 
-const KIND_VERB: Record<string, string> = {
-  like: "liked your post",
-  comment: "commented on your post",
-  comment_reply: "replied to your comment",
-  follow: "started following you",
-  peer_rating: "rated your car",
-  crew_join_request: "requested to join your crew",
-  crew_join_approved: "approved your request to join",
-  crew_post: "posted in a crew you're in",
-  meetup_attending: "is going to your meet",
-  shop_review: "reviewed your shop",
-  story_mention: "mentioned you in their story",
-  story_answer: "answered your question",
-  comment_reaction: "reacted to your comment",
-  story_reaction: "reacted to your story",
-  invite_joined: "joined SORZA from your invite",
-  // These four have no actor — an admin decision or an automated check,
-  // never a specific person to attribute it to (see the triggers in
-  // 0092_more_notification_kinds.sql, every one inserts actor_id: null).
-  // Rendered with username "SORZA" (the page's existing fallback for a
-  // null actor_id), so the sentence needs to read naturally after that.
-  meetup_approved: "approved your meet — it's live",
-  meetup_rejected: "didn't approve your meet",
-  ad_approved: "approved your ad — it's live",
-  vehicle_verified: "verified your vehicle",
-};
+const KIND_VERB = NOTIFICATION_VERBS;
 
 /** The small badge on each avatar that says what kind of activity it
  * was, the way iOS marks a notification's source. */
