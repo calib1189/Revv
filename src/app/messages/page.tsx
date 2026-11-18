@@ -82,7 +82,7 @@ export default async function MessagesInboxPage({ searchParams }: { searchParams
       )}
 
       <nav className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-2" aria-label="Filter conversations">
-        <Chip href="/messages" active={filter === "all"} label="All" count={0} />
+        <Chip href="/messages" active={filter === "all"} label="All" count={rows.length} />
         <Chip href="/messages?filter=unread" active={filter === "unread"} label="Unread" count={unreadCount} />
       </nav>
 
@@ -102,7 +102,7 @@ export default async function MessagesInboxPage({ searchParams }: { searchParams
               <PinnedRow
                 href="/notifications"
                 icon={<BellIcon className="h-6 w-6" />}
-                iconClass="bg-foreground/[0.07] text-muted"
+                iconClass="bg-foreground/[0.08] text-foreground"
                 title="System notifications"
                 line={systemLine}
                 unread={system.unread}

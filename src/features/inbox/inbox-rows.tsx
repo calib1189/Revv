@@ -6,16 +6,6 @@ import { relativeTime } from "@/lib/format/relative-time";
 
 /** The inbox's rows (app/messages/page.tsx). */
 
-/** A row's second line: the text truncates, the time always shows. */
-function RowLine({ text, at, strong }: { text: string; at: string | null; strong: boolean }) {
-  return (
-    <p className={`mt-0.5 flex min-w-0 text-[0.875rem] ${strong ? "font-semibold text-foreground" : "text-muted"}`} suppressHydrationWarning>
-      <span className="truncate">{text}</span>
-      {at && <span className="flex-shrink-0 whitespace-pre font-normal text-muted">{` · ${relativeTime(at)}`}</span>}
-    </p>
-  );
-}
-
 export function Chip({ href, active, label, count }: { href: string; active: boolean; label: string; count: number }) {
   return (
     <Link
@@ -54,7 +44,10 @@ export function PinnedRow({
         <span className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full ${iconClass}`}>{icon}</span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[1rem] font-semibold">{title}</p>
-          <RowLine text={line} at={at} strong={unread > 0} />
+          <p className={`mt-0.5 truncate text-[0.875rem] ${unread > 0 ? "font-semibold text-foreground" : "text-muted"}`} suppressHydrationWarning>
+            {line}
+            {at && <span className="font-normal text-muted"> · {relativeTime(at)}</span>}
+          </p>
         </div>
         {unread > 0 && (
           <span className="flex h-6 min-w-6 flex-shrink-0 items-center justify-center rounded-full bg-danger px-1.5 text-[0.75rem] font-bold text-white">
@@ -92,7 +85,10 @@ export function ConversationRow({
             <span className="truncate">{name}</span>
             {verified && <VerifiedBadge className="h-4 w-4 flex-shrink-0" />}
           </p>
-          <RowLine text={status.text} at={at} strong={status.unread} />
+          <p className={`mt-0.5 truncate text-[0.875rem] ${status.unread ? "font-semibold text-foreground" : "text-muted"}`} suppressHydrationWarning>
+            {status.text}
+            {at && <span className="font-normal text-muted"> · {relativeTime(at)}</span>}
+          </p>
         </div>
         {status.unread && <span aria-label="Unread" className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-accent" />}
       </Link>
