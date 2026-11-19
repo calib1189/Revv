@@ -764,6 +764,29 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   animation: heart-float 950ms var(--ease-ios) forwards;
 }
 
+/* A feed video waiting on data: a line that grows from the centre and
+   fades, over and over, where the progress line sits. */
+@keyframes feed-buffer {
+  0% {
+    opacity: 0.9;
+    transform: scaleX(0.05);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+.animate-feed-buffer {
+  animation: feed-buffer 900ms ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-feed-buffer {
+    animation: none;
+    opacity: 0.5;
+    transform: none;
+  }
+}
+
 /* Equalizer bars on a sound row that's previewing. Each bar runs the
    same keyframes at its own delay. */
 @keyframes eq-bar {

@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { SaveButton } from "@/features/feed/save-button";
 import { PostContextMenu } from "@/features/feed/post-context-menu";
@@ -39,6 +39,34 @@ import type { PostCardData } from "@/features/feed/post-card";
 /** Feed photos are drawn edge to edge. */
 export const FEED_IMAGE_SIZES = "100vw";
 const ON_VIDEO_SHADOW ="[filter:drop-shadow(0_1px_4px_rgb(0_0_0/0.55))]";
+
+/** The feed scrolls inside its own container, and an observer rooted at
+ * the viewport sees everything clipped by it as hidden, whatever its
+ * rootMargin: a "load before it's on screen" margin has to be measured
+ * against the container itself. */
+function scrollParent(el: HTMLElement): HTMLElement | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const y = getComputedStyle(p).overflowY;
+    if (y === "auto" || y === "scroll") return p;
+  }
+  return null;
+}
+
+/** Set once the first on-screen feed video starts playing: the cue for
+ * the videos next to it to start buffering. */
+let feedVideoStarted = false;
+const feedVideoStartedListeners = new Set<() => void>();
+function subscribeFeedVideoStarted(listener: () => void) {
+  feedVideoStartedListeners.add(listener);
+  return () => {
+    feedVideoStartedListeners.delete(listener);
+  };
+}
+function markFeedVideoStarted() {
+  if (feedVideoStarted) return;
+  feedVideoStarted = true;
+  for (const listener of feedVideoStartedListeners) listener();
+}
 
 function formatClock(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
@@ -283,6 +311,15 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
   const lastTapRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isPaused, setIsPaused] = useState(false);
   const [scrub, setScrub] = useState<{ time: number; duration: number } | null>(null);
+  const [onScreen, setOnScreen] = useState(false);
+  // The next video buffers ahead, so a swipe lands on a frame that's
+  // already playing — but only once the one on screen has started, so it
+  // never competes for bandwidth with the video being watched.
+  const anyVideoStarted = useSyncExternalStore(subscribeFeedVideoStarted, () => feedVideoStarted, () => false);
+  const preloadAhead = shouldLoad && (onScreen || anyVideoStarted);
+  const [buffering, setBuffering] = useState(false);
+  const hasLoadedRef = useRef(false);
+  const bufferTimerRef = useRef(0);
   const hasRecordedCompletion = useRef(false);
   const isIntersectingRef = useRef(false);
   const { spawn, layer: heartLayer } = useFloatingHearts();
@@ -318,6 +355,15 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
 
   /** Plays this video if it's the one on screen. Muted only if the viewer
    * muted the feed, or the browser refused sound before any tap. */
+  function markWaiting() {
+    window.clearTimeout(bufferTimerRef.current);
+    bufferTimerRef.current = window.setTimeout(() => setBuffering(true), 350);
+  }
+  function markReady() {
+    window.clearTimeout(bufferTimerRef.current);
+    setBuffering(false);
+  }
+
   function startPlayback() {
     const el = videoRef.current;
     if (!el || !isIntersectingRef.current) return;
@@ -330,6 +376,7 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
     // Not loaded yet: loadedmetadata (below) calls this again.
     if (!el.getAttribute("src")) return;
     el.muted = isFeedMuted() || blockedRef.current;
+    if (el.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) markWaiting();
     el.play()
       .then(() => setIsPaused(false))
       .catch((err: unknown) => {
@@ -384,6 +431,7 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
     const observer = new IntersectionObserver(
       ([entry]) => {
         isIntersectingRef.current = entry.isIntersecting && entry.intersectionRatio > 0.6;
+        setOnScreen(isIntersectingRef.current);
         if (isIntersectingRef.current) startPlayback();
         else el.pause();
       },
@@ -396,6 +444,57 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
     return () => {
       observer.disconnect();
       el.removeEventListener("loadedmetadata", startPlayback);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startPlayback reads only refs and module state
+  }, []);
+
+  // Scrolled well away: let go of the file. iPhones only decode a few
+  // videos at once, and a feed that kept every video it passed loaded
+  // got slower the further down it went.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (shouldLoad || !el || !hasLoadedRef.current) return;
+    hasLoadedRef.current = false;
+    el.pause();
+    el.load(); // src is already gone; this drops the buffered data
+    setBuffering(false);
+    if (progressFillRef.current) progressFillRef.current.style.transform = "scaleX(0)";
+  }, [shouldLoad]);
+
+  // Waiting on data while it should be playing: show the loading line,
+  // after a beat, so a quick hiccup doesn't flash it. A video that has
+  // never had any data doesn't always fire "waiting", so startPlayback
+  // calls markWaiting itself too.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const waiting = markWaiting;
+    const ready = markReady;
+    const playing = () => {
+      ready();
+      if (isIntersectingRef.current) markFeedVideoStarted();
+    };
+    // Just given its file: if it's already the one on screen (a fast
+    // swipe gets there first), start now rather than after the file's
+    // header arrives, so the loading line shows while it fetches.
+    const loadstart = () => {
+      hasLoadedRef.current = true;
+      startPlayback();
+    };
+    el.addEventListener("waiting", waiting);
+    el.addEventListener("playing", playing);
+    el.addEventListener("canplay", ready);
+    el.addEventListener("pause", ready);
+    el.addEventListener("emptied", ready);
+    el.addEventListener("loadstart", loadstart);
+    return () => {
+      window.clearTimeout(bufferTimerRef.current);
+      el.removeEventListener("waiting", waiting);
+      el.removeEventListener("playing", playing);
+      el.removeEventListener("canplay", ready);
+      el.removeEventListener("pause", ready);
+      el.removeEventListener("emptied", ready);
+      el.removeEventListener("loadstart", loadstart);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- startPlayback reads only refs and module state
   }, []);
@@ -533,11 +632,13 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
     <div ref={containerRef} className="absolute inset-0" onClick={handleClick} {...longPressHandlers}>
       <video
         ref={videoRef}
-        src={shouldLoad ? url : undefined}
+        // #t=0.001 makes iPhones fetch and paint the first frame instead
+        // of a black box while the slide is still waiting to play.
+        src={shouldLoad ? `${url}#t=0.001` : undefined}
         loop
         muted={isMuted}
         playsInline
-        preload="metadata"
+        preload={preloadAhead ? "auto" : "metadata"}
         className="h-full w-full object-cover"
       />
       {isMuted && shouldLoad && <SoundOffPill onUnmute={unmute} />}
@@ -574,6 +675,7 @@ const VideoMedia = forwardRef<VideoMediaHandle, {
           className={`relative w-full overflow-hidden bg-white/20 transition-[height] duration-150 ${scrub ? "h-1.5" : "h-[2px]"}`}
         >
           <div ref={progressFillRef} className="h-full w-full origin-left scale-x-0 bg-white/90" />
+          {buffering && !scrub && <div aria-hidden className="animate-feed-buffer absolute inset-0 bg-white" />}
         </div>
       </div>
     </div>
@@ -812,6 +914,7 @@ export function SwipeSlide({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isOnScreen, setIsOnScreen] = useState(false);
   const [shouldLoadMedia, setShouldLoadMedia] = useState(false);
+  const [videoNear, setVideoNear] = useState(false);
   const [likeBurst, setLikeBurst] = useState(0);
   // Local override so an edited caption shows immediately — `data` is a
   // snapshot from whichever server fetch produced this slide.
@@ -852,24 +955,41 @@ export function SwipeSlide({
     if (!next) audio.play().catch(() => {});
   }
 
+  // A video loads while it's on screen or one swipe away, and lets go of
+  // its file once it's further than that (VideoMedia): the next video is
+  // already buffered when the swipe lands, and only a few are ever held.
+  useEffect(() => {
+    if (!isVideo) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => setVideoNear(entry.isIntersecting), {
+      root: scrollParent(el),
+      rootMargin: "50% 0px",
+      threshold: 0,
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isVideo]);
+
   useEffect(() => {
     // Every post the feed has fetched used to mount a real <video>/<img
     // src> the instant it rendered, regardless of whether it was ever
     // scrolled to — that drove Supabase Storage egress past 300% with a
     // handful of users. A generous rootMargin starts the request a bit
-    // before the slide is on screen. Once true it stays true.
-    if (shouldLoadMedia) return;
+    // before the slide is on screen. Once true it stays true. (Videos
+    // use videoNear above instead.)
+    if (shouldLoadMedia || isVideo) return;
     const el = containerRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) setShouldLoadMedia(true);
       },
-      { rootMargin: "150% 0px", threshold: 0 },
+      { root: scrollParent(el), rootMargin: "150% 0px", threshold: 0 },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [shouldLoadMedia]);
+  }, [shouldLoadMedia, isVideo]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -902,7 +1022,7 @@ export function SwipeSlide({
           <VideoMedia
             ref={videoMediaRef}
             url={data.media[0].url}
-            shouldLoad={shouldLoadMedia}
+            shouldLoad={videoNear}
             postId={data.post.id}
             trackCompletion={data.isAuthenticated}
             onDoubleTapLike={handleDoubleTapLike}
