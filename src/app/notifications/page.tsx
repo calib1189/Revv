@@ -8,11 +8,10 @@ import { getProfileByUserId } from "@/lib/db/profiles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { Avatar } from "@/features/feed/avatar";
 import { MarkAllReadButton } from "@/features/notifications/mark-all-read-button";
-import { InboxTabs } from "@/features/shell/inbox-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SectionTitle } from "@/components/ui/grouped-list";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import {
+  BackIcon,
   BellIcon,
   CommentIcon,
   HeartIcon,
@@ -112,35 +111,36 @@ export default async function NotificationsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-lg flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
-      <header className="mb-5 flex items-end justify-between gap-4">
-        <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em]">Inbox</h1>
-        {hasUnread && (
-          <div className="mb-1.5">
-            <MarkAllReadButton />
-          </div>
-        )}
+    <div className="mx-auto w-full max-w-lg flex-1 pb-16 pt-3 sm:pt-8">
+      {/* Same shape as the inbox it opens from (app/messages/page.tsx). */}
+      <header className="grid h-12 grid-cols-[1fr_auto_1fr] items-center px-4">
+        <Link href="/messages" aria-label="Back to inbox" className="pressable -ml-2 flex h-9 w-9 items-center justify-center rounded-full">
+          <BackIcon className="h-5 w-5" />
+        </Link>
+        <h1 className="text-[1.0625rem] font-bold">Activity</h1>
+        <div className="flex justify-end">{hasUnread && <MarkAllReadButton />}</div>
       </header>
-      <InboxTabs current="activity" />
 
       {notifications.length === 0 ? (
+        <div className="px-4 pt-4">
         <EmptyState
           card
           icon={<BellIcon />}
           title="No activity yet"
           body="Likes, comments, and new followers show up here."
         />
+        </div>
       ) : (
-        <div className="flex flex-col gap-7">
+        <div className="mt-2 flex flex-col gap-4">
           {groups
             .filter((g) => g.items.length > 0)
             .map((group) => (
               <section key={group.title}>
-                <SectionTitle>{group.title}</SectionTitle>
-                <ul className="glass-raised elev-1 overflow-hidden rounded-[22px]">
+                <h2 className="px-4 pb-1 pt-2 text-[0.8125rem] font-semibold text-muted">{group.title}</h2>
+                <ul>
                   {/* Repeats from one person fold into one row
                       ("liked 2 of your posts"); the newest one leads. */}
-                  {groupNotifications(group.items).map(({ lead: n, targetCount, unread }, i) => {
+                  {groupNotifications(group.items).map(({ lead: n, targetCount, unread }) => {
                     const username = n.actor_id
                       ? (usernameByActorId.get(n.actor_id) ?? "unknown")
                       : "SORZA";
@@ -171,41 +171,39 @@ export default async function NotificationsPage() {
                                   : "#";
 
                     return (
-                      <li key={n.id} className="relative">
-                        {i > 0 && <span className="absolute left-[4.75rem] right-0 top-0 h-px bg-border" />}
+                      <li key={n.id}>
                         <Link
                           href={href}
-                          className="flex items-center gap-3 py-3 pl-2 pr-4 transition-colors active:bg-foreground/[0.06]"
+                          className="flex items-center gap-3.5 px-4 py-3 transition-colors active:bg-foreground/[0.06]"
                         >
-                          <span
-                            aria-label={unread ? "Unread" : undefined}
-                            className={`h-2 w-2 flex-shrink-0 rounded-full ${unread ? "bg-accent" : ""}`}
-                          />
                           <span className="relative flex-shrink-0">
                             <Avatar
                               username={username}
                               avatarUrl={n.actor_id ? (avatarUrlByActorId.get(n.actor_id) ?? null) : null}
-                              className="h-11 w-11 text-base"
+                              className="h-14 w-14 text-lg"
                             />
                             {badge && (
                               <span
-                                className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full text-white ring-2 ring-[var(--glass-solid-raised)]"
+                                className="absolute -bottom-0.5 -right-0.5 flex h-[20px] w-[20px] items-center justify-center rounded-full text-white ring-2 ring-background"
                                 style={{ background: badge.color }}
                               >
                                 {badge.icon}
                               </span>
                             )}
                           </span>
-                          <span className="min-w-0 flex-1 text-[0.9375rem] leading-snug">
-                            <span className="font-semibold">{username}</span>
-                            {n.actor_id && verifiedActorIds.has(n.actor_id) && (
-                              <VerifiedBadge className="ml-1 h-3.5 w-3.5 align-[-0.15em]" />
-                            )}{" "}
-                            <span className={unread ? "" : "text-muted"}>{verb}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[0.9375rem] leading-snug">
+                              <span className="font-semibold">{username}</span>
+                              {n.actor_id && verifiedActorIds.has(n.actor_id) && (
+                                <VerifiedBadge className="ml-1 h-3.5 w-3.5 align-[-0.15em]" />
+                              )}{" "}
+                              <span className={unread ? "" : "text-muted"}>{verb}</span>
+                            </span>
+                            <span className="mt-0.5 block text-[0.8125rem] text-muted" suppressHydrationWarning>
+                              {relativeTime(n.created_at)}
+                            </span>
                           </span>
-                          <span className="flex-shrink-0 self-start pt-0.5 text-[0.8125rem] text-muted" suppressHydrationWarning>
-                            {relativeTime(n.created_at)}
-                          </span>
+                          {unread && <span aria-label="Unread" className="h-2.5 w-2.5 flex-shrink-0 rounded-full bg-accent" />}
                         </Link>
                       </li>
                     );
