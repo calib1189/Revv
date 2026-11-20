@@ -111,6 +111,20 @@ export function decideScheduledPush({
   return null;
 }
 
+/** The "your car got passed" push (features/leaderboard/notify-rank-drops)
+ * and the add-a-car / rate-your-car nudges (lib/onboarding/nudges) go out
+ * in the afternoon, between the morning and evening Daily pushes, so they
+ * never land on top of either. */
+const AFTERNOON_HOUR = 15;
+const AFTERNOON_LAST_HOUR = 18;
+
+export function isAfternoonPushHour(
+  localHour: number,
+  prefs: Pick<PushPrefs, "quietHours" | "quietStart" | "quietEnd">,
+): boolean {
+  return localHour >= AFTERNOON_HOUR && localHour <= AFTERNOON_LAST_HOUR && !isQuietHour(localHour, prefs);
+}
+
 const VOTE_ALERT_GAP_MS = 3 * 60 * 60 * 1000;
 export const MAX_VOTE_ALERTS_PER_DAY = 3;
 

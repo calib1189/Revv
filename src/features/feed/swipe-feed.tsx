@@ -6,6 +6,8 @@ import { loadMoreFeedPostsAction, loadFeedByCategoryAction } from "@/features/fe
 import { SwipeSlide } from "@/features/feed/swipe-slide";
 import { SponsoredSlide, type SponsoredSlideData } from "@/features/feed/sponsored-slide";
 import { DailyFeedSlide } from "@/features/daily/daily-teaser-card";
+import { JustRatedSlide } from "@/features/feed/just-rated-slide";
+import type { JustRatedSlideData } from "@/lib/feed/just-rated";
 import type { DailyTeaser } from "@/lib/daily/teaser";
 import { CategoryFilterBar } from "@/features/feed/category-filter-bar";
 import { StoriesPeek } from "@/features/stories/stories-peek";
@@ -20,11 +22,15 @@ import type { PostCardData } from "@/features/feed/post-card";
 // system, so showing it once per session (not re-injected as more
 // posts load) is the honest amount of "ad load" to claim credit for.
 const AD_INJECTION_INDEX = 3;
+// Where the "Just rated" slides sit: one early, then spread out, clear of
+// the ad. Placed once, like the ad, not re-injected as more posts load.
+const JUST_RATED_INDEXES = [1, 6, 10];
 
 export function SwipeFeed({
   initialPosts,
   ad,
   daily = null,
+  justRated = [],
   isAuthenticated,
   storyTray = [],
 }: {
@@ -32,6 +38,8 @@ export function SwipeFeed({
   ad: SponsoredSlideData | null;
   /** Today's Sorza Daily challenge, shown as the first slide. */
   daily?: DailyTeaser | null;
+  /** Cars rated in the last few days, slotted between posts. */
+  justRated?: JustRatedSlideData[];
   isAuthenticated: boolean;
   /** Stories from you and people you follow, for the pill at the start
    * of the filter row. */
@@ -110,6 +118,11 @@ export function SwipeFeed({
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [posts, hasMore, category]);
+
+  function justRatedAt(index: number): JustRatedSlideData | null {
+    const k = JUST_RATED_INDEXES.indexOf(index);
+    return k >= 0 ? (justRated[k] ?? null) : null;
+  }
 
   // Every post by the blocked author, not just the one the menu was
   // opened on — blocking has to take effect in the feed immediately (App
@@ -195,9 +208,19 @@ export function SwipeFeed({
               {ad && category === null && index === AD_INJECTION_INDEX && (
                 <SponsoredSlide data={ad} slideHeight={feedHeight} />
               )}
+              {category === null && justRatedAt(index) && (
+                <JustRatedSlide data={justRatedAt(index)!} slideHeight={feedHeight} />
+              )}
               <SwipeSlide data={post} slideHeight={feedHeight} onBlocked={handleBlocked} />
             </div>
           ))}
+          {/* A short feed that's run out still shows the rest at the end,
+              rather than never reaching their spot. */}
+          {category === null &&
+            !hasMore &&
+            justRated
+              .filter((_, k) => (JUST_RATED_INDEXES[k] ?? Infinity) >= posts.length)
+              .map((data) => <JustRatedSlide key={data.vehicleId} data={data} slideHeight={feedHeight} />)}
           {hasMore && <div ref={sentinelRef} className="h-1" />}
         </div>
       )}

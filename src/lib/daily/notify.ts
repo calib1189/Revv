@@ -32,7 +32,7 @@ interface PrefsRow {
   time_zone: string | null;
 }
 
-function toPushPrefs(row: PrefsRow | undefined): { prefs: PushPrefs; timeZone: string | null } {
+export function toPushPrefs(row: PrefsRow | undefined): { prefs: PushPrefs; timeZone: string | null } {
   return {
     prefs: {
       dailyChallenge: row?.daily_challenge ?? DEFAULT_NOTIFICATION_PREFERENCES.daily_challenge,
@@ -47,7 +47,7 @@ function toPushPrefs(row: PrefsRow | undefined): { prefs: PushPrefs; timeZone: s
   };
 }
 
-async function loadPrefs(service: SupabaseClient<Database>, userIds: string[]): Promise<Map<string, PrefsRow>> {
+export async function loadPrefs(service: SupabaseClient<Database>, userIds: string[]): Promise<Map<string, PrefsRow>> {
   const { data, error } = await service
     .from("notification_preferences")
     .select("user_id, daily_challenge, daily_results, daily_votes, rate_ride, quiet_hours, quiet_start, quiet_end, time_zone")
@@ -59,11 +59,11 @@ async function loadPrefs(service: SupabaseClient<Database>, userIds: string[]): 
 /** Claims a log slot before sending. The log's primary key means only
  * one caller ever wins a given (person, day, kind, slot), so two runs
  * overlapping can't send the same push twice. */
-async function claimLogSlot(
+export async function claimLogSlot(
   service: SupabaseClient<Database>,
   userId: string,
   day: string,
-  kind: "morning" | "evening" | "vote",
+  kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car",
   slot = 0,
 ): Promise<boolean> {
   const { data, error } = await service
@@ -160,7 +160,7 @@ export async function sendDueDailyPushes(today: DailyChallenge, now: Date = new 
 
   const sentByUser = new Map<string, Set<ScheduledKind>>();
   for (const row of log.data ?? []) {
-    if (row.kind === "vote") continue;
+    if (row.kind !== "morning" && row.kind !== "evening") continue;
     const set = sentByUser.get(row.user_id) ?? new Set<ScheduledKind>();
     set.add(row.kind);
     sentByUser.set(row.user_id, set);

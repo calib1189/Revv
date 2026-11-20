@@ -39,7 +39,7 @@ import { VehicleTabs } from "@/features/garage/vehicle-tabs";
 import { RateBuildPanel } from "@/features/garage/rate-build-panel";
 import { ScoreHero, ScoreReasons } from "@/features/garage/score-hero";
 import { GroupedList, GroupedRow, RowIcon, SectionTitle } from "@/components/ui/grouped-list";
-import { EditIcon, WheelIcon } from "@/components/ui/icons";
+import { ChevronRightIcon, EditIcon, WheelIcon } from "@/components/ui/icons";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
@@ -248,6 +248,12 @@ export default async function VehiclePage({
     ? buildPosterOffer({ vehicle, build: activeBuild, hero: heroMedia, viewerId: user?.id ?? null, photoUrl: heroUrl })
     : null;
 
+  const hasRatablePhoto = Boolean(heroMedia) || gallery.some((g) => g.media.kind === "image");
+  // The rate panel sits under a photo that fills most of a phone screen,
+  // so an owner who'd just added a car never saw it: most unrated cars
+  // were never even tried. This puts the way in on the photo itself.
+  const showRateCta = isOwner && score == null && hasRatablePhoto;
+
   return (
     <div className="flex-1 pb-16">
       {/* Full-bleed hero: tall on phones so the car is the screen, a
@@ -310,37 +316,48 @@ export default async function VehiclePage({
                 {owner.is_verified && <VerifiedBadge className="h-4 w-4" />}
               </Link>
             )}
+            {showRateCta && (
+              <a
+                href="#rate"
+                className="pressable mt-5 flex h-12 w-full max-w-xs items-center justify-center gap-1.5 rounded-full bg-white text-[1rem] font-semibold text-black"
+              >
+                Get your SORZA score
+                <ChevronRightIcon className="h-4 w-4" />
+              </a>
+            )}
           </div>
         </div>
       </div>
 
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 pt-6 sm:px-6 sm:pt-8">
         {isOwner ? (
-          <RateBuildPanel
-            vehicleId={vehicle.id}
-            currentScore={score}
-            currentStrengths={activeBuild?.ai_rating_strengths ?? null}
-            currentLimitingFactors={activeBuild?.ai_rating_limiting_factors ?? null}
-            currentSubscores={currentSubscores}
-            topPercent={topPercent}
-            ratingHistory={ratingHistory}
-            rankPosition={rankPosition}
-            shareText={buildShareText({ title, score, isOwner })}
-            cardUrl={
-              score != null && heroMedia?.kind === "image"
-                ? `/garage/${vehicle.id}/card?v=${encodeURIComponent(`${activeBuild?.ai_rating_rated_at ?? ""}:${heroMedia.id}`)}`
-                : undefined
-            }
-            refUsername={owner?.username}
-            savedPending={activeBuild ? pendingRatingFromBuild(activeBuild) : null}
-            hasPhotos={Boolean(heroMedia) || gallery.some((g) => g.media.kind === "image")}
-            rerate={{ freeAt: freeRateAt?.toISOString() ?? null, balance: pointsBalance, cost: rerateCostNow }}
-            decal={
-              decalsEnabled(owner?.is_admin ?? false) && vehicle.ownership_verification_status === "approved"
-                ? { carName: title, photoUrl: heroUrl, priceCents: DECAL_PRICE_CENTS }
-                : null
-            }
-          />
+          <div id="rate" className="scroll-mt-24">
+            <RateBuildPanel
+              vehicleId={vehicle.id}
+              currentScore={score}
+              currentStrengths={activeBuild?.ai_rating_strengths ?? null}
+              currentLimitingFactors={activeBuild?.ai_rating_limiting_factors ?? null}
+              currentSubscores={currentSubscores}
+              topPercent={topPercent}
+              ratingHistory={ratingHistory}
+              rankPosition={rankPosition}
+              shareText={buildShareText({ title, score, isOwner })}
+              cardUrl={
+                score != null && heroMedia?.kind === "image"
+                  ? `/garage/${vehicle.id}/card?v=${encodeURIComponent(`${activeBuild?.ai_rating_rated_at ?? ""}:${heroMedia.id}`)}`
+                  : undefined
+              }
+              refUsername={owner?.username}
+              savedPending={activeBuild ? pendingRatingFromBuild(activeBuild) : null}
+              hasPhotos={hasRatablePhoto}
+              rerate={{ freeAt: freeRateAt?.toISOString() ?? null, balance: pointsBalance, cost: rerateCostNow }}
+              decal={
+                decalsEnabled(owner?.is_admin ?? false) && vehicle.ownership_verification_status === "approved"
+                  ? { carName: title, photoUrl: heroUrl, priceCents: DECAL_PRICE_CENTS }
+                  : null
+              }
+            />
+          </div>
         ) : (
           score != null && (
             <div className="glass-raised elev-2 rounded-[28px] p-5 sm:p-6">

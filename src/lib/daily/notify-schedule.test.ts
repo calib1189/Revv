@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideScheduledPush, isQuietHour, localHourIn, mayNotifyVote, type PushPrefs, type DayState } from "./notify-schedule";
+import { decideScheduledPush, isQuietHour, isAfternoonPushHour, localHourIn, mayNotifyVote, type PushPrefs, type DayState } from "./notify-schedule";
 
 const prefs: PushPrefs = {
   dailyChallenge: true,
@@ -118,5 +118,19 @@ describe("mayNotifyVote", () => {
   it("respects quiet hours and the switch", () => {
     expect(mayNotifyVote({ prefs, localHour: 23, sentTodayAt: [], now })).toBe(false);
     expect(mayNotifyVote({ prefs: { ...prefs, dailyVotes: false }, localHour: 12, sentTodayAt: [], now })).toBe(false);
+  });
+});
+
+describe("isAfternoonPushHour", () => {
+  it("is open only in the afternoon", () => {
+    expect(isAfternoonPushHour(14, prefs)).toBe(false);
+    expect(isAfternoonPushHour(15, prefs)).toBe(true);
+    expect(isAfternoonPushHour(18, prefs)).toBe(true);
+    expect(isAfternoonPushHour(19, prefs)).toBe(false);
+  });
+
+  it("respects quiet hours that reach into the afternoon", () => {
+    expect(isAfternoonPushHour(16, { ...prefs, quietStart: 16, quietEnd: 9 })).toBe(false);
+    expect(isAfternoonPushHour(15, { ...prefs, quietStart: 16, quietEnd: 9 })).toBe(true);
   });
 });

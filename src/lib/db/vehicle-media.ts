@@ -19,6 +19,26 @@ export async function listVehicleMedia(
   return data as VehicleMediaWithMedia[];
 }
 
+/** Which of these vehicles have at least one photo (not video) in their
+ * gallery — with a cover photo, what the rating needs (see
+ * generateBuildRatingAction). */
+export async function listVehicleIdsWithGalleryPhotos(
+  supabase: SupabaseClient<Database>,
+  vehicleIds: string[],
+): Promise<Set<string>> {
+  if (vehicleIds.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from("vehicle_media")
+    .select("vehicle_id, media(kind)")
+    .in("vehicle_id", vehicleIds);
+  if (error) throw error;
+  return new Set(
+    (data as { vehicle_id: string; media: { kind: string } | null }[])
+      .filter((row) => row.media?.kind === "image")
+      .map((row) => row.vehicle_id),
+  );
+}
+
 /** Total gallery photo count across several vehicles at once — for
  * garage-wide achievement thresholds (see lib/achievements/unlock.ts),
  * where per-vehicle counts don't matter, only the sum. */

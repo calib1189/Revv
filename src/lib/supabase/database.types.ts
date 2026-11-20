@@ -1502,14 +1502,14 @@ export interface Database {
         Row: {
           user_id: string;
           day: string;
-          kind: "morning" | "evening" | "vote";
+          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car";
           slot: number;
           sent_at: string;
         };
         Insert: {
           user_id: string;
           day: string;
-          kind: "morning" | "evening" | "vote";
+          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car";
           slot?: number;
           sent_at?: string;
         };

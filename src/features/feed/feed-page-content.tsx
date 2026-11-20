@@ -8,6 +8,7 @@ import { SwipeFeed } from "@/features/feed/swipe-feed";
 import { loadDailyTeaser } from "@/lib/daily/teaser";
 import { loadStoryTray, type TrayPerson } from "@/lib/stories/load";
 import type { SponsoredSlideData } from "@/features/feed/sponsored-slide";
+import { loadJustRated, type JustRatedSlideData } from "@/lib/feed/just-rated";
 
 export async function FeedPageContent() {
   const supabase = await createClient();
@@ -31,10 +32,12 @@ export async function FeedPageContent() {
   // to load is never a reason for the feed itself to fail.
   }).catch(() => null);
   const user = await getCurrentUser();
-  const [{ items }, dailyTeaser, storyTray] = await Promise.all([
+  const [{ items }, dailyTeaser, storyTray, justRated] = await Promise.all([
     listRankedFeedPosts(supabase, { viewerId: user?.id ?? null, limit: 8 }),
     loadDailyTeaser(user?.id ?? null),
     user ? loadStoryTray(supabase, user.id).catch(() => [] as TrayPerson[]) : Promise.resolve([] as TrayPerson[]),
+    // Like the ad: extra, so failing to load is never the feed failing.
+    loadJustRated(supabase, user?.id ?? null).catch(() => [] as JustRatedSlideData[]),
   ]);
   const [cards, ad] = await Promise.all([
     composePostCards(supabase, items.map((item) => item.post), user?.id ?? null),
@@ -46,6 +49,13 @@ export async function FeedPageContent() {
   const daily = dailyTeaser && !dailyTeaser.tookPartToday ? dailyTeaser : null;
 
   return (
-    <SwipeFeed initialPosts={cardsWithCursor} ad={ad} daily={daily} isAuthenticated={Boolean(user)} storyTray={storyTray} />
+    <SwipeFeed
+      initialPosts={cardsWithCursor}
+      ad={ad}
+      daily={daily}
+      justRated={justRated}
+      isAuthenticated={Boolean(user)}
+      storyTray={storyTray}
+    />
   );
 }
