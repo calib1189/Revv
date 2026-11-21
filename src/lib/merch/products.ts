@@ -11,10 +11,11 @@
  * Print files: public/merch/print, in two inks: dark for the light shirts
  * (white, sky), white for black and grey. The core designs come from
  * scripts/make-tee-print-files.py at 1800x2400 (150 DPI); the Limited Vice
- * City tee ("sunset") and the reworked Built. Rated. Ranked. are vector,
- * rendered separately at 3600x4800 (300 DPI) over the same 12x16 in. area,
- * so they print as sharp as Printful prints. Built. Rated. Ranked. has a
- * third print file for dark heather (see printFor). Shop photos:
+ * City tee ("sunset"), the reworked Built. Rated. Ranked. and Built Not
+ * Bought ("wordmark") are vector, rendered separately at 3600x4800
+ * (300 DPI) over the same 12x16 in. area, so they print as sharp as
+ * Printful prints. The last two have a third print file for dark heather
+ * (see printFor). Shop photos:
  * public/merch/3d and /4k, on Printful's own blank photos.
  */
 export type TeeDesignId = "sunset" | "big-s" | "built-rated-ranked" | "wordmark";
@@ -115,11 +116,14 @@ export const TEE_DESIGNS: TeeDesign[] = [
     printFor: { grey: "heather" },
   },
   {
+    // The id stays "wordmark": it's what tee_orders stores for past orders.
     id: "wordmark",
-    name: "Wordmark",
+    name: "Built Not Bought",
     colors: CORE_COLORS,
-    defaultColor: "grey",
-    detail: "S on the chest, SORZA across the back",
+    defaultColor: "black",
+    detail: "The S on the chest; on the back the S over “Built Not Bought”, with a halftone NOT and speed lines through BOUGHT",
+    // as on Built. Rated. Ranked., the red line is white on dark heather
+    printFor: { grey: "heather" },
   },
 ];
 
