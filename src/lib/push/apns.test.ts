@@ -179,3 +179,11 @@ describe("signApnsJwt", () => {
     expect(jwt.split(".")).toHaveLength(3);
   });
 });
+
+describe("buildApnsPayload importance", () => {
+  it("ranks an important push first in the summary, and leaves others alone", () => {
+    const base = { title: "T", body: "B", url: "/daily" };
+    expect(JSON.parse(buildApnsPayload({ ...base, important: true })).aps["relevance-score"]).toBe(1);
+    expect(JSON.parse(buildApnsPayload(base)).aps["relevance-score"]).toBeUndefined();
+  });
+});

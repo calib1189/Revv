@@ -4,6 +4,12 @@
 // to members who saw the badge-only version.
 export const INVITE_ANNOUNCEMENT = "invites_points_2026_11";
 
+/** A prize day's takeover (more points than usual for the Daily winner):
+ * once per account per day. */
+export function dailyBoostAnnouncement(dateKey: string): string {
+  return `daily_boost_${dateKey}`;
+}
+
 const DAY = 24 * 60 * 60 * 1000;
 
 /** A brand-new account has just had the welcome screen and the tour, so

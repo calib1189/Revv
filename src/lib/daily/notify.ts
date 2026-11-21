@@ -7,7 +7,9 @@ import { listUserIdsWithPushSubscriptions } from "@/lib/db/push-subscriptions";
 import { DEFAULT_NOTIFICATION_PREFERENCES, DEFAULT_QUIET_HOURS } from "@/lib/db/notification-preferences";
 import { getDailyChallengeByDate, type DailyChallenge } from "@/lib/db/daily";
 import { addDays, dailyDateKey } from "@/lib/daily/day";
-import { boostedPushCopy } from "@/lib/daily/prize";
+import { boostedPushCopy, isBoostedDay } from "@/lib/daily/prize";
+import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { SITE_URL } from "@/lib/site-url";
 import {
   decideScheduledPush,
   localHourIn,
@@ -80,17 +82,32 @@ function presentedBy(challenge: DailyChallenge): string {
   return challenge.sponsor_name ? `, presented by ${challenge.sponsor_name}` : "";
 }
 
+/** The challenge's picture as an absolute URL, for a push's big image:
+ * the admin's cover photo, else the stock photo for its icon. */
+async function challengeImageUrl(service: SupabaseClient<Database>, challenge: DailyChallenge): Promise<string> {
+  if (challenge.cover_media_id) {
+    const [media] = await getMediaByIds(service, [challenge.cover_media_id]).catch(() => []);
+    // Through Next's image optimizer: every Android device fetches it, so
+    // it's resized and cached on Vercel rather than pulled full size from
+    // Supabase Storage each time (Free plan egress).
+    if (media) return `${SITE_URL}/_next/image?url=${encodeURIComponent(publicMediaUrl(service, media.storage_path))}&w=1080&q=75`;
+  }
+  return `${SITE_URL}/daily/${challenge.icon}.jpg`;
+}
+
 function payloadFor(
   push: ScheduledPush,
   today: DailyChallenge,
   yesterday: DailyChallenge | null,
   place: number | null,
   rides: number,
+  image: string | null = null,
 ): PushPayload {
-  // A day with more points than usual leads every push with them.
+  // A day with more points than usual leads every push with them, marked
+  // important and carrying the challenge's photo.
   if (push.variant === "live" || push.variant === "results" || push.variant === "reminder") {
     const boosted = boostedPushCopy(push.variant, today);
-    if (boosted) return { ...boosted, url: "/daily" };
+    if (boosted) return { ...boosted, url: "/daily", important: true, ...(image ? { image } : {}) };
   }
   switch (push.variant) {
     case "placed":
@@ -195,6 +212,7 @@ export async function sendDueDailyPushes(today: DailyChallenge, now: Date = new 
   }
 
   const minutesLeft = Math.floor((new Date(today.ends_at).getTime() - now.getTime()) / 60_000);
+  const boostImage = isBoostedDay(today) ? await challengeImageUrl(service, today) : null;
   let sent = 0;
 
   const work = userIds.map((userId) => async () => {
@@ -221,7 +239,7 @@ export async function sendDueDailyPushes(today: DailyChallenge, now: Date = new 
     if (!push) return;
     if (!(await claimLogSlot(service, userId, todayKey, push.kind))) return;
     const remaining = round ? round.filter((id) => !rated.has(id)).length : 3;
-    await sendPushToUser(userId, payloadFor(push, today, yesterday, state.placeYesterday, remaining), push.category);
+    await sendPushToUser(userId, payloadFor(push, today, yesterday, state.placeYesterday, remaining, boostImage), push.category);
     sent += 1;
   });
 

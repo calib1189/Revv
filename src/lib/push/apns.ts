@@ -26,6 +26,8 @@ export function buildApnsPayload(payload: PushPayload): string {
         body: truncate(payload.body, MAX_BODY_LENGTH),
       },
       sound: "default",
+      // Ranks it first in the notification summary (0 to 1).
+      ...(payload.important ? { "relevance-score": 1 } : {}),
     },
     // Custom keys sit beside `aps`, never inside it.
     url: isSafeAppPath(payload.url) ? payload.url : "/",

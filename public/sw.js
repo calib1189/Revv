@@ -17,6 +17,11 @@ self.addEventListener("push", (event) => {
       body: payload.body,
       icon: "/icon.png",
       badge: "/icon.png",
+      // A big picture under the text (Android, desktop Chrome).
+      ...(payload.image ? { image: payload.image } : {}),
+      // A prize day: stays on screen until tapped or dismissed, with a
+      // buzz where the device allows it.
+      ...(payload.important ? { requireInteraction: true, vibrate: [180, 80, 180] } : {}),
       data: { url: payload.url || "/" },
     }),
   );

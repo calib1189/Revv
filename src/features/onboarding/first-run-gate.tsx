@@ -11,6 +11,8 @@ import { ChooseUsernameScreen } from "@/features/onboarding/choose-username-scre
 import { InvitePromo } from "@/features/invites/invite-promo";
 import { hasSeenAnnouncement } from "@/lib/db/announcement-views";
 import { INVITE_ANNOUNCEMENT, isAnnouncementAgeReady } from "@/lib/announcements";
+import { loadDailyBoost } from "@/lib/daily/boost";
+import { DailyBoostPromo } from "@/features/daily/daily-boost-promo";
 
 /** A free username built from what Google or Apple shared, or null. */
 async function suggestFreeUsername(supabase: SupabaseClient<Database>, user: User): Promise<string | null> {
@@ -32,8 +34,10 @@ async function suggestFreeUsername(supabase: SupabaseClient<Database>, user: Use
  *    box on /welcome that most people skipped, which left them unfindable
  *    and unrecognisable in the feed.
  * 2. After that, the first-time walkthrough.
- * 3. Once that's done, a one-time announcement (the invite program) for
- *    accounts at least a day old.
+ * 3. Once that's done, a prize day's takeover (the Daily winner gets more
+ *    points than usual) once that day, if they haven't entered; else a
+ *    one-time announcement (the invite program) for accounts at least a
+ *    day old. Never both at once.
  *
  * Only for confirmed accounts (only they can save either), and nothing is
  * shown when the reads fail, so neither can end up on every launch.
@@ -52,6 +56,15 @@ export async function FirstRunGate({ user }: { user: User }) {
   if (profile && isPlaceholderUsername(profile.username)) {
     const suggestion = await suggestFreeUsername(supabase, user).catch(() => null);
     return <ChooseUsernameScreen suggestion={suggestion} />;
+  }
+  const boost = startStep === null && profile ? await loadDailyBoost(supabase, profile.id) : null;
+  if (boost) {
+    return (
+      <>
+        <TutorialHost startStep={startStep} />
+        <DailyBoostPromo boost={boost} />
+      </>
+    );
   }
   if (startStep === null && profile && (await shouldShowInvitePromo(supabase, profile.id, profile.created_at))) {
     return (

@@ -24,6 +24,8 @@ import { isChallengeIcon } from "@/lib/daily/rotation";
 import { normalizeCaption, normalizeChallengeText, normalizeSponsor } from "@/lib/daily/validation";
 import { rewardDailyActivity } from "@/lib/daily/rewards";
 import { parseWinnerPoints } from "@/lib/daily/prize";
+import { markAnnouncementSeen } from "@/lib/db/announcement-views";
+import { dailyBoostAnnouncement } from "@/lib/announcements";
 import { notifyEntryVote } from "@/lib/daily/notify";
 import { getOrCreateRideRound } from "@/lib/daily/ride-server";
 import { compareToCommunity, type CommunityComparison } from "@/lib/daily/ride";
@@ -285,4 +287,15 @@ export async function rateRideAction(vehicleId: string, stars: number): Promise<
     aiScore: builds.get(vehicleId)?.ai_rating_score ?? null,
     roundComplete,
   };
+}
+
+/** The prize-day takeover showed; don't show it again today. */
+export async function markDailyBoostSeenAction(dateKey: string): Promise<void> {
+  if (!isDateKey(dateKey)) return;
+  try {
+    const { supabase, user } = await requireUser();
+    await markAnnouncementSeen(supabase, user.id, dailyBoostAnnouncement(dateKey));
+  } catch {
+    // Worst case it shows once more on the next launch.
+  }
 }
