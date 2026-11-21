@@ -24,7 +24,7 @@ describe("tee catalog", () => {
   it("has the three core designs in black, grey and white, and the Sunset drop in black, white and sky", () => {
     expect(TEE_DESIGNS.map((d) => d.id)).toEqual(["sunset", "big-s", "built-rated-ranked", "wordmark"]);
     expect(TEE_COLORS).toEqual(["black", "grey", "white", "sky"]);
-    expect(TEE_DESIGNS.map((d) => d.defaultColor)).toEqual(["black", "black", "white", "grey"]);
+    expect(TEE_DESIGNS.map((d) => d.defaultColor)).toEqual(["sky", "black", "white", "grey"]);
     for (const id of ["big-s", "built-rated-ranked", "wordmark"]) expect(teeById(id)?.colors).toEqual(["black", "grey", "white"]);
     expect(teeById("sunset")?.colors).toEqual(["black", "white", "sky"]);
   });

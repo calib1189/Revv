@@ -89,7 +89,7 @@ export const TEE_DESIGNS: TeeDesign[] = [
     id: "sunset",
     name: "Limited Vice City",
     colors: ["black", "white", "sky"],
-    defaultColor: "black",
+    defaultColor: "sky",
     detail: "The S and SORZA on the chest, the sunset S and “SORZA Auto Club” on the back",
     // Sunday, December 6, 2026, 11:59:59 PM Eastern
     endsAt: "2026-12-07T04:59:59Z",

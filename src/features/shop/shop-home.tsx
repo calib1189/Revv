@@ -389,7 +389,8 @@ export function ShopHome({
             tone="#e1141f"
             onClick={() => goTo("tees")}
           >
-            {liveTees.slice(0, 2).map((d) => (
+            {/* A drop's card is about the drop: only its shirt. */}
+            {(teeDrop ? [teeDrop] : liveTees.slice(0, 2)).map((d) => (
               <MiniTile
                 key={d.id}
                 label={formatUsd(TEE_FROM_CENTS)}
