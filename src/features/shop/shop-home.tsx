@@ -375,19 +375,24 @@ export function ShopHome({
       <div className="no-scrollbar -mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         {showTees && (
           <Promo
-            eyebrow={
+            eyebrow={teeDrop ? "Limited drop" : "New drop"}
+            title={teeDrop ? `${teeDrop.name} Tee` : "SORZA Tees"}
+            sub={
               teeDrop?.endsAt ? (
                 <>
-                  Limited drop · ends in <DropCountdown endsAt={teeDrop.endsAt} />
+                  <span className="block font-semibold text-foreground">
+                    Ends in <DropCountdown endsAt={teeDrop.endsAt} />
+                  </span>
+                  Gone after {teeDropEndLabel(teeDrop)} · from {formatUsd(TEE_FROM_CENTS)}
                 </>
               ) : (
-                "New drop"
+                `Heavy cotton · from ${formatUsd(TEE_FROM_CENTS)}`
               )
             }
-            title={teeDrop ? `${teeDrop.name} Tee` : "SORZA Tees"}
-            sub={teeDrop ? `Gone after ${teeDropEndLabel(teeDrop)} · from ${formatUsd(TEE_FROM_CENTS)}` : `Heavy cotton · from ${formatUsd(TEE_FROM_CENTS)}`}
             tone="#e1141f"
             onClick={() => goTo("tees")}
+            // a drop is one shirt: it sits beside the text, sized to the shirt
+            row={teeDrop !== null}
           >
             {/* A drop's card is about the drop: only its shirt. */}
             {(teeDrop ? [teeDrop] : liveTees.slice(0, 2)).map((d) => (
@@ -405,7 +410,7 @@ export function ShopHome({
           </Promo>
         )}
         {featured && (
-          <Promo eyebrow="Featured this week" title={featured.name} sub={`${RARITY_LABEL[rarityFor(featured.price, featured.founderOnly)]} ${STORE_CATEGORY_LABELS[featured.category].toLowerCase()}`} tone={RARITY_COLOR[rarityFor(featured.price, featured.founderOnly)]} onClick={() => open({ kind: "cosmetic", key: featured.id, item: featured })}>
+          <Promo eyebrow="Featured this week" title={featured.name} sub={`${RARITY_LABEL[rarityFor(featured.price, featured.founderOnly)]} ${STORE_CATEGORY_LABELS[featured.category].toLowerCase()}`} tone={RARITY_COLOR[rarityFor(featured.price, featured.founderOnly)]} onClick={() => open({ kind: "cosmetic", key: featured.id, item: featured })} row>
             <MiniTile
               wide
               label={owned.has(featured.id) ? "Owned" : `${featured.price.toLocaleString()} pts`}
@@ -590,26 +595,33 @@ function Promo({
   sub,
   tone,
   onClick,
+  row = false,
   children,
 }: {
   eyebrow: React.ReactNode;
   title: string;
-  sub: string;
+  sub: React.ReactNode;
   tone: string;
   onClick: () => void;
+  /** Tiles beside the text instead of under it: for a single product. */
+  row?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className="relative flex w-[84%] max-w-[360px] flex-shrink-0 snap-start flex-col self-start overflow-hidden rounded-[24px] bg-surface p-4 ring-1 ring-border">
+    <section
+      className={`relative flex w-[84%] max-w-[360px] flex-shrink-0 snap-start self-start overflow-hidden rounded-[24px] bg-surface ring-1 ring-border ${
+        row ? "flex-row items-center gap-3.5 p-3" : "flex-col p-4"
+      }`}
+    >
       <span aria-hidden className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full opacity-25 blur-3xl" style={{ background: tone }} />
-      <button type="button" onClick={onClick} className="relative text-left">
+      <button type="button" onClick={onClick} className={`relative text-left ${row ? "order-2 min-w-0 flex-1" : ""}`}>
         <p className="text-[0.75rem] font-bold uppercase tracking-[0.08em]" style={{ color: tone }}>
           {eyebrow}
         </p>
-        <p className="mt-1 line-clamp-1 text-[1.375rem] font-extrabold leading-tight tracking-[-0.02em]">{title}</p>
-        <p className="mt-0.5 text-[0.8125rem] text-muted">{sub}</p>
+        <p className={`mt-1 font-extrabold leading-tight tracking-[-0.02em] ${row ? "line-clamp-2 text-[1.1875rem]" : "line-clamp-1 text-[1.375rem]"}`}>{title}</p>
+        <p className={`text-[0.8125rem] text-muted ${row ? "mt-1.5 leading-snug" : "mt-0.5"}`}>{sub}</p>
       </button>
-      <div className="relative mt-3 flex gap-2.5">{children}</div>
+      <div className={`relative flex gap-2.5 ${row ? "order-1 w-[116px] flex-shrink-0" : "mt-3"}`}>{children}</div>
     </section>
   );
 }
