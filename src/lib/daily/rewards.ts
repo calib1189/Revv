@@ -39,12 +39,18 @@ export async function rewardDailyActivity(userId: string, dateKey: string, kind:
   }
 }
 
-/** Pays the podium of a settled challenge. Idempotent per challenge date. */
-export async function rewardPlacements(dateKey: string, placements: Placement[]): Promise<void> {
+/** Pays the podium of a settled challenge. Idempotent per challenge date.
+ * First place pays the day's own amount when an admin set one (0128). */
+export async function rewardPlacements(
+  dateKey: string,
+  placements: Placement[],
+  firstPlacePoints: number = DAILY_POINTS.place[1],
+): Promise<void> {
   for (const p of placements) {
     try {
       await recordDailyActivityRow(p.userId, dateKey, "placed");
-      await awardDailyPoints(p.userId, `place:${dateKey}`, DAILY_POINTS.place[p.place] ?? 0);
+      const amount = p.place === 1 ? firstPlacePoints : (DAILY_POINTS.place[p.place] ?? 0);
+      await awardDailyPoints(p.userId, `place:${dateKey}`, amount);
     } catch (err) {
       console.error("rewardPlacements failed:", err);
     }

@@ -19,6 +19,7 @@ export function ChallengeHero({
   sponsor = null,
   prize = null,
   prizePoints,
+  boosted = false,
   exampleClock,
   children,
 }: {
@@ -35,6 +36,9 @@ export function ChallengeHero({
   /** What the winner gets beyond points, with the points it comes with. */
   prize?: string | null;
   prizePoints: number;
+  /** The winner gets more points than usual: shown as the prize itself
+   * when there's no other prize. */
+  boosted?: boolean;
   /** A fixed time to show instead of the live countdown (the example
    * card on the sponsor page). */
   exampleClock?: string;
@@ -87,7 +91,7 @@ export function ChallengeHero({
       </div>
 
       <div className="flex flex-col gap-5 px-5 pb-5 pt-2">
-        {prize && <PrizeStrip prize={prize} points={prizePoints} />}
+        {(prize || boosted) && <PrizeStrip prize={prize} points={prizePoints} />}
         <p className="text-[0.9375rem] leading-relaxed text-white/75">{description}</p>
         <dl className="grid grid-cols-3 divide-x divide-white/[0.08] rounded-[18px] bg-white/[0.04] py-3 ring-1 ring-white/[0.06]">
           {stats.map((s) => (

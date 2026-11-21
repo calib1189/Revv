@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/daily";
 import { computePlacements, type Placement } from "@/lib/daily/placements";
 import { rewardPlacements } from "@/lib/daily/rewards";
+import { winnerPoints } from "@/lib/daily/prize";
 
 /** Settles one finished challenge: counts its real votes, works out the
  * podium, and records it. Safe to run more than once: placements are
@@ -38,7 +39,7 @@ export async function settleDailyChallenge(challenge: DailyChallenge): Promise<P
     if (error) throw error;
   }
 
-  await rewardPlacements(challenge.challenge_date, placements);
+  await rewardPlacements(challenge.challenge_date, placements, winnerPoints(challenge));
 
   const { error } = await service
     .from("daily_challenges")

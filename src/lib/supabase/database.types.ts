@@ -1382,6 +1382,8 @@ export interface Database {
           sponsor_url: string | null;
           sponsor_logo_media_id: string | null;
           prize: string | null;
+          /** 0128 — points for first place; null is the usual amount. */
+          winner_points: number | null;
           created_at: string;
         };
         Insert: {
@@ -1399,6 +1401,7 @@ export interface Database {
           sponsor_url?: string | null;
           sponsor_logo_media_id?: string | null;
           prize?: string | null;
+          winner_points?: number | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["daily_challenges"]["Insert"]>;

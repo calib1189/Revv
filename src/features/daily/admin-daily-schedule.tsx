@@ -12,6 +12,8 @@ import { clearDailyChallengeAction, scheduleDailyChallengeAction } from "@/featu
 import { CHALLENGE_ICONS, type ChallengeIcon } from "@/lib/daily/rotation";
 import { MAX_CHALLENGE_DESCRIPTION, MAX_CHALLENGE_TITLE, MAX_PRIZE, MAX_SPONSOR_NAME } from "@/lib/daily/validation";
 import { formatDayShort } from "@/lib/daily/format";
+import { MAX_WINNER_POINTS } from "@/lib/daily/prize";
+import { DAILY_POINTS } from "@/lib/points/values";
 import { ChallengeIconGlyph } from "@/features/daily/challenge-visual";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,8 @@ export interface ScheduleDay {
   sponsorLogoMediaId: string | null;
   sponsorLogoUrl: string | null;
   prize: string | null;
+  /** First place's points when set for this day (0128); null is the usual. */
+  winnerPoints: number | null;
 }
 
 type Uploaded = { mediaId: string; url: string };
@@ -63,10 +67,11 @@ export function AdminDailySchedule({ days, adminId }: { days: ScheduleDay[]; adm
                   {day.isToday ? "Today" : formatDayShort(day.dateKey)} · {day.isCustom ? "Scheduled" : "Rotation"}
                 </span>
                 <span className="block truncate text-[0.9375rem] font-semibold">{day.title}</span>
-                {(day.sponsorName || day.prize) && (
+                {(day.sponsorName || day.prize || day.winnerPoints) && (
                   <span className="mt-0.5 block truncate text-[0.75rem] font-semibold text-accent">
                     {day.sponsorName ? `Sponsored by ${day.sponsorName}` : "Prize day"}
                     {day.prize ? ` · ${day.prize}` : ""}
+                    {day.winnerPoints ? ` · ${day.winnerPoints.toLocaleString()} pts to the winner` : ""}
                   </span>
                 )}
               </span>
@@ -180,6 +185,7 @@ function DayEditor({ day, adminId, onDone }: { day: ScheduleDay; adminId: string
     day.sponsorLogoMediaId && day.sponsorLogoUrl ? { mediaId: day.sponsorLogoMediaId, url: day.sponsorLogoUrl } : null,
   );
   const [prize, setPrize] = useState(day.prize ?? "");
+  const [winnerPoints, setWinnerPoints] = useState(day.winnerPoints ? String(day.winnerPoints) : "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -194,6 +200,7 @@ function DayEditor({ day, adminId, onDone }: { day: ScheduleDay; adminId: string
         icon,
         coverMediaId: cover?.mediaId ?? null,
         sponsor: { name: sponsorName, url: sponsorUrl, logoMediaId: logo?.mediaId ?? null, prize },
+        winnerPoints,
       });
       if (result.error) {
         setError(result.error);
@@ -313,6 +320,20 @@ function DayEditor({ day, adminId, onDone }: { day: ScheduleDay; adminId: string
             placeholder="Free full detail ($150 value)"
             onChange={(e) => setPrize(e.target.value)}
           />
+        </div>
+        <div>
+          <Label htmlFor={`winner-points-${day.dateKey}`}>Points for the winner</Label>
+          <Input
+            id={`winner-points-${day.dateKey}`}
+            value={winnerPoints}
+            inputMode="numeric"
+            placeholder={`${DAILY_POINTS.place[1]} (the usual)`}
+            onChange={(e) => setWinnerPoints(e.target.value)}
+          />
+          <p className="mt-1 text-[0.75rem] leading-relaxed text-muted">
+            Blank pays the usual {DAILY_POINTS.place[1]}. Up to {MAX_WINNER_POINTS.toLocaleString()}. More than usual makes the day&apos;s
+            pushes and challenge card lead with it. 2nd and 3rd stay at {DAILY_POINTS.place[2]} and {DAILY_POINTS.place[3]}.
+          </p>
         </div>
       </div>
 

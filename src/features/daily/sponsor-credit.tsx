@@ -31,8 +31,9 @@ export function PresentedBy({ sponsor, className = "" }: { sponsor: DailySponsor
   );
 }
 
-/** What the winner takes home, on top of the usual points. */
-export function PrizeStrip({ prize, points }: { prize: string; points: number }) {
+/** What the winner takes home: a prize plus the points, or, on a day
+ * that only raises the points, the points themselves. */
+export function PrizeStrip({ prize, points }: { prize: string | null; points: number }) {
   return (
     <div className="flex items-start gap-3 rounded-[18px] bg-accent/12 px-4 py-3 ring-1 ring-accent/30">
       <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-accent text-white">
@@ -40,9 +41,11 @@ export function PrizeStrip({ prize, points }: { prize: string; points: number })
       </span>
       <div className="min-w-0 flex-1">
         <p className="micro-label text-accent">Winner gets</p>
-        <p className="mt-0.5 text-[0.9375rem] font-semibold leading-snug text-white">{prize}</p>
+        <p className="mt-0.5 text-[0.9375rem] font-semibold leading-snug text-white">
+          {prize ?? <span className="numeral">{points.toLocaleString()} points</span>}
+        </p>
         <p className="mt-0.5 text-[0.75rem] text-white/55">
-          Plus {points} points.{" "}
+          {prize ? `Plus ${points.toLocaleString()} points. ` : "Most votes when the clock runs out wins. "}
           <Link href="/daily/rules" className="underline underline-offset-2">
             Official rules
           </Link>

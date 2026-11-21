@@ -5,6 +5,7 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { dailyDateKey, isChallengeOpen } from "@/lib/daily/day";
 import { hasDailyActivityOn } from "@/lib/db/daily-activity";
 import type { ChallengeIcon } from "@/lib/daily/rotation";
+import { isBoostedDay, winnerTakes } from "@/lib/daily/prize";
 
 export interface DailyTeaser {
   title: string;
@@ -16,7 +17,8 @@ export interface DailyTeaser {
   /** Up to three real entry photos, newest first. */
   entryPhotos: string[];
   tookPartToday: boolean;
-  /** A sponsored day's sponsor, and/or what the winner gets (0109). */
+  /** A sponsored day's sponsor, and/or what the winner gets (0109): the
+   * prize, and on a day with more points than usual, those too (0128). */
   sponsorName: string | null;
   prize: string | null;
 }
@@ -52,7 +54,7 @@ export const loadDailyTeaser = cache(async (userId: string | null): Promise<Dail
       entryPhotos: recent.map((s) => urlById.get(s.media_id)).filter((u): u is string => Boolean(u)),
       tookPartToday: tookPart || Boolean(userId && submissions.some((s) => s.user_id === userId)),
       sponsorName: challenge.sponsor_name ?? null,
-      prize: challenge.prize ?? null,
+      prize: isBoostedDay(challenge) ? winnerTakes(challenge) : (challenge.prize ?? null),
     };
   } catch {
     return null;

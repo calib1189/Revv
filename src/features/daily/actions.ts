@@ -23,6 +23,7 @@ import { dailyDateKey, isChallengeOpen, isDateKey } from "@/lib/daily/day";
 import { isChallengeIcon } from "@/lib/daily/rotation";
 import { normalizeCaption, normalizeChallengeText, normalizeSponsor } from "@/lib/daily/validation";
 import { rewardDailyActivity } from "@/lib/daily/rewards";
+import { parseWinnerPoints } from "@/lib/daily/prize";
 import { notifyEntryVote } from "@/lib/daily/notify";
 import { getOrCreateRideRound } from "@/lib/daily/ride-server";
 import { compareToCommunity, type CommunityComparison } from "@/lib/daily/ride";
@@ -111,6 +112,8 @@ export async function scheduleDailyChallengeAction(input: {
   icon: string;
   coverMediaId: string | null;
   sponsor: { name: string; url: string; logoMediaId: string | null; prize: string };
+  /** Points for first place, as typed; blank is the usual amount. */
+  winnerPoints?: string;
 }): Promise<DailyActionResult> {
   if (!isDateKey(input.dateKey)) return { error: "Pick a date." };
   if (input.dateKey < dailyDateKey()) return { error: "That day has already finished." };
@@ -119,6 +122,8 @@ export async function scheduleDailyChallengeAction(input: {
   if ("error" in text) return { error: text.error };
   const sponsor = normalizeSponsor(input.sponsor);
   if ("error" in sponsor) return { error: sponsor.error };
+  const winner = parseWinnerPoints(input.winnerPoints ?? "");
+  if ("error" in winner) return { error: winner.error };
 
   let admin;
   try {
@@ -136,14 +141,24 @@ export async function scheduleDailyChallengeAction(input: {
       coverMediaId: input.coverMediaId,
       adminId: admin.userId,
       sponsor: sponsor.value,
+      winnerPoints: winner.value,
     });
     await createAuditLog(admin.supabase, {
       actorId: admin.userId,
       action: "daily_challenge.scheduled",
       targetType: "daily_challenge",
-      metadata: { dateKey: input.dateKey, title: text.value.title, sponsor: sponsor.value.name, prize: sponsor.value.prize },
+      metadata: {
+        dateKey: input.dateKey,
+        title: text.value.title,
+        sponsor: sponsor.value.name,
+        prize: sponsor.value.prize,
+        winnerPoints: winner.value,
+      },
     }).catch(() => undefined);
   } catch {
+    if (winner.value !== null) {
+      return { error: "Couldn't save that challenge. Points for the winner need migration 0128 applied first." };
+    }
     return {
       error: hasSponsor
         ? "Couldn't save that challenge. Sponsors and prizes need migration 0109 applied first."

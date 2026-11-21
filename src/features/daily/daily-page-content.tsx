@@ -13,7 +13,7 @@ import {
 } from "@/lib/db/daily";
 import { addDays, dailyDateKey, isChallengeOpen } from "@/lib/daily/day";
 import { dailyNumber, formatDayLong } from "@/lib/daily/format";
-import { DAILY_POINTS } from "@/lib/points/values";
+import { isBoostedDay, winnerPoints } from "@/lib/daily/prize";
 import { composeDailyEntries, listGaragePhotos } from "@/lib/daily/compose";
 import { loadChallengeResults, type ChallengeResults } from "@/lib/daily/results";
 import { settleDueDailyChallenges } from "@/lib/daily/settle";
@@ -116,11 +116,12 @@ export async function DailyPageContent() {
             : null
         }
         prize={challenge.prize ?? null}
-        prizePoints={DAILY_POINTS.place[1]}
+        prizePoints={winnerPoints(challenge)}
+        boosted={isBoostedDay(challenge)}
         stats={[
           { label: "Entries", value: entries.length.toLocaleString() },
           { label: "Votes", value: voteTotal.toLocaleString() },
-          { label: "Winner", value: `+${DAILY_POINTS.place[1]} pts`, accent: true },
+          { label: "Winner", value: `+${winnerPoints(challenge).toLocaleString()} pts`, accent: true },
         ]}
       >
         <MyEntry

@@ -103,6 +103,8 @@ export async function upsertScheduledChallenge(
     coverMediaId: string | null;
     adminId: string;
     sponsor: { name: string | null; url: string | null; logoMediaId: string | null; prize: string | null };
+    /** First place's points for the day (0128); null is the usual amount. */
+    winnerPoints?: number | null;
   },
 ): Promise<void> {
   const { startsAt, endsAt } = dayBounds(input.dateKey);
@@ -122,6 +124,15 @@ export async function upsertScheduledChallenge(
     sponsor_logo_media_id: input.sponsor.logoMediaId,
     prize: input.sponsor.prize,
   };
+  const winnerPoints = input.winnerPoints ?? null;
+  const first = await supabase
+    .from("daily_challenges")
+    .upsert({ ...base, ...sponsor, winner_points: winnerPoints }, { onConflict: "challenge_date" });
+  if (!first.error) return;
+  const missingColumn = (e: { code?: string }) => e.code === "PGRST204" || e.code === "42703";
+  // Before 0128 there's no winner_points. A day at the usual amount still
+  // saves without it; one with its own amount fails, so the admin knows.
+  if (winnerPoints !== null || !missingColumn(first.error)) throw first.error;
   const { error } = await supabase.from("daily_challenges").upsert({ ...base, ...sponsor }, { onConflict: "challenge_date" });
   if (!error) return;
   // Before 0109 the sponsor columns don't exist. An ordinary day still

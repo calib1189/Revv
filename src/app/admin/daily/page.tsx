@@ -51,6 +51,7 @@ export default async function AdminDailyPage() {
       sponsorLogoMediaId: row?.sponsor_logo_media_id ?? null,
       sponsorLogoUrl: row?.sponsor_logo_media_id ? (coverUrlById.get(row.sponsor_logo_media_id) ?? null) : null,
       prize: row?.prize ?? null,
+      winnerPoints: row?.winner_points ?? null,
     };
   });
 

@@ -7,6 +7,7 @@ import { listUserIdsWithPushSubscriptions } from "@/lib/db/push-subscriptions";
 import { DEFAULT_NOTIFICATION_PREFERENCES, DEFAULT_QUIET_HOURS } from "@/lib/db/notification-preferences";
 import { getDailyChallengeByDate, type DailyChallenge } from "@/lib/db/daily";
 import { addDays, dailyDateKey } from "@/lib/daily/day";
+import { boostedPushCopy } from "@/lib/daily/prize";
 import {
   decideScheduledPush,
   localHourIn,
@@ -86,6 +87,11 @@ function payloadFor(
   place: number | null,
   rides: number,
 ): PushPayload {
+  // A day with more points than usual leads every push with them.
+  if (push.variant === "live" || push.variant === "results" || push.variant === "reminder") {
+    const boosted = boostedPushCopy(push.variant, today);
+    if (boosted) return { ...boosted, url: "/daily" };
+  }
   switch (push.variant) {
     case "placed":
       return {
