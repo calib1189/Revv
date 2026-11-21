@@ -11,19 +11,44 @@ import {
   teePhotos3d,
   teePhotos4k,
   teePrintFiles,
+  teeOnSale,
+  teesOnSale,
 } from "@/lib/merch/products";
 
 afterEach(() => vi.unstubAllEnvs());
 
+const BEFORE_END = Date.parse("2026-12-07T04:59:58Z");
+const AFTER_END = Date.parse("2026-12-07T05:00:00Z");
+
 describe("tee catalog", () => {
-  it("has the three designs, each sold in black, grey and white", () => {
-    expect(TEE_DESIGNS.map((d) => d.id)).toEqual(["big-s", "built-rated-ranked", "wordmark"]);
-    expect(TEE_COLORS).toEqual(["black", "grey", "white"]);
-    expect(TEE_DESIGNS.map((d) => d.defaultColor)).toEqual(["black", "white", "grey"]);
+  it("has the three core designs in black, grey and white, and the Sunset drop in black, white and sky", () => {
+    expect(TEE_DESIGNS.map((d) => d.id)).toEqual(["sunset", "big-s", "built-rated-ranked", "wordmark"]);
+    expect(TEE_COLORS).toEqual(["black", "grey", "white", "sky"]);
+    expect(TEE_DESIGNS.map((d) => d.defaultColor)).toEqual(["black", "black", "white", "grey"]);
+    for (const id of ["big-s", "built-rated-ranked", "wordmark"]) expect(teeById(id)?.colors).toEqual(["black", "grey", "white"]);
+    expect(teeById("sunset")?.colors).toEqual(["black", "white", "sky"]);
+  });
+
+  it("only sells a design in its own colours", () => {
+    expect(teeOrderLine("sunset", "M", "sky", BEFORE_END)?.variantId).toBe(14982);
+    expect(teeOrderLine("sunset", "M", "grey", BEFORE_END)).toBeNull();
+    expect(teeOrderLine("big-s", "M", "sky")).toBeNull();
+  });
+
+  it("ends the Sunset drop at its end date, and leaves the core tees on sale", () => {
+    const sunset = teeById("sunset")!;
+    expect(sunset.endsAt).toBe("2026-12-07T04:59:59Z");
+    expect(teeOnSale(sunset, BEFORE_END)).toBe(true);
+    expect(teeOnSale(sunset, AFTER_END)).toBe(false);
+    expect(teeOrderLine("sunset", "L", "black", AFTER_END)).toBeNull();
+    expect(teeOrderLine("big-s", "L", "black", AFTER_END)?.variantId).toBe(11548);
+    expect(teeOnSale(teeById("big-s")!, AFTER_END)).toBe(true);
+    expect(teesOnSale(AFTER_END).map((d) => d.id)).toEqual(["big-s", "built-rated-ranked", "wordmark"]);
+    expect(teesOnSale(BEFORE_END).map((d) => d.id)).toEqual(["sunset", "big-s", "built-rated-ranked", "wordmark"]);
   });
 
   it("maps every colour and size to its own Printful variant", () => {
-    const line = (c: string, s: string) => teeOrderLine("big-s", s, c)?.variantId;
+    const line = (c: string, s: string) => teeOrderLine(c === "sky" ? "sunset" : "big-s", s, c, BEFORE_END)?.variantId;
     const ids = TEE_COLORS.flatMap((c) => TEE_SIZES.map((s) => line(c, s)));
     expect(ids.every((id) => Number.isInteger(id) && (id ?? 0) > 0)).toBe(true);
     expect(new Set(ids).size).toBe(ids.length);
@@ -37,7 +62,7 @@ describe("tee catalog", () => {
 
   it("prices in whole cents, more for the bigger sizes, the same in every colour", () => {
     for (const color of TEE_COLORS) {
-      const line = (size: string) => teeOrderLine("big-s", size, color);
+      const line = (size: string) => teeOrderLine(color === "sky" ? "sunset" : "big-s", size, color, BEFORE_END);
       expect(line("S")?.priceCents).toBe(2999);
       expect(line("XL")?.priceCents).toBe(2999);
       expect(line("2XL")?.priceCents).toBe(3299);
@@ -62,6 +87,7 @@ describe("tee catalog", () => {
     expect(teeColorForVariant(11546)).toBe("black");
     expect(teeColorForVariant(12650)).toBe("white");
     expect(teeColorForVariant(15848)).toBe("grey");
+    expect(teeColorForVariant(14986)).toBe("sky");
     expect(teeColorForVariant(1)).toBeNull();
     expect(isTeeColor("grey")).toBe(true);
     expect(isTeeColor("Dark Heather")).toBe(false);
@@ -75,6 +101,9 @@ describe("tee catalog", () => {
     ]);
     expect(urls("black")[1].url).toBe("https://sorza.net/merch/print/big-s-back-white.png");
     expect(urls("grey")[1].url).toBe("https://sorza.net/merch/print/big-s-back-white.png");
+    // sky is a light shirt, so it takes the dark-ink print like white
+    expect(teePrintFiles("sunset", "sky", "https://sorza.net")[1].url).toBe("https://sorza.net/merch/print/sunset-back-ink.png");
+    expect(teePrintFiles("sunset", "black", "https://sorza.net")[0].url).toBe("https://sorza.net/merch/print/sunset-front-white.png");
   });
 
   it("has shop photos for each design in each colour", () => {

@@ -15,7 +15,8 @@ import { PosterSheet } from "@/features/posters/poster-card";
 import { TeeSheet } from "@/features/shop/tee-sheet";
 import { PRODUCT_STAGE, PosterPrint, StickerArt, TeeStill } from "@/features/shop/product-art";
 import type { PosterOffer } from "@/lib/posters/offer";
-import { TEE_DESIGNS, TEE_FROM_CENTS, type TeeDesign } from "@/lib/merch/products";
+import { TEE_COLOR_INFO, TEE_FROM_CENTS, teeById, teeDropEndLabel, teeOnSale, teesOnSale, type TeeDesign } from "@/lib/merch/products";
+import { DropCountdown } from "@/features/shop/drop-countdown";
 import { listStoreItemsByCategory, getStoreItem, STORE_CATEGORY_LABELS, type StoreCategory, type StoreItem } from "@/lib/store/catalog";
 import { RARITY_COLOR, RARITY_LABEL, rarityFor } from "@/lib/store/rarity";
 import { featuredItem } from "@/lib/store/featured";
@@ -87,7 +88,7 @@ type Product =
 
 const searchText = (p: Product): string =>
   p.kind === "tee"
-    ? `${p.design.name} tee shirt black grey gray white`
+    ? `${p.design.name} tee shirt ${p.design.colors.map((c) => TEE_COLOR_INFO[c].label).join(" ")}${p.design.endsAt ? " limited drop" : ""}`
     : p.kind === "decal"
       ? `${RANK_LABELS[p.offer.tier]} rank decal sticker ${p.offer.carName}`
       : p.kind === "poster"
@@ -140,11 +141,14 @@ export function ShopHome({
 }) {
   const params = useSearchParams();
   const teeOrdered = params.get("tee") === "ordered";
+  // A notification's link (/store?tee=sunset) opens that tee's sheet.
+  const linkedTee = showTees ? (teeById(params.get("tee") ?? "") ?? null) : null;
+  const openTee = linkedTee && teeOnSale(linkedTee) ? linkedTee : null;
   const [balance, setBalance] = useState(initialBalance);
   const [owned, setOwned] = useState(new Set(initialOwnedItemIds));
   const [equipped, setEquipped] = useState<Equipped>({ ...profileEquipped, ...garageEquipped, ...(crews[0]?.equipped ?? {}) });
   const [selectedCrewId, setSelectedCrewId] = useState<string | null>(crews[0]?.id ?? null);
-  const [section, setSection] = useState<Section>(teeOrdered ? "tees" : "all");
+  const [section, setSection] = useState<Section>(teeOrdered || openTee ? "tees" : "all");
   const [query, setQuery] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
@@ -154,8 +158,11 @@ export function ShopHome({
   // Each kind of sheet keeps its item after closing, so it can slide away.
   const [cosmetic, setCosmetic] = useState<StoreItem | null>(null);
   const [cosmeticOpen, setCosmeticOpen] = useState(false);
-  const [tee, setTee] = useState<TeeDesign | null>(null);
-  const [teeOpen, setTeeOpen] = useState(false);
+  const [tee, setTee] = useState<TeeDesign | null>(openTee);
+  const [teeOpen, setTeeOpen] = useState(openTee !== null);
+  // A limited drop leads the tee promo while it lasts.
+  const liveTees = teesOnSale();
+  const teeDrop = liveTees.find((d) => d.endsAt) ?? null;
   const [decal, setDecal] = useState<DecalOffer | null>(null);
   const [decalOpen, setDecalOpen] = useState(false);
   const [poster, setPoster] = useState<PosterOffer | null>(null);
@@ -251,7 +258,7 @@ export function ShopHome({
 
   // Everything for sale, in shop order.
   const all = useMemo<Product[]>(() => {
-    const tees: Product[] = showTees ? TEE_DESIGNS.map((design) => ({ kind: "tee", key: `tee:${design.id}`, design })) : [];
+    const tees: Product[] = showTees ? teesOnSale().map((design) => ({ kind: "tee", key: `tee:${design.id}`, design })) : [];
     const car: Product[] = [
       ...decals.map((offer): Product => ({ kind: "decal", key: `decal:${offer.vehicleId}`, offer })),
       ...posters.map((offer): Product => ({ kind: "poster", key: `poster:${offer.vehicleId}`, offer })),
@@ -367,8 +374,22 @@ export function ShopHome({
       {/* Featured promos. */}
       <div className="no-scrollbar -mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         {showTees && (
-          <Promo eyebrow="New drop" title="SORZA Tees" sub={`Heavy cotton · from ${formatUsd(TEE_FROM_CENTS)}`} tone="#e1141f" onClick={() => goTo("tees")}>
-            {TEE_DESIGNS.slice(0, 2).map((d) => (
+          <Promo
+            eyebrow={
+              teeDrop?.endsAt ? (
+                <>
+                  Limited drop · ends in <DropCountdown endsAt={teeDrop.endsAt} />
+                </>
+              ) : (
+                "New drop"
+              )
+            }
+            title={teeDrop ? `${teeDrop.name} Tee` : "SORZA Tees"}
+            sub={teeDrop ? `Gone after ${teeDropEndLabel(teeDrop)} · from ${formatUsd(TEE_FROM_CENTS)}` : `Heavy cotton · from ${formatUsd(TEE_FROM_CENTS)}`}
+            tone="#e1141f"
+            onClick={() => goTo("tees")}
+          >
+            {liveTees.slice(0, 2).map((d) => (
               <MiniTile
                 key={d.id}
                 label={formatUsd(TEE_FROM_CENTS)}
@@ -570,7 +591,7 @@ function Promo({
   onClick,
   children,
 }: {
-  eyebrow: string;
+  eyebrow: React.ReactNode;
   title: string;
   sub: string;
   tone: string;
@@ -638,7 +659,16 @@ function ProductCard({
       </span>
     );
     price = <Price usd={TEE_FROM_CENTS} />;
-    badge = shipping;
+    badge = product.design.endsAt ? (
+      <span className="flex flex-wrap gap-1">
+        <span className="rounded-[6px] bg-accent/15 px-1.5 py-0.5 text-[0.6875rem] font-bold text-accent">
+          Ends in <DropCountdown endsAt={product.design.endsAt} />
+        </span>
+        {shipping}
+      </span>
+    ) : (
+      shipping
+    );
   } else if (product.kind === "decal") {
     title = `${RANK_LABELS[product.offer.tier]} rank decal · ${product.offer.carName}`;
     media = (

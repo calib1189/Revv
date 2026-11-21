@@ -7,10 +7,11 @@ import { TeeZoomViewer } from "@/features/shop/tee-zoom-viewer";
 import { ExpandIcon } from "@/components/ui/icons";
 import { startTeeOrderAction } from "@/features/merch/actions";
 import {
-  TEE_COLORS,
   TEE_COLOR_INFO,
   TEE_FROM_CENTS,
   TEE_SIZES,
+  teeDropEndLabel,
+  teeOnSale,
   teePhotos3d,
   teePhotos4k,
   teePriceCents,
@@ -19,6 +20,7 @@ import {
   type TeeSize,
 } from "@/lib/merch/products";
 import { formatUsd } from "@/lib/points/packs";
+import { DropCountdown, useDropCountdown } from "@/features/shop/drop-countdown";
 
 /** One tee: spin it in 3D, pick a colour and a size, order. */
 export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: boolean; onClose: () => void }) {
@@ -31,6 +33,11 @@ export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: b
   const [colorId, setColorId] = useState<TeeColor>(design.defaultColor);
   const photos = teePhotos3d(design.id, colorId);
   const color = TEE_COLOR_INFO[colorId];
+  const dropEnd = teeDropEndLabel(design);
+  // Checked again on the server at checkout; this just stops a stale sheet
+  // offering it, the second the countdown runs out.
+  const { ended } = useDropCountdown(design.endsAt);
+  const onSale = teeOnSale(design) && !ended;
 
   async function order() {
     if (!size) return;
@@ -95,6 +102,15 @@ export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: b
         </div>
 
         <div>
+          {design.endsAt && (
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-[16px] bg-accent/12 px-3.5 py-2.5 ring-1 ring-accent/25">
+              <div>
+                <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-accent">{onSale ? "Limited drop" : "Drop ended"}</p>
+                <p className="text-[0.75rem] text-muted">{onSale ? `Gone after ${dropEnd}` : `Ended ${dropEnd}`}</p>
+              </div>
+              {onSale && <DropCountdown endsAt={design.endsAt} className="text-[1.0625rem] font-extrabold text-foreground" />}
+            </div>
+          )}
           <div className="flex items-baseline justify-between gap-3">
             <p className="text-[1.375rem] font-bold tracking-[-0.02em]">{design.name}</p>
             <p className="numeral flex-shrink-0 text-[1.25rem] font-bold">{formatUsd(size ? teePriceCents(size) : TEE_FROM_CENTS)}</p>
@@ -109,7 +125,7 @@ export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: b
         <div>
           <p className="mb-2 text-[0.8125rem] font-semibold">Color</p>
           <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label="Color">
-            {TEE_COLORS.map((c) => {
+            {design.colors.map((c) => {
               const info = TEE_COLOR_INFO[c];
               const selected = c === colorId;
               return (
@@ -168,12 +184,14 @@ export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: b
           <button
             type="button"
             onClick={() => void order()}
-            disabled={busy || !size}
+            disabled={busy || !size || !onSale}
             className="pressable h-[52px] w-full rounded-full bg-accent text-[1rem] font-semibold text-accent-foreground disabled:opacity-55"
           >
-            {busy ? "Opening checkout…" : size ? `Buy now · ${formatUsd(teePriceCents(size))}` : "Pick a size"}
+            {!onSale ? "This drop has ended" : busy ? "Opening checkout…" : size ? `Buy now · ${formatUsd(teePriceCents(size))}` : "Pick a size"}
           </button>
-          <p className="mt-2 text-center text-[0.75rem] text-muted">Printed to order · Free US shipping</p>
+          <p className="mt-2 text-center text-[0.75rem] text-muted">
+            Printed to order · Free US shipping{dropEnd && onSale ? ` · Gone after ${dropEnd}` : ""}
+          </p>
           {error && <p className="mt-2 text-center text-[0.8125rem] text-danger">{error}</p>}
         </div>
       </div>

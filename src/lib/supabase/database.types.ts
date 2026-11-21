@@ -345,7 +345,7 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          design: "big-s" | "built-rated-ranked" | "wordmark";
+          design: "sunset" | "big-s" | "built-rated-ranked" | "wordmark";
           size: "S" | "M" | "L" | "XL" | "2XL" | "3XL";
           variant_id: number;
           status: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
@@ -359,7 +359,7 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          design: "big-s" | "built-rated-ranked" | "wordmark";
+          design: "sunset" | "big-s" | "built-rated-ranked" | "wordmark";
           size: "S" | "M" | "L" | "XL" | "2XL" | "3XL";
           variant_id: number;
           status?: "awaiting_payment" | "paid" | "sent_to_printer" | "failed" | "canceled";
@@ -1502,14 +1502,14 @@ export interface Database {
         Row: {
           user_id: string;
           day: string;
-          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car";
+          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car" | "drop";
           slot: number;
           sent_at: string;
         };
         Insert: {
           user_id: string;
           day: string;
-          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car";
+          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car" | "drop";
           slot?: number;
           sent_at?: string;
         };

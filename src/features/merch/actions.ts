@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { createTeeCheckoutSession } from "@/lib/billing/stripe";
-import { merchEnabled, teeOrderLine, TEE_COLOR_INFO } from "@/lib/merch/products";
+import { merchEnabled, teeById, teeOnSale, teeOrderLine, TEE_COLOR_INFO } from "@/lib/merch/products";
 import { SITE_URL } from "@/lib/site-url";
 
 type Result = { ok: true; url: string } | { ok: false; error: string };
@@ -19,6 +19,8 @@ export async function startTeeOrderAction(designId: string, size: string, color:
   const supabase = await createClient();
   const profile = await getProfileByUserId(supabase, user.id).catch(() => null);
   if (!merchEnabled(profile?.is_admin ?? false)) return { ok: false, error: "Shirts aren't available yet." };
+  const design = teeById(designId);
+  if (design && !teeOnSale(design)) return { ok: false, error: "This drop has ended." };
   const line = teeOrderLine(designId, size, color);
   if (!line) return { ok: false, error: "Pick a size and colour." };
 
