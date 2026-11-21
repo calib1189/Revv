@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } fr
 import { createWebHandoffAction, type WebHandoffResult } from "@/features/auth/actions";
 import { webHandoffUrl } from "@/lib/auth/web-handoff-url";
 import { openExternalBrowser } from "@/lib/native/open-external";
+import { isAndroidApp } from "@/lib/native/android-app";
 import { SITE_URL } from "@/lib/site-url";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -120,15 +121,20 @@ function watchForLeave(): Promise<boolean> {
  * message below only says the browser opened once the app has actually
  * gone to the background.
  *
- * Native only — callers render their web version off-native.
+ * Native only — callers render their web version off-native. In the
+ * Android app there's no handoff: Google Play doesn't allow sending
+ * people out of the app to pay, so the purchase just isn't offered there.
  */
-export function WebHandoffButton({
-  nextPath,
-  label,
-  note = `Opens ${SITE_HOST} in your browser, already signed in.`,
-  prepareWhen = "mount",
-  className = "",
-}: {
+export function WebHandoffButton(props: WebHandoffButtonProps) {
+  // Callers only render this once they know they're in a store app, so
+  // it never renders on the server.
+  if (isAndroidApp()) {
+    return <p className="text-center text-[0.8125rem] text-muted">Not available in the Android app yet.</p>;
+  }
+  return <IosWebHandoffButton {...props} />;
+}
+
+interface WebHandoffButtonProps {
   /** Where the browser lands: the page, and the spot on it, the person
    * tapped from. */
   nextPath: string;
@@ -138,7 +144,15 @@ export function WebHandoffButton({
    * of people open without meaning to leave the app. */
   prepareWhen?: "mount" | "visible";
   className?: string;
-}) {
+}
+
+function IosWebHandoffButton({
+  nextPath,
+  label,
+  note = `Opens ${SITE_HOST} in your browser, already signed in.`,
+  prepareWhen = "mount",
+  className = "",
+}: WebHandoffButtonProps) {
   const { token, error } = useSyncExternalStore(subscribe, () => store, () => EMPTY);
   const [phase, setPhase] = useState<"idle" | "opening" | "opened" | "stayed">("idle");
   const rootRef = useRef<HTMLDivElement>(null);

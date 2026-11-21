@@ -112,7 +112,7 @@ export function PointsWallet({
     }
   }
 
-  const canBuy = packsEnabled && env !== null;
+  const canBuy = packsEnabled && env !== null && env !== "android-app";
 
   const pill = (
     <>

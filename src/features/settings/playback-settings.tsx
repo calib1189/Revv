@@ -4,13 +4,14 @@ import { GroupedList, GroupedRow, RowIcon } from "@/components/ui/grouped-list";
 import { Toggle } from "@/components/ui/toggle";
 import { PlayIcon, VolumeIcon, BoltIcon } from "@/components/ui/icons";
 import { setDevicePreference, useDevicePreferences } from "@/lib/device-preferences";
-import { useIsNative } from "@/lib/native/use-is-native";
+import { useAppShell } from "@/lib/native/use-is-native";
 
 /** Settings that apply to this device only (see device-preferences.ts):
  * how feed videos start, and haptics in the iPhone app. */
 export function PlaybackSettings() {
   const preferences = useDevicePreferences();
-  const isNative = useIsNative();
+  // Haptics come from the iPhone app's native bridge; Android has none.
+  const isIosApp = useAppShell() === "ios";
 
   return (
     <GroupedList footer="Saved on this device.">
@@ -46,7 +47,7 @@ export function PlaybackSettings() {
           />
         }
       />
-      {isNative && (
+      {isIosApp && (
         <GroupedRow
           label="Haptics"
           detail="Small vibrations, like when your build rating lands"

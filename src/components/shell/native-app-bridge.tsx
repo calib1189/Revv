@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { isSafeAppPath } from "@/lib/push/validation";
 import { installEdgeSwipeBack } from "@/lib/native/edge-swipe-back";
+import { isAndroidApp } from "@/lib/native/android-app";
 import {
   listenForNotificationTaps,
   promptForNativePushIfNeverAsked,
@@ -28,6 +29,10 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
     let tapHandle: { remove: () => void } | undefined;
     let resumeListenerHandle: { remove: () => void } | undefined;
     let removeEdgeSwipe: (() => void) | undefined;
+
+    // Chrome only says "this is the Android app" on the first page it
+    // loads; reading it now keeps the answer for the rest of the session.
+    isAndroidApp();
 
     (async () => {
       const { Capacitor } = await import("@capacitor/core");

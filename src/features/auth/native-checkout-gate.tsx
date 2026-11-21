@@ -3,6 +3,7 @@
 import { useIsNative } from "@/lib/native/use-is-native";
 import { WebHandoffButton } from "@/features/auth/web-handoff-button";
 import { SITE_URL } from "@/lib/site-url";
+import { isAndroidApp } from "@/lib/native/android-app";
 
 const SITE_HOST = SITE_URL.replace(/^https?:\/\//, "");
 
@@ -33,6 +34,16 @@ export function NativeCheckoutGate({
 
   if (isNative === null) return null;
   if (!isNative) return <>{children ?? null}</>;
+
+  // Google Play doesn't allow pointing people to the web to pay, so the
+  // Android app just doesn't offer it (see WebHandoffButton).
+  if (isAndroidApp()) {
+    return (
+      <div className="glass-raised elev-1 rounded-[22px] p-6 text-center">
+        <p className="text-sm font-medium">{what} isn&apos;t available in the Android app yet</p>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-raised elev-1 flex flex-col items-center gap-4 rounded-[22px] p-6 text-center">

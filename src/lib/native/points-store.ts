@@ -1,5 +1,7 @@
 "use client";
 
+import { isAndroidApp } from "@/lib/native/android-app";
+
 // The iPhone app's in-app purchase for points packs. The native half is
 // PointsStorePlugin in ios/App/App/MainViewController.swift. On the web,
 // and on app builds from before it existed, none of this is available
@@ -15,12 +17,15 @@ interface PointsStorePlugin {
   unfinished(): Promise<{ transactionIds: string[] }>;
 }
 
-export type StoreEnvironment = "web" | "app" | "old-app";
+// "android-app": the Play Store app, where Google requires its own billing
+// for points and that isn't built, so packs aren't offered there.
+export type StoreEnvironment = "web" | "app" | "old-app" | "android-app";
 
 // Kept inside a plain object, never returned bare from an async function:
 // a Capacitor plugin proxy answers `then`, so awaiting it would hang
 // (see loadPlugin in ./push.ts).
 async function load(): Promise<{ env: StoreEnvironment; plugin: PointsStorePlugin | null }> {
+  if (isAndroidApp()) return { env: "android-app", plugin: null };
   const { Capacitor, registerPlugin } = await import("@capacitor/core");
   if (!Capacitor.isNativePlatform()) return { env: "web", plugin: null };
   if (!Capacitor.isPluginAvailable("PointsStore")) return { env: "old-app", plugin: null };
