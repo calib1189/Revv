@@ -7,6 +7,7 @@ import { formatUsd } from "@/lib/points/packs";
 import { DropCountdown } from "@/features/shop/drop-countdown";
 import { PRODUCT_STAGE } from "@/features/shop/product-art";
 import { teePhotos3d } from "@/lib/merch/products";
+import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 
 const CYCLE_MS = 2800;
 
@@ -98,11 +99,18 @@ export function DropSlide({ drop, slideHeight }: { drop: FeedDrop; slideHeight: 
   }
 
   return (
-    <div ref={ref} className={`relative ${slideHeight} w-full flex-shrink-0 snap-start overflow-hidden bg-[#141417]`}>
+    <div
+      ref={ref}
+      className={`relative flex ${slideHeight} w-full flex-shrink-0 snap-start flex-col overflow-hidden bg-[#141417]`}
+      // Clear of the floating tabs and filter chips (swipe-feed.tsx), so
+      // the shirt is never tucked under them.
+      style={{ paddingTop: `calc(${HEADER_HEIGHT} + 3.25rem)` }}
+    >
       <span className={`pointer-events-none absolute inset-0 ${PRODUCT_STAGE}`} />
 
-      {/* The shirt, back first, cross-fading through its colours. */}
-      <div className="absolute inset-x-6 bottom-[40%] top-[11%]">
+      {/* The shirt, back first, cross-fading through its colours, in
+          whatever height the copy below leaves. */}
+      <div className="relative mx-8 min-h-0 flex-1">
         {drop.colors.map((c, i) => (
           // Plain img, like the shop's TeeStill: these are transparent
           // cut-outs, and the image optimizer would flatten them to JPEG.
@@ -118,7 +126,7 @@ export function DropSlide({ drop, slideHeight }: { drop: FeedDrop; slideHeight: 
         ))}
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-5 pb-[calc(var(--bottom-nav-h)+1.5rem)]">
+      <div className="relative flex flex-shrink-0 flex-col gap-3 px-5 pb-6 pt-4">
         <p className="micro-label text-accent">Limited drop · From SORZA</p>
         <div>
           <h2 className="text-balance text-[2rem] font-bold leading-[1.05] tracking-[-0.025em] text-white">{drop.name} Tee</h2>

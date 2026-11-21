@@ -21,7 +21,7 @@ export function JustRatedSlide({ data, slideHeight }: { data: JustRatedSlideData
       <MediaImg src={data.heroUrl} sizes="100vw" className="h-full w-full object-cover" />
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/35 to-black/25" />
 
-      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-5 pb-[calc(var(--bottom-nav-h)+1.5rem)]">
+      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-5 pb-6">
         <p className="micro-label" style={{ color: tierColor }} suppressHydrationWarning>
           Just rated · {relativeTime(data.ratedAt)}
         </p>
