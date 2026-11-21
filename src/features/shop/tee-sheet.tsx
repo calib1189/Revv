@@ -24,7 +24,8 @@ import { DropCountdown, useDropCountdown } from "@/features/shop/drop-countdown"
 
 /** One tee: spin it in 3D, pick a colour and a size, order. */
 export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: boolean; onClose: () => void }) {
-  const [side, setSide] = useState<"front" | "back">("front");
+  // Opens on the back: that's where each design's main artwork is.
+  const [side, setSide] = useState<"front" | "back">("back");
   const [snap, setSnap] = useState<{ side: "front" | "back"; n: number } | null>(null);
   const [size, setSize] = useState<TeeSize | null>(null);
   const [busy, setBusy] = useState(false);
@@ -81,6 +82,7 @@ export function TeeSheet({ design, open, onClose }: { design: TeeDesign; open: b
             snapTo={snap}
             onSideChange={setSide}
             onTap={setZoomSide}
+            initialSide="back"
             className="mx-auto w-full max-w-[290px]"
           />
           <div className="mt-3 flex justify-center gap-1 rounded-full bg-black/35 p-1 backdrop-blur-md" role="radiogroup" aria-label="Side">

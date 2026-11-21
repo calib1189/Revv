@@ -24,6 +24,7 @@ export function TeeTurntable({
   snapTo,
   onSideChange,
   onTap,
+  initialSide = "front",
   className = "",
 }: {
   front: string;
@@ -34,15 +35,18 @@ export function TeeTurntable({
   onSideChange?: (side: "front" | "back") => void;
   /** A tap (not a drag) on the shirt, with the side facing you. */
   onTap?: (side: "front" | "back") => void;
+  /** The side facing you when it first appears. */
+  initialSide?: "front" | "back";
   className?: string;
 }) {
-  const [angle, setAngle] = useState(-SWAY_DEG);
-  const angleRef = useRef(-SWAY_DEG);
+  const startAngle = (initialSide === "back" ? 180 : 0) - SWAY_DEG;
+  const [angle, setAngle] = useState(startAngle);
+  const angleRef = useRef(startAngle);
   const velocity = useRef(0);
   const drag = useRef<{ x: number; y: number; start: number; lastX: number; lastT: number; decided: boolean; horizontal: boolean } | null>(null);
   const idleFrom = useRef(0);
   const [hinted, setHinted] = useState(false);
-  const facingRef = useRef<"front" | "back">("front");
+  const facingRef = useRef<"front" | "back">(initialSide);
 
   const set = useCallback(
     (a: number) => {

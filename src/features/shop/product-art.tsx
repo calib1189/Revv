@@ -49,14 +49,15 @@ export function PosterPrint({ offer, width = 420, className = "" }: { offer: Pos
   );
 }
 
-/** A tee's front, floating with its shadow, for the shop grid. */
+/** A tee's back (where each design's main artwork is), floating with its
+ * shadow, for the shop grid. */
 export function TeeStill({ design, alt, className = "" }: { design: TeeDesignId; alt: string; className?: string }) {
-  const { front } = teePhotos3d(design, teeById(design)?.defaultColor ?? "black");
+  const { back } = teePhotos3d(design, teeById(design)?.defaultColor ?? "black");
   return (
     <div className={`relative ${className}`}>
       <div aria-hidden className="absolute bottom-[3%] left-1/2 h-[5%] w-[58%] -translate-x-1/2 rounded-[50%] bg-black/50 blur-[8px]" />
       {/* eslint-disable-next-line @next/next/no-img-element -- transparent cut-out */}
-      <img src={front} alt={alt} draggable={false} className="relative h-full w-full object-contain" />
+      <img src={back} alt={alt} draggable={false} className="relative h-full w-full object-contain" />
     </div>
   );
 }
