@@ -7,7 +7,7 @@ function sale(hoursAgo: number, amountCents: number, refunded = false): Sale {
   return {
     id: `${hoursAgo}-${amountCents}`,
     kind: "tee",
-    title: "Big S tee",
+    title: "SORZA Classic tee",
     detail: "Size L",
     buyerId: "u",
     amountCents,
@@ -46,7 +46,7 @@ describe("salePush", () => {
     expect(teeSale({ design: "big-s", size: "L" }).detail).toBe("Size L");
     expect(salePush(teeSale({ design: "big-s", size: "L" }), 2999, "s55")).toEqual({
       title: "New sale · $29.99",
-      body: "@s55 bought a Big S tee",
+      body: "@s55 bought a SORZA Classic tee",
       url: "/admin/sales",
     });
   });
