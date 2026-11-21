@@ -9,6 +9,8 @@ import { loadDailyTeaser } from "@/lib/daily/teaser";
 import { loadStoryTray, type TrayPerson } from "@/lib/stories/load";
 import type { SponsoredSlideData } from "@/features/feed/sponsored-slide";
 import { loadJustRated, type JustRatedSlideData } from "@/lib/feed/just-rated";
+import { loadFeedDrop } from "@/lib/merch/feed-drop";
+import { getProfileByUserId } from "@/lib/db/profiles";
 
 export async function FeedPageContent() {
   const supabase = await createClient();
@@ -32,12 +34,18 @@ export async function FeedPageContent() {
   // to load is never a reason for the feed itself to fail.
   }).catch(() => null);
   const user = await getCurrentUser();
-  const [{ items }, dailyTeaser, storyTray, justRated] = await Promise.all([
+  const [{ items }, dailyTeaser, storyTray, justRated, drop] = await Promise.all([
     listRankedFeedPosts(supabase, { viewerId: user?.id ?? null, limit: 8 }),
     loadDailyTeaser(user?.id ?? null),
     user ? loadStoryTray(supabase, user.id).catch(() => [] as TrayPerson[]) : Promise.resolve([] as TrayPerson[]),
     // Like the ad: extra, so failing to load is never the feed failing.
     loadJustRated(supabase, user?.id ?? null).catch(() => [] as JustRatedSlideData[]),
+    // Likewise extra. Admins see a drop before tees are switched on for everyone.
+    user
+      ? getProfileByUserId(supabase, user.id)
+          .then((p) => loadFeedDrop(supabase, user.id, p?.is_admin ?? false))
+          .catch(() => null)
+      : Promise.resolve(null),
   ]);
   const [cards, ad] = await Promise.all([
     composePostCards(supabase, items.map((item) => item.post), user?.id ?? null),
@@ -54,6 +62,7 @@ export async function FeedPageContent() {
       ad={ad}
       daily={daily}
       justRated={justRated}
+      drop={drop}
       isAuthenticated={Boolean(user)}
       storyTray={storyTray}
     />

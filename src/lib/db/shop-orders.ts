@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { RANK_LABELS, type RankTier } from "@/lib/rating/rank";
 import { posterProductById } from "@/lib/posters/products";
-import { teeById } from "@/lib/merch/products";
+import { teeById, type TeeDesignId } from "@/lib/merch/products";
 import { teeSale } from "@/lib/sales/sale";
 
 /** One printed order, for the shop's Orders list. */
@@ -51,4 +51,19 @@ export async function listMyShopOrders(supabase: SupabaseClient<Database>, userI
     if (status) out.push({ id: o.id, kind: "tee", title: `${design?.name ?? "SORZA"} tee`, detail: teeSale(o).detail, status, amountCents: o.amount_cents, createdAt: o.created_at });
   }
   return out.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+/** Whether someone has a paid order for a tee design (paid or already at
+ * the printer). False when it can't be read, so an error only means the
+ * drop's feed slide may show to a buyer, never the reverse. */
+export async function hasPaidTeeOrder(supabase: SupabaseClient<Database>, userId: string, designId: TeeDesignId): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("tee_orders")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("design", designId)
+    .in("status", ["paid", "sent_to_printer"])
+    .limit(1);
+  if (error) return false;
+  return data.length > 0;
 }

@@ -7,6 +7,8 @@ import { SwipeSlide } from "@/features/feed/swipe-slide";
 import { SponsoredSlide, type SponsoredSlideData } from "@/features/feed/sponsored-slide";
 import { DailyFeedSlide } from "@/features/daily/daily-teaser-card";
 import { JustRatedSlide } from "@/features/feed/just-rated-slide";
+import { DropSlide } from "@/features/feed/drop-slide";
+import type { FeedDrop } from "@/lib/merch/feed-drop";
 import type { JustRatedSlideData } from "@/lib/feed/just-rated";
 import type { DailyTeaser } from "@/lib/daily/teaser";
 import { CategoryFilterBar } from "@/features/feed/category-filter-bar";
@@ -25,12 +27,16 @@ const AD_INJECTION_INDEX = 3;
 // Where the "Just rated" slides sit: one early, then spread out, clear of
 // the ad. Placed once, like the ad, not re-injected as more posts load.
 const JUST_RATED_INDEXES = [1, 6, 10];
+// A limited tee drop sits deep in the feed, clear of all of the above,
+// never at the top: it's SORZA selling something, so it waits its turn.
+const DROP_INDEX = 8;
 
 export function SwipeFeed({
   initialPosts,
   ad,
   daily = null,
   justRated = [],
+  drop = null,
   isAuthenticated,
   storyTray = [],
 }: {
@@ -40,6 +46,8 @@ export function SwipeFeed({
   daily?: DailyTeaser | null;
   /** Cars rated in the last few days, slotted between posts. */
   justRated?: JustRatedSlideData[];
+  /** A live limited tee drop, as one slide deep in the feed (drop-slide). */
+  drop?: FeedDrop | null;
   isAuthenticated: boolean;
   /** Stories from you and people you follow, for the pill at the start
    * of the filter row. */
@@ -208,6 +216,7 @@ export function SwipeFeed({
               {ad && category === null && index === AD_INJECTION_INDEX && (
                 <SponsoredSlide data={ad} slideHeight={feedHeight} />
               )}
+              {drop && category === null && index === DROP_INDEX && <DropSlide drop={drop} slideHeight={feedHeight} />}
               {category === null && justRatedAt(index) && (
                 <JustRatedSlide data={justRatedAt(index)!} slideHeight={feedHeight} />
               )}
