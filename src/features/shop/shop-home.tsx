@@ -423,16 +423,19 @@ export function ShopHome({
           </Promo>
         )}
         {(decals.length > 0 || posters.length > 0) && (
-          <Promo eyebrow="Made for your car" title="Rank decals & posters" sub="Printed and shipped free in the US" tone="#ffd60a" onClick={() => goTo("car")}>
-            {bestDecal && (
+          <Promo eyebrow="Made for your car" title="Rank decals & posters" sub="Printed and shipped free in the US" tone="#ffd60a" onClick={() => goTo("car")} row>
+            {/* One tile, like the other promos: the best decal, else the
+                poster. The card itself opens the section with both. */}
+            {bestDecal ? (
               <MiniTile label={formatUsd(decalPriceCents)} onClick={() => open({ kind: "decal", key: "d", offer: bestDecal })}>
                 <StickerArt tier={bestDecal.tier} className="h-[72%] w-[72%]" />
               </MiniTile>
-            )}
-            {posters[0] && (
-              <MiniTile label="Poster" onClick={() => open({ kind: "poster", key: "p", offer: posters[0] })}>
-                <PosterPrint offer={posters[0]} width={300} className="h-[80%]" />
-              </MiniTile>
+            ) : (
+              posters[0] && (
+                <MiniTile label="Poster" onClick={() => open({ kind: "poster", key: "p", offer: posters[0] })}>
+                  <PosterPrint offer={posters[0]} width={300} className="h-[80%]" />
+                </MiniTile>
+              )
             )}
           </Promo>
         )}

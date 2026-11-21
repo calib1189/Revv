@@ -101,14 +101,14 @@ export const TEE_DESIGNS: TeeDesign[] = [
   },
   {
     id: "big-s",
-    name: "Big S",
+    name: "SORZA Classic",
     colors: CORE_COLORS,
     defaultColor: "black",
     detail: "SORZA wordmark on the chest, the S and “The social network for car enthusiasts” on the back",
   },
   {
     id: "built-rated-ranked",
-    name: "Built. Rated. Ranked.",
+    name: "Ranked",
     colors: CORE_COLORS,
     defaultColor: "white",
     detail: "The S on the chest; on the back the S over “Built. Rated. Ranked.”, from outline to solid",
