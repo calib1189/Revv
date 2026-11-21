@@ -104,6 +104,13 @@ describe("tee catalog", () => {
     // sky is a light shirt, so it takes the dark-ink print like white
     expect(teePrintFiles("sunset", "sky", "https://sorza.net")[1].url).toBe("https://sorza.net/merch/print/sunset-back-ink.png");
     expect(teePrintFiles("sunset", "black", "https://sorza.net")[0].url).toBe("https://sorza.net/merch/print/sunset-front-white.png");
+    // Built. Rated. Ranked. has its own file for dark heather; its others follow the shirt's ink
+    expect(teePrintFiles("built-rated-ranked", "grey", "https://sorza.net")[1].url).toBe(
+      "https://sorza.net/merch/print/built-rated-ranked-back-heather.png",
+    );
+    expect(teePrintFiles("built-rated-ranked", "black", "https://sorza.net")[1].url).toBe(
+      "https://sorza.net/merch/print/built-rated-ranked-back-white.png",
+    );
   });
 
   it("has shop photos for each design in each colour", () => {

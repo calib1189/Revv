@@ -11,9 +11,10 @@
  * Print files: public/merch/print, in two inks: dark for the light shirts
  * (white, sky), white for black and grey. The core designs come from
  * scripts/make-tee-print-files.py at 1800x2400 (150 DPI); the Limited Vice
- * City tee's ("sunset") colour-fade S, palms and type are vector, rendered
- * separately at 3600x4800 (300 DPI) over the same 12x16 in. area, so they
- * print as sharp as Printful prints. Shop photos:
+ * City tee ("sunset") and the reworked Built. Rated. Ranked. are vector,
+ * rendered separately at 3600x4800 (300 DPI) over the same 12x16 in. area,
+ * so they print as sharp as Printful prints. Built. Rated. Ranked. has a
+ * third print file for dark heather (see printFor). Shop photos:
  * public/merch/3d and /4k, on Printful's own blank photos.
  */
 export type TeeDesignId = "sunset" | "big-s" | "built-rated-ranked" | "wordmark";
@@ -82,6 +83,9 @@ export interface TeeDesign {
   detail: string;
   /** A limited drop: no new orders after this instant (UTC). */
   endsAt?: string;
+  /** Shirts that take their own print file instead of their colour's
+   * usual ink, e.g. "heather" for a version tuned for dark heather. */
+  printFor?: Partial<Record<TeeColor, string>>;
 }
 
 export const TEE_DESIGNS: TeeDesign[] = [
@@ -106,7 +110,9 @@ export const TEE_DESIGNS: TeeDesign[] = [
     name: "Built. Rated. Ranked.",
     colors: CORE_COLORS,
     defaultColor: "white",
-    detail: "S on the chest, the S and “Built. Rated. Ranked.” on the back",
+    detail: "The S on the chest; on the back the S over “Built. Rated. Ranked.”, from outline to solid",
+    // red RANKED goes muddy on dark heather, so that shirt's is white
+    printFor: { grey: "heather" },
   },
   {
     id: "wordmark",
@@ -182,7 +188,7 @@ export function teeColorForVariant(variantId: number): TeeColor | null {
 /** The print files Printful downloads: the front and back of the design,
  * in the ink that shows on that shirt. */
 export function teePrintFiles(designId: TeeDesignId, color: TeeColor, siteUrl: string): { type: "front" | "back"; url: string }[] {
-  const ink = TEE_COLOR_INFO[color].ink;
+  const ink = teeById(designId)?.printFor?.[color] ?? TEE_COLOR_INFO[color].ink;
   return (["front", "back"] as const).map((type) => ({ type, url: `${siteUrl}/merch/print/${designId}-${type}-${ink}.png` }));
 }
 
