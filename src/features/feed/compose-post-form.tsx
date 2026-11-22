@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadImage, uploadVideo } from "@/lib/storage/upload";
 import { createMedia } from "@/lib/db/media";
 import { createPost } from "@/lib/db/posts";
+import { claimPostBonusAction } from "@/features/promo/actions";
 import { addPostMedia } from "@/lib/db/post-media";
 import {
   validateImageFile,
@@ -488,11 +489,14 @@ export function ComposePostForm({
       // — the post itself already published successfully above.
       if (crewId) void notifyCrewPostAction(crewId, post.id);
 
-      setPublish({ stage: "done", done: total, total });
+      // The weekend post bonus, when it applies: shown on the finished
+      // state, and held a little longer so it registers.
+      const bonusPoints = await claimPostBonusAction(post.id);
+      setPublish({ stage: "done", done: total, total, bonusPoints });
       // A beat on the finished state so "Posted" actually registers, then
       // straight into the post itself. replace, not push: Back from the
       // new post shouldn't land on an empty composer.
-      await new Promise((resolve) => setTimeout(resolve, 650));
+      await new Promise((resolve) => setTimeout(resolve, bonusPoints > 0 ? 1600 : 650));
       router.replace(username ? `/u/${username}/reel/${post.id}` : `/p/${post.id}`);
     } catch {
       setError("Couldn't publish that post. Check your connection and try again.");

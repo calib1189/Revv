@@ -7,6 +7,7 @@ import { sendDueDailyPushes } from "@/lib/daily/notify";
 import { sendDueRankPushes } from "@/features/leaderboard/notify-rank-drops";
 import { sendDueOnboardingNudges } from "@/features/garage/notify-onboarding-nudges";
 import { sendDueDropPushes } from "@/features/merch/notify-drop";
+import { sendDuePostBonusPushes } from "@/features/promo/notify-post-bonus";
 
 // Settling plus a push fan-out; generous so a growing user base fits.
 export const maxDuration = 60;
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
   const pushed = await sendDueDailyPushes(today);
   // The afternoon pushes ride the same hourly run; none failing ever
   // costs the Daily, or the others.
-  const [rankPushed, nudged, dropPushed] = await Promise.all([
+  const [rankPushed, nudged, dropPushed, postBonusPushed] = await Promise.all([
     sendDueRankPushes().catch((err) => {
       console.error("sendDueRankPushes failed:", err);
       return 0;
@@ -38,6 +39,10 @@ export async function GET(request: Request) {
       console.error("sendDueDropPushes failed:", err);
       return 0;
     }),
+    sendDuePostBonusPushes().catch((err) => {
+      console.error("sendDuePostBonusPushes failed:", err);
+      return 0;
+    }),
   ]);
 
   return NextResponse.json({
@@ -47,5 +52,6 @@ export async function GET(request: Request) {
     rankPushed,
     nudged,
     dropPushed,
+    postBonusPushed,
   });
 }

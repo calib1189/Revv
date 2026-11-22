@@ -60,6 +60,8 @@ export interface PublishState {
   /** Files uploaded so far, during "uploading". */
   done: number;
   total: number;
+  /** Points a promo paid for this post (lib/promo), on "done". */
+  bonusPoints?: number;
 }
 
 function vehicleName(vehicle: Vehicle): string {
@@ -690,9 +692,16 @@ function PublishOverlay({
           )}
         </div>
       </div>
-      <p key={label} className="animate-rise-in text-[1rem] font-semibold text-white" aria-live="polite">
-        {label}
-      </p>
+      <div className="flex flex-col items-center gap-1.5" aria-live="polite">
+        <p key={label} className="animate-rise-in text-[1rem] font-semibold text-white">
+          {label}
+        </p>
+        {publish.stage === "done" && (publish.bonusPoints ?? 0) > 0 && (
+          <p className="animate-rise-in numeral text-[1.375rem] font-bold tracking-[-0.02em] text-accent">
+            +{publish.bonusPoints} points
+          </p>
+        )}
+      </div>
     </div>
   );
 }

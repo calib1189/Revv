@@ -75,3 +75,23 @@ export async function listOwnedItemIds(
   if (error) throw error;
   return new Set(data.map((row) => row.item_id));
 }
+
+/** One admin grant (a promo, a make-good). Service-role client only: the
+ * ledger has no client insert policy (0081). True when it was new, false
+ * when this person already had it. */
+export async function insertAdminGrant(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  sourceId: string,
+  amount: number,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("points_ledger")
+    .upsert(
+      { user_id: userId, amount, source_type: "admin_grant", source_id: sourceId },
+      { onConflict: "user_id,source_type,source_id", ignoreDuplicates: true },
+    )
+    .select("user_id");
+  if (error) throw error;
+  return data.length > 0;
+}
