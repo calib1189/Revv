@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useNativeKeyboardHeight } from "@/lib/native/keyboard";
 
 export interface VisualViewportBox {
   /** Where the visible area starts, in layout-viewport pixels. Non-zero
@@ -39,5 +40,10 @@ export function useVisualViewportBox(enabled: boolean): VisualViewportBox | null
     };
   }, [enabled]);
 
-  return box;
+  // In the iOS app the WebView isn't panned or resized for the keyboard
+  // (lib/native/keyboard.ts), so visualViewport doesn't see it at all; the
+  // keyboard's own reported height says how much of the screen it takes.
+  const keyboard = useNativeKeyboardHeight();
+  if (!box || keyboard === 0) return box;
+  return { ...box, height: Math.min(box.height, box.layoutHeight - keyboard) };
 }

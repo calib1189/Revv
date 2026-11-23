@@ -132,6 +132,7 @@ export function CommentSheet({
   return createPortal(
     <div
       data-no-edge-swipe
+      data-keyboard-dock
       className="pointer-events-none fixed inset-x-0 z-[75]"
       style={viewport ? { top: viewport.top, height: viewport.height } : { top: 0, bottom: 0 }}
     >

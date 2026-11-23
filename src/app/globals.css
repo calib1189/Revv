@@ -343,6 +343,22 @@ html.native-app .web-only {
   display: none !important;
 }
 
+/* In the iOS app the WebView isn't resized for the keyboard (see
+   src/lib/native/keyboard.ts): this extra room is what lets a field low on
+   an ordinary page scroll up above it. */
+html[data-keyboard-open] body {
+  padding-bottom: var(--keyboard-h);
+}
+
+/* Anything sized to the space above the keyboard (the comment sheet, the
+   story text editor, a DM thread) slides with it on the keyboard's own
+   curve instead of snapping. Only in the app: on the web the size comes
+   from visualViewport, which already lands after the keyboard has. */
+html.native-app [data-keyboard-dock] {
+  /* opacity kept for layers that also fade in and out (the story text editor). */
+  transition: height 340ms var(--ease-ios), opacity 200ms ease;
+}
+
 /* The bottom tab bar steps aside while a sheet is up over the feed
    (comments, a post's ⋯ menu), the way TikTok's does — see
    useHideBottomNav. */

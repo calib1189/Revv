@@ -62,6 +62,16 @@ const config: CapacitorConfig = {
     // exactly the oversized empty strip under the status bar this fixes.
     contentInset: "never",
   },
+  plugins: {
+    // The page moves its own composers for the keyboard (src/lib/native/
+    // keyboard.ts) instead of iOS resizing or panning the whole WebView:
+    // "native" resizes only after the keyboard has finished opening, so
+    // anything docked to the bottom jumps into place late. The plugin also
+    // removes the gray ⌃ ⌄ Done bar iOS puts above web text fields.
+    Keyboard: {
+      resize: "none",
+    },
+  },
   // No PushNotifications.presentationOptions on purpose: the plugin's
   // default (badge only) keeps banners from interrupting someone who is
   // already using the app. The catch is that a notification arriving

@@ -54,6 +54,7 @@ export function TextEditorOverlay({
 
   return (
     <div
+      data-keyboard-dock
       className={`fixed inset-x-0 z-[85] flex flex-col bg-black/55 backdrop-blur-[3px] transition-opacity duration-200 ${
         open ? "opacity-100" : "pointer-events-none opacity-0"
       }`}

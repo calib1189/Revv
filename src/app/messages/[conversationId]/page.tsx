@@ -7,6 +7,7 @@ import { listMessages } from "@/lib/db/messages";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { Avatar } from "@/features/feed/avatar";
 import { MessageForm } from "@/features/messages/message-form";
+import { ConversationScreen } from "@/features/messages/conversation-screen";
 import { MarkReadOnView } from "@/features/messages/mark-read-on-view";
 import { relativeTime } from "@/lib/format/relative-time";
 import { getMediaById, publicMediaUrl } from "@/lib/db/media";
@@ -59,32 +60,33 @@ export default async function ConversationPage({
   const username = otherProfile?.username ?? "unknown";
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
+    <ConversationScreen
+      composer={<MessageForm conversationId={conversationId} />}
+      header={
+        /* Messages-style header: back on the left, the other person's
+            photo and name stacked in the centre, tapping through to their
+            profile. */
+        <div className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center px-3 py-2">
+          <Link
+            href="/messages"
+            aria-label="Back to inbox"
+            className="flex h-10 w-10 items-center justify-center rounded-full text-accent"
+          >
+            <BackIcon className="h-5 w-5" />
+          </Link>
+          <Link href={`/u/${username}`} className="flex flex-col items-center gap-1">
+            <Avatar username={username} avatarUrl={avatarUrl} className="h-10 w-10 text-sm" />
+            <span className="flex max-w-full items-center gap-0.5 text-[0.75rem] font-medium">
+              <span className="truncate">{otherProfile?.display_name || username}</span>
+              {otherProfile?.is_verified && <VerifiedBadge className="ml-0.5 h-3 w-3" />}
+              <ChevronRightIcon className="h-3 w-3 flex-shrink-0 text-muted" />
+            </span>
+          </Link>
+          <span />
+        </div>
+      }
+    >
       <MarkReadOnView conversationId={conversationId} />
-
-      {/* Messages-style header: back on the left, the other person's
-          photo and name stacked in the centre, tapping through to their
-          profile. */}
-      <div className="grid grid-cols-[2.5rem_1fr_2.5rem] items-center border-b border-border px-3 py-2">
-        <Link
-          href="/messages"
-          aria-label="Back to inbox"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-accent"
-        >
-          <BackIcon className="h-5 w-5" />
-        </Link>
-        <Link href={`/u/${username}`} className="flex flex-col items-center gap-1">
-          <Avatar username={username} avatarUrl={avatarUrl} className="h-10 w-10 text-sm" />
-          <span className="flex max-w-full items-center gap-0.5 text-[0.75rem] font-medium">
-            <span className="truncate">{otherProfile?.display_name || username}</span>
-            {otherProfile?.is_verified && <VerifiedBadge className="ml-0.5 h-3 w-3" />}
-            <ChevronRightIcon className="h-3 w-3 flex-shrink-0 text-muted" />
-          </span>
-        </Link>
-        <span />
-      </div>
-
-      <div className="flex flex-1 flex-col px-3 py-4">
         {messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center py-16 text-center">
             <Avatar username={username} avatarUrl={avatarUrl} className="h-20 w-20 text-3xl" />
@@ -142,11 +144,6 @@ export default async function ConversationPage({
             );
           })
         )}
-      </div>
-
-      <div className="border-t border-border px-3 py-2.5">
-        <MessageForm conversationId={conversationId} />
-      </div>
-    </div>
+    </ConversationScreen>
   );
 }

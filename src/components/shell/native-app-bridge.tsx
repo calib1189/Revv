@@ -9,6 +9,7 @@ import {
   promptForNativePushIfNeverAsked,
   refreshNativePushRegistration,
 } from "@/lib/native/push";
+import { installNativeKeyboardTracking } from "@/lib/native/keyboard";
 
 /** No-ops entirely on the regular web/PWA — only does anything when this
  * page is running inside the Capacitor-wrapped native shell. Dynamically
@@ -29,6 +30,7 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
     let tapHandle: { remove: () => void } | undefined;
     let resumeListenerHandle: { remove: () => void } | undefined;
     let removeEdgeSwipe: (() => void) | undefined;
+    let removeKeyboardTracking: (() => void) | undefined;
 
     // Chrome only says "this is the Android app" on the first page it
     // loads; reading it now keeps the answer for the rest of the session.
@@ -43,6 +45,8 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
       document.documentElement.classList.add("native-app");
 
       if (!cancelled) removeEdgeSwipe = installEdgeSwipeBack();
+      // Composers ride on top of the keyboard — see lib/native/keyboard.ts.
+      if (!cancelled) removeKeyboardTracking = installNativeKeyboardTracking();
 
       const [{ StatusBar, Style }, { SplashScreen }, { App }, { Browser }] = await Promise.all([
         import("@capacitor/status-bar"),
@@ -153,6 +157,7 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
     return () => {
       cancelled = true;
       removeEdgeSwipe?.();
+      removeKeyboardTracking?.();
       listenerHandle?.remove();
       tapHandle?.remove();
       resumeListenerHandle?.remove();

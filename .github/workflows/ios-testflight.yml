@@ -41,6 +41,11 @@ name: iOS TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "App Store version for this build (e.g. 1.0.2). Must be higher than the version live on the App Store."
+        required: true
+        type: string
 
 concurrency:
   group: ios-testflight
@@ -63,6 +68,7 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APP_VERSION: ${{ inputs.version }}
 
     steps:
       - name: Check required configuration
@@ -96,6 +102,25 @@ jobs:
       # committed it.
       - name: Sync Capacitor
         run: npx cap sync ios
+
+      # The app only loads the native plugins named in the generated
+      # ios/App/App/capacitor.config.json (gitignored, written by the sync
+      # above). The build shipped around 2026-11-10 was made outside this
+      # workflow from a stale copy of that file without
+      # PushNotificationsPlugin, so every phone on it reported "plugin is
+      # not implemented on ios" and no new device could get notifications.
+      # Fail here instead of shipping that again.
+      - name: Check native plugins are registered
+        run: |
+          CONFIG=ios/App/App/capacitor.config.json
+          for plugin in PushNotificationsPlugin KeyboardPlugin HapticsPlugin AppPlugin CAPBrowserPlugin SplashScreenPlugin StatusBarPlugin; do
+            if ! grep -q "\"$plugin\"" "$CONFIG"; then
+              echo "::error title=Plugins::$plugin is missing from $CONFIG after cap sync."
+              exit 1
+            fi
+          done
+          echo "All native plugins present:"
+          cat "$CONFIG"
 
       # Apple rejects uploads built with an SDK older than its current
       # minimum, and that minimum moves every year. Rather than pin a
@@ -147,6 +172,7 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            MARKETING_VERSION="$APP_VERSION" \
             CURRENT_PROJECT_VERSION="$(( GITHUB_RUN_NUMBER + 100 ))" \
             2>&1 | tee "$RUNNER_TEMP/archive.log"
 
