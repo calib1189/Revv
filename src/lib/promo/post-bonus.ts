@@ -2,22 +2,27 @@ import type { PushPayload } from "@/lib/push/payload";
 
 /*
  * A one-off nudge to get people posting again (Nov 2026): the first
- * photo or video someone posts this weekend earns 50 points. Paid once
+ * photo or video someone posts in the window earns points. Paid once
  * per person by the ledger's own unique (user, source type, source id),
  * as an admin grant under this offer's id, so no migration was needed.
- * Ends 11:59pm ET Sunday Nov 22; nothing is paid or pushed after that.
+ *
+ * Second run: 200 points, from Monday evening Nov 23 through 11:59pm ET
+ * Tuesday Nov 24, announced by email and push. Its own id, so anyone
+ * paid by the first run (50 points, weekend of Nov 21, id
+ * post_bonus_2026_11_22) can earn this one too. Nothing is paid or
+ * pushed outside the window.
  */
 export const POST_BONUS = {
   /** The ledger source id, so one payment per person, ever. */
-  id: "post_bonus_2026_11_22",
-  points: 50,
-  /** Posts from the start of Saturday Nov 21 (ET) count. */
-  startsAt: "2026-11-21T05:00:00Z",
-  endsAt: "2026-11-23T04:59:59Z",
+  id: "post_bonus_2026_11_24",
+  points: 200,
+  /** 6pm CT Monday Nov 23, about when the email goes out. */
+  startsAt: "2026-11-24T00:00:00Z",
+  endsAt: "2026-11-25T04:59:59Z",
   /** The daily_push_log key for its one push per person, under the
    * "drop" kind (promo pushes) in a slot of its own, clear of the tee
    * drop's (its end date, slot 0). */
-  pushLogDay: "2026-11-22",
+  pushLogDay: "2026-11-24",
   pushLogSlot: 1,
 } as const;
 
@@ -43,8 +48,8 @@ export function isPromoPushHour(localHour: number): boolean {
 
 export function postBonusPushPayload(): PushPayload {
   return {
-    title: "The feed's been quiet. Fix that.",
-    body: `Post a photo or video of your car before Sunday night and we'll drop ${POST_BONUS.points} points in your account.`,
+    title: `${POST_BONUS.points} points for one post`,
+    body: `Post a photo or video of your car before Tuesday night and we'll drop ${POST_BONUS.points} points in your account.`,
     url: "/feed/new",
   };
 }
