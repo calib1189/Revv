@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import type { GifRef } from "@/lib/gifs";
 
 export type Comment = Database["public"]["Tables"]["comments"]["Row"];
 
@@ -72,10 +73,20 @@ export async function createComment(
   authorId: string,
   body: string,
   parentId: string | null = null,
+  /** A GIF comment has an empty body (migration 0130). */
+  gif: GifRef | null = null,
 ): Promise<Comment> {
   const { data, error } = await supabase
     .from("comments")
-    .insert({ post_id: postId, author_id: authorId, body, parent_id: parentId })
+    .insert({
+      post_id: postId,
+      author_id: authorId,
+      body: gif ? "" : body,
+      parent_id: parentId,
+      // Only named when there is a GIF, so text comments don't depend on
+      // migration 0130 having been applied.
+      ...(gif ? { gif_id: gif.id, gif_width: gif.width, gif_height: gif.height } : {}),
+    })
     .select("*")
     .single();
 

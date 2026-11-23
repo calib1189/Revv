@@ -23,7 +23,7 @@ export function ReactableMessage({
   messageId: string;
   isMine: boolean;
   initial: ReactionSummary;
-  /** The message, for Copy. */
+  /** The message, for Copy. Empty for a GIF, which has nothing to copy. */
   text: string;
   children: React.ReactNode;
 }) {
@@ -89,7 +89,7 @@ export function ReactableMessage({
           onPick={(r) => void pick(r)}
           onClose={() => setOpen(false)}
           align={isMine ? "right" : "left"}
-          onCopy={() => void navigator.clipboard?.writeText(text).catch(() => {})}
+          onCopy={text ? () => void navigator.clipboard?.writeText(text).catch(() => {}) : undefined}
         />
       )}
     </div>

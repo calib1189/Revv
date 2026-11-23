@@ -21,6 +21,7 @@ import { listVehicleIdsByCategory } from "@/lib/db/vehicles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { getBestRatingScoresByOwnerIds } from "@/lib/rating/best-build-scores";
 import { validateComment } from "@/lib/validation/comment";
+import { parseGifFromForm } from "@/lib/gifs";
 import { validateCaption } from "@/lib/validation/post";
 import { composePostCards } from "@/lib/feed/compose-post-cards";
 import { sendPushToUser } from "@/lib/push/send";
@@ -246,8 +247,12 @@ export async function createCommentAction(
   formData: FormData,
 ): Promise<CommentFormState> {
   const body = String(formData.get("body") ?? "");
-  const error = validateComment(body);
-  if (error) return { error };
+  const gif = parseGifFromForm(formData);
+  if (gif === "invalid") return { error: "Couldn't post that GIF." };
+  if (!gif) {
+    const error = validateComment(body);
+    if (error) return { error };
+  }
 
   const { supabase, user } = await requireUser();
 
@@ -261,7 +266,7 @@ export async function createCommentAction(
   }
 
   try {
-    await createComment(supabase, postId, user.id, body.trim(), parentId);
+    await createComment(supabase, postId, user.id, body.trim(), parentId, gif);
   } catch {
     return { error: "Couldn't post that comment. Try again in a bit." };
   }

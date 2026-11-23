@@ -13,6 +13,8 @@ import { ReportButton } from "@/features/feed/report-button";
 import { CommentIcon } from "@/components/ui/icons";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { relativeTime } from "@/lib/format/relative-time";
+import { GifImage } from "@/features/gifs/gif-image";
+import { gifFromRow } from "@/lib/gifs";
 import type { Comment } from "@/lib/db/comments";
 
 export interface CommentWithAuthor extends Comment {
@@ -164,6 +166,7 @@ function CommentRow({
   compact?: boolean;
 }) {
   const size = compact ? 28 : 36;
+  const gif = gifFromRow(comment);
   const inner = compact ? "h-[23px] w-[23px] text-[0.625rem]" : "h-[30px] w-[30px] text-xs";
   const bare = compact ? "h-7 w-7 text-[0.625rem]" : "h-9 w-9 text-xs";
 
@@ -196,9 +199,13 @@ function CommentRow({
             {relativeTime(comment.created_at)}
           </span>
         </p>
-        <p className="mt-0.5 whitespace-pre-line break-words text-[0.9375rem] leading-snug text-foreground">
-          {comment.body}
-        </p>
+        {gif ? (
+          <GifImage gif={gif} className="mt-1 max-w-[180px] rounded-xl" />
+        ) : (
+          <p className="mt-0.5 whitespace-pre-line break-words text-[0.9375rem] leading-snug text-foreground">
+            {comment.body}
+          </p>
+        )}
         <div className="mt-1.5 flex items-center gap-4 text-[0.8125rem] font-semibold text-muted">
           {onReply && (
             <button type="button" onClick={onReply} className="hover:text-foreground">

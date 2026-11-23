@@ -43,6 +43,9 @@ describe("conversationStatus", () => {
   it("says Sent while mine is unread", () => {
     expect(conversationStatus({ sender_id: me, body: "yo", read_at: null }, me)).toEqual({ text: "Sent", unread: false, mine: true });
   });
+  it("says Sent a GIF for their GIF", () => {
+    expect(conversationStatus({ sender_id: "them", body: "", gif_id: "abc", read_at: null }, me)).toEqual({ text: "Sent a GIF", unread: true, mine: false });
+  });
   it("handles a conversation with no messages", () => {
     expect(conversationStatus(undefined, me)).toEqual({ text: "Say hi", unread: false, mine: false });
   });

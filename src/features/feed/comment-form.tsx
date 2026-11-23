@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, useRef, useEffect, useState } from "react";
+import { useActionState, useRef, useEffect, useState, startTransition } from "react";
 import {
   createCommentAction,
   type CommentFormState,
 } from "@/features/feed/actions";
 import { Callout } from "@/components/ui/callout";
+import { GifButton, GifPicker } from "@/features/gifs/gif-picker";
+import type { GifRef } from "@/lib/gifs";
 import { ArrowUpIcon, CloseIcon } from "@/components/ui/icons";
 
 const initialState: CommentFormState = { error: null };
@@ -33,6 +35,7 @@ export function CommentForm({
   const action = createCommentAction.bind(null, postId, parentId);
   const [state, formAction, isPending] = useActionState(action, initialState);
   const [text, setText] = useState("");
+  const [gifOpen, setGifOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const wasPending = useRef(false);
@@ -59,6 +62,15 @@ export function CommentForm({
 
   const canSend = text.trim().length > 0 && !isPending;
 
+  function postGif(gif: GifRef) {
+    const fd = new FormData();
+    fd.set("gif_id", gif.id);
+    fd.set("gif_width", String(gif.width));
+    fd.set("gif_height", String(gif.height));
+    setGifOpen(false);
+    startTransition(() => formAction(fd));
+  }
+
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-2">
       {state.error && <Callout tone="danger">{state.error}</Callout>}
@@ -79,12 +91,14 @@ export function CommentForm({
           )}
         </div>
       )}
+      {gifOpen && <GifPicker onPick={postGif} onClose={() => setGifOpen(false)} disabled={isPending} />}
       <div className="flex items-center gap-1 rounded-full bg-foreground/[0.06] py-1 pl-4 pr-1 transition-[box-shadow,background-color] focus-within:bg-foreground/[0.08] focus-within:ring-2 focus-within:ring-accent/25">
         <input
           ref={inputRef}
           name="body"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onFocus={() => setGifOpen(false)}
           placeholder={parentId ? "Add a reply…" : "Add a comment…"}
           maxLength={2000}
           autoComplete="off"
@@ -92,6 +106,7 @@ export function CommentForm({
           aria-label={parentId ? "Reply" : "Comment"}
           className="min-w-0 flex-1 bg-transparent py-1.5 text-[0.9375rem] text-foreground placeholder:text-muted/60 focus:outline-none"
         />
+        <GifButton open={gifOpen} onClick={() => setGifOpen((o) => !o)} />
         <button
           type="submit"
           disabled={!canSend}

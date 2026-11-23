@@ -7,6 +7,7 @@ import { requireConfirmedUser as requireUser } from "@/lib/auth/require-confirme
 import { getOrCreateConversation, getConversationById } from "@/lib/db/conversations";
 import { sendMessage, markConversationRead } from "@/lib/db/messages";
 import { validateMessageBody } from "@/lib/validation/message";
+import { parseGifFromForm } from "@/lib/gifs";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { sendPushToUser } from "@/lib/push/send";
 
@@ -41,12 +42,16 @@ export async function sendMessageAction(
   formData: FormData,
 ): Promise<SendMessageState> {
   const body = String(formData.get("body") ?? "");
-  const error = validateMessageBody(body);
-  if (error) return { error };
+  const gif = parseGifFromForm(formData);
+  if (gif === "invalid") return { error: "Couldn't send that GIF." };
+  if (!gif) {
+    const error = validateMessageBody(body);
+    if (error) return { error };
+  }
 
   const { supabase, user } = await requireUser();
   try {
-    await sendMessage(supabase, conversationId, user.id, body.trim());
+    await sendMessage(supabase, conversationId, user.id, body.trim(), gif);
   } catch {
     return { error: "Couldn't send that message." };
   }
@@ -59,7 +64,7 @@ export async function sendMessageAction(
     const actor = await getProfileByUserId(supabase, user.id);
     await sendPushToUser(otherUserId, {
       title: "SORZA",
-      body: `@${actor?.username ?? "Someone"} sent you a message`,
+      body: `@${actor?.username ?? "Someone"} sent you ${gif ? "a GIF" : "a message"}`,
       url: `/messages/${conversationId}`,
     }, "messages");
   });

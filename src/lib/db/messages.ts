@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import type { GifRef } from "@/lib/gifs";
 
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 
@@ -22,10 +23,19 @@ export async function sendMessage(
   conversationId: string,
   senderId: string,
   body: string,
+  /** A GIF message has an empty body (migration 0130). */
+  gif: GifRef | null = null,
 ): Promise<Message> {
   const { data, error } = await supabase
     .from("messages")
-    .insert({ conversation_id: conversationId, sender_id: senderId, body })
+    .insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      body: gif ? "" : body,
+      // Only named when there is a GIF, so text messages don't depend on
+      // migration 0130 having been applied.
+      ...(gif ? { gif_id: gif.id, gif_width: gif.width, gif_height: gif.height } : {}),
+    })
     .select("*")
     .single();
 
