@@ -1637,6 +1637,9 @@ export interface Database {
           body: string;
           created_at: string;
           read_at: string | null;
+          gif_id: string | null;
+          gif_width: number | null;
+          gif_height: number | null;
         };
         Insert: {
           id?: string;
@@ -1645,13 +1648,13 @@ export interface Database {
           body: string;
           created_at?: string;
           read_at?: string | null;
+          gif_id?: string | null;
+          gif_width?: number | null;
+          gif_height?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
         Relationships: never[];
       };
-          gif_id: string | null;
-          gif_width: number | null;
-          gif_height: number | null;
       ad_campaigns: {
         Row: {
           id: string;
@@ -1660,9 +1663,6 @@ export interface Database {
           caption: string | null;
           media_id: string;
           destination_url: string;
-          gif_id?: string | null;
-          gif_width?: number | null;
-          gif_height?: number | null;
           tier: "starter" | "standard" | "featured";
           price_cents: number;
           duration_days: number;
