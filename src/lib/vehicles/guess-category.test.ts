@@ -20,6 +20,11 @@ describe("guessVehicleCategory", () => {
     ["Kawasaki", "Ninja ZX-6R", "street_bikes"],
     ["Harley-Davidson", "Fat Boy", "cruisers_choppers"],
     ["Indian", "Chief", "cruisers_choppers"],
+    ["Ford", "F-150 Raptor", "trucks_offroad"],
+    ["Chevrolet", "Silverado 1500", "trucks_offroad"],
+    ["Toyota", "Tacoma TRD Pro", "trucks_offroad"],
+    ["Jeep", "Wrangler Rubicon", "trucks_offroad"],
+    ["Ram", "1500", "trucks_offroad"],
   ] as const)("guesses %s %s as %s", (make, model, expected) => {
     expect(guessVehicleCategory(make, model)).toBe(expected);
   });
@@ -28,6 +33,8 @@ describe("guessVehicleCategory", () => {
     expect(guessVehicleCategory("Cadillac", "ATS")).toBeNull();
     expect(guessVehicleCategory("Toyota", "Camry")).toBeNull();
     expect(guessVehicleCategory("Honda", "Civic")).toBeNull();
+    // A Jeep that isn't built for the trail stays a car.
+    expect(guessVehicleCategory("Jeep", "Compass")).toBeNull();
   });
 
   it("doesn't false-positive on short substrings inside unrelated model names", () => {

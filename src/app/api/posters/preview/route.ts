@@ -9,6 +9,7 @@ import { posterProductById, postersEnabled, printPixels } from "@/lib/posters/pr
 import { posterSubscores } from "@/lib/posters/snapshot";
 import { renderPoster } from "@/features/posters/poster-art";
 import { fetchPosterPhoto } from "@/features/posters/poster-photo";
+import { vehicleKind } from "@/lib/vehicles/category";
 
 export const runtime = "nodejs";
 
@@ -59,6 +60,7 @@ export async function GET(request: Request) {
         tier: offer.tier,
         subscores: posterSubscores(build.ai_rating_subscores),
         ratedAt: build.ai_rating_rated_at,
+        isBike: vehicleKind(vehicle.category) === "bike",
       },
       photo,
       { width, height: Math.round((width * print.height) / print.width) },

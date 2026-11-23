@@ -14,6 +14,9 @@ const PROMPT =
   `${VEHICLE_CATEGORIES.join(", ")}. "cars" means an ordinary everyday car ` +
   "with no strong enthusiast identity (a daily-driven sedan/SUV/crossover) " +
   "— use it as the default when nothing more specific clearly applies. " +
+  '"trucks_offroad" means a pickup truck or a built off-road 4x4 (lifted, ' +
+  'big tires, armor); "street_bikes" and "cruisers_choppers" are ' +
+  "motorcycles. " +
   "If you cannot confidently determine a field, use null for it rather " +
   "than guessing — this includes category if the vehicle type genuinely " +
   "isn't clear from the photo. Give an overall confidence score from 0 " +

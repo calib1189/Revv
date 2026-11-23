@@ -7,21 +7,15 @@ import { ProgressRing } from "@/components/ui/progress-ring";
 import { RatingSparkline } from "@/features/garage/rating-sparkline";
 import { formatDateOnly } from "@/lib/format/date";
 import type { BuildRatingSubscores } from "@/lib/providers/rating-provider";
+import { SUBSCORE_ORDER, subscoreLabels } from "@/lib/rating/subscore-labels";
+import type { VehicleKind } from "@/lib/vehicles/category";
 
 export interface RatingHistoryPoint {
   score: number;
   ratedAt: string;
 }
 
-const SUBSCORE_LABELS: Record<keyof BuildRatingSubscores, string> = {
-  appearance: "Appearance",
-  performance: "Performance",
-  wheelsFitment: "Wheels/Fitment",
-  interior: "Interior",
-  modifications: "Modifications",
-};
-
-const SUBSCORE_KEYS = Object.keys(SUBSCORE_LABELS) as (keyof BuildRatingSubscores)[];
+const SUBSCORE_KEYS = SUBSCORE_ORDER;
 
 /** A build rated under the old (style/execution/mods/photography) or a
  * future taxonomy would otherwise render `undefined` for whichever keys
@@ -45,10 +39,13 @@ export function RatingBreakdownTrigger({
   subscores,
   topPercent,
   history = [],
+  kind = "car",
   children,
   className = "min-w-0 text-left",
 }: {
   className?: string;
+  /** A bike's interior score reads as Cockpit. */
+  kind?: VehicleKind;
   score: number;
   subscores: BuildRatingSubscores | null;
   topPercent: number | null;
@@ -60,6 +57,7 @@ export function RatingBreakdownTrigger({
   const [isOpen, setIsOpen] = useState(false);
   const tier = rankForScore(score);
   const validSubscores = hasCompleteSubscores(subscores) ? subscores : null;
+  const labels = subscoreLabels(kind);
 
   return (
     <>
@@ -108,7 +106,7 @@ export function RatingBreakdownTrigger({
                 {SUBSCORE_KEYS.map((key) => (
                   <div key={key}>
                     <div className="mb-1.5 flex items-center justify-between">
-                      <span className="text-[0.875rem] font-medium">{SUBSCORE_LABELS[key]}</span>
+                      <span className="text-[0.875rem] font-medium">{labels[key]}</span>
                       <span className="numeral text-[0.875rem]">{validSubscores[key].toFixed(0)}</span>
                     </div>
                     <div className="h-[6px] w-full overflow-hidden rounded-full bg-foreground/10">

@@ -60,7 +60,7 @@ export function DailyBoostPromo({ boost }: { boost: DailyBoost }) {
           to whoever wins today
         </h3>
         <p className="mt-2 text-[0.9375rem] leading-snug text-muted">
-          {boost.prize ? `Plus ${boost.prize}. ` : ""}Post your car, get the most votes, take it all. Closes in{" "}
+          {boost.prize ? `Plus ${boost.prize}. ` : ""}Post your ride, get the most votes, take it all. Closes in{" "}
           <Countdown endsAt={boost.endsAt} clock fallback="a few hours" className="font-semibold text-foreground" />.
         </p>
       </div>

@@ -7,6 +7,7 @@ export type VehicleCategory =
   | "muscle_pony"
   | "euro_performance"
   | "track_race"
+  | "trucks_offroad"
   | "cars";
 
 /** Single source of truth for the vehicle category allowlist — mirrored
@@ -23,6 +24,7 @@ export const VEHICLE_CATEGORIES: VehicleCategory[] = [
   "supercars",
   "track_race",
   "classics",
+  "trucks_offroad",
   "street_bikes",
   "cruisers_choppers",
 ];
@@ -35,10 +37,22 @@ export const VEHICLE_CATEGORY_LABELS: Record<VehicleCategory, string> = {
   supercars: "Supercars",
   track_race: "Track & Race",
   classics: "Classics",
+  trucks_offroad: "Trucks & Off-road",
   street_bikes: "Street Bikes",
   cruisers_choppers: "Cruisers & Choppers",
 };
 
 export function isVehicleCategory(value: string): value is VehicleCategory {
   return (VEHICLE_CATEGORIES as string[]).includes(value);
+}
+
+/** What kind of machine a category is, for the few places that judge or
+ * describe one differently: the AI rating (a bike has no cabin to score)
+ * and the labels on its subscores. */
+export type VehicleKind = "car" | "bike" | "truck";
+
+export function vehicleKind(category: string | null | undefined): VehicleKind {
+  if (category === "street_bikes" || category === "cruisers_choppers") return "bike";
+  if (category === "trucks_offroad") return "truck";
+  return "car";
 }

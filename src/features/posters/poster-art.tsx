@@ -137,7 +137,8 @@ export async function renderPoster(data: PosterData, photo: string, size: { widt
 
         {data.subscores && (
           <div style={{ display: "flex", marginTop: px(64) }}>
-            {SUBSCORE_LABELS.map(([key, label], i) => {
+            {SUBSCORE_LABELS.map(([key, subscoreLabel], i) => {
+              const label = key === "interior" && data.isBike ? "Cockpit" : subscoreLabel;
               const v = data.subscores![key];
               return (
                 <div key={key} style={{ display: "flex", flexDirection: "column", flex: 1, marginLeft: i === 0 ? 0 : px(34) }}>

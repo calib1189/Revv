@@ -75,7 +75,7 @@ export function MyEntry({
           </div>
           <div className="min-w-0 flex-1">
             <p className="micro-label text-accent">Your entry</p>
-            <p className="mt-1 truncate text-[0.9375rem] font-semibold">{entry.vehicleTitle ?? "Your car"}</p>
+            <p className="mt-1 truncate text-[0.9375rem] font-semibold">{entry.vehicleTitle ?? "Your ride"}</p>
             <p className="mt-0.5 text-[0.8125rem] text-muted">
               {entryVotes === 1 ? "1 vote so far" : `${entryVotes} votes so far`}
             </p>
@@ -184,7 +184,7 @@ function EnterForm({
 
   function handleSubmit() {
     // Editing can keep the photo already entered.
-    if (!photo && !entry) return setError("Pick a photo of your car.");
+    if (!photo && !entry) return setError("Pick a photo of your ride.");
     setError(null);
     startTransition(async () => {
       const result = await submitDailyEntryAction({

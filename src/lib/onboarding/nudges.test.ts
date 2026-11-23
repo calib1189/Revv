@@ -57,7 +57,7 @@ describe("onboardingNudgePayload", () => {
   it("reads right for each case", () => {
     expect(onboardingNudgePayload({ kind: "add_car" })).toEqual({
       title: "SORZA",
-      body: "Add your car. SORZA scores it free and shows you where it ranks.",
+      body: "Add your ride. SORZA scores it free and shows you where it ranks.",
       url: "/garage/new",
     });
     expect(onboardingNudgePayload({ kind: "rate_car", car: car() }).body).toBe(

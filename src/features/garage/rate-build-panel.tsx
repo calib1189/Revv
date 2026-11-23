@@ -24,6 +24,7 @@ import { requestAppReviewAfterRating } from "@/lib/native/app-review";
 import { GemIcon, ChevronRightIcon } from "@/components/ui/icons";
 import type { BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 import type { RankPosition } from "@/lib/rating/rank-position";
+import type { VehicleKind } from "@/lib/vehicles/category";
 
 export function RateBuildPanel({
   vehicleId,
@@ -41,8 +42,11 @@ export function RateBuildPanel({
   hasPhotos,
   rerate = null,
   decal = null,
+  kind = "car",
 }: {
   vehicleId: string;
+  /** Bike, truck or car: how the score's categories are labelled. */
+  kind?: VehicleKind;
   /** What goes out with the link when the owner shares their score. */
   shareText: string;
   /** The build's trading card image, shared along with the link. */
@@ -212,7 +216,7 @@ export function RateBuildPanel({
           caption={
             currentScore != null
               ? `Not saved yet. Your current score of ${currentScore.toFixed(2)} stays until you save this one.`
-              : "Not saved yet. Save it to put your car on the leaderboard."
+              : "Not saved yet. Save it to put your ride on the leaderboard."
           }
         />
         <ScoreReasons strengths={pending.strengths} limitingFactors={pending.limitingFactors} />
@@ -249,10 +253,11 @@ export function RateBuildPanel({
   if (currentScore != null) {
     return (
       <>
-        {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} decal={revealDecal} />}
+        {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} decal={revealDecal} kind={kind} />}
         {decalSheet}
         <div className="glass-raised elev-2 rounded-[28px] p-5 sm:p-6">
           <RatingBreakdownTrigger
+            kind={kind}
             score={currentScore}
             subscores={currentSubscores}
             topPercent={topPercent}
@@ -318,7 +323,7 @@ export function RateBuildPanel({
 
   return (
     <>
-      {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} decal={revealDecal} />}
+      {isRevealing && <RatingReveal result={revealResult} onDone={handleRevealDone} decal={revealDecal} kind={kind} />}
       {decalSheet}
       <div className="glass-raised elev-2 flex flex-col items-center rounded-[28px] px-6 py-8 text-center">
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent/12 text-accent">
@@ -344,7 +349,7 @@ export function RateBuildPanel({
                 Add a photo to get rated
               </Button>
             </a>
-            <p className="mt-2 max-w-xs text-[0.8125rem] text-muted">The AI rates your car from its photos.</p>
+            <p className="mt-2 max-w-xs text-[0.8125rem] text-muted">The AI rates your ride from its photos.</p>
           </>
         )}
         <AiDisclosure kind="rating" className="mt-3 max-w-xs" />

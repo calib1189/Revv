@@ -26,6 +26,7 @@ import { getRatingProvider } from "@/lib/providers/get-rating-provider";
 import type { RatingPhoto, BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 import { getPointsBalance } from "@/lib/db/points";
 import { nextFreeRateAt, rerateCost } from "@/lib/rating/rerate";
+import { vehicleKind } from "@/lib/vehicles/category";
 
 async function requireOwner(vehicleId: string) {
   const { supabase, user } = await requireConfirmedUser();
@@ -165,7 +166,7 @@ async function rateBuild(
   const provider = getRatingProvider();
 
   try {
-    const rating = await provider.rateBuild(photos, summary);
+    const rating = await provider.rateBuild(photos, summary, vehicleKind(vehicle.category));
     // Recorded the moment a real result comes back, so the daily limit
     // is on the AI call itself.
     const build = await getOrCreateActiveBuild(supabase, vehicleId);

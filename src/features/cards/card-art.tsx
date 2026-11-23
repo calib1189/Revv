@@ -83,7 +83,8 @@ export async function renderTradingCard(data: PosterData, photo: string): Promis
         {/* the five stats */}
         <div style={{ display: "flex", flexDirection: "column", marginTop: 26 }}>
           {data.subscores ? (
-            STATS.map(([key, label]) => {
+            STATS.map(([key, statLabel]) => {
+              const label = key === "interior" && data.isBike ? "COCKPIT" : statLabel;
               const v = Math.max(0, Math.min(100, data.subscores![key]));
               return (
                 <div key={key} style={{ display: "flex", alignItems: "center", height: 66 }}>

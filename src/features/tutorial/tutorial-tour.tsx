@@ -21,7 +21,7 @@ const COPY: Record<Exclude<TutorialStepId, "welcome">, { eyebrow: string; title:
   feed: {
     eyebrow: "Feed",
     title: "Every build, one swipe away",
-    body: "Post photos and videos of your car, share build updates, and like, comment on and follow the builds you love.",
+    body: "Post photos and videos of your ride, share build updates, and like, comment on and follow the builds you love.",
   },
   garage: {
     eyebrow: "Garage",
@@ -146,7 +146,7 @@ export function TutorialTour({
 
   let primaryLabel = "Continue";
   if (step === 0) primaryLabel = "Let's get started";
-  if (isLast) primaryLabel = mode === "replay" ? "Done" : hasCar || load.status !== "ready" ? "Start exploring" : "Add your car";
+  if (isLast) primaryLabel = mode === "replay" ? "Done" : hasCar || load.status !== "ready" ? "Start exploring" : "Add your ride";
 
   return (
     <div
@@ -262,7 +262,7 @@ export function TutorialTour({
             {primaryLabel}
           </button>
         </div>
-        {isLast && primaryLabel === "Add your car" && (
+        {isLast && primaryLabel === "Add your ride" && (
           <button type="button" onClick={() => onFinish("finished", step)} className="h-10 text-[0.875rem] font-medium text-white/60">
             I&apos;ll explore first
           </button>

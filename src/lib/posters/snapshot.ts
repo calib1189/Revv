@@ -11,6 +11,9 @@ export interface PosterData {
   tier: RankTier;
   subscores: PosterSubscores | null;
   ratedAt: string | null;
+  /** A motorcycle: its interior score prints as Cockpit. Left off for
+   * everything else, so older snapshots read exactly as before. */
+  isBike?: boolean;
 }
 
 export interface PosterSubscores {
@@ -65,6 +68,7 @@ export function parsePosterSnapshot(raw: Json): PosterSnapshot | null {
     subscores: posterSubscores(r.subscores),
     ratedAt: typeof r.ratedAt === "string" ? r.ratedAt : null,
     photoPath: r.photoPath,
+    ...(r.isBike === true ? { isBike: true } : {}),
   };
 }
 
@@ -79,5 +83,6 @@ export function posterSnapshotJson(s: PosterSnapshot): Json {
     subscores: s.subscores ? { ...s.subscores } : null,
     ratedAt: s.ratedAt,
     photoPath: s.photoPath,
+    ...(s.isBike ? { isBike: true } : {}),
   };
 }

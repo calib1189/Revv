@@ -42,7 +42,7 @@ export function GetAppPage({ inApp, platform }: { inApp: InAppBrowser | null; pl
       </div>
 
       <h1 className="mt-7 text-balance text-[2.25rem] font-bold leading-[1.02] tracking-[-0.035em]">
-        What&apos;s your car rated?
+        What&apos;s your ride rated?
       </h1>
       <p className="mt-3 max-w-[34ch] text-[0.9375rem] leading-relaxed text-muted">
         Add your build, get a real SORZA score out of 100, and see where you rank on the leaderboard.

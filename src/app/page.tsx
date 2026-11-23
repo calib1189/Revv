@@ -16,7 +16,7 @@ import { SupabaseNotConfigured } from "@/components/ui/supabase-not-configured";
 const STEPS = [
   {
     title: "Build your garage",
-    body: "Add your car and log every mod as real data — parts, prices, install dates — not just a caption.",
+    body: "Add your ride and log every mod as real data — parts, prices, install dates — not just a caption.",
   },
   {
     title: "Get rated by AI",
@@ -24,7 +24,7 @@ const STEPS = [
   },
   {
     title: "Climb the board",
-    body: "Once SORZA approves your car, its score ranks it against every other build on SORZA.",
+    body: "Once SORZA approves your ride, its score ranks it against every other build on SORZA.",
   },
 ];
 

@@ -122,7 +122,7 @@ export default async function OgImage({ params }: { params: Promise<{ vehicleId:
               SORZA
             </div>
             <div style={{ display: "flex", color: "rgba(244,244,245,0.8)", fontSize: 24 }}>
-              {score != null ? "What would your car score?" : "Rate your build"}
+              {score != null ? "What would your ride score?" : "Rate your build"}
             </div>
           </div>
 

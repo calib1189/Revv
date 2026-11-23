@@ -11,7 +11,7 @@ const STEPS = [
   {
     href: "/garage/new",
     icon: PlusIcon,
-    title: "Add your car",
+    title: "Add your ride",
     description: "Start your garage — photos, mods, and specs all live here.",
   },
   {
@@ -84,7 +84,7 @@ export default async function WelcomePage() {
       </div>
 
       <Link href="/garage/new" className="mt-12">
-        <Button className="h-12 w-full text-[1rem] font-semibold">Add Your Car</Button>
+        <Button className="h-12 w-full text-[1rem] font-semibold">Add Your Ride</Button>
       </Link>
       <Link href="/feed" className="mt-4 text-center text-[0.9375rem] font-medium text-accent">
         Skip for Now

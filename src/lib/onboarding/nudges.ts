@@ -44,7 +44,7 @@ export function decideOnboardingNudge({
 
 export function onboardingNudgePayload(nudge: OnboardingNudge): PushPayload {
   if (nudge.kind === "add_car") {
-    return { title: "SORZA", body: "Add your car. SORZA scores it free and shows you where it ranks.", url: "/garage/new" };
+    return { title: "SORZA", body: "Add your ride. SORZA scores it free and shows you where it ranks.", url: "/garage/new" };
   }
   const { car } = nudge;
   if (!car.hasPhoto) {

@@ -12,6 +12,7 @@ import { buildPosterOffer, posterCarName } from "@/lib/posters/offer";
 import { photoPrintsSharp, posterProductById, postersEnabled } from "@/lib/posters/products";
 import { posterSnapshotJson, posterSubscores, type PosterSnapshot } from "@/lib/posters/snapshot";
 import { SITE_URL } from "@/lib/site-url";
+import { vehicleKind } from "@/lib/vehicles/category";
 
 type Result = { ok: true; url: string } | { ok: false; error: string };
 
@@ -52,6 +53,7 @@ export async function startPosterOrderAction(vehicleId: string, productId: strin
     subscores: posterSubscores(build.ai_rating_subscores),
     ratedAt: build.ai_rating_rated_at,
     photoPath: hero.storage_path,
+    isBike: vehicleKind(vehicle.category) === "bike",
   };
 
   const service = createServiceRoleClient();

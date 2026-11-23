@@ -28,7 +28,7 @@ const ROWS: { category: PushCategory; label: string; detail: string; color: stri
     icon: CommentIcon,
   },
   { category: "follows", label: "New followers", detail: "Someone follows you", color: "#30d158", icon: PersonIcon },
-  { category: "ratings", label: "Ratings", detail: "Someone rates your car", color: "#ffd60a", icon: StarIcon },
+  { category: "ratings", label: "Ratings", detail: "Someone rates your ride", color: "#ffd60a", icon: StarIcon },
   {
     category: "leaderboard",
     label: "Leaderboard",

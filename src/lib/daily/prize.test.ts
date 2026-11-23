@@ -37,7 +37,7 @@ describe("winner points", () => {
     const day = { title: "Cleanest Engine Bay", winner_points: 250 };
     expect(boostedPushCopy("live", day)).toEqual({
       title: "250 points up for grabs today",
-      body: "Today's Sorza Daily is Cleanest Engine Bay. Enter your car now, get the votes, and take 250 points.",
+      body: "Today's Sorza Daily is Cleanest Engine Bay. Enter your ride now, get the votes, and take 250 points.",
     });
     expect(boostedPushCopy("reminder", day)?.title).toBe("Last call for 250 points");
     expect(boostedPushCopy("results", { ...day, sponsor_name: "Lone Star Detailing", prize: "a free detail" })?.body).toBe(

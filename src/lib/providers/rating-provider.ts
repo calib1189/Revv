@@ -1,3 +1,5 @@
+import type { VehicleKind } from "@/lib/vehicles/category";
+
 export interface BuildRatingSubscores {
   /** All 0-100. Each is the AI's independent read of that one facet.
    * They also refine the headline `score`: see lib/rating/blend-score.ts. */
@@ -28,6 +30,7 @@ export interface RatingPhoto {
 export interface RatingProvider {
   /** `buildSummary` is a plain-text description of the vehicle and its
    * modifications assembled by the caller — the provider never reaches
-   * into the database itself. */
-  rateBuild(photos: RatingPhoto[], buildSummary: string): Promise<BuildRating>;
+   * into the database itself. `kind` sets how it's judged: a bike's
+   * `interior` is its cockpit, a truck's lift and tires are mods. */
+  rateBuild(photos: RatingPhoto[], buildSummary: string, kind?: VehicleKind): Promise<BuildRating>;
 }

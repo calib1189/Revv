@@ -10,7 +10,7 @@ type CopyStatus = "idle" | "copied" | "failed";
 /** Your invite link, with Share (the native sheet) and Copy. */
 export function InviteLinkCard({ url, username }: { url: string; username: string }) {
   const [status, setStatus] = useState<CopyStatus>("idle");
-  const text = `Join me on SORZA and get your car rated out of 100. Sign up with my link, or enter @${username} as who invited you, and we both get ${REFERRAL_POINTS} points when you add your car.`;
+  const text = `Join me on SORZA and get your ride rated out of 100. Sign up with my link, or enter @${username} as who invited you, and we both get ${REFERRAL_POINTS} points when you add your ride.`;
   const displayUrl = url.replace(/^https?:\/\//, "");
 
   async function copy() {

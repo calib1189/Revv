@@ -49,6 +49,7 @@ import { getPartClickCountsForBuildParts } from "@/lib/db/part-clicks";
 import type { Metadata } from "next";
 import { getPointsBalance } from "@/lib/db/points";
 import { nextFreeRateAt, rerateCost } from "@/lib/rating/rerate";
+import { vehicleKind } from "@/lib/vehicles/category";
 
 export async function generateMetadata({
   params,
@@ -334,6 +335,7 @@ export default async function VehiclePage({
           <div id="rate" className="scroll-mt-24">
             <RateBuildPanel
               vehicleId={vehicle.id}
+              kind={vehicleKind(vehicle.category)}
               currentScore={score}
               currentStrengths={activeBuild?.ai_rating_strengths ?? null}
               currentLimitingFactors={activeBuild?.ai_rating_limiting_factors ?? null}
@@ -366,6 +368,7 @@ export default async function VehiclePage({
                 subscores={currentSubscores}
                 topPercent={topPercent}
                 history={ratingHistory}
+                kind={vehicleKind(vehicle.category)}
                 className="block w-full text-left"
               >
                 <ScoreHero score={score} />

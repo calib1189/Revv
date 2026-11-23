@@ -81,7 +81,7 @@ export function ProfileTabs({
           (posts.length === 0 ? (
             <EmptyTab
               title="No posts yet"
-              body={isOwnProfile ? "Share a photo of your car to start your feed." : "Nothing shared here yet."}
+              body={isOwnProfile ? "Share a photo of your ride to start your feed." : "Nothing shared here yet."}
             />
           ) : (
             <PostThumbnailGrid posts={posts} />

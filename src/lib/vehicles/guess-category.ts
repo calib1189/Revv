@@ -63,6 +63,16 @@ const MODEL_KEYWORDS: { category: VehicleCategory; keywords: string[] }[] = [
     ],
   },
   {
+    category: "trucks_offroad",
+    keywords: [
+      "f-150", "f150", "f-250", "f250", "f-350", "f350", "raptor", "lightning",
+      "silverado", "sierra", "tacoma", "tundra", "ranger", "colorado", "canyon",
+      "frontier", "titan", "gladiator", "wrangler", "bronco", "4runner",
+      "land cruiser", "trx", "power wagon", "tremor", "zr2", "at4",
+      "ridgeline", "maverick", "cybertruck", "rubicon", "hilux", "defender",
+    ],
+  },
+  {
     category: "street_bikes",
     keywords: [
       "ninja", "cbr", "gsx-r", "gsxr", "yzf", "r1", "r6", "r3",
@@ -91,6 +101,7 @@ const MODEL_KEYWORDS: { category: VehicleCategory; keywords: string[] }[] = [
  * Honda CBR. */
 const MAKE_ONLY: { category: VehicleCategory; makes: string[] }[] = [
   { category: "supercars", makes: ["ferrari", "lamborghini", "mclaren", "bugatti", "koenigsegg", "pagani", "rimac", "pininfarina"] },
+  { category: "trucks_offroad", makes: ["ram"] },
   { category: "cruisers_choppers", makes: ["harley-davidson", "harley davidson", "indian motorcycle", "indian"] },
   { category: "street_bikes", makes: ["ducati", "kawasaki", "aprilia", "triumph"] },
 ];

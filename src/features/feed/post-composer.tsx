@@ -283,7 +283,7 @@ export function PostComposer({
           />
 
           {vehicles.length > 0 && (
-            <ChipSection icon={<WheelIcon className="h-[18px] w-[18px]" />} label="Tag your car">
+            <ChipSection icon={<WheelIcon className="h-[18px] w-[18px]" />} label="Tag your ride">
               <Chip active={vehicleId === ""} onClick={() => onVehicleIdChange("")}>
                 None
               </Chip>

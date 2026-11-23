@@ -24,6 +24,8 @@ import { DecalArt, rankGlow } from "@/features/decals/decal-sheet";
 import { formatUsd } from "@/lib/points/packs";
 import { hapticTierUp, hapticLanding } from "@/lib/haptics";
 import type { BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
+import { SUBSCORE_ORDER, subscoreLabels } from "@/lib/rating/subscore-labels";
+import type { VehicleKind } from "@/lib/vehicles/category";
 
 type Stage = "climbing" | "anticipating" | "correcting" | "landing" | "landed" | "settled";
 
@@ -66,16 +68,8 @@ function ringPoint(value: number): { x: number; y: number } {
   return { x: 100 + RING_RADIUS * Math.cos(angle), y: 100 + RING_RADIUS * Math.sin(angle) };
 }
 
-const SUBSCORE_ROWS: { key: keyof BuildRatingSubscores; label: string }[] = [
-  { key: "appearance", label: "Appearance" },
-  { key: "performance", label: "Performance" },
-  { key: "wheelsFitment", label: "Wheels/Fitment" },
-  { key: "interior", label: "Interior" },
-  { key: "modifications", label: "Modifications" },
-];
-
 function hasSubscores(subscores: BuildRatingSubscores | null | undefined): subscores is BuildRatingSubscores {
-  return !!subscores && SUBSCORE_ROWS.every(({ key }) => typeof subscores[key] === "number");
+  return !!subscores && SUBSCORE_ORDER.every((key) => typeof subscores[key] === "number");
 }
 
 /**
@@ -99,7 +93,10 @@ export function RatingReveal({
   onDone,
   landedLabel,
   decal,
+  kind = "car",
 }: {
+  /** A bike's interior score reads as Cockpit. */
+  kind?: VehicleKind;
   /** Null while still awaiting the real rating call. */
   result: BuildRating | null;
   onDone: () => void;
@@ -628,7 +625,8 @@ export function RatingReveal({
           <div className="mt-8 flex w-full max-w-sm flex-col gap-6">
             {subscores && (
               <ul className="reveal-rise flex flex-col gap-3.5 rounded-[22px] bg-white/[0.04] p-5 ring-1 ring-inset ring-white/[0.07]">
-                {SUBSCORE_ROWS.map(({ key, label }, i) => {
+                {SUBSCORE_ORDER.map((key, i) => {
+                  const label = subscoreLabels(kind)[key];
                   const value = Math.max(0, Math.min(100, subscores[key]));
                   const delay = { "--delay": `${150 + i * 90}ms` } as React.CSSProperties;
                   return (

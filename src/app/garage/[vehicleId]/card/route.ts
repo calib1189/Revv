@@ -8,6 +8,7 @@ import { posterSubscores } from "@/lib/posters/snapshot";
 import { rankForScore } from "@/lib/rating/rank";
 import { fetchPosterPhoto } from "@/features/posters/poster-photo";
 import { renderTradingCard } from "@/features/cards/card-art";
+import { vehicleKind } from "@/lib/vehicles/category";
 
 export const runtime = "nodejs";
 
@@ -42,6 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ vehi
         tier: rankForScore(score),
         subscores: posterSubscores(build?.ai_rating_subscores),
         ratedAt: build?.ai_rating_rated_at ?? null,
+        isBike: vehicleKind(vehicle.category) === "bike",
       },
       photo,
     );

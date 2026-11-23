@@ -5,7 +5,7 @@ export const NOTIFICATION_VERBS: Record<string, string> = {
   comment: "commented on your post",
   comment_reply: "replied to your comment",
   follow: "started following you",
-  peer_rating: "rated your car",
+  peer_rating: "rated your ride",
   crew_join_request: "requested to join your crew",
   crew_join_approved: "approved your request to join",
   crew_post: "posted in a crew you're in",

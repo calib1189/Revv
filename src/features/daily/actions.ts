@@ -47,7 +47,7 @@ export async function submitDailyEntryAction(input: {
 }): Promise<DailyActionResult> {
   const caption = normalizeCaption(input.caption);
   if ("error" in caption) return { error: caption.error };
-  if (!input.mediaId) return { error: "Pick a photo of your car." };
+  if (!input.mediaId) return { error: "Pick a photo of your ride." };
 
   const { supabase, user } = await requireUser();
 

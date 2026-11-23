@@ -49,7 +49,7 @@ export function boostedPushCopy(
     case "live":
       return {
         title: `${points} up for grabs today`,
-        body: `Today's Sorza Daily is ${challenge.title}${by}. Enter your car now, get the votes, and take ${takes}.`,
+        body: `Today's Sorza Daily is ${challenge.title}${by}. Enter your ride now, get the votes, and take ${takes}.`,
       };
     case "results":
       return {
@@ -59,7 +59,7 @@ export function boostedPushCopy(
     case "reminder":
       return {
         title: `Last call for ${points}`,
-        body: `${challenge.title} closes tonight and the winner takes ${takes}. Enter your car before the clock runs out.`,
+        body: `${challenge.title} closes tonight and the winner takes ${takes}. Enter your ride before the clock runs out.`,
       };
   }
 }

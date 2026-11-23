@@ -99,7 +99,7 @@ export function WelcomeStep() {
         <span aria-hidden className="tour-logo-shine absolute inset-0" />
       </div>
       <h1 className="mt-10 flex flex-col text-[2.25rem] font-bold leading-[1.05] tracking-[-0.035em]">
-        {["Your cars.", "Your community.", "Your platform."].map((line, i) => (
+        {["Your rides.", "Your community.", "Your platform."].map((line, i) => (
           <span
             key={line}
             className={`animate-tour-in ${i === 2 ? "text-accent" : ""}`}
@@ -304,7 +304,7 @@ export function LeaderboardDemo({ podium, loading }: { podium: TutorialShowcase[
   if (podium.length === 0) {
     return (
       <Panel className="p-5 text-[0.875rem] leading-relaxed text-white/60">
-        No builds are ranked yet. Add your car and get it rated to take the first spot.
+        No builds are ranked yet. Add your ride and get it rated to take the first spot.
       </Panel>
     );
   }
@@ -470,7 +470,7 @@ const CONNECT_ROWS = [
   { Icon: HeartIcon, title: "Friends", body: "Everyone you follow and everyone following you, in one place." },
   { Icon: UsersIcon, title: "Crews", body: "Clubs, scenes and local groups, with their own feed and events." },
   { Icon: CommentIcon, title: "Messages", body: "Talk builds, parts and meets one on one." },
-  { Icon: PersonIcon, title: "Your profile", body: "Your cars, posts, rank and followers on one page." },
+  { Icon: PersonIcon, title: "Your profile", body: "Your rides, posts, rank and followers on one page." },
 ];
 
 export function ConnectDemo({ viewer, loading }: { viewer: TutorialShowcase["viewer"]; loading: boolean }) {
