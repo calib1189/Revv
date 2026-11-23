@@ -1,6 +1,8 @@
 "use server";
 
 import { requireConfirmedUser } from "@/lib/auth/require-confirmed-user";
+import { createClient } from "@/lib/supabase/server";
+import { trackEvent } from "@/lib/analytics/track";
 import { saveSubscription, deleteSubscription } from "@/lib/db/push-subscriptions";
 import {
   registerDevicePushToken,
@@ -43,15 +45,35 @@ export async function unsubscribeFromPushAction(endpoint: string): Promise<void>
  * silently on every app launch (a token can change, and the phone may
  * have changed hands), so it must be safe for a logged-out visitor:
  * it returns an error rather than throwing or redirecting. */
-export async function registerDeviceTokenAction(token: string): Promise<{ error?: string }> {
-  if (!isValidDeviceToken(token)) return { error: "That isn't a valid device token." };
+export async function registerDeviceTokenAction(
+  token: string,
+): Promise<{ error?: string; detail?: string }> {
+  if (!isValidDeviceToken(token)) {
+    return { error: "That isn't a valid device token.", detail: `bad token (length ${String(token).length})` };
+  }
   try {
     const { supabase } = await requireConfirmedUser();
     await registerDevicePushToken(supabase, token);
     return {};
-  } catch {
-    return { error: "Couldn't turn on notifications for this device." };
+  } catch (err) {
+    return {
+      error: "Couldn't turn on notifications for this device.",
+      detail: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+    };
   }
+}
+
+/** Records why this phone couldn't register for push (see reportFailure in
+ * lib/native/push.ts). A signed-out caller is recorded without a user. */
+export async function reportPushRegistrationFailureAction(stage: string, detail: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  await trackEvent(supabase, user?.id ?? null, "push_register_failed", {
+    stage: String(stage).slice(0, 20),
+    detail: String(detail).slice(0, 300),
+  });
 }
 
 export async function unregisterDeviceTokenAction(token: string): Promise<void> {

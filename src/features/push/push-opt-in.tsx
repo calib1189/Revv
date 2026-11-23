@@ -160,7 +160,7 @@ export function PushOptIn() {
         const result = await enableNativePush();
         if (result.ok) setStatus("on");
         else if (result.reason === "denied") setStatus("denied");
-        else setError("Couldn't enable notifications. Check your connection and try again.");
+        else setError(`Couldn't enable notifications (${result.detail}). Check your connection and try again.`);
       } catch {
         setError("Couldn't enable notifications. Try again.");
       } finally {

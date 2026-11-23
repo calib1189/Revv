@@ -3,6 +3,7 @@
 import type { PushNotificationsPlugin } from "@capacitor/push-notifications";
 import {
   registerDeviceTokenAction,
+  reportPushRegistrationFailureAction,
   unregisterDeviceTokenAction,
 } from "@/features/push/push-actions";
 
@@ -70,18 +71,18 @@ export async function getNativePushPermission(): Promise<NativePushPermission> {
  * prompt again, and the person has to use Settings), gets an APNs token,
  * and attaches it to the signed-in account. */
 export async function enableNativePush(): Promise<
-  { ok: true } | { ok: false; reason: "denied" | "failed" }
+  { ok: true } | { ok: false; reason: "denied" } | { ok: false; reason: "failed"; detail: string }
 > {
   const loaded = await loadPlugin();
-  if (!loaded) return { ok: false, reason: "failed" };
+  if (!loaded) return { ok: false, reason: "failed", detail: "plugin unavailable" };
   const { plugin } = loaded;
 
   const permission = await plugin.requestPermissions();
   if (permission.receive !== "granted") return { ok: false, reason: "denied" };
 
-  const token = await new Promise<string | null>((resolve) => {
+  const outcome = await new Promise<{ token: string } | { error: string }>((resolve) => {
     const handles: { remove: () => Promise<void> }[] = [];
-    const done = (value: string | null) => {
+    const done = (value: { token: string } | { error: string }) => {
       clearTimeout(timer);
       handles.forEach((h) => void h.remove());
       resolve(value);
@@ -90,18 +91,21 @@ export async function enableNativePush(): Promise<
     // an event, and a failure arrives on another. Without a timeout, a
     // network where APNs is unreachable leaves the toggle spinning
     // forever with nothing to say why.
-    const timer = setTimeout(() => done(null), REGISTRATION_TIMEOUT_MS);
+    const timer = setTimeout(() => done({ error: "timed out waiting for iOS" }), REGISTRATION_TIMEOUT_MS);
 
     void (async () => {
-      handles.push(await plugin.addListener("registration", (t) => done(t.value)));
-      handles.push(await plugin.addListener("registrationError", () => done(null)));
+      handles.push(await plugin.addListener("registration", (t) => done({ token: t.value })));
+      handles.push(
+        await plugin.addListener("registrationError", (e) => done({ error: `iOS: ${e.error}` })),
+      );
       await plugin.register();
-    })().catch(() => done(null));
+    })().catch((err: unknown) => done({ error: `register threw: ${errorText(err)}` }));
   });
-  if (!token) return { ok: false, reason: "failed" };
+  if ("error" in outcome) return failed(outcome.error);
+  const { token } = outcome;
 
   const result = await registerDeviceTokenAction(token);
-  if (result.error) return { ok: false, reason: "failed" };
+  if (result.error) return failed(`server: ${result.detail ?? result.error}`);
 
   storePushToken(token);
   return { ok: true };
@@ -154,10 +158,31 @@ export async function refreshNativePushRegistration(): Promise<void> {
 
   await plugin.addListener("registration", (t) => {
     storePushToken(t.value);
-    // A logged-out launch just gets an error back, which is fine.
-    void registerDeviceTokenAction(t.value);
+    void registerDeviceTokenAction(t.value).then((result) => {
+      // A signed-out launch is expected to fail; anything else is worth knowing.
+      if (result.error && result.detail !== "You must be logged in.") {
+        reportFailure("refresh", `server: ${result.detail ?? result.error}`);
+      }
+    });
   });
+  await plugin.addListener("registrationError", (e) => reportFailure("refresh", `iOS: ${e.error}`));
   await plugin.register();
+}
+
+function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/** Push registration fails silently on a real phone, where nobody can see
+ * the console, so the reason is recorded where it can be read: the events
+ * table, as push_register_failed. Fire-and-forget. */
+function reportFailure(stage: "enable" | "refresh", detail: string) {
+  void reportPushRegistrationFailureAction(stage, detail).catch(() => {});
+}
+
+function failed(detail: string): { ok: false; reason: "failed"; detail: string } {
+  reportFailure("enable", detail);
+  return { ok: false, reason: "failed", detail };
 }
 
 /** Wires a tapped notification to navigation. `open` receives only a
