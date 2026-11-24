@@ -4,6 +4,7 @@ import type { DailyTeaser } from "@/lib/daily/teaser";
 import { ChallengeVisual } from "@/features/daily/challenge-visual";
 import { Countdown } from "@/features/daily/countdown";
 import { ChevronRightIcon } from "@/components/ui/icons";
+import { StreakChip } from "@/features/daily/streak-chip";
 
 /** "Presented by X · Win: Y", whichever parts the day has. */
 function sponsorLine(teaser: DailyTeaser): string {
@@ -20,7 +21,10 @@ export function DailyTeaserCard({ teaser }: { teaser: DailyTeaser }) {
         <ChallengeVisual icon={teaser.icon} coverUrl={teaser.coverUrl ?? teaser.entryPhotos[0] ?? null} />
         <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent" />
         <div className="absolute inset-y-0 left-0 flex max-w-[75%] flex-col justify-center gap-1 p-4">
-          <p className="micro-label text-accent">Sorza Daily</p>
+          <p className="flex items-center gap-2">
+            <span className="micro-label text-accent">Sorza Daily</span>
+            <StreakChip streak={teaser.streak} chestReady={teaser.chestReady} onMedia className="text-[0.75rem]" />
+          </p>
           <p className="text-balance text-[1.25rem] font-bold leading-tight text-white">{teaser.title}</p>
           {(teaser.sponsorName || teaser.prize) && (
             <p className="truncate text-[0.75rem] font-semibold text-white/85">{sponsorLine(teaser)}</p>
@@ -89,7 +93,9 @@ export function DailyInlineLink({ teaser }: { teaser: DailyTeaser }) {
     <Link href="/daily" className="pressable glass-raised elev-1 min-w-0 rounded-[16px] px-3 py-2.5">
       <span className="flex items-center gap-1.5">
         <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${teaser.tookPartToday ? "bg-foreground/30" : "bg-accent"}`} />
-        <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold">Sorza Daily</span>
+        <span className="min-w-0 truncate text-[0.8125rem] font-semibold">Sorza Daily</span>
+        <StreakChip streak={teaser.streak} chestReady={teaser.chestReady} className="flex-shrink-0 text-[0.6875rem]" />
+        <span className="flex-1" />
         <span className="numeral flex-shrink-0 text-[0.6875rem] text-muted">
           <Countdown endsAt={teaser.endsAt} fallback="Today" />
         </span>

@@ -22,9 +22,16 @@ function daysBetween(fromKey: string, toKey: string): number {
  * showing up, not to punish a busy day: one missed day is bridged as
  * long as the last bridge was at least a week earlier. Two missed days
  * in a row, or two misses in one week, start a new run. */
-export function computeStreak(activeDateKeys: string[], todayKey: string): Streak {
+export function computeStreak(activeDateKeys: string[], todayKey: string, repairedDateKeys: string[] = []): Streak {
   const dates = [...new Set(activeDateKeys)].filter((d) => d <= todayKey).sort();
   if (dates.length === 0) return { current: 0, longest: 0, activeToday: false, atRisk: false };
+  // Days someone paid to fill (lib/streak/repair.ts): a gap made only of
+  // these doesn't break the run, and doesn't add to it either.
+  const repaired = new Set(repairedDateKeys);
+  const repairedBetween = (from: string, to: string) => {
+    for (let d = addDays(from, 1); d < to; d = addDays(d, 1)) if (!repaired.has(d)) return false;
+    return true;
+  };
 
   let run = 0;
   let longest = 0;
@@ -34,7 +41,7 @@ export function computeStreak(activeDateKeys: string[], todayKey: string): Strea
     const gap = previous ? daysBetween(previous, date) : 0;
     if (previous === null) {
       run = 1;
-    } else if (gap === 1) {
+    } else if (gap === 1 || repairedBetween(previous, date)) {
       run += 1;
     } else if (gap === 2 && (lastBridge === null || daysBetween(lastBridge, addDays(date, -1)) >= BRIDGE_COOLDOWN_DAYS)) {
       run += 1;
@@ -51,12 +58,13 @@ export function computeStreak(activeDateKeys: string[], todayKey: string): Strea
   const sinceLast = daysBetween(last, todayKey);
   const canBridgeYesterday =
     lastBridge === null || daysBetween(lastBridge, addDays(todayKey, -1)) >= BRIDGE_COOLDOWN_DAYS;
-  const alive = sinceLast <= 1 || (sinceLast === 2 && canBridgeYesterday);
+  const repairedToToday = sinceLast > 1 && repairedBetween(last, todayKey);
+  const alive = sinceLast <= 1 || repairedToToday || (sinceLast === 2 && canBridgeYesterday);
 
   return {
     current: alive ? run : 0,
     longest,
     activeToday: sinceLast === 0,
-    atRisk: alive && sinceLast === 2,
+    atRisk: alive && sinceLast === 2 && !repairedToToday,
   };
 }

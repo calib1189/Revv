@@ -96,6 +96,24 @@ export async function getMyBattleVote(
 
 /** Casts a vote as the signed-in user; RLS checks the battle is open,
  * the car is in it, and it isn't the voter's own battle. */
+/** When someone voted in battles, newest first: one vote per battle, and
+ * a battle runs one Sorza day, so each is a day they showed up (the
+ * streak, lib/daily/streak-days.ts). RLS returns only your own votes. */
+export async function listMyBattleVoteTimes(
+  supabase: SupabaseClient<Database>,
+  voterId: string,
+  limit = 400,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("build_battle_votes")
+    .select("created_at")
+    .eq("voter_id", voterId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.map((row) => row.created_at);
+}
+
 export async function insertBattleVote(
   supabase: SupabaseClient<Database>,
   vote: { battleId: string; voterId: string; vehicleId: string },

@@ -43,4 +43,25 @@ describe("computeStreak", () => {
   it("is zero with no activity", () => {
     expect(computeStreak([], TODAY)).toEqual({ current: 0, longest: 0, activeToday: false, atRisk: false });
   });
+
+  it("joins a run back up across repaired days, without counting them", () => {
+    // Played 14th–16th, missed 17th–18th (repaired), played today.
+    const active = ["2026-11-14", "2026-11-15", "2026-11-16", "2026-11-20"];
+    expect(computeStreak(active, TODAY)).toMatchObject({ current: 1 });
+    expect(computeStreak(active, TODAY, ["2026-11-17", "2026-11-18", "2026-11-19"])).toMatchObject({ current: 4 });
+  });
+
+  it("keeps a repaired run alive while today is still to play", () => {
+    const active = ["2026-11-14", "2026-11-15", "2026-11-16"];
+    expect(computeStreak(active, TODAY, ["2026-11-17", "2026-11-18", "2026-11-19"])).toMatchObject({
+      current: 3,
+      activeToday: false,
+      atRisk: false,
+    });
+  });
+
+  it("still breaks where a gap is only partly repaired", () => {
+    const active = ["2026-11-14", "2026-11-15", "2026-11-16", "2026-11-20"];
+    expect(computeStreak(active, TODAY, ["2026-11-17"])).toMatchObject({ current: 1 });
+  });
 });

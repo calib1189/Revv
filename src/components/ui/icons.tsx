@@ -2293,3 +2293,23 @@ export function PersonPlusIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** A streak: a filled flame, so it reads at 12px next to a number. */
+export function FlameIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <path d="M12.6 2.2c.3 2.6-.7 4.4-2.1 5.9C8.8 9.8 7 11.7 7 14.6 7 18.2 9.3 21 12.4 21c3.4 0 5.6-2.7 5.6-6.2 0-2.2-.9-3.9-1.9-5.2-.2 1.3-.8 2.3-1.7 2.9.3-3.6-.8-7.5-1.8-10.3Zm-.4 11.1c.9 1.1 1.7 2.2 1.7 3.6 0 1.4-.8 2.4-1.9 2.4s-1.9-.9-1.9-2.2c0-1.4.9-2.4 2.1-3.8Z" />
+    </svg>
+  );
+}
+
+/** The streak's seventh-day chest. */
+export function GiftIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinejoin="round" {...props}>
+      <rect x="3.5" y="8" width="17" height="4" rx="1" />
+      <path d="M5 12v7.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V12M12 8v12.5" />
+      <path d="M12 8c-1.2-2.6-3.6-4-5-2.8-1.1 1 .2 2.8 5 2.8Zm0 0c1.2-2.6 3.6-4 5-2.8 1.1 1-.2 2.8-5 2.8Z" strokeLinecap="round" />
+    </svg>
+  );
+}

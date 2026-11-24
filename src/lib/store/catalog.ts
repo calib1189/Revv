@@ -44,6 +44,11 @@ export interface StoreItem {
    *  path, but a request naming the id directly still has to be
    *  rejected the same way an under-priced purchase would be. */
   founderOnly?: boolean;
+  /** Earned, never sold: only found in streak chests (lib/streak/chest.ts).
+   * Shown in the shop so people know it exists and how to get it, but
+   * purchaseItemAction refuses it, and equipping still needs it owned
+   * like anything else. */
+  streakOnly?: boolean;
 }
 
 /** A fixed, code-defined catalog — same relationship to
@@ -619,8 +624,67 @@ const NAME_COLOR_ONLY_ITEMS: StoreItem[] = NAME_COLOR_ONLY_THEMES.flatMap((theme
   deriveItem(`name_${theme}`, `cname_${theme}`, "crew_name_color"),
 ]);
 
+/** Found only in streak chests, never sold (streakOnly). Which chest
+ * tier each turns up in lives with the chest (lib/streak/chest.ts); a
+ * blue-flame theme runs through them so they read as one set. */
+const STREAK_ITEMS: StoreItem[] = [
+  {
+    id: "name_afterburner",
+    category: "name_color",
+    name: "Afterburner",
+    price: 0,
+    // A blue flame: hottest at the white core. Every stop stays bright
+    // enough to read on a near-black header mid-shimmer.
+    value: "linear-gradient(90deg, #4f8bff, #7cc4ff, #e8f6ff, #7cc4ff, #8b7bff, #4f8bff)",
+    effectClassName: "text-shimmer-anim",
+    streakOnly: true,
+  },
+  {
+    id: "name_supernova",
+    category: "name_color",
+    name: "Supernova",
+    price: 0,
+    // The rarest thing in a chest: a white-hot core flaring through
+    // magenta, violet and cyan, swinging back and forth.
+    value: "linear-gradient(90deg, #67e8f9, #a78bfa, #f472b6, #fff1f9, #f472b6, #a78bfa, #67e8f9)",
+    effectClassName: "text-flip-anim",
+    streakOnly: true,
+  },
+  {
+    id: "bg_burnout",
+    category: "profile_background",
+    name: "Burnout",
+    price: 0,
+    // Tire smoke hanging in the air, lit red by tail lights behind it.
+    value:
+      "radial-gradient(90% 60% at 20% 10%, rgba(229,231,235,0.16), transparent 65%), radial-gradient(70% 50% at 85% 25%, rgba(239,68,68,0.32), transparent 70%), linear-gradient(170deg, #1c1c20, #0e0e11)",
+    streakOnly: true,
+  },
+  {
+    id: "bg_blue_flame",
+    category: "profile_background",
+    name: "Blue Flame",
+    price: 0,
+    // A flame straight out of an exhaust tip, high in the panel since
+    // profile backgrounds fade toward the bottom.
+    value:
+      "radial-gradient(45% 40% at 50% 18%, rgba(240,249,255,0.55), transparent 70%), radial-gradient(70% 60% at 50% 22%, rgba(59,130,246,0.55), transparent 72%), radial-gradient(110% 80% at 50% 30%, rgba(79,70,229,0.35), transparent 75%), linear-gradient(180deg, #050816, #0b1230)",
+    streakOnly: true,
+  },
+  { id: "frame_streak", category: "showcase_frame", name: "Streak Ring", price: 0, value: "frame-streak-ring", streakOnly: true },
+  {
+    id: "frame_afterburner",
+    category: "showcase_frame",
+    name: "Afterburner Ring",
+    price: 0,
+    value: "frame-afterburner-ring",
+    streakOnly: true,
+  },
+];
+
 export const STORE_ITEMS: StoreItem[] = [
   ...PROFILE_ITEMS,
+  ...STREAK_ITEMS,
   ...GARAGE_ITEMS,
   ...CREW_ITEMS,
   ...NAME_COLOR_ONLY_ITEMS,

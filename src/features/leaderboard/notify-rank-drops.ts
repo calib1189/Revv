@@ -7,7 +7,15 @@ import { sendPushToUser } from "@/lib/push/send";
 import { listAfternoonPushRecipients, runInBatches } from "@/lib/push/afternoon";
 import { claimLogSlot } from "@/lib/daily/notify";
 import { dailyDateKey } from "@/lib/daily/day";
-import { bestDropPerOwner, findRankDrops, rankDropBody, scoreAsOf, type RankBoardEntry } from "@/lib/rating/rank-drops";
+import {
+  bestDropPerOwner,
+  findRankDrops,
+  gapToPlaceAbove,
+  rankDropBody,
+  scoreAsOf,
+  type RankBoardEntry,
+} from "@/lib/rating/rank-drops";
+import { MY_ROW_HASH } from "@/lib/leaderboard/my-row";
 import { vehicleDisplayName } from "@/lib/vehicles/display-name";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -64,6 +72,7 @@ export async function sendDueRankPushes(now: Date = new Date()): Promise<number>
   if (drops.length === 0) return 0;
 
   const buildById = new Map(builds.map((b) => [b.id, b]));
+  const nowScores = board.map((e) => e.scoreNow);
   const vehicleOfBuild = (buildId: string) => vehicleById.get(buildById.get(buildId)?.vehicle_id ?? "");
   const passerOwnerIds = new Set(drops.flatMap((d) => d.passedBy.map((id) => vehicleOfBuild(id)?.owner_id ?? "")));
   const owners = await getProfilesByIds(service, [...passerOwnerIds].filter(Boolean));
@@ -80,9 +89,16 @@ export async function sendDueRankPushes(now: Date = new Date()): Promise<number>
     });
     if (passers.length === 0) return;
     if (!(await claimLogSlot(service, drop.ownerId, day, "rank"))) return;
+    const scoreNow = buildById.get(drop.buildId)?.ai_rating_score ?? null;
+    const gap = scoreNow === null ? null : gapToPlaceAbove(scoreNow, nowScores);
     await sendPushToUser(
       drop.ownerId,
-      { title: "SORZA", body: rankDropBody({ carName: vehicleDisplayName(mine), to: drop.to, passers }), url: "/leaderboard" },
+      {
+        title: "SORZA",
+        body: rankDropBody({ carName: vehicleDisplayName(mine), to: drop.to, passers, gap }),
+        // Lands on their own row, not the top of the board.
+        url: `/leaderboard${MY_ROW_HASH}`,
+      },
       "leaderboard",
     );
     sent += 1;

@@ -1023,6 +1023,11 @@ export function SwipeSlide({
   return (
     <div
       ref={containerRef}
+      // Swipe left to the creator's profile, in the app
+      // (lib/native/swipe-to-profile.ts reads these).
+      data-profile-swipe={profileHref}
+      data-profile-username={data.authorUsername}
+      data-profile-avatar={data.authorAvatarUrl ?? undefined}
       className={`relative ${slideHeight} w-full flex-shrink-0 snap-start overflow-hidden bg-black`}
     >
       {data.media.length > 0 &&

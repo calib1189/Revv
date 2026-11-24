@@ -224,8 +224,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "daily_first_entry", name: "Daily Debut", description: "Entered your first Sorza Daily challenge", category: "daily", icon: CameraIcon, points: 2 },
   { id: "daily_first_vote", name: "Ballot Cast", description: "Voted in a Sorza Daily challenge", category: "daily", icon: FlagIcon, points: 2 },
   { id: "daily_winner", name: "Daily Champion", description: "Won a Sorza Daily challenge", category: "daily", icon: StarIcon, points: 12 },
-  { id: "daily_streak_7", name: "7-Day Participant", description: "Took part in Sorza Daily 7 days running", category: "daily", icon: TimerIcon, points: 7 },
-  { id: "daily_streak_30", name: "30-Day Participant", description: "Took part in Sorza Daily 30 days running", category: "daily", icon: TimerIcon, points: 20 },
+  { id: "daily_streak_7", name: "7-Day Participant", description: "Kept a 7-day streak in Sorza Daily or the Build Battle", category: "daily", icon: TimerIcon, points: 7 },
+  { id: "daily_streak_30", name: "30-Day Participant", description: "Kept a 30-day streak in Sorza Daily or the Build Battle", category: "daily", icon: TimerIcon, points: 20 },
 
   // ---- Invites (lib/invites/tiers.ts) ----
   // An invite counts once the person has added a car.

@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { isSafeAppPath } from "@/lib/push/validation";
 import { installSwipeBack } from "@/lib/native/swipe-back";
+import { installSwipeToProfile } from "@/lib/native/swipe-to-profile";
 import { isAndroidApp } from "@/lib/native/android-app";
 import {
   listenForNotificationTaps,
@@ -16,6 +18,14 @@ import { installNativeKeyboardTracking } from "@/lib/native/keyboard";
  * imported so the Capacitor JS bridge is never pulled into the ordinary
  * web bundle. */
 export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
+  // The gesture is installed once; it always navigates with the current
+  // router.
+  const router = useRouter();
+  const routerRef = useRef(router);
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+
   // Re-runs when someone signs in (the layout re-renders with the new
   // value), so a first launch that starts logged out still gets asked
   // right after they log in. No-ops on the web and once iOS has recorded
@@ -30,6 +40,7 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
     let tapHandle: { remove: () => void } | undefined;
     let resumeListenerHandle: { remove: () => void } | undefined;
     let removeEdgeSwipe: (() => void) | undefined;
+    let removeProfileSwipe: (() => void) | undefined;
     let removeKeyboardTracking: (() => void) | undefined;
 
     // Chrome only says "this is the Android app" on the first page it
@@ -45,6 +56,8 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
       document.documentElement.classList.add("native-app");
 
       if (!cancelled) removeEdgeSwipe = installSwipeBack();
+      // Swipe left on a feed post to its creator's profile.
+      if (!cancelled) removeProfileSwipe = installSwipeToProfile((href) => routerRef.current.push(href));
       // Composers ride on top of the keyboard — see lib/native/keyboard.ts.
       if (!cancelled) removeKeyboardTracking = installNativeKeyboardTracking();
 
@@ -157,6 +170,7 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
     return () => {
       cancelled = true;
       removeEdgeSwipe?.();
+      removeProfileSwipe?.();
       removeKeyboardTracking?.();
       listenerHandle?.remove();
       tapHandle?.remove();

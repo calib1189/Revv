@@ -53,8 +53,22 @@ export const DAILY_POINTS = {
   voted: 3,
   ratedRides: 3,
   place: { 1: 25, 2: 15, 3: 10 } as Record<number, number>,
-  streak: { 7: 15, 30: 50 } as Record<number, number>,
 };
+
+/** The streak's reward track (lib/streak/track.ts): what days 1 to 6 of
+ * each week of a run pay on top of that day's own points. Day 7 is the
+ * chest, a draw of points or a streak-only cosmetic (lib/streak/chest.ts).
+ * Each day is paid at most once (the ledger's unique key). This replaced
+ * the old one-off 15 at day 7 and 50 at day 30; economy.test.ts holds
+ * the total. */
+export const STREAK_POINTS = {
+  track: [1, 2, 2, 3, 3, 4] as const,
+};
+
+/** Restoring a lost streak (lib/streak/repair.ts). The price of the
+ * smallest points pack ($0.99), like an instant re-rate: worth paying
+ * for a long streak, not something to do every week. */
+export const STREAK_REPAIR_POINTS = 100;
 
 /** Build Battle. Voting pays like voting in the Daily; picking the
  * winner adds a little; a win pays the car's owner, an upset (the crowd

@@ -1,9 +1,10 @@
 /** How rare a store item reads, from its price. Purely a label: what an
  * item does is the same whatever it costs. */
-export type Rarity = "founder" | "common" | "rare" | "epic" | "legendary";
+export type Rarity = "founder" | "streak" | "common" | "rare" | "epic" | "legendary";
 
 export const RARITY_LABEL: Record<Rarity, string> = {
   founder: "Founder",
+  streak: "Streak reward",
   common: "Common",
   rare: "Rare",
   epic: "Epic",
@@ -14,6 +15,7 @@ export const RARITY_LABEL: Record<Rarity, string> = {
  * surfaces alike. */
 export const RARITY_COLOR: Record<Rarity, string> = {
   founder: "#f0cd6e",
+  streak: "#6fb4ff",
   common: "#9ca3af",
   rare: "#4ea8ff",
   epic: "#a78bfa",
@@ -24,8 +26,9 @@ export const RARITY_COLOR: Record<Rarity, string> = {
  * every item kept the rarity it had. */
 export const RARITY_MIN_PRICE = { rare: 400, epic: 800, legendary: 1400 } as const;
 
-export function rarityFor(price: number, founderOnly = false): Rarity {
+export function rarityFor(price: number, founderOnly = false, streakOnly = false): Rarity {
   if (founderOnly) return "founder";
+  if (streakOnly) return "streak";
   if (price >= RARITY_MIN_PRICE.legendary) return "legendary";
   if (price >= RARITY_MIN_PRICE.epic) return "epic";
   if (price >= RARITY_MIN_PRICE.rare) return "rare";

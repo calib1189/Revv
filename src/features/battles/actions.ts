@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { rewardStreakDay } from "@/lib/daily/rewards";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getCurrentUser } from "@/lib/auth/get-user";
@@ -42,6 +44,10 @@ export async function voteInBattleAction(battleId: string, vehicleId: string): P
     console.error("battle vote failed:", err);
     return { error: "Your vote didn't go through. Try again.", points: 0 };
   }
+
+  // A battle vote is a day shown up for the streak too; its reward is
+  // paid after the response, so the vote never waits on it.
+  after(() => rewardStreakDay(user.id, battle.battle_date));
 
   try {
     await awardDailyPoints(user.id, `battle_vote:${battle.battle_date}`, BATTLE_POINTS.voted);

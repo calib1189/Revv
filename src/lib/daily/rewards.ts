@@ -2,12 +2,15 @@ import { DAILY_POINTS } from "@/lib/points/values";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
   awardDailyPoints,
-  listDailyActivity,
   recordDailyActivityRow,
   STREAK_KINDS,
   type DailyActivityKind,
 } from "@/lib/db/daily-activity";
-import { computeStreak } from "@/lib/daily/streak";
+import { listStreakDays, streakFrom } from "@/lib/daily/streak-days";
+import { streakDayReward } from "@/lib/streak/track";
+import { drawChest, FALLBACK_CHEST_POINTS, secureRandom, type ChestPrize } from "@/lib/streak/chest";
+import { hasAnyStreakChest, insertStreakChest } from "@/lib/db/streak-chests";
+import { listOwnedItemIds } from "@/lib/db/points";
 import type { Placement } from "@/lib/daily/placements";
 
 const KIND_POINTS: Partial<Record<DailyActivityKind, number>> = {
@@ -25,17 +28,55 @@ export async function rewardDailyActivity(userId: string, dateKey: string, kind:
     const amount = KIND_POINTS[kind];
     if (amount) await awardDailyPoints(userId, `${kind}:${dateKey}`, amount);
 
-    if (STREAK_KINDS.includes(kind)) {
-      const rows = await listDailyActivity(createServiceRoleClient(), userId);
-      const streak = computeStreak(
-        rows.filter((r) => STREAK_KINDS.includes(r.kind)).map((r) => r.activity_date),
-        dateKey,
-      );
-      const bonus = DAILY_POINTS.streak[streak.current];
-      if (bonus) await awardDailyPoints(userId, `streak${streak.current}:${dateKey}`, bonus);
-    }
+    if (STREAK_KINDS.includes(kind)) await rewardStreakDay(userId, dateKey);
   } catch (err) {
     console.error("rewardDailyActivity failed:", err);
+  }
+}
+
+/** Pays today's place on the streak's reward track (lib/streak/track.ts)
+ * after someone shows up: called once their Daily activity or battle
+ * vote is recorded. Every payout is keyed to the Sorza day, so showing
+ * up twice in a day (the Daily and the battle) pays the track once. A
+ * chest day (every seventh of a run) draws the chest instead.
+ * Best-effort, like the rest: never fails the vote or entry. */
+export async function rewardStreakDay(userId: string, dateKey: string): Promise<void> {
+  try {
+    const service = createServiceRoleClient();
+    const streak = streakFrom(await listStreakDays(service, userId), dateKey);
+    if (!streak.activeToday) return;
+    const reward = streakDayReward(streak.current);
+    if (!reward) return;
+    if (reward.chest) await drawStreakChest(userId, dateKey);
+    else await awardDailyPoints(userId, `streakday:${dateKey}`, reward.points);
+  } catch (err) {
+    console.error("rewardStreakDay failed:", err);
+  }
+}
+
+/** Draws a chest once (lib/streak/chest.ts), records the draw, and pays
+ * it: points to the ledger, a cosmetic to the owner's items. The record
+ * goes first, so two rewards racing for the same day pay only the one
+ * whose draw was kept. Before its table exists (0132) the chest pays a
+ * flat amount of points instead. */
+async function drawStreakChest(userId: string, dateKey: string): Promise<void> {
+  const service = createServiceRoleClient();
+  let prize: ChestPrize;
+  try {
+    const [owned, hadOne] = await Promise.all([listOwnedItemIds(service, userId), hasAnyStreakChest(service, userId)]);
+    prize = drawChest(secureRandom(), secureRandom(), { firstChest: !hadOne, owned });
+    if (!(await insertStreakChest(service, userId, dateKey, prize))) return;
+  } catch (err) {
+    console.error("streak chest draw failed, paying the flat amount:", err);
+    await awardDailyPoints(userId, `chest:${dateKey}`, FALLBACK_CHEST_POINTS);
+    return;
+  }
+  if (prize.points > 0) await awardDailyPoints(userId, `chest:${dateKey}`, prize.points);
+  if (prize.itemId) {
+    const { error } = await service
+      .from("store_items_owned")
+      .upsert({ user_id: userId, item_id: prize.itemId }, { onConflict: "user_id,item_id", ignoreDuplicates: true });
+    if (error) throw error;
   }
 }
 

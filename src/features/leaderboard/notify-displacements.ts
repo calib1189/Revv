@@ -7,6 +7,7 @@ import {
   findLeaderboardDisplacements,
 } from "@/lib/rating/leaderboard-displacement";
 import { vehicleDisplayName } from "@/lib/vehicles/display-name";
+import { MY_ROW_HASH } from "@/lib/leaderboard/my-row";
 
 /** After `vehicleId`'s build moves from `oldScore` to `newScore`, tells
  * the owners who just lost #1 or dropped out of the top 10 of the
@@ -65,7 +66,7 @@ export async function notifyLeaderboardDisplacements(
               d.lost === "first"
                 ? `Your ${name} just lost #1 on the leaderboard`
                 : `Your ${name} was pushed out of the top 10`,
-            url: "/leaderboard",
+            url: `/leaderboard${MY_ROW_HASH}`,
           },
           "leaderboard",
         );

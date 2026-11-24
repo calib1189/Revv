@@ -68,6 +68,28 @@ export async function listTopRatedBuilds(
   return data;
 }
 
+/** Just the score and when it was given, for every rated active build
+ * on the given vehicles: the whole board, kept small, for working out
+ * how places moved (lib/leaderboard/movement.ts). */
+export async function listBoardScores(
+  supabase: SupabaseClient<Database>,
+  vehicleIds: string[],
+): Promise<{ buildId: string; score: number; ratedAt: string | null }[]> {
+  if (vehicleIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("builds")
+    .select("id, ai_rating_score, ai_rating_rated_at")
+    .eq("status", "active")
+    .not("ai_rating_score", "is", null)
+    .in("vehicle_id", vehicleIds)
+    .order("ai_rating_score", { ascending: false })
+    .limit(2000);
+  if (error) throw error;
+  return data.flatMap((row) =>
+    row.ai_rating_score === null ? [] : [{ buildId: row.id, score: row.ai_rating_score, ratedAt: row.ai_rating_rated_at }],
+  );
+}
+
 export async function getBuildById(
   supabase: SupabaseClient<Database>,
   id: string,

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { bestDropPerOwner, findRankDrops, rankDropBody, scoreAsOf, type RankBoardEntry } from "./rank-drops";
+import {
+  bestDropPerOwner,
+  findRankDrops,
+  gapToPlaceAbove,
+  rankDropBody,
+  scoreAsOf,
+  type RankBoardEntry,
+} from "./rank-drops";
 
 const T0 = new Date("2026-11-19T20:00:00Z");
 
@@ -139,5 +146,27 @@ describe("rankDropBody", () => {
         ],
       }),
     ).toBe("2 cars passed your Civic Si since yesterday. You're #24 now.");
+  });
+
+  it("says how close the place above is, so it reads as winnable", () => {
+    expect(
+      rankDropBody({ carName: "Civic Si", to: 24, passers: [{ username: "mike", carName: "Supra" }], gap: 0.31 }),
+    ).toBe("@mike's Supra passed your Civic Si. You're #24, 0.31 behind #23.");
+  });
+
+  it("says tied when level with the place above", () => {
+    expect(
+      rankDropBody({ carName: "Civic Si", to: 24, passers: [{ username: "mike", carName: "Supra" }], gap: 0 }),
+    ).toBe("@mike's Supra passed your Civic Si. You're #24, level on points with #23.");
+  });
+});
+
+describe("gapToPlaceAbove", () => {
+  it("is the distance to the lowest score above yours", () => {
+    expect(gapToPlaceAbove(80, [90, 84.85, 80, 70])).toBe(4.85);
+  });
+
+  it("is null when nobody is above", () => {
+    expect(gapToPlaceAbove(90, [90, 80])).toBeNull();
   });
 });

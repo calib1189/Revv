@@ -58,6 +58,8 @@ export async function purchaseItemAction(itemId: string): Promise<StoreActionSta
 
   const founderError = await assertFounderAccess(supabase, user.id, item);
   if (founderError) return { error: founderError };
+  // Earned with a streak, never sold, whatever the request says.
+  if (item.streakOnly) return { error: "This one is only found in streak chests." };
 
   const owned = await listOwnedItemIds(supabase, user.id);
   if (owned.has(itemId)) return { error: "You already own this." };

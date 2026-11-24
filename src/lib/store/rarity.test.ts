@@ -16,4 +16,8 @@ describe("rarityFor", () => {
   it("marks founder items as founder whatever their price", () => {
     expect(rarityFor(0, true)).toBe("founder");
   });
+
+  it("marks streak rewards as streak rewards, not common", () => {
+    expect(rarityFor(0, false, true)).toBe("streak");
+  });
 });

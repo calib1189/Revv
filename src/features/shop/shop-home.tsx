@@ -29,6 +29,7 @@ import {
   FlagIcon,
   GemIcon,
   SearchIcon,
+  FlameIcon,
   ShoppingBagIcon,
   StarIcon,
   WheelIcon,
@@ -410,7 +411,7 @@ export function ShopHome({
           </Promo>
         )}
         {featured && (
-          <Promo eyebrow="Featured this week" title={featured.name} sub={`${RARITY_LABEL[rarityFor(featured.price, featured.founderOnly)]} ${STORE_CATEGORY_LABELS[featured.category].toLowerCase()}`} tone={RARITY_COLOR[rarityFor(featured.price, featured.founderOnly)]} onClick={() => open({ kind: "cosmetic", key: featured.id, item: featured })} row>
+          <Promo eyebrow="Featured this week" title={featured.name} sub={`${RARITY_LABEL[rarityFor(featured.price, featured.founderOnly, featured.streakOnly)]} ${STORE_CATEGORY_LABELS[featured.category].toLowerCase()}`} tone={RARITY_COLOR[rarityFor(featured.price, featured.founderOnly, featured.streakOnly)]} onClick={() => open({ kind: "cosmetic", key: featured.id, item: featured })} row>
             <MiniTile
               wide
               label={owned.has(featured.id) ? "Owned" : `${featured.price.toLocaleString()} pts`}
@@ -710,7 +711,7 @@ function ProductCard({
     const kind = CATEGORY_KIND[item.category];
     aspect = kind === "background" ? "aspect-[4/5]" : "aspect-square";
     title = item.name;
-    const rarity = rarityFor(item.price, item.founderOnly);
+    const rarity = rarityFor(item.price, item.founderOnly, item.streakOnly);
     media = (
       <span className="absolute inset-0">
         <ItemTile item={item} previewLabel={previewLabel} />
@@ -725,6 +726,11 @@ function ProductCard({
       <span className="flex items-center gap-1 text-[0.875rem] font-bold">
         {equipped && <CheckIcon className="h-3.5 w-3.5 text-accent" />}
         {equipped ? "Wearing" : "Owned"}
+      </span>
+    ) : item.streakOnly ? (
+      <span className="flex items-center gap-1 text-[0.8125rem] font-bold text-muted">
+        <FlameIcon className="h-3.5 w-3.5" style={{ color: RARITY_COLOR.streak }} />
+        Streak chest
       </span>
     ) : (
       <span className="numeral flex items-center gap-1 text-[1.0625rem] font-extrabold">
@@ -837,7 +843,7 @@ function ItemDetail({
   onEquip: () => void;
   onGetPoints: () => void;
 }) {
-  const rarity = rarityFor(item.price, item.founderOnly);
+  const rarity = rarityFor(item.price, item.founderOnly, item.streakOnly);
   const short = item.price - balance;
   const kind = CATEGORY_KIND[item.category];
   return (
@@ -852,7 +858,7 @@ function ItemDetail({
             {RARITY_LABEL[rarity]} · {kind === "text" ? "Color" : kind === "background" ? "Background" : "Frame"}
           </p>
         </div>
-        {!owned && (
+        {!owned && !item.streakOnly && (
           <p className="numeral flex flex-shrink-0 items-center gap-1.5 text-[1.375rem] font-bold">
             <GemIcon className="h-4 w-4 text-accent" />
             {item.price.toLocaleString()}
@@ -871,6 +877,17 @@ function ItemDetail({
           {equipped && <CheckIcon className="h-4 w-4 text-accent" />}
           {equipped ? "Wearing it. Tap to take off" : "Wear it"}
         </button>
+      ) : item.streakOnly ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-center text-[0.875rem] text-muted">
+            Can&apos;t be bought. Only found in streak chests: keep a streak in Sorza Daily or the Build Battle, and
+            every 7th day opens one.
+          </p>
+          <Link href="/daily" className="pressable flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground/[0.08] text-[0.9375rem] font-semibold">
+            <FlameIcon className="h-4 w-4" style={{ color: RARITY_COLOR.streak }} />
+            See your streak
+          </Link>
+        </div>
       ) : short <= 0 ? (
         <button
           type="button"

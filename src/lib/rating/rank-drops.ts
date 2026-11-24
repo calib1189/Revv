@@ -1,5 +1,6 @@
 import { computeRankPosition } from "./rank-position";
 import { LEADERBOARD_TOP_SIZE } from "./leaderboard-displacement";
+import { pointsBehind } from "@/lib/leaderboard/tier-groups";
 
 /** "Your car got passed" — the once-a-day leaderboard push for everyone
  * below the top 10, who otherwise never hear that the board moved
@@ -90,18 +91,36 @@ export function bestDropPerOwner(drops: RankDrop[]): RankDrop[] {
   return [...byOwner.values()];
 }
 
+/** How far `score` trails the next score above it on the board (to the
+ * hundredth), or null when nothing is above. */
+export function gapToPlaceAbove(score: number, boardScores: readonly number[]): number | null {
+  let above: number | null = null;
+  for (const s of boardScores) if (s > score && (above === null || s < above)) above = s;
+  return above === null ? null : pointsBehind(above, score);
+}
+
 export function rankDropBody({
   carName,
   to,
   passers,
+  gap = null,
 }: {
   carName: string;
   to: number;
   passers: { username: string; carName: string }[];
+  /** Points behind the place above, when known: "0.31 behind #23" reads
+   * as one re-rate away, which is the point of telling them. */
+  gap?: number | null;
 }): string {
+  const standing =
+    gap === null || to <= 1
+      ? `You're #${to} now.`
+      : gap === 0
+        ? `You're #${to}, level on points with #${to - 1}.`
+        : `You're #${to}, ${gap.toFixed(2)} behind #${to - 1}.`;
   if (passers.length === 1) {
     const [p] = passers;
-    return `@${p.username}'s ${p.carName} passed your ${carName}. You're #${to} now.`;
+    return `@${p.username}'s ${p.carName} passed your ${carName}. ${standing}`;
   }
-  return `${passers.length} cars passed your ${carName} since yesterday. You're #${to} now.`;
+  return `${passers.length} cars passed your ${carName} since yesterday. ${standing}`;
 }

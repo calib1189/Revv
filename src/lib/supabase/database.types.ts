@@ -78,7 +78,7 @@ export interface Database {
           id: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate" | "referral" | "battle_priority";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate" | "referral" | "battle_priority" | "streak_repair";
           source_id: string;
           created_at: string;
         };
@@ -86,7 +86,7 @@ export interface Database {
           id?: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate" | "referral" | "battle_priority";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate" | "referral" | "battle_priority" | "streak_repair";
           source_id: string;
           created_at?: string;
         };
@@ -1773,6 +1773,42 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["build_battle_votes"]["Insert"]>;
+        Relationships: never[];
+      };
+      streak_chests: {
+        Row: {
+          user_id: string;
+          chest_date: string;
+          tier: "common" | "uncommon" | "rare" | "epic" | "legendary";
+          points: number;
+          item_id: string | null;
+          opened_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          chest_date: string;
+          tier: "common" | "uncommon" | "rare" | "epic" | "legendary";
+          points?: number;
+          item_id?: string | null;
+          opened_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["streak_chests"]["Insert"]>;
+        Relationships: never[];
+      };
+      streak_repairs: {
+        Row: {
+          user_id: string;
+          repaired_date: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          repaired_date: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["streak_repairs"]["Insert"]>;
         Relationships: never[];
       };
       build_battle_priority: {

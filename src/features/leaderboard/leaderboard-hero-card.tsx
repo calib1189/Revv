@@ -5,6 +5,9 @@ import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, type RankTier } from "@/lib/rating/rank";
 import type { LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
+import type { RankMovement } from "@/lib/leaderboard/movement";
+import { MY_ROW_ID } from "@/lib/leaderboard/my-row";
+import { MovementTag } from "@/features/leaderboard/movement-tag";
 
 /** Every podium card shares one anatomy, at two scales: the photograph
  * full-bleed, the place as a numeral in the tier's colour top left, and
@@ -25,17 +28,41 @@ function RankEdge({ tier }: { tier: RankTier }) {
 
 /** The place numeral, top left. Shaded on its own because cars are shot
  * against bright sky as often as anything else. */
-function PlaceNumeral({ place, color, className }: { place: number; color: string; className: string }) {
+function PlaceNumeral({
+  place,
+  color,
+  className,
+  size,
+  movement,
+  isViewer,
+}: {
+  place: number;
+  color: string;
+  /** Position of the numeral group. */
+  className: string;
+  /** Font size of the numeral itself. */
+  size: string;
+  movement: RankMovement | undefined;
+  isViewer: boolean;
+}) {
   return (
     <>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
-      <span
-        aria-label={`Number ${place}`}
-        className={`numeral absolute leading-none ${className}`}
-        style={{ color, textShadow: "0 2px 18px rgb(0 0 0 / 0.6)" }}
-      >
-        {place}
-      </span>
+      <div className={`absolute flex items-center gap-2 ${className}`}>
+        <span
+          aria-label={`Number ${place}`}
+          className={`numeral leading-none ${size}`}
+          style={{ color, textShadow: "0 2px 18px rgb(0 0 0 / 0.6)" }}
+        >
+          {place}
+        </span>
+        <MovementTag movement={movement} onMedia />
+        {isViewer && (
+          <span className="rounded-full bg-accent px-1.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.06em] text-white">
+            You
+          </span>
+        )}
+      </div>
     </>
   );
 }
@@ -43,13 +70,27 @@ function PlaceNumeral({ place, color, className }: { place: number; color: strin
 /** First place: the page's photograph. Sits in a soft shadow of its own
  * tier colour, so the board looks different the day someone new takes
  * the top spot. */
-export function LeaderboardHeroCard({ entry, priority = true }: { entry: LeaderboardEntry; priority?: boolean }) {
+export function LeaderboardHeroCard({
+  entry,
+  priority = true,
+  movement,
+  isViewer = false,
+}: {
+  entry: LeaderboardEntry;
+  priority?: boolean;
+  movement?: RankMovement;
+  isViewer?: boolean;
+}) {
   const tier = rankForScore(entry.score);
   const Icon = RANK_MATERIAL_ICONS[tier];
   const tierColor = RANK_TEXT_COLORS[tier];
 
   return (
-    <div className="relative rounded-[28px]" style={{ boxShadow: `0 24px 60px -30px ${tierColor}73` }}>
+    <div
+      id={isViewer ? MY_ROW_ID : undefined}
+      className="relative scroll-mt-24 rounded-[28px]"
+      style={{ boxShadow: `0 24px 60px -30px ${tierColor}73` }}
+    >
       <Link
         href={`/garage/${entry.vehicleId}`}
         className="pressable group relative block overflow-hidden rounded-[28px] bg-neutral-950 elev-3"
@@ -67,7 +108,14 @@ export function LeaderboardHeroCard({ entry, priority = true }: { entry: Leaderb
               className="object-cover transition-transform duration-[900ms] ease-[var(--ease-ios)] group-hover:scale-[1.035]"
             />
           )}
-          <PlaceNumeral place={1} color={tierColor} className="left-5 top-4 text-[3.5rem] sm:left-7 sm:top-6" />
+          <PlaceNumeral
+            place={1}
+            color={tierColor}
+            className="left-5 top-4 sm:left-7 sm:top-6"
+            size="text-[3.5rem]"
+            movement={movement}
+            isViewer={isViewer}
+          />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
 
           <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 px-5 pb-6 sm:px-7 sm:pb-8">
@@ -102,7 +150,17 @@ export function LeaderboardHeroCard({ entry, priority = true }: { entry: Leaderb
 
 /** Second to fifth place, a 2×2 grid under the hero: the same anatomy at
  * half the scale, so the top five read as one podium. */
-export function LeaderboardRunnerUpCard({ rank, entry }: { rank: number; entry: LeaderboardEntry }) {
+export function LeaderboardRunnerUpCard({
+  rank,
+  entry,
+  movement,
+  isViewer = false,
+}: {
+  rank: number;
+  entry: LeaderboardEntry;
+  movement?: RankMovement;
+  isViewer?: boolean;
+}) {
   const tier = rankForScore(entry.score);
   const Icon = RANK_MATERIAL_ICONS[tier];
   const tierColor = RANK_TEXT_COLORS[tier];
@@ -110,7 +168,8 @@ export function LeaderboardRunnerUpCard({ rank, entry }: { rank: number; entry: 
   return (
     <Link
       href={`/garage/${entry.vehicleId}`}
-      className="pressable group relative block overflow-hidden rounded-[22px] bg-neutral-950 elev-2"
+      id={isViewer ? MY_ROW_ID : undefined}
+      className="pressable group relative block scroll-mt-24 overflow-hidden rounded-[22px] bg-neutral-950 elev-2"
     >
       <div className="relative aspect-[3/4] w-full">
         {entry.heroUrl && (
@@ -122,7 +181,14 @@ export function LeaderboardRunnerUpCard({ rank, entry }: { rank: number; entry: 
             className="object-cover transition-transform duration-[900ms] ease-[var(--ease-ios)] group-hover:scale-[1.04]"
           />
         )}
-        <PlaceNumeral place={rank} color={tierColor} className="left-3.5 top-2.5 text-[2.5rem]" />
+        <PlaceNumeral
+          place={rank}
+          color={tierColor}
+          className="left-3.5 top-2.5"
+          size="text-[2.5rem]"
+          movement={movement}
+          isViewer={isViewer}
+        />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
         <div className="absolute inset-x-0 bottom-0 px-3.5 pb-4">

@@ -27,9 +27,9 @@ import { computeRankPosition } from "@/lib/rating/rank-position";
 import { evaluateAchievements, type SubscoreMax } from "@/lib/achievements/evaluate";
 import { ACHIEVEMENTS, getAchievement, type AchievementDef } from "@/lib/achievements/catalog";
 import { CHALLENGES } from "@/lib/challenges/catalog";
-import { listDailyActivity, STREAK_KINDS } from "@/lib/db/daily-activity";
+import { listDailyActivity } from "@/lib/db/daily-activity";
+import { listStreakDays, streakFrom } from "@/lib/daily/streak-days";
 import { countDailyWins } from "@/lib/db/daily";
-import { computeStreak } from "@/lib/daily/streak";
 import { dailyDateKey } from "@/lib/daily/day";
 import { listOwnersWithCars, listReferralsByReferrer } from "@/lib/db/referrals";
 import { countedInvites } from "@/lib/invites/tiers";
@@ -315,16 +315,17 @@ async function getDailyStats(
   userId: string,
 ): Promise<{ dailyEntryDays: number; dailyVoteDays: number; dailyWins: number; dailyLongestStreak: number }> {
   try {
-    const [activity, wins] = await Promise.all([
+    // The same days the streak itself counts: the Daily or a battle vote.
+    const [activity, wins, streakDays] = await Promise.all([
       listDailyActivity(supabase, userId),
       countDailyWins(supabase, userId),
+      listStreakDays(supabase, userId),
     ]);
-    const streakDays = activity.filter((a) => STREAK_KINDS.includes(a.kind)).map((a) => a.activity_date);
     return {
       dailyEntryDays: activity.filter((a) => a.kind === "entered").length,
       dailyVoteDays: activity.filter((a) => a.kind === "voted").length,
       dailyWins: wins,
-      dailyLongestStreak: computeStreak(streakDays, dailyDateKey()).longest,
+      dailyLongestStreak: streakFrom(streakDays, dailyDateKey()).longest,
     };
   } catch {
     return { dailyEntryDays: 0, dailyVoteDays: 0, dailyWins: 0, dailyLongestStreak: 0 };

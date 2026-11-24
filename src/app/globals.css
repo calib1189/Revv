@@ -520,6 +520,287 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   animation: section-rise 560ms var(--ease-ios) both;
 }
 
+/* Streak chest (features/daily/chest-opener.tsx). Waiting: a small hop
+   every few seconds. Opening: it rattles harder and swells, the lid
+   flies off, light bursts out in the prize's tier colour, and the prize
+   rises out of it. */
+@keyframes chest-idle {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  76% {
+    transform: translateY(-5px) rotate(-6deg);
+  }
+  82% {
+    transform: translateY(0) rotate(5deg);
+  }
+  88% {
+    transform: translateY(-2px) rotate(-3deg);
+  }
+}
+.chest-idle {
+  animation: chest-idle 2.6s var(--ease-ios) infinite;
+}
+@keyframes chest-shake {
+  0% {
+    transform: rotate(0) scale(1);
+  }
+  10% {
+    transform: rotate(-7deg) scale(1.01);
+  }
+  20% {
+    transform: rotate(7deg) scale(1.02);
+  }
+  32% {
+    transform: rotate(-9deg) scale(1.04);
+  }
+  44% {
+    transform: rotate(9deg) scale(1.06);
+  }
+  56% {
+    transform: rotate(-11deg) scale(1.08);
+  }
+  68% {
+    transform: rotate(11deg) scale(1.1);
+  }
+  80% {
+    transform: rotate(-6deg) scale(1.13);
+  }
+  90% {
+    transform: rotate(3deg) scale(1.16);
+  }
+  100% {
+    transform: rotate(0) scale(1.18);
+  }
+}
+.chest-shake {
+  animation: chest-shake 950ms cubic-bezier(0.36, 0, 0.66, 1) both;
+}
+@keyframes chest-lid-pop {
+  0% {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-95px) rotate(-28deg);
+    opacity: 0;
+  }
+}
+.chest-lid-pop {
+  animation: chest-lid-pop 600ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes chest-body-sink {
+  0% {
+    transform: scale(1.18);
+  }
+  35% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.chest-body-sink {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: chest-body-sink 500ms var(--ease-ios) both;
+}
+@keyframes chest-flash {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(5);
+    opacity: 0;
+  }
+}
+.chest-flash {
+  animation: chest-flash 750ms cubic-bezier(0.1, 0.7, 0.3, 1) both;
+}
+@keyframes chest-rays {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+}
+.chest-rays {
+  animation: chest-rays 1.2s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+@keyframes chest-rays-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.chest-rays-spin {
+  animation: chest-rays-spin 40s linear infinite;
+}
+@keyframes chest-spark {
+  0% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(0.2);
+    opacity: 0;
+  }
+}
+.chest-spark {
+  animation: chest-spark 900ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
+}
+@keyframes chest-prize-rise {
+  0% {
+    transform: translateY(40px) scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+.chest-prize-rise {
+  animation: chest-prize-rise 520ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+@keyframes chest-fade-out {
+  to {
+    transform: translateY(-20px) scale(0.8);
+    opacity: 0;
+  }
+}
+.chest-fade-out {
+  animation: chest-fade-out 400ms var(--ease-ios) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chest-idle,
+  .chest-shake,
+  .chest-lid-pop,
+  .chest-body-sink,
+  .chest-flash,
+  .chest-rays,
+  .chest-rays-spin,
+  .chest-spark,
+  .chest-prize-rise,
+  .chest-fade-out {
+    animation: none;
+  }
+  .chest-fade-out,
+  .chest-flash,
+  .chest-spark {
+    opacity: 0;
+  }
+  .chest-rays {
+    transform: translate(-50%, -50%);
+    opacity: 0.5;
+  }
+}
+
+/* The streak card's flame once it's lit: a slow, small flicker. And the
+   day you just played popping into place. */
+@keyframes flame-flicker {
+  0%,
+  100% {
+    transform: scale(1) rotate(0);
+  }
+  30% {
+    transform: scale(1.06, 0.97) rotate(-2deg);
+  }
+  60% {
+    transform: scale(0.97, 1.05) rotate(2deg);
+  }
+}
+.flame-flicker {
+  transform-origin: 50% 85%;
+  animation: flame-flicker 2.2s ease-in-out infinite;
+}
+@keyframes streak-day-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.streak-day-pop {
+  animation: streak-day-pop 500ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flame-flicker,
+  .streak-day-pop {
+    animation: none;
+  }
+}
+
+/* A restored streak's flame lighting back up. */
+@keyframes streak-relight {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.2;
+    filter: grayscale(1);
+  }
+  60% {
+    transform: scale(1.2);
+    opacity: 1;
+    filter: none;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.streak-relight {
+  animation: streak-relight 700ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .streak-relight {
+    animation: none;
+  }
+}
+
+/* "Your position" → your place on the board: one pulse so the eye lands
+   on it (features/leaderboard/jump-to-me.tsx). A row tints; a photo
+   card, which has no background of its own to tint, swells slightly. */
+@keyframes place-flash-row {
+  0%,
+  40% {
+    background-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+}
+@keyframes place-flash-card {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.025);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+a.place-flash:not(.pressable) {
+  animation: place-flash-row 1.6s var(--ease-ios);
+}
+div.place-flash,
+a.place-flash.pressable {
+  animation: place-flash-card 700ms var(--ease-ios);
+}
+@media (prefers-reduced-motion: reduce) {
+  div.place-flash,
+  a.place-flash.pressable {
+    animation: none;
+  }
+}
+
 /* Long-form documents (Terms, Privacy, Guidelines, Support): a readable
    measure, generous leading, and section headings that step out without
    shouting. Applied to the document's wrapper; styles its direct
@@ -1504,9 +1785,13 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   .frame-candy-ring,
   .frame-redline-ring,
   .frame-nitrous-ring,
-  .frame-chameleon-ring {
+  .frame-chameleon-ring,
+  .frame-streak-ring,
+  .frame-afterburner-ring {
     position: relative;
   }
+  .frame-streak-ring::before,
+  .frame-afterburner-ring::before,
   .frame-bronze-ring::before,
   .frame-gold-ring::before,
   .frame-titanium-ring::before,
@@ -1527,6 +1812,20 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     mask-composite: exclude;
+  }
+
+  /* Streak-chest rings (never sold). Streak: two cool blues turning
+     slowly. Afterburner: a blue flame racing round, white-hot at its
+     core. */
+  .frame-streak-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #1e3a8a, #6fb4ff, #1e3a8a, #93c5fd, #1e3a8a);
+    animation: rank-angle-spin 14s linear infinite;
+    filter: drop-shadow(0 0 4px rgb(111 180 255 / 0.45));
+  }
+  .frame-afterburner-ring::before {
+    background: conic-gradient(from var(--rank-angle, 0deg), #0b1f4d, #2563eb, #7cc4ff, #f0f9ff, #7cc4ff, #2563eb, #0b1f4d, #4f46e5, #0b1f4d);
+    animation: rank-angle-spin 3.2s linear infinite;
+    filter: drop-shadow(0 0 6px rgb(96 165 250 / 0.6));
   }
 
   .frame-bronze-ring::before {
@@ -1711,6 +2010,8 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
     .bg-nitrous-anim,
     .bg-flip-anim,
     .frame-neon-ring,
+    .frame-streak-ring::before,
+    .frame-afterburner-ring::before,
     .frame-bronze-ring::before,
     .frame-gold-ring::before,
     .frame-titanium-ring::before,

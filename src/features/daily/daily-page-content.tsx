@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
-import { getMediaById, publicMediaUrl } from "@/lib/db/media";
+import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import {
   ensureDailyChallenge,
   getDailyChallengeByDate,
@@ -22,10 +22,13 @@ import { MyEntry } from "@/features/daily/my-entry";
 import { EntriesGallery } from "@/features/daily/entries-gallery";
 import { ResultsPodium } from "@/features/daily/results-podium";
 import { DailyProgress, RideEntryCard, type TodayProgress } from "@/features/daily/daily-progress";
-import { listDailyActivity, STREAK_KINDS } from "@/lib/db/daily-activity";
+import { listStreakDays, streakFrom } from "@/lib/daily/streak-days";
+import { streakRepairOffer, type RepairOffer } from "@/lib/streak/repair";
 import { getPointsBalance } from "@/lib/db/points";
+import { getUnopenedStreakChest } from "@/lib/db/streak-chests";
+import { getProfileByUserId } from "@/lib/db/profiles";
 import { getOrCreateRideRound } from "@/lib/daily/ride-server";
-import { computeStreak, type Streak } from "@/lib/daily/streak";
+import type { Streak } from "@/lib/daily/streak";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -74,8 +77,14 @@ export async function DailyPageContent() {
   const others = entries.filter((e) => e.userId !== user?.id);
 
   // Your own day: streak, points, today's checklist and Rate the Ride.
-  let personal: { streak: Streak; points: number; today: TodayProgress; ride: { total: number; rated: number } } | null =
-    null;
+  let personal: {
+    streak: Streak;
+    readyChest: { chestDate: string; username: string; avatarUrl: string | null } | null;
+    repairOffer: RepairOffer | null;
+    points: number;
+    today: TodayProgress;
+    ride: { total: number; rated: number };
+  } | null = null;
   if (user) {
     personal = await loadPersonalDaily(supabase, user.id, today, {
       entered: Boolean(myEntry),
@@ -137,7 +146,14 @@ export async function DailyPageContent() {
 
       {personal && (
         <section className="mt-6 flex flex-col gap-2.5">
-          <DailyProgress streak={personal.streak} points={personal.points} today={personal.today} />
+          <DailyProgress
+            streak={personal.streak}
+            todayKey={today}
+            readyChest={personal.readyChest}
+            repairOffer={personal.repairOffer}
+            points={personal.points}
+            today={personal.today}
+          />
           <RideEntryCard total={personal.ride.total} rated={personal.ride.rated} />
         </section>
       )}
@@ -200,16 +216,39 @@ export async function DailyPageContent() {
   );
 }
 
+/** An earned chest waiting to be opened, with who you are for the
+ * reveal's preview. Null without one, or before chests exist (0132). */
+async function loadReadyChest(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<{ chestDate: string; username: string; avatarUrl: string | null } | null> {
+  try {
+    const chest = await getUnopenedStreakChest(supabase, userId);
+    if (!chest) return null;
+    const profile = await getProfileByUserId(supabase, userId);
+    if (!profile) return null;
+    const avatar = profile.avatar_media_id ? (await getMediaByIds(supabase, [profile.avatar_media_id]))[0] : null;
+    return {
+      chestDate: chest.chestDate,
+      username: profile.username,
+      avatarUrl: avatar ? publicMediaUrl(supabase, avatar.storage_path) : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function loadPersonalDaily(
   supabase: SupabaseClient<Database>,
   userId: string,
   today: string,
   live: { entered: boolean; voted: boolean },
 ) {
-  const [activity, points, round] = await Promise.all([
-    listDailyActivity(supabase, userId),
+  const [streakDays, points, round, readyChest] = await Promise.all([
+    listStreakDays(supabase, userId),
     getPointsBalance(supabase, userId).catch(() => 0),
     getOrCreateRideRound(userId, today).catch(() => [] as string[]),
+    loadReadyChest(supabase, userId),
   ]);
   const { data: myRideRatings } = round.length
     ? await supabase.from("peer_ratings").select("vehicle_id").eq("rater_id", userId).in("vehicle_id", round)
@@ -223,10 +262,12 @@ async function loadPersonalDaily(
     voted: live.voted,
     ratedRides: round.length > 0 && rated >= round.length,
   };
-  const days = activity.filter((a) => STREAK_KINDS.includes(a.kind)).map((a) => a.activity_date);
-  if (todayProgress.entered || todayProgress.voted || todayProgress.ratedRides) days.push(today);
+  const days = { ...streakDays, active: [...streakDays.active] };
+  if (todayProgress.entered || todayProgress.voted || todayProgress.ratedRides) days.active.push(today);
   return {
-    streak: computeStreak(days, today),
+    streak: streakFrom(days, today),
+    repairOffer: streakRepairOffer(days, today, streakDays.lastRepairKey),
+    readyChest,
     points,
     today: todayProgress,
     ride: { total: round.length, rated },

@@ -65,7 +65,23 @@ export function forgetCurrentPageSnapshot() {
   if (typeof key === "string") snapshots.delete(key);
 }
 
+let installed = false;
+
+/** Whether pages are being remembered (inside the app only). */
+export function pageHistoryActive(): boolean {
+  return installed;
+}
+
+/** For a page left by a gesture rather than a link tap (swiping a feed
+ * post to its creator's profile): files `snapshot` as this page's copy
+ * when the navigation it's about to start pushes the new entry. */
+export function noteLeavingWith(snapshot: PageSnapshot) {
+  if (!installed) return;
+  pending = { href: window.location.href, at: Date.now(), snapshot };
+}
+
 export function installPageHistory(): () => void {
+  installed = true;
   const history = window.history;
   const push = history.pushState;
   const replace = history.replaceState;
@@ -119,5 +135,6 @@ export function installPageHistory(): () => void {
     history.replaceState = replace;
     snapshots.clear();
     pending = null;
+    installed = false;
   };
 }

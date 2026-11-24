@@ -4,6 +4,9 @@ import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
 import { rankForScore, RANK_LABELS, tierColorVar } from "@/lib/rating/rank";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import type { LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
+import type { RankMovement } from "@/lib/leaderboard/movement";
+import { MovementTag } from "@/features/leaderboard/movement-tag";
+import { MY_ROW_ID } from "@/lib/leaderboard/my-row";
 
 /** One row of the board below the podium — a GroupedList-style row:
  * rank, thumbnail, name over owner, score. The tier isn't repeated per
@@ -22,6 +25,7 @@ export function LeaderboardRow({
   showCategory = false,
   highlight = false,
   showTier = false,
+  movement,
 }: {
   rank: number;
   entry: LeaderboardEntry;
@@ -34,17 +38,23 @@ export function LeaderboardRow({
   /** Names the tier under the score, for lists that aren't grouped
    * under tier headings (the home page's preview of the board). */
   showTier?: boolean;
+  /** Places moved since yesterday; nothing shown when it held its place. */
+  movement?: RankMovement;
 }) {
   const tier = rankForScore(entry.score);
 
   return (
     <Link
       href={`/garage/${entry.vehicleId}`}
-      className={`relative flex items-center gap-3 px-3.5 py-3 transition-colors active:bg-foreground/[0.06] ${
+      id={highlight ? MY_ROW_ID : undefined}
+      className={`relative flex scroll-mt-24 items-center gap-3 px-3.5 py-3 transition-colors active:bg-foreground/[0.06] ${
         highlight ? "bg-accent/[0.07]" : ""
       }`}
     >
-      <span className="numeral w-6 flex-shrink-0 text-center text-[0.9375rem] text-muted">{rank}</span>
+      <span className="flex w-6 flex-shrink-0 flex-col items-center gap-1">
+        <span className="numeral text-[0.9375rem] leading-none text-muted">{rank}</span>
+        <MovementTag movement={movement} />
+      </span>
 
       <div
         className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-[12px] bg-foreground/[0.06]"

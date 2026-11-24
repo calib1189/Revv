@@ -9,4 +9,9 @@
 // via Profile. GaragePageContent was always written pager-safe (see its
 // own doc comment) even while pulled out of this array, so restoring it
 // here was a one-line change, not a rebuild.
-export const TAB_HREFS = ["/garage", "/feed", "/discover", "/leaderboard"] as const;
+//
+// Feed sits last, at the far right: nothing is beyond it, so a swipe left
+// on a post is free to open its creator's profile, the way TikTok's does
+// (features/feed/swipe-to-profile.ts). Swiping right from the Feed still
+// pages back through the tabs.
+export const TAB_HREFS = ["/garage", "/discover", "/leaderboard", "/feed"] as const;

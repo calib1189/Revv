@@ -21,6 +21,9 @@ import {
   type RankTier,
 } from "@/lib/rating/rank";
 import { groupByTier } from "@/lib/leaderboard/tier-groups";
+import { loadRankMovement } from "@/lib/leaderboard/load-movement";
+import type { RankMovement } from "@/lib/leaderboard/movement";
+import { RevealMyPlaceOnArrival } from "@/features/leaderboard/jump-to-me";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { ChevronRightIcon } from "@/components/ui/icons";
 import { ViewerStandingCard } from "@/features/leaderboard/viewer-standing-card";
@@ -156,8 +159,15 @@ export async function LeaderboardPageContent({
     const scopeVehicleSet = new Set(scopeVehicles.map((v) => v.id));
     vehicleIds = vehicleIds.filter((id) => scopeVehicleSet.has(id));
   }
-  const builds = await listTopRatedBuilds(supabase, 50, vehicleIds);
-  const entries = await composeLeaderboard(supabase, builds);
+  // Places moved since yesterday load alongside the board; the board
+  // never waits on them failing.
+  const [entries, movement] = await Promise.all([
+    listTopRatedBuilds(supabase, 50, vehicleIds).then((builds) => composeLeaderboard(supabase, builds)),
+    loadRankMovement(supabase, vehicleIds).catch((err) => {
+      console.error("loadRankMovement failed:", err);
+      return new Map<string, RankMovement>();
+    }),
+  ]);
 
   // The top five as photo cards: #1 the big card, #2–#5 a 2×2 grid under
   // it, then the list from #6.
@@ -195,6 +205,7 @@ export async function LeaderboardPageContent({
       )}
 
       <div className="relative mx-auto w-full max-w-2xl px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      {viewerEntry && <RevealMyPlaceOnArrival />}
       <header className="animate-section-rise mb-5">
         <p className="text-[0.8125rem] font-medium text-muted">
           {initialCategory ? VEHICLE_CATEGORY_LABELS[initialCategory] : "Approved builds, ranked by AI"}
@@ -262,11 +273,22 @@ export async function LeaderboardPageContent({
         />
       ) : (
         <div className="animate-section-rise flex flex-col gap-4" style={{ animationDelay: "120ms" }}>
-          <LeaderboardHeroCard entry={entries[0]} priority={eagerImages} />
+          <LeaderboardHeroCard
+            entry={entries[0]}
+            priority={eagerImages}
+            movement={movement.get(entries[0].buildId)}
+            isViewer={entries[0].buildId === viewerEntry?.buildId}
+          />
           {runnersUp.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {runnersUp.map((entry, i) => (
-                <LeaderboardRunnerUpCard key={entry.buildId} rank={i + 2} entry={entry} />
+                <LeaderboardRunnerUpCard
+                  key={entry.buildId}
+                  rank={i + 2}
+                  entry={entry}
+                  movement={movement.get(entry.buildId)}
+                  isViewer={entry.buildId === viewerEntry?.buildId}
+                />
               ))}
             </div>
           )}
@@ -281,6 +303,7 @@ export async function LeaderboardPageContent({
                     entry={entry}
                     showCategory={!initialCategory}
                     highlight={entry.buildId === viewerEntry?.buildId}
+                    movement={movement.get(entry.buildId)}
                   />
                 ))}
               </div>
