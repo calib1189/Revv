@@ -86,19 +86,15 @@ export function DailyFeedSlide({ teaser, slideHeight }: { teaser: DailyTeaser; s
 /** A one-line way into Sorza Daily (under the Leaderboard title). */
 export function DailyInlineLink({ teaser }: { teaser: DailyTeaser }) {
   return (
-    <Link
-      href="/daily"
-      className="pressable glass-raised elev-1 mt-3 flex items-center gap-3 rounded-[16px] px-3.5 py-2.5"
-    >
-      <span className={`h-2 w-2 flex-shrink-0 rounded-full ${teaser.tookPartToday ? "bg-foreground/30" : "bg-accent"}`} />
-      <span className="min-w-0 flex-1 truncate text-[0.875rem]">
-        <span className="font-semibold">Sorza Daily</span>
-        <span className="text-muted"> · {teaser.title}</span>
+    <Link href="/daily" className="pressable glass-raised elev-1 min-w-0 rounded-[16px] px-3 py-2.5">
+      <span className="flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${teaser.tookPartToday ? "bg-foreground/30" : "bg-accent"}`} />
+        <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold">Sorza Daily</span>
+        <span className="numeral flex-shrink-0 text-[0.6875rem] text-muted">
+          <Countdown endsAt={teaser.endsAt} fallback="Today" />
+        </span>
       </span>
-      <span className="flex-shrink-0 text-[0.75rem] text-muted">
-        <Countdown endsAt={teaser.endsAt} /> left
-      </span>
-      <ChevronRightIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted" />
+      <span className="mt-0.5 block truncate text-[0.75rem] text-muted">{teaser.title}</span>
     </Link>
   );
 }

@@ -6,7 +6,9 @@ import { VerifiedBadge } from "@/components/ui/verified-badge";
 import type { LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
 
 /** One row of the board below the podium — a GroupedList-style row:
- * rank, thumbnail, name over owner, score over tier. Owner and category
+ * rank, thumbnail, name over owner, score. The tier isn't repeated per
+ * row: the board groups rows by tier under one heading each (see
+ * groupByTier). Owner and category
  * share one truncating line so nothing collides at 375px. Meant to sit
  * inside a grouped card (see LeaderboardPageContent), which draws the
  * inset hairlines between rows.
@@ -19,6 +21,7 @@ export function LeaderboardRow({
   entry,
   showCategory = false,
   highlight = false,
+  showTier = false,
 }: {
   rank: number;
   entry: LeaderboardEntry;
@@ -28,6 +31,9 @@ export function LeaderboardRow({
   /** The viewer's own build. Tints the row so they can find themselves
    * without reading every line. */
   highlight?: boolean;
+  /** Names the tier under the score, for lists that aren't grouped
+   * under tier headings (the home page's preview of the board). */
+  showTier?: boolean;
 }) {
   const tier = rankForScore(entry.score);
 
@@ -63,9 +69,11 @@ export function LeaderboardRow({
 
       <div className="flex-shrink-0 text-right">
         <p className="numeral text-[1.125rem] leading-none">{entry.score.toFixed(2)}</p>
-        <p className="micro-label mt-1" style={{ color: tierColorVar(tier) }}>
-          {RANK_LABELS[tier]}
-        </p>
+        {showTier && (
+          <p className="micro-label mt-1" style={{ color: tierColorVar(tier) }}>
+            {RANK_LABELS[tier]}
+          </p>
+        )}
       </div>
     </Link>
   );

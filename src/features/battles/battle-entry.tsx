@@ -60,22 +60,17 @@ export function BattleEntryCard({ view }: { view: BattleView }) {
  * title, beside the Daily's). */
 export function BattleInlineLink({ view }: { view: BattleView }) {
   return (
-    <Link
-      href={`/battle/${view.id}`}
-      className="pressable glass-raised elev-1 mt-2 flex items-center gap-3 rounded-[16px] px-3.5 py-2.5"
-    >
-      <span className={`h-2 w-2 flex-shrink-0 rounded-full ${needsVote(view) ? "bg-accent" : "bg-foreground/30"}`} />
-      <span className="min-w-0 flex-1 truncate text-[0.875rem]">
-        <span className="font-semibold">Build Battle</span>
-        <span className="text-muted">
-          {" "}
-          · {view.a.title} vs {view.b.title}
+    <Link href={`/battle/${view.id}`} className="pressable glass-raised elev-1 min-w-0 rounded-[16px] px-3 py-2.5">
+      <span className="flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${needsVote(view) ? "bg-accent" : "bg-foreground/30"}`} />
+        <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-semibold">Build Battle</span>
+        <span className="numeral flex-shrink-0 text-[0.6875rem] text-muted">
+          <Countdown endsAt={view.endsAt} fallback="Today" />
         </span>
       </span>
-      <span className="flex-shrink-0 text-[0.75rem] text-muted">
-        <Countdown endsAt={view.endsAt} fallback="under 24h" /> left
+      <span className="mt-0.5 block truncate text-[0.75rem] text-muted">
+        {view.a.title} vs {view.b.title}
       </span>
-      <ChevronRightIcon className="h-3.5 w-3.5 flex-shrink-0 text-muted" />
     </Link>
   );
 }

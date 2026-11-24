@@ -1,55 +1,62 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRightIcon } from "@/components/ui/icons";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { VEHICLE_CATEGORY_LABELS } from "@/lib/vehicles/category";
-import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS, type RankTier } from "@/lib/rating/rank";
 import type { LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
 
-/** Every podium card shares one anatomy: photograph, then the tier's own
- * animated rule (.rank-line, globals.css), then a solid plinth carrying
- * tier and score. The plinth is opaque near-black rather than the frosted
- * black/35 the garage bays use — over a bright daylight shot a translucent
- * bar blurs up into flat grey, which is exactly what made the old board
- * look washed out. Opaque also lets the rank line above it read as a
- * material edge rather than a seam. */
-function Plinth({
-  tier,
-  children,
-  className = "",
-}: {
-  tier: ReturnType<typeof rankForScore>;
-  children: React.ReactNode;
-  className?: string;
-}) {
+/** Every podium card shares one anatomy, at two scales: the photograph
+ * full-bleed, the place as a numeral in the tier's colour top left, and
+ * along the bottom the build on the left and its score on the right, over
+ * a deep scrim. The tier's own animated rule (.rank-line, globals.css)
+ * is the card's bottom edge. The photo carries the card; there is no
+ * separate info bar under it. */
+
+/** The tier's rule, pinned to the card's bottom edge. Wrapped because
+ * .rank-line sets its own position. */
+function RankEdge({ tier }: { tier: RankTier }) {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0">
+      <div className={`rank-line rank-line-${tier}`} />
+    </div>
+  );
+}
+
+/** The place numeral, top left. Shaded on its own because cars are shot
+ * against bright sky as often as anything else. */
+function PlaceNumeral({ place, color, className }: { place: number; color: string; className: string }) {
   return (
     <>
-      <div className={`rank-line rank-line-${tier}`} aria-hidden />
-      <div className={`flex items-center bg-[#08080a] text-white ${className}`}>{children}</div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent" />
+      <span
+        aria-label={`Number ${place}`}
+        className={`numeral absolute leading-none ${className}`}
+        style={{ color, textShadow: "0 2px 18px rgb(0 0 0 / 0.6)" }}
+      >
+        {place}
+      </span>
     </>
   );
 }
 
-/** First place, presented as a feature card: the car full-bleed and tall,
- * a "No. 1" eyebrow in the tier's colour and the name over a top scrim,
- * and the tier plinth along the bottom — the same language as the garage's
- * vehicle bays, so the top of the board reads as the thing to chase. The
- * card sits in a soft halo of its own tier colour, which is the page's
- * only real flourish and the reason the board looks different the day
- * someone new takes the top spot. */
+/** First place: the page's photograph. Sits in a soft shadow of its own
+ * tier colour, so the board looks different the day someone new takes
+ * the top spot. */
 export function LeaderboardHeroCard({ entry, priority = true }: { entry: LeaderboardEntry; priority?: boolean }) {
   const tier = rankForScore(entry.score);
   const Icon = RANK_MATERIAL_ICONS[tier];
   const tierColor = RANK_TEXT_COLORS[tier];
 
   return (
-    <div className="relative rounded-[28px]" style={{ boxShadow: `0 22px 60px -28px ${tierColor}66` }}>
+    <div className="relative rounded-[28px]" style={{ boxShadow: `0 24px 60px -30px ${tierColor}73` }}>
       <Link
         href={`/garage/${entry.vehicleId}`}
-        className="pressable group relative flex w-full flex-col overflow-hidden rounded-[28px] bg-neutral-950 elev-3"
+        className="pressable group relative block overflow-hidden rounded-[28px] bg-neutral-950 elev-3"
       >
-        <div className="relative aspect-[4/5] w-full sm:aspect-[16/10]">
+        {/* 5:6 on a phone: the page's big photograph, with the score
+            still on the first screen. */}
+        <div className="relative aspect-[5/6] w-full sm:aspect-[16/10]">
           {entry.heroUrl && (
             <Image
               src={entry.heroUrl}
@@ -60,52 +67,52 @@ export function LeaderboardHeroCard({ entry, priority = true }: { entry: Leaderb
               className="object-cover transition-transform duration-[900ms] ease-[var(--ease-ios)] group-hover:scale-[1.035]"
             />
           )}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-black/75 via-black/25 to-transparent" />
+          <PlaceNumeral place={1} color={tierColor} className="left-5 top-4 text-[3.5rem] sm:left-7 sm:top-6" />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
 
-          <div className="absolute inset-x-0 top-0 p-5 sm:p-7">
-            <p className="micro-label" style={{ color: tierColor }}>
-              No. 1 · {VEHICLE_CATEGORY_LABELS[entry.category]}
-            </p>
-            <h3 className="mt-1.5 line-clamp-2 text-[1.75rem] font-bold leading-[1.08] tracking-[-0.025em] text-white sm:text-[2.5rem]">
-              {entry.vehicleTitle}
-            </h3>
-            <p className="mt-1 flex items-center gap-1 text-[0.875rem] text-white/70">
-              @{entry.ownerUsername}
-              {entry.ownerIsVerified && <VerifiedBadge onMedia className="h-3.5 w-3.5" />}
-            </p>
+          <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 px-5 pb-6 sm:px-7 sm:pb-8">
+            <div className="min-w-0 flex-1">
+              <p className="micro-label" style={{ color: tierColor }}>
+                {VEHICLE_CATEGORY_LABELS[entry.category]}
+              </p>
+              <h3 className="mt-1.5 line-clamp-2 text-[1.75rem] font-bold leading-[1.05] tracking-[-0.025em] text-white sm:text-[2.5rem]">
+                {entry.vehicleTitle}
+              </h3>
+              <p className="mt-1.5 flex items-center gap-1 text-[0.875rem] text-white/70">
+                <span className="truncate">@{entry.ownerUsername}</span>
+                {entry.ownerIsVerified && <VerifiedBadge onMedia className="h-3.5 w-3.5 flex-shrink-0" />}
+              </p>
+            </div>
+            <div className="flex-shrink-0 text-right">
+              <p className="numeral text-[2.75rem] leading-[0.9] text-white sm:text-[3.5rem]">{entry.score.toFixed(2)}</p>
+              <p className="mt-2 flex items-center justify-end gap-1.5">
+                <Icon className="h-4 w-4" />
+                <span className="micro-label" style={{ color: tierColor }}>
+                  {RANK_LABELS[tier]}
+                </span>
+              </p>
+            </div>
           </div>
+          <RankEdge tier={tier} />
         </div>
-
-        <Plinth tier={tier} className="gap-3 px-4 py-3.5 sm:px-6 sm:py-4">
-          <Icon className="h-10 w-10 flex-shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="micro-label" style={{ color: tierColor }}>
-              {RANK_LABELS[tier]}
-            </p>
-            <p className="mt-0.5 text-xs text-white/55">Top build</p>
-          </div>
-          <span className="numeral text-[1.875rem] leading-none">{entry.score.toFixed(2)}</span>
-          <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-white/40" />
-        </Plinth>
       </Link>
     </div>
   );
 }
 
-/** Second and third place, side by side under the hero — the same three
- * parts at half the scale, so the podium reads as one object. The rank is
- * set as a large numeral in the tier's colour rather than a pill: a grey
- * bubble over a photograph looks like a placeholder avatar. */
+/** Second to fifth place, a 2×2 grid under the hero: the same anatomy at
+ * half the scale, so the top five read as one podium. */
 export function LeaderboardRunnerUpCard({ rank, entry }: { rank: number; entry: LeaderboardEntry }) {
   const tier = rankForScore(entry.score);
+  const Icon = RANK_MATERIAL_ICONS[tier];
   const tierColor = RANK_TEXT_COLORS[tier];
 
   return (
     <Link
       href={`/garage/${entry.vehicleId}`}
-      className="pressable group flex flex-col overflow-hidden rounded-[22px] bg-neutral-950 elev-2"
+      className="pressable group relative block overflow-hidden rounded-[22px] bg-neutral-950 elev-2"
     >
-      <div className="relative aspect-[4/5] w-full">
+      <div className="relative aspect-[3/4] w-full">
         {entry.heroUrl && (
           <Image
             src={entry.heroUrl}
@@ -115,36 +122,32 @@ export function LeaderboardRunnerUpCard({ rank, entry }: { rank: number; entry: 
             className="object-cover transition-transform duration-[900ms] ease-[var(--ease-ios)] group-hover:scale-[1.04]"
           />
         )}
-        <div className="photo-scrim pointer-events-none absolute inset-0" />
-        {/* .photo-scrim is bottom-weighted, so the rank numeral needs its
-            own patch of shade — #2 to #5 are as often shot against bright
-            sky as against anything else. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent" />
+        <PlaceNumeral place={rank} color={tierColor} className="left-3.5 top-2.5 text-[2.5rem]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
-        <span
-          className="numeral absolute left-3 top-1.5 text-[2.5rem] leading-none"
-          style={{ color: tierColor, textShadow: "0 2px 16px rgb(0 0 0 / 0.75)" }}
-        >
-          {rank}
-        </span>
-
-        <div className="absolute inset-x-0 bottom-0 p-3">
-          <p className="truncate text-[0.9375rem] font-bold tracking-[-0.01em] text-white">
-            {entry.vehicleTitle}
-          </p>
-          <p className="flex items-center gap-1 text-[0.75rem] text-white/65">
-            <span className="truncate">@{entry.ownerUsername}</span>
-            {entry.ownerIsVerified && <VerifiedBadge onMedia className="h-3 w-3" />}
-          </p>
+        <div className="absolute inset-x-0 bottom-0 px-3.5 pb-4">
+          <div className="flex items-baseline gap-2">
+            <p className="min-w-0 flex-1 truncate text-[0.9375rem] font-bold tracking-[-0.01em] text-white">
+              {entry.vehicleTitle}
+            </p>
+            <span className="numeral flex-shrink-0 text-[1.125rem] leading-none text-white">
+              {entry.score.toFixed(2)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <p className="flex min-w-0 flex-1 items-center gap-1 text-[0.75rem] text-white/65">
+              <span className="truncate">@{entry.ownerUsername}</span>
+              {entry.ownerIsVerified && <VerifiedBadge onMedia className="h-3 w-3 flex-shrink-0" />}
+            </p>
+            {/* The gem, not the word: "Diamond" is twice the width of
+                "Ruby" and would squeeze the owner's name on a half-width
+                card. The numeral and the edge carry the colour too. */}
+            <Icon className="h-4 w-4 flex-shrink-0" />
+            <span className="sr-only">{RANK_LABELS[tier]}</span>
+          </div>
         </div>
+        <RankEdge tier={tier} />
       </div>
-
-      <Plinth tier={tier} className="justify-between gap-2 px-3 py-2.5">
-        <span className="micro-label truncate" style={{ color: tierColor }}>
-          {RANK_LABELS[tier]}
-        </span>
-        <span className="numeral text-[1.125rem] leading-none">{entry.score.toFixed(2)}</span>
-      </Plinth>
     </Link>
   );
 }

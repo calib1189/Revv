@@ -12,7 +12,17 @@ import {
 import { listFollowingIds } from "@/lib/db/follows";
 import { listCrewIdsForUser, listApprovedMembersForCrews } from "@/lib/db/crew-members";
 import { composeLeaderboard } from "@/lib/leaderboard/compose-leaderboard";
-import { rankForScore, RANK_AMBIENT_COLORS } from "@/lib/rating/rank";
+import {
+  rankForScore,
+  rankRangeLabel,
+  tierColorVar,
+  RANK_AMBIENT_COLORS,
+  RANK_LABELS,
+  type RankTier,
+} from "@/lib/rating/rank";
+import { groupByTier } from "@/lib/leaderboard/tier-groups";
+import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
+import { ChevronRightIcon } from "@/components/ui/icons";
 import { ViewerStandingCard } from "@/features/leaderboard/viewer-standing-card";
 import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
 import { LeaderboardHeroCard, LeaderboardRunnerUpCard } from "@/features/leaderboard/leaderboard-hero-card";
@@ -21,7 +31,6 @@ import { loadDailyTeaser } from "@/lib/daily/teaser";
 import { loadTodayBattle } from "@/lib/battles/load";
 import { BattleInlineLink } from "@/features/battles/battle-entry";
 import { SegmentedLinks, FilterChips } from "@/components/ui/segmented-links";
-import { SectionTitle } from "@/components/ui/grouped-list";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RatingExplainer } from "@/features/leaderboard/rating-explainer";
 import { TierLadder } from "@/features/leaderboard/tier-ladder";
@@ -52,6 +61,39 @@ async function resolveScopeOwnerIds(
   if (crewIds.length === 0) return [];
   const members = await listApprovedMembersForCrews(supabase, crewIds);
   return [...new Set(members.map((m) => m.user_id))];
+}
+
+/** Names one tier over its run of rows: its gem, its name in its colour,
+ * a rule, and the score range it covers. */
+function TierHeading({ tier }: { tier: RankTier }) {
+  const Icon = RANK_MATERIAL_ICONS[tier];
+  return (
+    <div className="mb-2.5 flex items-center gap-2.5 px-1">
+      <Icon className="h-5 w-5 flex-shrink-0" />
+      <h2 className="micro-label flex-shrink-0" style={{ color: tierColorVar(tier) }}>
+        {RANK_LABELS[tier]}
+      </h2>
+      <span aria-hidden className="h-px flex-1 bg-border" />
+      <span className="numeral flex-shrink-0 text-[0.75rem] text-muted">{rankRangeLabel(tier)}</span>
+    </div>
+  );
+}
+
+/** A row that opens to reveal reference copy under it. Native
+ * <details>, so it needs no client JavaScript. */
+function Disclosure({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
+  return (
+    <details className="group">
+      <summary className="pressable glass-raised elev-1 flex cursor-pointer list-none items-center gap-3 rounded-[18px] px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-semibold">{title}</span>
+          <span className="mt-0.5 block text-[0.8125rem] text-muted">{hint}</span>
+        </span>
+        <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted transition-transform duration-200 group-open:rotate-90" />
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
+  );
 }
 
 function categoryHref(category: VehicleCategory | null, scope: LeaderboardScope = "global"): string {
@@ -117,7 +159,8 @@ export async function LeaderboardPageContent({
   const builds = await listTopRatedBuilds(supabase, 50, vehicleIds);
   const entries = await composeLeaderboard(supabase, builds);
 
-  // #1 gets the big card, #2–#5 a 2×2 grid of photo cards, then the list.
+  // The top five as photo cards: #1 the big card, #2–#5 a 2×2 grid under
+  // it, then the list from #6.
   const runnersUp = entries.slice(1, 5);
   const rest = entries.slice(5);
 
@@ -133,6 +176,10 @@ export async function LeaderboardPageContent({
   // The board's ambient colour is whoever currently leads it — the page
   // literally changes mood the day someone new takes No. 1.
   const leadTier = entries[0] ? rankForScore(entries[0].score) : null;
+  const liveBattle = todayBattle && !todayBattle.ended ? todayBattle : null;
+  // Below the podium the tier is named once per run of rows, not on
+  // every row.
+  const restGroups = groupByTier(rest, 6);
 
   return (
     <div className="relative w-full flex-1 overflow-x-clip">
@@ -155,8 +202,12 @@ export async function LeaderboardPageContent({
         <h1 className="text-[2.125rem] font-bold leading-tight tracking-[-0.03em] sm:text-[2.75rem]">
           Leaderboard
         </h1>
-        {dailyTeaser && <DailyInlineLink teaser={dailyTeaser} />}
-        {todayBattle && !todayBattle.ended && <BattleInlineLink view={todayBattle} />}
+        {(dailyTeaser || liveBattle) && (
+          <div className={`mt-3 grid gap-2 ${dailyTeaser && liveBattle ? "grid-cols-2" : "grid-cols-1"}`}>
+            {dailyTeaser && <DailyInlineLink teaser={dailyTeaser} />}
+            {liveBattle && <BattleInlineLink view={liveBattle} />}
+          </div>
+        )}
       </header>
 
       <div className="animate-section-rise mb-6 flex flex-col gap-3" style={{ animationDelay: "60ms" }}>
@@ -180,7 +231,12 @@ export async function LeaderboardPageContent({
           ]}
         />
         {viewerEntry && (
-          <ViewerStandingCard rank={viewerIndex + 1} entry={viewerEntry} total={entries.length} />
+          <ViewerStandingCard
+            rank={viewerIndex + 1}
+            entry={viewerEntry}
+            total={entries.length}
+            aheadScore={viewerIndex > 0 ? entries[viewerIndex - 1].score : null}
+          />
         )}
       </div>
 
@@ -214,42 +270,39 @@ export async function LeaderboardPageContent({
               ))}
             </div>
           )}
-          {rest.length > 0 && (
-            <div className="mt-1">
-              <p className="micro-label mb-2 px-1 text-muted">The rest of the board</p>
+          {restGroups.map((group, g) => (
+            <section key={group.tier} className={g === 0 ? "mt-4" : "mt-3"}>
+              <TierHeading tier={group.tier} />
               <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[6.875rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
-                {rest.map((entry, i) => (
+                {group.entries.map((entry, i) => (
                   <LeaderboardRow
                     key={entry.buildId}
-                    rank={i + 6}
+                    rank={group.firstRank + i}
                     entry={entry}
                     showCategory={!initialCategory}
                     highlight={entry.buildId === viewerEntry?.buildId}
                   />
                 ))}
               </div>
-            </div>
-          )}
+            </section>
+          ))}
         </div>
       )}
 
-      {/* Everything below is reference material about the board rather
-          than the board itself — the rule and the extra air are what keep
-          two blocks of explanatory copy from out-weighing the ranking. */}
-      <div className="mt-14 border-t border-border pt-9">
-        <section>
-          <SectionTitle>How ratings work</SectionTitle>
+      {/* Reference material about the board rather than the board
+          itself, so it stays folded away: two rows to tap, instead of two
+          blocks of copy competing with the ranking. */}
+      <div className="mt-12 flex flex-col gap-2.5">
+        <Disclosure title="How ratings work" hint="What the AI looks at">
           <RatingExplainer />
-        </section>
-
-        <section className="mt-10">
-          <SectionTitle>The tiers</SectionTitle>
+        </Disclosure>
+        <Disclosure title="The tiers" hint="Bronze to Cosmic">
           <p className="mb-3 px-1 text-[0.875rem] leading-relaxed text-muted">
             Every tier has its own look on your profile and garage. Climb from
             Bronze to Cosmic as your build and its score grow.
           </p>
           <TierLadder />
-        </section>
+        </Disclosure>
       </div>
       </div>
     </div>

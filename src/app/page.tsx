@@ -111,7 +111,7 @@ export default async function LandingPage() {
             {topEntries.length > 1 && (
               <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[6.875rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
                 {topEntries.slice(1).map((entry, i) => (
-                  <LeaderboardRow key={entry.buildId} rank={i + 2} entry={entry} showCategory />
+                  <LeaderboardRow key={entry.buildId} rank={i + 2} entry={entry} showCategory showTier />
                 ))}
               </div>
             )}
