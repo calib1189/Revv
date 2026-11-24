@@ -9,6 +9,8 @@ import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listVehicleMedia } from "@/lib/db/vehicle-media";
 import { ratedGalleryIds } from "@/lib/rating/rated-photos";
 import { getActiveBuild, listAllRatingScores, pendingRatingFromBuild } from "@/lib/db/builds";
+import { loadBattleRecord, loadSkipLineState } from "@/lib/battles/load";
+import { BattleCarCard } from "@/features/battles/battle-car-card";
 import { listBuildRatingHistory } from "@/lib/db/build-rating-history";
 import { computeTopPercent } from "@/lib/rating/percentile";
 import { computeRankPosition, type RankPosition } from "@/lib/rating/rank-position";
@@ -118,6 +120,7 @@ export default async function VehiclePage({
       ? recordVehicleView(supabase, user.id, vehicleId, sourcePostId).catch(() => {})
       : Promise.resolve();
 
+  const battleRecordPromise = loadBattleRecord(supabase, vehicleId).catch(() => null);
   const [owner, gallery, heroMedia, activeBuild] = await Promise.all([
     getProfileByUserId(supabase, vehicle.owner_id),
     listVehicleMedia(supabase, vehicleId),
@@ -393,6 +396,12 @@ export default async function VehiclePage({
           <DecalCard offer={decalOffer} priceCents={DECAL_PRICE_CENTS} justOrdered={decalParam === "ordered"} />
         )}
         {posterOffer && <PosterCard offer={posterOffer} justOrdered={posterParam === "ordered"} />}
+
+        <BattleCarCard
+          vehicleId={vehicle.id}
+          record={await battleRecordPromise}
+          skip={isOwner && user ? await loadSkipLineState(supabase, vehicle, score, user.id) : null}
+        />
 
         <PeerRatingCard
           vehicleId={vehicle.id}

@@ -55,3 +55,14 @@ export const DAILY_POINTS = {
   place: { 1: 25, 2: 15, 3: 10 } as Record<number, number>,
   streak: { 7: 15, 30: 50 } as Record<number, number>,
 };
+
+/** Build Battle. Voting pays like voting in the Daily; picking the
+ * winner adds a little; a win pays the car's owner, an upset (the crowd
+ * picked the car SORZA scored lower) like finishing first in the Daily.
+ * Each is paid once per day through the ledger's unique key. */
+export const BATTLE_POINTS = {
+  voted: 3,
+  calledIt: 2,
+  win: 15,
+  upsetWin: 25,
+};

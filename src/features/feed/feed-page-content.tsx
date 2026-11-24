@@ -11,6 +11,7 @@ import type { SponsoredSlideData } from "@/features/feed/sponsored-slide";
 import { isNewViewer, loadJustRated, loadTopBuilds, type JustRatedSlideData } from "@/lib/feed/just-rated";
 import { loadFeedDrop } from "@/lib/merch/feed-drop";
 import { getProfileByUserId } from "@/lib/db/profiles";
+import { loadTodayBattle, loadYesterdayBattle } from "@/lib/battles/load";
 
 export async function FeedPageContent() {
   const supabase = await createClient();
@@ -35,7 +36,7 @@ export async function FeedPageContent() {
   }).catch(() => null);
   const user = await getCurrentUser();
   const profilePromise = user ? getProfileByUserId(supabase, user.id) : Promise.resolve(null);
-  const [{ items }, dailyTeaser, storyTray, justRated, drop, topBuilds] = await Promise.all([
+  const [{ items }, dailyTeaser, storyTray, justRated, drop, topBuilds, todayBattle, yesterdayBattle] = await Promise.all([
     listRankedFeedPosts(supabase, { viewerId: user?.id ?? null, limit: 8 }),
     loadDailyTeaser(user?.id ?? null),
     user ? loadStoryTray(supabase, user.id).catch(() => [] as TrayPerson[]) : Promise.resolve([] as TrayPerson[]),
@@ -50,7 +51,11 @@ export async function FeedPageContent() {
     profilePromise
       .then((p) => ((user ? p !== null && isNewViewer(p.created_at) : true) ? loadTopBuilds(supabase) : []))
       .catch(() => [] as JustRatedSlideData[]),
+    // Build Battle: extra too, and hidden until 0131 has run.
+    loadTodayBattle(supabase, user?.id ?? null).catch(() => null),
+    loadYesterdayBattle(supabase, user?.id ?? null).catch(() => null),
   ]);
+  const viewerUsername = await profilePromise.then((p) => p?.username ?? null).catch(() => null);
   const [cards, ad] = await Promise.all([
     composePostCards(supabase, items.map((item) => item.post), user?.id ?? null),
     adPromise,
@@ -67,6 +72,11 @@ export async function FeedPageContent() {
       daily={daily}
       justRated={justRated.filter((j) => !topBuilds.some((t) => t.vehicleId === j.vehicleId))}
       topBuilds={topBuilds}
+      // Today's battle leads until you've voted; your own car's battle
+      // stays up so you can share it.
+      battle={todayBattle && !todayBattle.ended && (!todayBattle.myVote || todayBattle.isOwner) ? todayBattle : null}
+      battleWinner={yesterdayBattle?.result?.winnerId ? yesterdayBattle : null}
+      viewerUsername={viewerUsername}
       drop={drop}
       isAuthenticated={Boolean(user)}
       storyTray={storyTray}

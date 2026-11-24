@@ -78,7 +78,7 @@ export interface Database {
           id: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate" | "referral";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate" | "referral" | "battle_priority";
           source_id: string;
           created_at: string;
         };
@@ -86,7 +86,7 @@ export interface Database {
           id?: string;
           user_id: string;
           amount: number;
-          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate" | "referral";
+          source_type: "achievement" | "challenge" | "purchase" | "admin_grant" | "daily" | "points_pack" | "points_refund" | "instant_rerate" | "referral" | "battle_priority";
           source_id: string;
           created_at?: string;
         };
@@ -1511,14 +1511,14 @@ export interface Database {
         Row: {
           user_id: string;
           day: string;
-          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car" | "drop";
+          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car" | "drop" | "battle";
           slot: number;
           sent_at: string;
         };
         Insert: {
           user_id: string;
           day: string;
-          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car" | "drop";
+          kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car" | "drop" | "battle";
           slot?: number;
           sent_at?: string;
         };
@@ -1729,6 +1729,72 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["audit_logs"]["Insert"]>;
+        Relationships: never[];
+      };
+      build_battles: {
+        Row: {
+          id: string;
+          battle_date: string;
+          starts_at: string;
+          ends_at: string;
+          vehicle_a_id: string;
+          vehicle_b_id: string;
+          score_a: number;
+          score_b: number;
+          settled_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          battle_date: string;
+          starts_at: string;
+          ends_at: string;
+          vehicle_a_id: string;
+          vehicle_b_id: string;
+          score_a: number;
+          score_b: number;
+          settled_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["build_battles"]["Insert"]>;
+        Relationships: never[];
+      };
+      build_battle_votes: {
+        Row: {
+          battle_id: string;
+          voter_id: string;
+          vehicle_id: string;
+          created_at: string;
+        };
+        Insert: {
+          battle_id: string;
+          voter_id: string;
+          vehicle_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["build_battle_votes"]["Insert"]>;
+        Relationships: never[];
+      };
+      build_battle_priority: {
+        Row: {
+          id: string;
+          vehicle_id: string;
+          user_id: string;
+          points: number;
+          battle_id: string | null;
+          refunded_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          vehicle_id: string;
+          user_id: string;
+          points: number;
+          battle_id?: string | null;
+          refunded_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["build_battle_priority"]["Insert"]>;
         Relationships: never[];
       };
     };

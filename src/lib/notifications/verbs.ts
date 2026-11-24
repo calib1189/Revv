@@ -25,8 +25,24 @@ export const NOTIFICATION_VERBS: Record<string, string> = {
   meetup_rejected: "didn't approve your meet",
   ad_approved: "approved your ad — it's live",
   vehicle_verified: "verified your vehicle",
+  // Build Battle (lib/battles/run), also actor-less.
+  battle_entered: "put your car in today's Build Battle",
+  battle_won: "says your car won its Build Battle",
+  battle_upset: "says your car pulled off an upset in its Build Battle",
+  battle_lost: "says your car lost its Build Battle. Improve it and come back",
+  battle_refunded: "refunded your Build Battle spot: your car didn't get a battle in time",
 };
 
 /** Kinds with no actor: an admin decision or an automated check. The
  * inbox groups these as "System notifications". */
-export const SYSTEM_NOTIFICATION_KINDS = new Set(["meetup_approved", "meetup_rejected", "ad_approved", "vehicle_verified"]);
+export const SYSTEM_NOTIFICATION_KINDS = new Set([
+  "meetup_approved",
+  "meetup_rejected",
+  "ad_approved",
+  "vehicle_verified",
+  "battle_entered",
+  "battle_won",
+  "battle_upset",
+  "battle_lost",
+  "battle_refunded",
+]);

@@ -1,19 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { CHALLENGES } from "@/lib/challenges/catalog";
 import { ACHIEVEMENTS } from "@/lib/achievements/catalog";
-import { CHALLENGE_COMPLETION_POINTS, DAILY_POINTS, pointsForAchievement } from "@/lib/points/values";
+import { BATTLE_POINTS, CHALLENGE_COMPLETION_POINTS, DAILY_POINTS, pointsForAchievement } from "@/lib/points/values";
 import { STORE_ITEMS } from "@/lib/store/catalog";
 
-/** The most a perfect player earns in `days`: every Daily action every
- * day, every weekly challenge every week, both streak bonuses, and a
- * Daily win once a month. Achievements are one-time and counted apart. */
+/** The most a perfect player earns in `days`: every Daily action and a
+ * correctly called Build Battle every day, every weekly challenge every
+ * week, both streak bonuses, a Daily win and a battle upset once a month.
+ * Achievements are one-time and counted apart. */
 function perfectPlay(days: number): number {
-  const daily = (DAILY_POINTS.entered + DAILY_POINTS.voted + DAILY_POINTS.ratedRides) * days;
+  const daily =
+    (DAILY_POINTS.entered + DAILY_POINTS.voted + DAILY_POINTS.ratedRides + BATTLE_POINTS.voted + BATTLE_POINTS.calledIt) *
+    days;
   const weekly = CHALLENGES.length * CHALLENGE_COMPLETION_POINTS * Math.floor(days / 7);
   const streaks = Object.entries(DAILY_POINTS.streak)
     .filter(([d]) => Number(d) <= days)
     .reduce((sum, [, pts]) => sum + pts, 0);
-  const wins = DAILY_POINTS.place[1] * Math.floor(days / 30);
+  const wins = (DAILY_POINTS.place[1] + BATTLE_POINTS.upsetWin) * Math.floor(days / 30);
   return daily + weekly + streaks + wins;
 }
 

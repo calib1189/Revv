@@ -8,6 +8,7 @@ import { sendDueRankPushes } from "@/features/leaderboard/notify-rank-drops";
 import { sendDueOnboardingNudges } from "@/features/garage/notify-onboarding-nudges";
 import { sendDueDropPushes } from "@/features/merch/notify-drop";
 import { sendDuePostBonusPushes } from "@/features/promo/notify-post-bonus";
+import { ensureTodayBattle, refundExpiredPriority, settleDueBattles } from "@/lib/battles/run";
 
 // Settling plus a push fan-out; generous so a growing user base fits.
 export const maxDuration = 60;
@@ -24,6 +25,20 @@ export async function GET(request: Request) {
   const today = await ensureDailyChallenge(dailyDateKey());
   const settled = await settleDueDailyChallenges();
   const pushed = await sendDueDailyPushes(today);
+  // Build Battle: settle what ended, then set today's. Never costs the
+  // Daily; until 0131 runs both just fail here and log.
+  const battlesSettled = await settleDueBattles().catch((err) => {
+    console.error("settleDueBattles failed:", err);
+    return 0;
+  });
+  const spotsRefunded = await refundExpiredPriority().catch((err) => {
+    console.error("refundExpiredPriority failed:", err);
+    return 0;
+  });
+  const battle = await ensureTodayBattle().catch((err) => {
+    console.error("ensureTodayBattle failed:", err);
+    return null;
+  });
   // The afternoon pushes ride the same hourly run; none failing ever
   // costs the Daily, or the others.
   const [rankPushed, nudged, dropPushed, postBonusPushed] = await Promise.all([
@@ -49,6 +64,9 @@ export async function GET(request: Request) {
     challenge: today.challenge_date,
     settled: settled.map((s) => ({ date: s.challenge.challenge_date, placed: s.placements.length })),
     pushed,
+    battle: battle?.id ?? null,
+    battlesSettled,
+    spotsRefunded,
     rankPushed,
     nudged,
     dropPushed,

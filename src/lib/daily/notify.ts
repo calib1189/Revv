@@ -66,7 +66,7 @@ export async function claimLogSlot(
   service: SupabaseClient<Database>,
   userId: string,
   day: string,
-  kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car" | "drop",
+  kind: "morning" | "evening" | "vote" | "rank" | "add_car" | "rate_car" | "drop" | "battle",
   slot = 0,
 ): Promise<boolean> {
   const { data, error } = await service

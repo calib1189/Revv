@@ -52,6 +52,8 @@ const KIND_BADGE: Record<string, { icon: ReactNode; color: string }> = {
   meetup_rejected: { icon: <CloseIcon className="h-2.5 w-2.5" />, color: "#8e8e93" },
   ad_approved: { icon: <CheckIcon className="h-2.5 w-2.5" />, color: "#30d158" },
   vehicle_verified: { icon: <GemIcon className="h-2.5 w-2.5" />, color: "#f0cd6e" },
+  battle_won: { icon: <StarIcon className="h-2.5 w-2.5" />, color: "#f0cd6e" },
+  battle_upset: { icon: <StarIcon className="h-2.5 w-2.5" />, color: "#ff4433" },
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -161,6 +163,8 @@ export default async function NotificationsPage() {
                               ? `/discover/${n.target_id}`
                               : n.target_type === "vehicle" && n.target_id
                                 ? `/garage/${n.target_id}`
+                                : n.target_type === "battle" && n.target_id
+                                  ? `/battle/${n.target_id}`
                                 : n.target_type === "shop_review" && n.target_id && placeIdByReviewId.get(n.target_id)
                                   ? `/discover/shop/${encodeURIComponent(placeIdByReviewId.get(n.target_id)!)}`
                                 : n.target_type === "ad_campaign"
