@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickMatchup, type BattleCandidate } from "./match";
+import { hasTimeForBattle, pickMatchup, type BattleCandidate } from "./match";
 
 const car = (vehicleId: string, over: Partial<BattleCandidate> = {}): BattleCandidate => ({
   vehicleId,
@@ -74,5 +74,15 @@ describe("pickMatchup", () => {
   it("ignores a paid car that isn't in the pool", () => {
     const m = pickMatchup([car("a"), car("b")], "2026-11-24", "gone");
     expect(m).not.toBeNull();
+  });
+});
+
+describe("hasTimeForBattle", () => {
+  const endsAt = new Date("2026-11-24T06:00:00Z");
+  it("waits for tomorrow when fewer than 12 hours are left", () => {
+    expect(hasTimeForBattle(endsAt, new Date("2026-11-24T05:00:00Z"))).toBe(false);
+    expect(hasTimeForBattle(endsAt, new Date("2026-11-23T18:00:01Z"))).toBe(false);
+    expect(hasTimeForBattle(endsAt, new Date("2026-11-23T18:00:00Z"))).toBe(true);
+    expect(hasTimeForBattle(endsAt, new Date("2026-11-23T06:00:00Z"))).toBe(true);
   });
 });

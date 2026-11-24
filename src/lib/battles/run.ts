@@ -19,7 +19,7 @@ import { claimLogSlot } from "@/lib/daily/notify";
 import { dailyDateKey, dayBounds } from "@/lib/daily/day";
 import { sendPushToUser } from "@/lib/push/send";
 import { vehicleDisplayName } from "@/lib/vehicles/display-name";
-import { pickMatchup } from "@/lib/battles/match";
+import { hasTimeForBattle, pickMatchup } from "@/lib/battles/match";
 import { battleOutcome, battlePayouts, votePercents } from "@/lib/battles/result";
 
 /** The hourly job's Build Battle step (api/cron/daily). Sets today's
@@ -31,6 +31,9 @@ export async function ensureTodayBattle(now: Date = new Date()): Promise<Battle 
   const dateKey = dailyDateKey(now);
   const existing = await getBattleByDate(service, dateKey);
   if (existing) return existing;
+  const { startsAt, endsAt } = dayBounds(dateKey);
+  // Too late in the day for a fair vote: tomorrow's battle opens at midnight.
+  if (!hasTimeForBattle(endsAt, now)) return null;
 
   const approvedIds = await listLeaderboardVehicleIds(service);
   const builds = await listTopRatedBuilds(service, 1000, approvedIds);
@@ -59,7 +62,6 @@ export async function ensureTodayBattle(now: Date = new Date()): Promise<Battle 
   const match = pickMatchup(candidates, dateKey, paid?.vehicle_id ?? null);
   if (!match) return null;
 
-  const { startsAt, endsAt } = dayBounds(dateKey);
   const created = await createBattle(service, {
     battle_date: dateKey,
     starts_at: startsAt.toISOString(),

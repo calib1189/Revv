@@ -14,6 +14,14 @@ export interface BattleCandidate {
 /** A car sits out this many days after a battle, while there are others. */
 export const BATTLE_REST_DAYS = 14;
 
+/** A day's battle only starts with at least this long left to vote:
+ * set late in the day, it waits for tomorrow's instead. */
+export const MIN_BATTLE_HOURS = 12;
+
+export function hasTimeForBattle(endsAt: Date, now: Date): boolean {
+  return endsAt.getTime() - now.getTime() >= MIN_BATTLE_HOURS * 3_600_000;
+}
+
 function daysBetween(fromKey: string, toKey: string): number {
   return Math.round((Date.parse(`${toKey}T00:00:00Z`) - Date.parse(`${fromKey}T00:00:00Z`)) / 86_400_000);
 }
