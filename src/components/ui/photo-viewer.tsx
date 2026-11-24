@@ -59,7 +59,7 @@ export function PhotoViewer({
   if (!isClient) return null;
 
   return createPortal(
-    <div className="animate-fade-in fixed inset-0 z-[70] bg-black" role="dialog" aria-modal="true" aria-label="Photo">
+    <div data-no-edge-swipe className="animate-fade-in fixed inset-0 z-[70] bg-black" role="dialog" aria-modal="true" aria-label="Photo">
       <div
         ref={stripRef}
         onScroll={(e) => {

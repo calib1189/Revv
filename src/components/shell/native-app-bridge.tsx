@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { isSafeAppPath } from "@/lib/push/validation";
-import { installEdgeSwipeBack } from "@/lib/native/edge-swipe-back";
+import { installSwipeBack } from "@/lib/native/swipe-back";
 import { isAndroidApp } from "@/lib/native/android-app";
 import {
   listenForNotificationTaps,
@@ -44,7 +44,7 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
       // regular desktop browser should keep its normal scrollbar.
       document.documentElement.classList.add("native-app");
 
-      if (!cancelled) removeEdgeSwipe = installEdgeSwipeBack();
+      if (!cancelled) removeEdgeSwipe = installSwipeBack();
       // Composers ride on top of the keyboard — see lib/native/keyboard.ts.
       if (!cancelled) removeKeyboardTracking = installNativeKeyboardTracking();
 
