@@ -32,14 +32,14 @@ export default async function AdminDashboardPage() {
   const reviewSections = ADMIN_SECTION_GROUPS[0].sections;
   const waiting = reviewSections.filter((s) => s.countKey && counts[s.countKey] > 0);
 
-  const stats = [
-    { label: "Users", value: totals.profiles },
+  const stats: { label: string; value: number; href?: string }[] = [
+    { label: "Users", value: totals.profiles, href: "/admin/users" },
     { label: "Vehicles", value: totals.vehicles },
     { label: "Posts", value: totals.posts },
     ...(active
       ? [
-          { label: "Active today", value: active.last24h },
-          { label: "Active this week", value: active.last7d },
+          { label: "Active today", value: active.last24h, href: "/admin/activity" },
+          { label: "Active this week", value: active.last7d, href: "/admin/activity?range=week" },
         ]
       : []),
   ];
@@ -110,12 +110,26 @@ export default async function AdminDashboardPage() {
       <section className="mb-8">
         <SectionTitle action={<Link href="/admin/analytics">Analytics</Link>}>Platform</SectionTitle>
         <div className="grid grid-cols-3 gap-2.5">
-          {stats.map(({ label, value }) => (
-            <div key={label} className="glass-raised elev-1 rounded-[18px] px-3 py-3.5">
-              <p className="numeral text-[1.375rem] leading-none">{formatCompactNumber(value)}</p>
-              <p className="mt-1.5 text-[0.75rem] text-muted">{label}</p>
-            </div>
-          ))}
+          {stats.map(({ label, value, href }) => {
+            const body = (
+              <>
+                <p className="numeral text-[1.375rem] leading-none">{formatCompactNumber(value)}</p>
+                <p className="mt-1.5 flex items-center gap-0.5 text-[0.75rem] text-muted">
+                  {label}
+                  {href && <ChevronRightIcon className="h-3 w-3 flex-shrink-0 text-muted/60" />}
+                </p>
+              </>
+            );
+            return href ? (
+              <Link key={label} href={href} className="pressable glass-raised elev-1 rounded-[18px] px-3 py-3.5">
+                {body}
+              </Link>
+            ) : (
+              <div key={label} className="glass-raised elev-1 rounded-[18px] px-3 py-3.5">
+                {body}
+              </div>
+            );
+          })}
         </div>
       </section>
 

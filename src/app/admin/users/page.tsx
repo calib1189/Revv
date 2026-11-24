@@ -6,6 +6,8 @@ import {
   type AdminUserFilter,
 } from "@/lib/db/profiles";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { getLastActiveAt } from "@/lib/analytics/queries";
+import { relativeTime } from "@/lib/format/relative-time";
 import { UserRow, type UserRowData } from "@/features/admin/user-row";
 import { FilterChips } from "@/components/ui/segmented-links";
 import { SearchIcon, UsersIcon } from "@/components/ui/icons";
@@ -47,7 +49,11 @@ export default async function AdminUsersPage({
   const { profiles, total } = await listProfilesForAdmin(supabase, { query: q, filter, page });
 
   const avatarIds = profiles.map((p) => p.avatar_media_id).filter((id): id is string => Boolean(id));
-  const avatars = await getMediaByIds(supabase, avatarIds).catch(() => []);
+  const [avatars, lastActive] = await Promise.all([
+    getMediaByIds(supabase, avatarIds).catch(() => []),
+    // null hides the line rather than wrongly saying "No activity yet".
+    getLastActiveAt(supabase, profiles.map((p) => p.id)).catch(() => null),
+  ]);
   const avatarUrlById = new Map(avatars.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]));
 
   const rows: UserRowData[] = profiles.map((p) => ({
@@ -60,6 +66,11 @@ export default async function AdminUsersPage({
       day: "numeric",
       year: "numeric",
     }),
+    lastActiveLabel: lastActive
+      ? lastActive.has(p.id)
+        ? `Last active ${relativeTime(lastActive.get(p.id)!)}`
+        : "No activity yet"
+      : null,
     isVerified: p.is_verified,
     isFounder: p.is_founder,
     isBanned: p.is_banned,

@@ -15,6 +15,9 @@ export interface UserRowData {
   /** When the account was made, already formatted ("Nov 3, 2026") — done
    * on the server so the server and browser renders can't disagree. */
   joinedLabel: string;
+  /** "Last active 3h ago" / "No activity yet", formatted on the server;
+   * null when it couldn't be looked up. */
+  lastActiveLabel: string | null;
   isVerified: boolean;
   isFounder: boolean;
   isBanned: boolean;
@@ -38,7 +41,7 @@ export function UserRow({ data }: { data: UserRowData }) {
 
   return (
     <li className="flex flex-col gap-3 border-b border-border px-4 py-3.5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
-      <Link href={`/u/${data.username}`} className="flex min-w-0 items-center gap-3">
+      <Link href={`/admin/users/${data.userId}`} className="flex min-w-0 items-center gap-3">
         <Avatar username={data.username} avatarUrl={data.avatarUrl} className="h-11 w-11 flex-shrink-0 text-base" />
         <div className="min-w-0">
           <p className="flex items-center gap-1 truncate text-[0.9375rem] font-semibold">
@@ -48,6 +51,9 @@ export function UserRow({ data }: { data: UserRowData }) {
           <p className="truncate text-[0.8125rem] text-muted">
             {data.displayName ? `@${data.username} · ` : ""}Joined {data.joinedLabel}
           </p>
+          {data.lastActiveLabel && (
+            <p className="truncate text-[0.8125rem] text-muted">{data.lastActiveLabel}</p>
+          )}
           {(isFounder || data.isBanned || data.isAdmin) && (
             <div className="mt-1 flex flex-wrap gap-1">
               {data.isAdmin && <Tag tone="accent">Admin</Tag>}
