@@ -7,7 +7,7 @@ import { isBlocking } from "@/lib/db/blocks";
 import { listVehiclesByOwner } from "@/lib/db/vehicles";
 import { listPostsByAuthor } from "@/lib/db/posts";
 import { listSavedPosts } from "@/lib/db/saves";
-import { recordProfileVisit } from "@/lib/db/profile-visits";
+import { RecordVisit } from "@/features/studio/record-visit";
 import { listLikedPosts, getLikeCountsForPosts } from "@/lib/db/likes";
 import { formatCompactNumber } from "@/lib/format/compact-number";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
@@ -63,15 +63,12 @@ export default async function ProfilePage({
 
   const isOwnProfile = currentUser?.id === profile.id;
 
-  // Best-effort: a visit that fails to record should never break the
-  // profile page itself. Skipped entirely for a logged-out viewer (no
-  // visitor_id to attribute it to, matching every other engagement
-  // table in this app) and for the owner viewing their own profile
-  // (not a meaningful "visit" for their own stats).
-  const recordVisit =
-    sourcePostId && currentUser && !isOwnProfile
-      ? recordProfileVisit(supabase, currentUser.id, profile.id, sourcePostId).catch(() => {})
-      : Promise.resolve();
+  // A visit from a post counts toward its Creator Studio stats. Recorded
+  // by the page once it's on screen (RecordVisit below), not here: the
+  // feed preloads this page, and a preload isn't a visit. Skipped for a
+  // logged-out viewer (no visitor_id to attribute it to) and for the
+  // owner viewing their own profile.
+  const countVisit = Boolean(sourcePostId && currentUser && !isOwnProfile);
 
   const [followerCount, followingCount, following, amBlocking, vehicles, posts, viewerIsAdmin] =
     await Promise.all([
@@ -92,7 +89,6 @@ export default async function ProfilePage({
             .then((viewer) => Boolean(viewer?.is_admin))
             .catch(() => false)
         : Promise.resolve(false),
-      recordVisit,
     ]);
 
   const heroIds = vehicles
@@ -217,6 +213,7 @@ export default async function ProfilePage({
 
   return (
     <div className="relative w-full flex-1 overflow-x-clip">
+      {countVisit && sourcePostId && <RecordVisit kind="profile" targetId={profile.id} sourcePostId={sourcePostId} />}
       {/* Equipped profile background as an ambient wash: full-bleed
           behind the whole top of the profile, dissolving into the page
           (.ambient-fade) instead of sitting in a box. Dimmed so the name

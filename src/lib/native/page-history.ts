@@ -90,12 +90,21 @@ export function installPageHistory(): () => void {
     return replace.call(history, stateForReplace(data, currentState()), unused, url);
   };
 
-  // Taps that can leave the page: take the copy now, while it's still the
-  // page on screen. Most taps go nowhere and the copy is simply dropped.
+  // A tap on a link to another page: take the copy now, while it's still
+  // the page on screen. Only links, so ordinary taps (like, vote, play)
+  // never pay for a copy; pages opened from a button get the plain
+  // background underneath instead.
   function onClick(e: MouseEvent) {
     const target = e.target instanceof Element ? e.target : null;
-    if (!target?.closest("a[href], button, [role='button'], [role='link']")) return;
-    if (target.closest("[data-swipe-back]")) return;
+    const link = target?.closest<HTMLAnchorElement>("a[href]");
+    if (!link || link.closest("[data-swipe-back]") || link.target === "_blank") return;
+    let next: URL;
+    try {
+      next = new URL(link.href, window.location.href);
+    } catch {
+      return;
+    }
+    if (next.origin !== window.location.origin || next.pathname === window.location.pathname) return;
     try {
       pending = { href: window.location.href, at: Date.now(), snapshot: capturePage() };
     } catch {

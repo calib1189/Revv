@@ -61,14 +61,86 @@ export async function GaragePageContent({
   }
 
   const supabase = await createClient();
-  const vehicles = await listVehiclesByOwner(supabase, user.id);
-  const heroIds = vehicles
-    .map((v) => v.hero_media_id)
-    .filter((id): id is string => Boolean(id));
-  const [heroMedia, activeBuildByVehicle] = await Promise.all([
-    getMediaByIds(supabase, heroIds),
-    listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id)),
+
+  // The cars, their builds and their parts depend on each other; nothing
+  // else here does, so it all loads at once alongside them. (It used to
+  // run as six rounds, one after another, on a panel that's mounted on
+  // every tab.)
+  const garagePromise = (async () => {
+    const vehicles = await listVehiclesByOwner(supabase, user.id);
+    const heroIds = vehicles
+      .map((v) => v.hero_media_id)
+      .filter((id): id is string => Boolean(id));
+    const [heroMedia, activeBuildByVehicle] = await Promise.all([
+      getMediaByIds(supabase, heroIds),
+      listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id)),
+    ]);
+
+    // What this garage actually contains, read back from the parts
+    // themselves rather than stored anywhere (CLAUDE.md invariant 3).
+    // Best-effort like everything else on this page: the Garage panel is
+    // mounted on every route via the tab pager, so a failure here must
+    // not take down the whole app — it just costs the stat panel its
+    // mod/spend figures.
+    let modCount = 0;
+    let investedCents = 0;
+    try {
+      const buildIds = [...activeBuildByVehicle.values()].map((b) => b.id);
+      const parts = await listBuildPartsForBuilds(supabase, buildIds);
+      modCount = parts.length;
+      investedCents = parts.reduce(
+        (sum, p) => sum + (p.price_cents ?? 0) + (p.install_cost_cents ?? 0),
+        0,
+      );
+    } catch (err) {
+      console.error("Garage parts aggregate failed:", err);
+    }
+    return { vehicles, heroMedia, activeBuildByVehicle, modCount, investedCents };
+  })();
+
+  // Nameplate Color is account-wide, bought/equipped from the central
+  // Store (/store) — this just displays whatever's currently equipped.
+  // Garage Backdrop, by contrast, lives on each vehicle row
+  // (vehicles.equipped_backdrop, set from the Garage Editor at
+  // /garage/customize) and VehicleBay reads it directly off the
+  // vehicle it's given, so there's nothing to fetch for it here.
+  // Best-effort: a not-yet-migrated equipped_* column shouldn't take
+  // down the whole Garage panel (mounted on every route via the tab
+  // pager, see the comment below).
+  const profilePromise = getProfileByUserId(supabase, user.id).catch((err) => {
+    console.error("Garage cosmetics fetch failed:", err);
+    return null;
+  });
+
+  // Garage is the loop's own home screen — visited constantly, so it's
+  // the natural place to lazily check for newly-earned achievements and
+  // weekly challenge completions (see lib/achievements/unlock.ts and
+  // lib/challenges/progress.ts) rather than needing a background job
+  // for every possible trigger.
+  //
+  // Degrade gracefully if their migrations haven't been applied yet —
+  // Garage is now mounted on every route via the tab pager (see
+  // tab-order.ts), so an unhandled error here doesn't just break this
+  // panel, it takes down every page for every logged-in user. Same
+  // "missing table shouldn't take down the nav" reasoning header.tsx
+  // already uses for messaging.
+  const progressPromise = Promise.all([
+    checkAndUnlockAchievements(supabase, user.id),
+    getWeeklyChallengeProgress(supabase, user.id),
+  ]).catch((err) => {
+    console.error("Achievements/challenges check failed:", err);
+    return null;
+  });
+
+  const [garage, profile, progress, dailyTeaser, todayBattle] = await Promise.all([
+    garagePromise,
+    profilePromise,
+    progressPromise,
+    loadDailyTeaser(user.id),
+    // The way back to today's battle once it has left your feed.
+    loadTodayBattle(supabase, user.id).catch(() => null),
   ]);
+  const { vehicles, heroMedia, activeBuildByVehicle, modCount, investedCents } = garage;
   const heroUrlById = new Map(
     heroMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
   );
@@ -87,76 +159,12 @@ export async function GaragePageContent({
   const bestHeroUrl = bestVehicle?.hero_media_id ? (heroUrlById.get(bestVehicle.hero_media_id) ?? null) : null;
   const bestName = bestVehicle ? bestVehicle.nickname || `${bestVehicle.make} ${bestVehicle.model}` : null;
 
-  // What this garage actually contains, read back from the parts
-  // themselves rather than stored anywhere (CLAUDE.md invariant 3).
-  // Best-effort like everything else on this page: the Garage panel is
-  // mounted on every route via the tab pager, so a failure here must
-  // not take down the whole app — it just costs the stat panel its
-  // mod/spend figures.
-  let modCount = 0;
-  let investedCents = 0;
-  try {
-    const buildIds = [...activeBuildByVehicle.values()].map((b) => b.id);
-    const parts = await listBuildPartsForBuilds(supabase, buildIds);
-    modCount = parts.length;
-    investedCents = parts.reduce(
-      (sum, p) => sum + (p.price_cents ?? 0) + (p.install_cost_cents ?? 0),
-      0,
-    );
-  } catch (err) {
-    console.error("Garage parts aggregate failed:", err);
-  }
-
-  // Nameplate Color is account-wide, bought/equipped from the central
-  // Store (/store) — this just displays whatever's currently equipped.
-  // Garage Backdrop, by contrast, lives on each vehicle row
-  // (vehicles.equipped_backdrop, set from the Garage Editor at
-  // /garage/customize) and VehicleBay reads it directly off the
-  // vehicle it's given, so there's nothing to fetch for it here.
-  // Best-effort: a not-yet-migrated equipped_* column shouldn't take
-  // down the whole Garage panel (mounted on every route via the tab
-  // pager, see the comment below).
-  let nameColorItem: ReturnType<typeof getStoreItem> = undefined;
-  try {
-    const profile = await getProfileByUserId(supabase, user.id);
-    nameColorItem = profile?.equipped_vehicle_name_color
-      ? getStoreItem(profile.equipped_vehicle_name_color)
-      : undefined;
-  } catch (err) {
-    console.error("Garage cosmetics fetch failed:", err);
-  }
-
-  // Garage is the loop's own home screen — visited constantly, so it's
-  // the natural place to lazily check for newly-earned achievements and
-  // weekly challenge completions (see lib/achievements/unlock.ts and
-  // lib/challenges/progress.ts) rather than needing a background job
-  // for every possible trigger.
-  //
-  // Degrade gracefully if their migrations haven't been applied yet —
-  // Garage is now mounted on every route via the tab pager (see
-  // tab-order.ts), so an unhandled error here doesn't just break this
-  // panel, it takes down every page for every logged-in user. Same
-  // "missing table shouldn't take down the nav" reasoning header.tsx
-  // already uses for messaging.
-  let newlyUnlocked: Awaited<ReturnType<typeof checkAndUnlockAchievements>> = [];
-  let challengeProgress: Awaited<ReturnType<typeof getWeeklyChallengeProgress>>["progress"] = [];
-  let newlyCompleted: Awaited<ReturnType<typeof getWeeklyChallengeProgress>>["newlyCompleted"] = [];
-  try {
-    const [unlocked, challenges] = await Promise.all([
-      checkAndUnlockAchievements(supabase, user.id),
-      getWeeklyChallengeProgress(supabase, user.id),
-    ]);
-    newlyUnlocked = unlocked;
-    challengeProgress = challenges.progress;
-    newlyCompleted = challenges.newlyCompleted;
-  } catch (err) {
-    console.error("Achievements/challenges check failed:", err);
-  }
-  const [dailyTeaser, todayBattle] = await Promise.all([
-    loadDailyTeaser(user.id),
-    // The way back to today's battle once it has left your feed.
-    loadTodayBattle(supabase, user.id).catch(() => null),
-  ]);
+  const nameColorItem = profile?.equipped_vehicle_name_color
+    ? getStoreItem(profile.equipped_vehicle_name_color)
+    : undefined;
+  const newlyUnlocked = progress?.[0] ?? [];
+  const challengeProgress = progress?.[1].progress ?? [];
+  const newlyCompleted = progress?.[1].newlyCompleted ?? [];
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">

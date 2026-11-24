@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { createCommentAction, type CommentFormState } from "@/features/feed/actions";
+import { createSheetCommentAction, type CommentFormState } from "@/features/feed/actions";
 import { Callout } from "@/components/ui/callout";
 import { ArrowUpIcon, CloseIcon } from "@/components/ui/icons";
 import { Avatar } from "@/features/feed/avatar";
@@ -55,7 +55,7 @@ export const SheetComposer = forwardRef<
 >(function SheetComposer({ postId, replyTo, onCancelReply, onPosted, onFocusChange, me }, ref) {
   const [state, formAction, isPending] = useActionState(
     (prev: CommentFormState, formData: FormData) =>
-      createCommentAction(postId, String(formData.get("parentId") ?? "") || null, prev, formData),
+      createSheetCommentAction(postId, String(formData.get("parentId") ?? "") || null, prev, formData),
     initialState,
   );
   const [text, setText] = useState("");

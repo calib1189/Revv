@@ -88,6 +88,10 @@ export async function LeaderboardPageContent({
   // logged out, neither means anything, so they silently behave like
   // Global rather than the scope tabs just not being clickable.
   const scope = currentUser ? initialScope : "global";
+  // Needed only at the end, so it loads alongside everything else.
+  const viewerProfilePromise = currentUser
+    ? getProfileByUserId(supabase, currentUser.id).catch(() => null)
+    : Promise.resolve(null);
 
   // Leaderboard eligibility gate: only builds on a vehicle with an
   // admin-approved ownership-verification photo count. Intersected with
@@ -120,7 +124,7 @@ export async function LeaderboardPageContent({
   // Where the viewer's own best build sits, so the first thing they look
   // for is the first thing the page answers. Matched on username because
   // that's the owner identity a composed entry carries.
-  const viewerProfile = currentUser ? await getProfileByUserId(supabase, currentUser.id) : null;
+  const viewerProfile = await viewerProfilePromise;
   const viewerIndex = viewerProfile
     ? entries.findIndex((e) => e.ownerUsername === viewerProfile.username)
     : -1;

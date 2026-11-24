@@ -11,6 +11,17 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "20mb",
     },
+    // Keep a page you've just been on for 30 seconds, so opening it again
+    // (a car, a profile, a tab you left) is instant instead of a fresh
+    // server round trip each time. Next 15 dropped this default to 0.
+    // `static` is how long a page the feed preloaded (lib/navigation/
+    // prefetch.ts) stays usable: 2 minutes rather than the default 5, so
+    // a preloaded profile is never far behind. Any action that
+    // revalidates clears both, so your own changes always show.
+    staleTimes: {
+      dynamic: 30,
+      static: 120,
+    },
   },
   // The build-poster renderer (features/posters/poster-art.tsx) reads its
   // fonts and artwork from disk by name, which the tracer can't follow:

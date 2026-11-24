@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from "react";
+import { useDwellPrefetch } from "@/lib/navigation/prefetch";
 import Link from "next/link";
 import { SaveButton } from "@/features/feed/save-button";
 import { PostContextMenu } from "@/features/feed/post-context-menu";
@@ -1011,6 +1012,13 @@ export function SwipeSlide({
   }, [data.isAuthenticated, data.post.id]);
 
   const discSpinning = isVideo ? isPlaying : isOnScreen;
+
+  // Once you've stayed on a post, its car and its author's profile load in
+  // the background, so tapping either opens instantly.
+  const profileHref = `/u/${data.authorUsername}?from=${data.post.id}`;
+  const carHref =
+    data.vehicleTitle && data.post.vehicle_id ? `/garage/${data.post.vehicle_id}?from=${data.post.id}` : null;
+  useDwellPrefetch(carHref ? [carHref, profileHref] : [profileHref], isOnScreen && !data.isOwnPost);
 
   return (
     <div

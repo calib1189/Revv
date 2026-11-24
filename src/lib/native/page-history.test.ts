@@ -74,8 +74,14 @@ describe("installPageHistory", () => {
     expect(previousPageSnapshot()).toBeNull();
   });
 
-  it("doesn't take copies for taps on plain text", () => {
-    document.querySelector("h1")!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  it("doesn't take copies for taps that aren't links to another page", () => {
+    const button = document.createElement("button");
+    const self = document.createElement("a");
+    self.href = "/garage/one";
+    document.querySelector("main")!.append(button, self);
+    for (const el of [document.querySelector("h1")!, button, self]) {
+      el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    }
     window.history.pushState({ __NA: true }, "", "/u/owner");
     expect(previousPageSnapshot()).toBeNull();
   });

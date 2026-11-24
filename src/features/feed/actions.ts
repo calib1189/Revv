@@ -136,8 +136,11 @@ export async function toggleLikeAction(
     const added = await likePost(supabase, user.id, postId);
     if (added) after(() => notifyPostAuthor(supabase, postId, user.id, "liked your post", "likes"));
   }
-  revalidatePath(`/p/${postId}`);
-  revalidatePath("/feed");
+  // No revalidatePath: in a server action any revalidation makes Next
+  // re-render the whole page you're on and send it back with the reply.
+  // On the feed that was the entire feed, on every like. The heart and
+  // count are already updated in place (LikeButton), and pages are
+  // fetched fresh when you open them.
 }
 
 /** Fire-and-forget push to a post's author — never blocks or fails the
@@ -240,12 +243,32 @@ export interface CommentFormState {
   error: string | null;
 }
 
+/** The post page's comment form: the comments there are drawn by the
+ * server, so the page is refreshed with the new one. */
 export async function createCommentAction(
   postId: string,
   parentId: string | null,
   _prevState: CommentFormState,
   formData: FormData,
 ): Promise<CommentFormState> {
+  const result = await postComment(postId, parentId, formData);
+  if (!result.error) revalidatePath(`/p/${postId}`);
+  return result;
+}
+
+/** The feed's slide-up comment sheet, which reloads its own list after
+ * posting. No revalidatePath: in an action that would make Next rebuild
+ * the whole feed you're on and send it back, for nothing. */
+export async function createSheetCommentAction(
+  postId: string,
+  parentId: string | null,
+  _prevState: CommentFormState,
+  formData: FormData,
+): Promise<CommentFormState> {
+  return postComment(postId, parentId, formData);
+}
+
+async function postComment(postId: string, parentId: string | null, formData: FormData): Promise<CommentFormState> {
   const body = String(formData.get("body") ?? "");
   const gif = parseGifFromForm(formData);
   if (gif === "invalid") return { error: "Couldn't post that GIF." };
@@ -274,7 +297,6 @@ export async function createCommentAction(
   if (parentId) {
     after(() => notifyParentCommentAuthor(supabase, postId, parentId, user.id));
   }
-  revalidatePath(`/p/${postId}`);
   return { error: null };
 }
 

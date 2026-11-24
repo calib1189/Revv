@@ -49,7 +49,8 @@ export function EntriesGallery({
         setError(result.error);
         return;
       }
-      router.refresh();
+      // The action's revalidatePath already sends the refreshed page back;
+      // a router.refresh() on top fetched it all a second time.
     });
   }
 

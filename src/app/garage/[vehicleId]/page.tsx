@@ -46,7 +46,7 @@ import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { CopyBuildButton } from "@/features/builds/copy-build-button";
 import { calculateBudgetSummary } from "@/lib/builds/budget";
 import { listMaintenanceForVehicle } from "@/lib/db/maintenance";
-import { recordVehicleView } from "@/lib/db/vehicle-views";
+import { RecordVisit } from "@/features/studio/record-visit";
 import { getPartClickCountsForBuildParts } from "@/lib/db/part-clicks";
 import type { Metadata } from "next";
 import { getPointsBalance } from "@/lib/db/points";
@@ -60,14 +60,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { vehicleId } = await params;
   const supabase = await createClient();
-  const vehicle = await getVehicleById(supabase, vehicleId);
+  const [vehicle, score] = await Promise.all([
+    getVehicleById(supabase, vehicleId),
+    getActiveBuild(supabase, vehicleId)
+      .then((build) => build?.ai_rating_score ?? null)
+      .catch(() => null),
+  ]);
   if (!vehicle) return {};
 
   const title = vehicle.nickname || `${vehicle.make} ${vehicle.model}`;
   const carName = [vehicle.year, vehicle.make, vehicle.model, vehicle.trim].filter(Boolean).join(" ");
-  const score = await getActiveBuild(supabase, vehicleId)
-    .then((build) => build?.ai_rating_score ?? null)
-    .catch(() => null);
   // The score is the hook in a link preview, so it leads the description.
   const description =
     score != null
@@ -103,110 +105,126 @@ export default async function VehiclePage({
   const { from: sourcePostId, decal: decalParam, poster: posterParam, score: scoreParam } = await searchParams;
   const supabase = await createClient();
 
-  const [vehicle, user] = await Promise.all([
+  // Everything below is loaded in as few round trips as the data allows:
+  // the car, the viewer and the build first, then every independent
+  // query at once. (They used to run one after another, ~20 deep, which
+  // was most of the time this page took to open.)
+  const [vehicle, user, activeBuild] = await Promise.all([
     getVehicleById(supabase, vehicleId),
     getCurrentUser(),
+    getActiveBuild(supabase, vehicleId),
   ]);
   if (!vehicle) notFound();
 
   const isOwner = user?.id === vehicle.owner_id;
 
-  // Best-effort, same reasoning as the profile page's equivalent: never
-  // let a failed visit record break the page, skip it for a logged-out
-  // viewer, and skip it for the vehicle's own owner (not a meaningful
-  // "visit" for their own stats).
-  const recordVisit =
-    sourcePostId && user && !isOwner
-      ? recordVehicleView(supabase, user.id, vehicleId, sourcePostId).catch(() => {})
-      : Promise.resolve();
+  // A visit from a post counts toward its Creator Studio stats. Recorded
+  // by the page once it's on screen (RecordVisit below), not here: the
+  // feed preloads this page, and a preload isn't a visit. Skipped for a
+  // logged-out viewer and the car's own owner.
+  const countVisit = Boolean(sourcePostId && user && !isOwner);
 
   const battleRecordPromise = loadBattleRecord(supabase, vehicleId).catch(() => null);
-  const [owner, gallery, heroMedia, activeBuild] = await Promise.all([
-    getProfileByUserId(supabase, vehicle.owner_id),
-    listVehicleMedia(supabase, vehicleId),
-    vehicle.hero_media_id
-      ? getMediaById(supabase, vehicle.hero_media_id)
-      : Promise.resolve(null),
-    getActiveBuild(supabase, vehicleId),
-    recordVisit,
-  ]);
-  const buildParts = activeBuild
-    ? await listBuildParts(supabase, activeBuild.id)
-    : [];
-  const linkedParts = await getPartsByIds(
-    supabase,
-    buildParts
-      .map((p) => p.part_id)
-      .filter((id): id is string => Boolean(id)),
-  );
-  const partsById = new Map(linkedParts.map((p) => [p.id, p]));
-  const partMedia = await getMediaByIds(
-    supabase,
-    buildParts
-      .map((p) => p.media_id)
-      .filter((id): id is string => Boolean(id)),
-  );
-  const partMediaUrlById = new Map(
-    partMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
-  );
-  // Only ever shown to the owner (see ModificationList), so skip the
-  // query entirely for everyone else.
-  const clickCountsByBuildPart = isOwner
-    ? await getPartClickCountsForBuildParts(supabase, buildParts.map((p) => p.id))
-    : new Map<string, number>();
 
-  const maintenanceRecords = isOwner
-    ? await listMaintenanceForVehicle(supabase, vehicleId)
-    : [];
-  const vehiclePosts = await listFeedPosts(supabase, { vehicleIds: [vehicleId], limit: 60 });
-  const postThumbnails = await composeThumbnails(supabase, vehiclePosts);
+  // The mod list: parts, then their catalog rows, photos and (owner only)
+  // click counts together.
+  const partsPromise = (async () => {
+    const buildParts = activeBuild ? await listBuildParts(supabase, activeBuild.id) : [];
+    const [linkedParts, partMedia, clickCountsByBuildPart] = await Promise.all([
+      getPartsByIds(
+        supabase,
+        buildParts.map((p) => p.part_id).filter((id): id is string => Boolean(id)),
+      ),
+      getMediaByIds(
+        supabase,
+        buildParts.map((p) => p.media_id).filter((id): id is string => Boolean(id)),
+      ),
+      // Only ever shown to the owner (see ModificationList), so skip the
+      // query entirely for everyone else.
+      isOwner
+        ? getPartClickCountsForBuildParts(supabase, buildParts.map((p) => p.id))
+        : Promise.resolve(new Map<string, number>()),
+    ]);
+    return { buildParts, linkedParts, partMedia, clickCountsByBuildPart };
+  })();
 
-  const currentSubscores = (activeBuild?.ai_rating_subscores ?? null) as BuildRatingSubscores | null;
+  const postThumbnailsPromise = listFeedPosts(supabase, { vehicleIds: [vehicleId], limit: 60 }).then((posts) =>
+    composeThumbnails(supabase, posts),
+  );
+
   // Population is every active, rated build on SORZA — deliberately not
   // scoped to verified-only (the leaderboard's own population), since an
   // unverified vehicle can still have a rating and this modal isn't
   // claiming leaderboard rank, just "of rated builds" generally.
-  const topPercent =
+  const topPercentPromise =
     activeBuild?.ai_rating_score != null
-      ? computeTopPercent(activeBuild.ai_rating_score, await listAllRatingScores(supabase))
-      : null;
+      ? listAllRatingScores(supabase).then((scores) => computeTopPercent(activeBuild.ai_rating_score!, scores))
+      : Promise.resolve(null);
+
   // Degrade gracefully if the rating-history migration hasn't been
   // applied yet — every rated vehicle's page runs this on every visit,
   // so an unhandled error here would take down the whole page, not just
   // the sparkline in the breakdown modal.
-  let ratingHistory: Awaited<ReturnType<typeof listBuildRatingHistory>> = [];
-  if (activeBuild) {
-    try {
-      ratingHistory = await listBuildRatingHistory(supabase, activeBuild.id);
-    } catch (err) {
-      console.error("listBuildRatingHistory failed:", err);
-    }
-  }
+  const ratingHistoryPromise: Promise<Awaited<ReturnType<typeof listBuildRatingHistory>>> = activeBuild
+    ? listBuildRatingHistory(supabase, activeBuild.id).catch((err) => {
+        console.error("listBuildRatingHistory failed:", err);
+        return [];
+      })
+    : Promise.resolve([]);
+
   // Unlike topPercent, this is scoped to the exact same population the
   // leaderboard itself ranks against — verified vehicles only — so the
   // rank number shown here is never a claim the real leaderboard
   // wouldn't back up. A not-yet-verified vehicle simply doesn't get one,
   // rather than a rank that would be wrong the moment they checked
   // /leaderboard themselves.
-  const rankPosition: RankPosition | null =
+  const rankPositionPromise: Promise<RankPosition | null> =
     isOwner && activeBuild?.ai_rating_score != null && vehicle.ownership_verification_status === "approved"
-      ? computeRankPosition(
-          activeBuild.ai_rating_score,
-          await listAllRatingScores(supabase, await listLeaderboardVehicleIds(supabase)),
-        )
-      : null;
+      ? listLeaderboardVehicleIds(supabase)
+          .then((ids) => listAllRatingScores(supabase, ids))
+          .then((scores) => computeRankPosition(activeBuild.ai_rating_score!, scores))
+      : Promise.resolve(null);
 
   // Degrade gracefully if the peer-ratings migration hasn't been
   // applied yet — same "missing table shouldn't take down the page"
   // reasoning as ratingHistory above.
-  let peerRatingSummary: Awaited<ReturnType<typeof getPeerRatingSummary>> = { average: null, count: 0 };
-  let myPeerRating: number | null = null;
-  try {
-    peerRatingSummary = await getPeerRatingSummary(supabase, vehicle.id);
-    myPeerRating = user && !isOwner ? await getMyPeerRating(supabase, vehicle.id, user.id) : null;
-  } catch (err) {
+  const peerPromise = Promise.all([
+    getPeerRatingSummary(supabase, vehicle.id),
+    user && !isOwner ? getMyPeerRating(supabase, vehicle.id, user.id) : Promise.resolve(null),
+  ]).catch((err) => {
     console.error("Peer rating fetch failed:", err);
-  }
+    return [{ average: null, count: 0 }, null] as const;
+  });
+
+  const [
+    owner,
+    gallery,
+    heroMedia,
+    { buildParts, linkedParts, partMedia, clickCountsByBuildPart },
+    maintenanceRecords,
+    postThumbnails,
+    topPercent,
+    ratingHistory,
+    rankPosition,
+    [peerRatingSummary, myPeerRating],
+  ] = await Promise.all([
+    getProfileByUserId(supabase, vehicle.owner_id),
+    listVehicleMedia(supabase, vehicleId),
+    vehicle.hero_media_id ? getMediaById(supabase, vehicle.hero_media_id) : Promise.resolve(null),
+    partsPromise,
+    isOwner ? listMaintenanceForVehicle(supabase, vehicleId) : Promise.resolve([]),
+    postThumbnailsPromise,
+    topPercentPromise,
+    ratingHistoryPromise,
+    rankPositionPromise,
+    peerPromise,
+  ]);
+  const partsById = new Map(linkedParts.map((p) => [p.id, p]));
+  const partMediaUrlById = new Map(
+    partMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
+  );
+
+  const currentSubscores = (activeBuild?.ai_rating_subscores ?? null) as BuildRatingSubscores | null;
 
   const heroUrl = heroMedia
     ? publicMediaUrl(supabase, heroMedia.storage_path)
@@ -260,6 +278,7 @@ export default async function VehiclePage({
 
   return (
     <div className="flex-1 pb-16">
+      {countVisit && sourcePostId && <RecordVisit kind="vehicle" targetId={vehicleId} sourcePostId={sourcePostId} />}
       {/* Full-bleed hero: tall on phones so the car is the screen, a
           cinematic strip on wide screens. The name sits on the photo's
           lower edge over a scrim, the way a feature story opens. */}
