@@ -653,6 +653,141 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   animation: rise-in 360ms var(--ease-ios) both;
 }
 
+/* Build Battle intro: the two builds slide in from opposite sides, their
+   photos settle, then the VS stamps down between them with one shock
+   ring. Plays once, when the card comes into view: BattleCard holds it
+   paused (data-intro="wait") until then, so a slide swiped into view
+   isn't caught mid-animation. */
+@keyframes battle-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes battle-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes battle-photo-settle {
+  from {
+    transform: scale(1.16);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes battle-vs-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(2.6) rotate(-8deg);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.88) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+@keyframes battle-vs-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  8% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+}
+@keyframes battle-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes battle-live {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes battle-photo-pick {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.05);
+  }
+}
+
+.battle-enter-a {
+  animation: battle-in-left 620ms var(--ease-ios) both;
+}
+.battle-enter-b {
+  animation: battle-in-right 620ms var(--ease-ios) 90ms both;
+}
+.battle-photo {
+  animation: battle-photo-settle 1400ms var(--ease-ios) both;
+}
+.battle-photo-picked {
+  animation: battle-photo-pick 700ms var(--ease-ios) forwards;
+}
+.battle-vs {
+  animation: battle-vs-stamp 460ms cubic-bezier(0.2, 0.9, 0.3, 1.2) 480ms both;
+}
+.battle-vs-ring {
+  opacity: 0;
+  animation: battle-vs-ring 700ms ease-out 700ms both;
+}
+.battle-rise {
+  animation: battle-rise 420ms var(--ease-ios) 620ms both;
+}
+.battle-rise-late {
+  animation: battle-rise 420ms var(--ease-ios) 760ms both;
+}
+.battle-live {
+  animation: battle-live 1.6s ease-in-out infinite;
+}
+[data-intro="wait"] :is(.battle-enter-a, .battle-enter-b, .battle-photo, .battle-vs, .battle-vs-ring, .battle-rise, .battle-rise-late) {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-enter-a,
+  .battle-enter-b,
+  .battle-photo,
+  .battle-photo-picked,
+  .battle-vs,
+  .battle-vs-ring,
+  .battle-rise,
+  .battle-rise-late,
+  .battle-live {
+    animation: none;
+  }
+}
+
 /* The posting flow's sliders: a thin track filled up to the thumb in
    white, with a plain white thumb — iOS's own slider, on the always-dark
    studio surface. --range-fill is set inline from the value. */

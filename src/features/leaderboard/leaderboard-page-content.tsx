@@ -18,6 +18,8 @@ import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
 import { LeaderboardHeroCard, LeaderboardRunnerUpCard } from "@/features/leaderboard/leaderboard-hero-card";
 import { DailyInlineLink } from "@/features/daily/daily-teaser-card";
 import { loadDailyTeaser } from "@/lib/daily/teaser";
+import { loadTodayBattle } from "@/lib/battles/load";
+import { BattleInlineLink } from "@/features/battles/battle-entry";
 import { SegmentedLinks, FilterChips } from "@/components/ui/segmented-links";
 import { SectionTitle } from "@/components/ui/grouped-list";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -92,11 +94,12 @@ export async function LeaderboardPageContent({
   // the category filter (rather than a Postgres-side join) the same
   // reason listVehicleIdsByCategory itself avoids one — no dependency on
   // PostgREST's embedded-resource relationship cache staying in sync.
-  const [verifiedVehicleIds, categoryVehicleIds, scopeOwnerIds, dailyTeaser] = await Promise.all([
+  const [verifiedVehicleIds, categoryVehicleIds, scopeOwnerIds, dailyTeaser, todayBattle] = await Promise.all([
     listLeaderboardVehicleIds(supabase),
     initialCategory ? listVehicleIdsByCategory(supabase, initialCategory) : Promise.resolve(null),
     resolveScopeOwnerIds(supabase, scope, currentUser?.id ?? null),
     loadDailyTeaser(currentUser?.id ?? null),
+    loadTodayBattle(supabase, currentUser?.id ?? null).catch(() => null),
   ]);
   const verifiedSet = new Set(verifiedVehicleIds);
   let vehicleIds = categoryVehicleIds
@@ -149,6 +152,7 @@ export async function LeaderboardPageContent({
           Leaderboard
         </h1>
         {dailyTeaser && <DailyInlineLink teaser={dailyTeaser} />}
+        {todayBattle && !todayBattle.ended && <BattleInlineLink view={todayBattle} />}
       </header>
 
       <div className="animate-section-rise mb-6 flex flex-col gap-3" style={{ animationDelay: "60ms" }}>

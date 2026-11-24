@@ -18,6 +18,8 @@ import { getWeeklyChallengeProgress } from "@/lib/challenges/progress";
 import { WeeklyChallengesCard } from "@/features/challenges/weekly-challenges-card";
 import { DailyTeaserCard } from "@/features/daily/daily-teaser-card";
 import { loadDailyTeaser } from "@/lib/daily/teaser";
+import { loadTodayBattle } from "@/lib/battles/load";
+import { BattleEntryCard } from "@/features/battles/battle-entry";
 import { ChallengeCompleteToast } from "@/features/challenges/challenge-complete-toast";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getStoreItem } from "@/lib/store/catalog";
@@ -150,7 +152,11 @@ export async function GaragePageContent({
   } catch (err) {
     console.error("Achievements/challenges check failed:", err);
   }
-  const dailyTeaser = await loadDailyTeaser(user.id);
+  const [dailyTeaser, todayBattle] = await Promise.all([
+    loadDailyTeaser(user.id),
+    // The way back to today's battle once it has left your feed.
+    loadTodayBattle(supabase, user.id).catch(() => null),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
@@ -242,6 +248,12 @@ export async function GaragePageContent({
       {dailyTeaser && (
         <div className="animate-section-rise mb-4" style={{ animationDelay: "160ms" }}>
           <DailyTeaserCard teaser={dailyTeaser} />
+        </div>
+      )}
+
+      {todayBattle && !todayBattle.ended && (
+        <div className="animate-section-rise mb-4" style={{ animationDelay: "170ms" }}>
+          <BattleEntryCard view={todayBattle} />
         </div>
       )}
 

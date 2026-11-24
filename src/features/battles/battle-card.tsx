@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { MediaImg } from "@/components/ui/media-img";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
@@ -43,6 +43,26 @@ export function BattleCard({
   const [points, setPoints] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // The intro (globals.css, battle-*) waits until the card is on screen,
+  // so a feed slide swiped into view plays it rather than finishing
+  // off screen.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [intro, setIntro] = useState<"wait" | "play">("wait");
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setIntro("play");
+          io.disconnect();
+        }
+      },
+      { threshold: 0.45 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   const canVote = isAuthenticated && !view.isOwner && !view.ended && myVote === null;
   const reveal = myVote !== null || view.ended || view.isOwner;
@@ -63,7 +83,7 @@ export function BattleCard({
     });
   }
 
-  function side(car: BattleCar, percent: number) {
+  function side(car: BattleCar, percent: number, order: "a" | "b") {
     const tier = rankForScore(car.score);
     const won = view.result?.winnerId === car.vehicleId;
     const lost = view.result?.winnerId != null && !won;
@@ -73,7 +93,9 @@ export function BattleCard({
 
     const body = (
       <>
-        <MediaImg src={car.heroUrl} sizes="100vw" className="absolute inset-0 h-full w-full object-cover" />
+        <span className={`absolute inset-0 ${picked && !view.ended ? "battle-photo-picked" : "battle-photo"}`}>
+          <MediaImg src={car.heroUrl} sizes="100vw" className="h-full w-full object-cover" />
+        </span>
         <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/10" />
         <span
           className={`pointer-events-none absolute inset-0 bg-black transition-opacity duration-500 ${
@@ -83,7 +105,11 @@ export function BattleCard({
         {picked && (
           <span className="animate-fade-in pointer-events-none absolute inset-0 rounded-[inherit] ring-[3px] ring-inset ring-white/90" />
         )}
-        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 text-left">
+        <div
+          className={`absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 text-left ${
+            order === "a" ? "battle-rise" : "battle-rise-late"
+          }`}
+        >
           <div className="min-w-0">
             <div className="mb-1 flex flex-wrap items-center gap-1.5">
               {won && (
@@ -123,16 +149,21 @@ export function BattleCard({
       </>
     );
 
+    // The wrapper carries the slide-in; the inner element keeps its own
+    // transform free for .pressable.
     const shape = "relative min-h-0 flex-1 overflow-hidden rounded-[22px] bg-black";
+    const wrap = (inner: React.ReactNode) => (
+      <div className={`flex min-h-0 flex-1 flex-col ${order === "a" ? "battle-enter-a" : "battle-enter-b"}`}>{inner}</div>
+    );
     if (!isAuthenticated && !view.ended) {
-      return (
+      return wrap(
         <Link href={`/login?next=${encodeURIComponent(`/battle/${view.id}`)}`} className={`pressable ${shape}`}>
           {body}
-        </Link>
+        </Link>,
       );
     }
     if (canVote) {
-      return (
+      return wrap(
         <button
           type="button"
           onClick={() => vote(car.vehicleId)}
@@ -141,13 +172,13 @@ export function BattleCard({
           className={`pressable ${shape}`}
         >
           {body}
-        </button>
+        </button>,
       );
     }
-    return (
+    return wrap(
       <Link href={`/garage/${car.vehicleId}`} className={shape}>
         {body}
-      </Link>
+      </Link>,
     );
   }
 
@@ -173,24 +204,32 @@ export function BattleCard({
   const strong = tone === "media" ? "text-white" : "text-foreground";
 
   return (
-    <div className={`flex w-full flex-col gap-2 ${className}`}>
+    <div ref={rootRef} data-intro={intro} className={`flex w-full flex-col gap-2 ${className}`}>
       <div className="flex items-center justify-between px-1">
         <p className="micro-label text-accent">Build Battle</p>
-        <p className={`text-[0.75rem] ${muted}`} suppressHydrationWarning>
+        <p className={`flex items-center gap-1.5 text-[0.75rem] ${muted}`} suppressHydrationWarning>
+          {!view.ended && <span aria-hidden className="battle-live h-1.5 w-1.5 rounded-full bg-accent" />}
           {view.ended
             ? `${(view.result?.a ?? 0) + (view.result?.b ?? 0)} votes`
             : `${view.voteTotal + (myVote && !view.myVote ? 1 : 0)} votes · ${hoursLeft(view.endsAt)}`}
         </p>
       </div>
       <div className="relative flex min-h-0 flex-1 flex-col gap-2">
-        {side(view.a, pa)}
-        {side(view.b, pb)}
-        <span className="pointer-events-none absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black text-[0.8125rem] font-black tracking-wide text-white">
-          VS
+        {side(view.a, pa, "a")}
+        {side(view.b, pb, "b")}
+        <span className="pointer-events-none absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2">
+          <span className="battle-vs-ring absolute inset-0 rounded-full border-2 border-white/80" />
+          <span className="battle-vs flex h-full w-full items-center justify-center rounded-full border border-white/20 bg-black text-[0.875rem] font-black tracking-wide text-white">
+            VS
+          </span>
         </span>
       </div>
-      <div className="flex min-h-11 items-center justify-between gap-3 px-1">
-        <p className={`text-[0.875rem] ${error ? "text-danger" : strong}`} role={error ? "alert" : undefined}>
+      <div className="battle-rise-late flex min-h-11 items-center justify-between gap-3 px-1">
+        <p
+          key={myVote ?? "open"}
+          className={`text-[0.875rem] ${error ? "text-danger" : strong} ${myVote && !view.myVote ? "animate-rise-in" : ""}`}
+          role={error ? "alert" : undefined}
+        >
           {error ?? status}
         </p>
         {(view.isOwner || myVote || view.ended) && (
