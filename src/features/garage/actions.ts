@@ -103,7 +103,9 @@ export async function createVehicleAction(
   // Their first car is what makes an invite pay out (lib/invites/rewards).
   after(() => payReferralIfEarned(user.id));
 
-  redirect(`/garage/${vehicle.id}`);
+  // With a photo, the first score is free and ready to run: land on the
+  // car with the reveal already starting rather than a button to find.
+  redirect(heroMediaId ? `/garage/${vehicle.id}?score=1` : `/garage/${vehicle.id}`);
 }
 
 /** Sets a car's cover photo. On the server rather than straight from the

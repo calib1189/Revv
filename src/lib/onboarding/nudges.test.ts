@@ -63,7 +63,7 @@ describe("onboardingNudgePayload", () => {
     expect(onboardingNudgePayload({ kind: "rate_car", car: car() }).body).toBe(
       "Your 2017 BMW 540i is approved but has no score yet. Your first rating is free. See where it ranks.",
     );
-    expect(onboardingNudgePayload({ kind: "rate_car", car: car() }).url).toBe("/garage/c1#rate");
+    expect(onboardingNudgePayload({ kind: "rate_car", car: car() }).url).toBe("/garage/c1?score=1");
     expect(onboardingNudgePayload({ kind: "rate_car", car: car({ approved: false }) }).body).toBe(
       "Your 2017 BMW 540i has no score yet. Your first rating is free. See where it ranks.",
     );

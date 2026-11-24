@@ -53,6 +53,7 @@ export function onboardingNudgePayload(nudge: OnboardingNudge): PushPayload {
   return {
     title: "SORZA",
     body: `Your ${car.name} ${car.approved ? "is approved but has" : "has"} no score yet. Your first rating is free. See where it ranks.`,
-    url: `/garage/${car.id}#rate`,
+    // Opens straight into the score reveal (RateBuildPanel autoStart).
+    url: `/garage/${car.id}?score=1`,
   };
 }

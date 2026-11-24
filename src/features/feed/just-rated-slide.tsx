@@ -7,7 +7,8 @@ import { relativeTime } from "@/lib/format/relative-time";
 import type { JustRatedSlideData } from "@/lib/feed/just-rated";
 
 /** A car SORZA rated in the last few days, between posts in the feed
- * (swipe-feed.tsx). Same anatomy as a leaderboard podium card: the
+ * (swipe-feed.tsx), or one of the top builds a new viewer's feed opens
+ * on (topPlace set). Same anatomy as a leaderboard podium card: the
  * photo, then the tier's own rule, then an opaque plinth with tier,
  * place and score. Labelled for what it is, a score, never dressed up
  * as someone's post: no like or comment rail. */
@@ -23,7 +24,7 @@ export function JustRatedSlide({ data, slideHeight }: { data: JustRatedSlideData
 
       <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 px-5 pb-6">
         <p className="micro-label" style={{ color: tierColor }} suppressHydrationWarning>
-          Just rated · {relativeTime(data.ratedAt)}
+          {data.topPlace ? `No. ${data.topPlace} on SORZA` : `Just rated · ${relativeTime(data.ratedAt)}`}
         </p>
         <div>
           <h2 className="line-clamp-2 text-balance text-[2rem] font-bold leading-[1.05] tracking-[-0.025em] text-white">

@@ -36,6 +36,7 @@ export function SwipeFeed({
   ad,
   daily = null,
   justRated = [],
+  topBuilds = [],
   drop = null,
   isAuthenticated,
   storyTray = [],
@@ -46,6 +47,8 @@ export function SwipeFeed({
   daily?: DailyTeaser | null;
   /** Cars rated in the last few days, slotted between posts. */
   justRated?: JustRatedSlideData[];
+  /** The top of the leaderboard, opening the feed for a new viewer. */
+  topBuilds?: JustRatedSlideData[];
   /** A live limited tee drop, as one slide deep in the feed (drop-slide). */
   drop?: FeedDrop | null;
   isAuthenticated: boolean;
@@ -206,6 +209,8 @@ export function SwipeFeed({
           ref={scrollContainerRef}
           className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}
         >
+          {category === null &&
+            topBuilds.map((b) => <JustRatedSlide key={`top-${b.vehicleId}`} data={b} slideHeight={feedHeight} />)}
           {daily && category === null && <DailyFeedSlide teaser={daily} slideHeight={feedHeight} />}
           {posts.map((post, index) => (
             <div key={post.post.id} className="contents">

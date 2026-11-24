@@ -95,10 +95,10 @@ export default async function VehiclePage({
    * lets Creator Studio attribute a garage visit back to the post that
    * drove it. Never present for a direct link or a garage-grid browse,
    * which is a real "unknown source", not an error. */
-  searchParams: Promise<{ from?: string; decal?: string; poster?: string }>;
+  searchParams: Promise<{ from?: string; decal?: string; poster?: string; score?: string }>;
 }) {
   const { vehicleId } = await params;
-  const { from: sourcePostId, decal: decalParam, poster: posterParam } = await searchParams;
+  const { from: sourcePostId, decal: decalParam, poster: posterParam, score: scoreParam } = await searchParams;
   const supabase = await createClient();
 
   const [vehicle, user] = await Promise.all([
@@ -352,6 +352,13 @@ export default async function VehiclePage({
               refUsername={owner?.username}
               savedPending={activeBuild ? pendingRatingFromBuild(activeBuild) : null}
               hasPhotos={hasRatablePhoto}
+              autoStart={
+                scoreParam === "1" &&
+                score == null &&
+                hasRatablePhoto &&
+                rerateCostNow === 0 &&
+                !(activeBuild && pendingRatingFromBuild(activeBuild))
+              }
               rerate={{ freeAt: freeRateAt?.toISOString() ?? null, balance: pointsBalance, cost: rerateCostNow }}
               decal={
                 decalsEnabled(owner?.is_admin ?? false) && vehicle.ownership_verification_status === "approved"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -40,6 +40,7 @@ export function RateBuildPanel({
   refUsername,
   savedPending,
   hasPhotos,
+  autoStart = false,
   rerate = null,
   decal = null,
   kind = "car",
@@ -66,6 +67,10 @@ export function RateBuildPanel({
   savedPending: BuildRating | null;
   /** The AI rates from photos; without one, point at adding a photo. */
   hasPhotos: boolean;
+  /** Start the (free, first) rating as soon as the page opens — set when
+   * someone arrives from adding a car or a "get your score" link
+   * (?score=1). The page only sets it when a rating can actually run. */
+  autoStart?: boolean;
   /** What the next rating costs in points (0 when it's free: a first
    * rating, or an admin), when the cheaper re-rate opens (null if it's
    * open now), and the owner's points. */
@@ -89,6 +94,19 @@ export function RateBuildPanel({
   const [revealResult, setRevealResult] = useState<BuildRating | null>(null);
   const [decalOffer, setDecalOffer] = useState<DecalOffer | null>(null);
   const [rerateOpen, setRerateOpen] = useState(false);
+
+  // Runs once per arrival. The ?score=1 is dropped from the address
+  // first, so a refresh or a back-swipe to this page doesn't rate again.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoStart || autoStarted.current) return;
+    autoStarted.current = true;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("score");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+    void handleGenerate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart]);
 
   // A rating that costs points asks first, with the price and the
   // owner's balance; a free one (the first, or an admin's) just runs.
