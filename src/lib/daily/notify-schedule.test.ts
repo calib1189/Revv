@@ -102,6 +102,48 @@ describe("decideScheduledPush", () => {
   it("never sends during quiet hours", () => {
     expect(decideScheduledPush({ localHour: 19, prefs: { ...prefs, quietStart: 18 }, sent: new Set(["morning"]), state })).toBeNull();
   });
+
+  it("warns that a streak is about to end, ahead of the usual reminder", () => {
+    const atStake = { ...state, streak: 12, showedUpToday: false };
+    expect(decideScheduledPush({ localHour: 20, prefs, sent: new Set(["morning"]), state: atStake })).toEqual({
+      kind: "evening",
+      category: "daily_challenge",
+      variant: "streak",
+    });
+    // A battle vote counts: nothing at stake once you've shown up, even
+    // without entering the Daily.
+    expect(
+      decideScheduledPush({ localHour: 20, prefs, sent: new Set(["morning"]), state: { ...atStake, showedUpToday: true } }),
+    ).toEqual({ kind: "evening", category: "daily_challenge", variant: "reminder" });
+    // A one-day streak isn't worth a warning.
+    expect(
+      decideScheduledPush({ localHour: 20, prefs, sent: new Set(["morning"]), state: { ...atStake, streak: 1 } }),
+    ).toMatchObject({ variant: "reminder" });
+  });
+
+  it("says a chest is waiting, once there's no streak at stake", () => {
+    const chest = { ...state, enteredToday: true, showedUpToday: true, streak: 14, chestUnopened: true };
+    expect(decideScheduledPush({ localHour: 20, prefs, sent: new Set(["morning"]), state: chest })).toEqual({
+      kind: "evening",
+      category: "daily_challenge",
+      variant: "chest",
+    });
+    expect(
+      decideScheduledPush({
+        localHour: 20,
+        prefs,
+        sent: new Set(["morning"]),
+        state: { ...chest, showedUpToday: false, enteredToday: false },
+      }),
+    ).toMatchObject({ variant: "streak" });
+  });
+
+  it("keeps the streak and chest pushes to people who get Daily pushes", () => {
+    const atStake = { ...state, streak: 12, showedUpToday: false };
+    expect(
+      decideScheduledPush({ localHour: 20, prefs: { ...prefs, dailyChallenge: false }, sent: new Set(["morning"]), state: atStake }),
+    ).toBeNull();
+  });
 });
 
 describe("mayNotifyVote", () => {

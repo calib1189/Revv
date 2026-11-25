@@ -22,7 +22,8 @@ import {
 } from "@/lib/rating/rank";
 import { groupByTier } from "@/lib/leaderboard/tier-groups";
 import { loadRankMovement } from "@/lib/leaderboard/load-movement";
-import type { RankMovement } from "@/lib/leaderboard/movement";
+import { biggestClimb, type RankMovement } from "@/lib/leaderboard/movement";
+import { BiggestClimbCard } from "@/features/leaderboard/biggest-climb";
 import { RevealMyPlaceOnArrival } from "@/features/leaderboard/jump-to-me";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { ChevronRightIcon } from "@/components/ui/icons";
@@ -190,6 +191,8 @@ export async function LeaderboardPageContent({
   // Below the podium the tier is named once per run of rows, not on
   // every row.
   const restGroups = groupByTier(rest, 6);
+  // The day's biggest mover on this board, called out on its own.
+  const climb = biggestClimb(entries, movement);
 
   return (
     <div className="relative w-full flex-1 overflow-x-clip">
@@ -290,6 +293,11 @@ export async function LeaderboardPageContent({
                   isViewer={entry.buildId === viewerEntry?.buildId}
                 />
               ))}
+            </div>
+          )}
+          {climb && (
+            <div className="mt-2">
+              <BiggestClimbCard entry={entries[climb.index]} places={climb.places} rank={climb.index + 1} />
             </div>
           )}
           {restGroups.map((group, g) => (

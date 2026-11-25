@@ -1,5 +1,34 @@
 import { describe, expect, it } from "vitest";
-import { rankMovement } from "./movement";
+import { biggestClimb, rankMovement, type RankMovement } from "./movement";
+
+describe("biggestClimb", () => {
+  const ranked = [{ buildId: "a" }, { buildId: "b" }, { buildId: "c" }, { buildId: "d" }];
+
+  it("picks the build that climbed the most places", () => {
+    const moves = new Map<string, RankMovement>([
+      ["a", { kind: "up", places: 3 }],
+      ["c", { kind: "up", places: 14 }],
+      ["d", { kind: "down", places: 20 }],
+    ]);
+    expect(biggestClimb(ranked, moves)).toEqual({ index: 2, places: 14 });
+  });
+
+  it("gives a tie to the build higher on the board", () => {
+    const moves = new Map<string, RankMovement>([
+      ["b", { kind: "up", places: 5 }],
+      ["d", { kind: "up", places: 5 }],
+    ]);
+    expect(biggestClimb(ranked, moves)).toEqual({ index: 1, places: 5 });
+  });
+
+  it("ignores small moves and new builds", () => {
+    const moves = new Map<string, RankMovement>([
+      ["a", { kind: "up", places: 2 }],
+      ["b", { kind: "new" }],
+    ]);
+    expect(biggestClimb(ranked, moves)).toBeNull();
+  });
+});
 
 const since = new Date("2026-11-23T12:00:00Z");
 const before = "2026-11-22T09:00:00Z";

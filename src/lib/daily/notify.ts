@@ -10,8 +10,11 @@ import { addDays, dailyDateKey } from "@/lib/daily/day";
 import { boostedPushCopy, isBoostedDay } from "@/lib/daily/prize";
 import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { SITE_URL } from "@/lib/site-url";
+import { loadStreakStates, type StreakState } from "@/lib/daily/streak-days";
+import { chestWaitingBody, streakEndingBody } from "@/lib/streak/push-copy";
 import {
   decideScheduledPush,
+  isEveningPushHour,
   localHourIn,
   mayNotifyVote,
   type DayState,
@@ -102,6 +105,7 @@ function payloadFor(
   place: number | null,
   rides: number,
   image: string | null = null,
+  streak = 0,
 ): PushPayload {
   // A day with more points than usual leads every push with them, marked
   // important and carrying the challenge's photo.
@@ -148,6 +152,10 @@ function payloadFor(
         body: rides === 1 ? "A new ride is waiting for your rating." : `${rides || 3} new rides are waiting for your rating.`,
         url: "/daily/rate",
       };
+    case "streak":
+      return { title: "Your streak", body: streakEndingBody(streak), url: "/daily" };
+    case "chest":
+      return { title: "Your streak", body: chestWaitingBody(), url: "/daily" };
   }
 }
 
@@ -213,6 +221,18 @@ export async function sendDueDailyPushes(today: DailyChallenge, now: Date = new 
 
   const minutesLeft = Math.floor((new Date(today.ends_at).getTime() - now.getTime()) / 60_000);
   const boostImage = isBoostedDay(today) ? await challengeImageUrl(service, today) : null;
+
+  // Streaks, only for people the evening push could reach this hour: it's
+  // the only push that uses them, and most hours that's nobody.
+  const eveningIds = userIds.filter((id) => {
+    if (sentByUser.get(id)?.has("evening")) return false;
+    const { prefs, timeZone } = toPushPrefs(prefsByUser.get(id));
+    return prefs.dailyChallenge && isEveningPushHour(localHourIn(timeZone, now), prefs);
+  });
+  const streaks = await loadStreakStates(service, eveningIds, todayKey).catch((err) => {
+    console.error("loading streaks for the evening push failed:", err);
+    return new Map<string, StreakState>();
+  });
   let sent = 0;
 
   const work = userIds.map((userId) => async () => {
@@ -229,6 +249,7 @@ export async function sendDueDailyPushes(today: DailyChallenge, now: Date = new 
       // there's no reason to think the pool is empty.
       ridesAvailable: round ? round.length > 0 : true,
       minutesLeft,
+      ...streaks.get(userId),
     };
     const push = decideScheduledPush({
       localHour: localHourIn(timeZone, now),
@@ -239,7 +260,11 @@ export async function sendDueDailyPushes(today: DailyChallenge, now: Date = new 
     if (!push) return;
     if (!(await claimLogSlot(service, userId, todayKey, push.kind))) return;
     const remaining = round ? round.filter((id) => !rated.has(id)).length : 3;
-    await sendPushToUser(userId, payloadFor(push, today, yesterday, state.placeYesterday, remaining, boostImage), push.category);
+    await sendPushToUser(
+      userId,
+      payloadFor(push, today, yesterday, state.placeYesterday, remaining, boostImage, state.streak ?? 0),
+      push.category,
+    );
     sent += 1;
   });
 

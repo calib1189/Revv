@@ -34,6 +34,12 @@ export interface DayState {
   ridesAvailable: boolean;
   /** Minutes until today's challenge closes. */
   minutesLeft: number;
+  /** Their live streak (lib/daily/streak.ts), if it was loaded. */
+  streak?: number;
+  /** Shown up today for the streak: the Daily, or a battle vote. */
+  showedUpToday?: boolean;
+  /** An earned streak chest they haven't opened. */
+  chestUnopened?: boolean;
 }
 
 export type ScheduledKind = "morning" | "evening";
@@ -42,8 +48,11 @@ export type DailyPushCategory = "daily_challenge" | "daily_results" | "daily_vot
 export interface ScheduledPush {
   kind: ScheduledKind;
   category: DailyPushCategory;
-  variant: "live" | "results" | "placed" | "reminder" | "rides";
+  variant: "live" | "results" | "placed" | "reminder" | "rides" | "streak" | "chest";
 }
+
+/** A streak this long is worth warning about before it ends. */
+export const STREAK_WARNING_MIN = 2;
 
 const MORNING_HOUR = 9;
 const MORNING_LAST_HOUR = 12;
@@ -101,6 +110,14 @@ export function decideScheduledPush({
 
   if (!sent.has("evening") && localHour >= EVENING_HOUR && localHour <= EVENING_LAST_HOUR) {
     if (state.minutesLeft < MIN_MINUTES_LEFT_FOR_REMINDER) return null;
+    // A streak about to end is the strongest reason to open the app, so
+    // it takes the evening slot first; then a chest still closed.
+    if (prefs.dailyChallenge && !state.showedUpToday && (state.streak ?? 0) >= STREAK_WARNING_MIN) {
+      return { kind: "evening", category: "daily_challenge", variant: "streak" };
+    }
+    if (prefs.dailyChallenge && state.chestUnopened) {
+      return { kind: "evening", category: "daily_challenge", variant: "chest" };
+    }
     if (!state.enteredToday) {
       return prefs.dailyChallenge ? { kind: "evening", category: "daily_challenge", variant: "reminder" } : null;
     }
@@ -117,6 +134,15 @@ export function decideScheduledPush({
  * never land on top of either. */
 const AFTERNOON_HOUR = 15;
 const AFTERNOON_LAST_HOUR = 18;
+
+/** Whether the evening push could go to someone this hour: the hourly
+ * job only loads streaks for these people. */
+export function isEveningPushHour(
+  localHour: number,
+  prefs: Pick<PushPrefs, "quietHours" | "quietStart" | "quietEnd">,
+): boolean {
+  return localHour >= EVENING_HOUR && localHour <= EVENING_LAST_HOUR && !isQuietHour(localHour, prefs);
+}
 
 export function isAfternoonPushHour(
   localHour: number,

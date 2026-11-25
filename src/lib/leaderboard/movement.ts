@@ -58,6 +58,26 @@ export function rankMovement(
   return movement;
 }
 
+/** A climb this small isn't news: re-rates nudge builds a place or two
+ * all the time. */
+export const BIGGEST_CLIMB_MIN = 3;
+
+/** The day's biggest climb on a board, among `ranked` (board order, best
+ * first): the build that moved up the most places, at least
+ * BIGGEST_CLIMB_MIN. A tie goes to the one higher on the board. */
+export function biggestClimb(
+  ranked: readonly { buildId: string }[],
+  movement: ReadonlyMap<string, RankMovement>,
+): { index: number; places: number } | null {
+  let best: { index: number; places: number } | null = null;
+  ranked.forEach((entry, index) => {
+    const move = movement.get(entry.buildId);
+    if (!move || move.kind !== "up" || move.places < BIGGEST_CLIMB_MIN) return;
+    if (!best || move.places > best.places) best = { index, places: move.places };
+  });
+  return best;
+}
+
 /** 1 + how many scores in a descending list beat `score`. */
 function placeOf(score: number, descending: readonly number[]): number {
   let lo = 0;
