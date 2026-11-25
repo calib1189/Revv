@@ -132,6 +132,28 @@ export async function getSoundUsageCounts(
   return counts;
 }
 
+/** Every sound someone can put on a post, optionally within one genre:
+ * the library, members' uploads and the audio of posted videos, most used
+ * first, then newest. Only the retired starter loops are left out. For
+ * the picker, where a sound you can't find is a sound you can't use. */
+export async function listAllSounds(
+  supabase: SupabaseClient<Database>,
+  genre: SoundGenre | null = null,
+): Promise<{ sounds: Sound[]; counts: Map<string, number> }> {
+  let request = supabase.from("sounds").select("*").neq("source", HIDDEN_SOURCE);
+  if (genre) request = request.eq("genre", genre);
+  const { data, error } = await request.order("created_at", { ascending: false }).limit(1000);
+
+  if (error) {
+    if (genre && error.code === UNDEFINED_COLUMN) return { sounds: [], counts: new Map() };
+    throw error;
+  }
+  const counts = await getSoundUsageCounts(supabase, data.map((s) => s.id));
+  // Stable sort: equal counts keep the newest-first order from the query.
+  const sounds = [...data].sort((a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0));
+  return { sounds, counts };
+}
+
 /** "Trending" sounds for the browse page, optionally within one genre: a
  * recent candidate pool ranked by how many posts currently use them. Not a stored counter — see
  * getSoundUsageCounts. Good enough at today's catalog size; if the sounds

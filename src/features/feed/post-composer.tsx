@@ -85,6 +85,7 @@ export function PostComposer({
   crewId,
   onCrewIdChange,
   sound,
+  soundChosenInEditor,
   onSoundChange,
   soundStartMs,
   onSoundStartMsChange,
@@ -106,11 +107,12 @@ export function PostComposer({
   onVehicleIdChange: (value: string) => void;
   crewId: string;
   onCrewIdChange: (value: string) => void;
-  /** On a video this is read-only here: the sound was chosen in the
-   * editor, where it was mixed into the exported file itself. Only a
-   * photo post picks one at this stage, because a photo's sound really
-   * is played by a separate audio element at view time. */
+  /** Read-only here when it was chosen in the editor (every video, and a
+   * photo that went through the photo editor): sounds are picked while
+   * editing, not on the way out. Only a photo set picked straight from
+   * the library, which has no editing step, picks one on this screen. */
   sound: Sound | null;
+  soundChosenInEditor: boolean;
   onSoundChange: (sound: Sound | null) => void;
   soundStartMs: number;
   onSoundStartMsChange: (startMs: number) => void;
@@ -275,6 +277,7 @@ export function PostComposer({
         <div className="flex flex-col py-2">
           <SoundRow
             mode={mode}
+            chosenInEditor={soundChosenInEditor}
             sound={sound}
             soundStartMs={soundStartMs}
             onOpenPicker={() => setPickerOpen(true)}
@@ -422,11 +425,13 @@ function Chip({
   );
 }
 
-/** A video's sound is already part of its exported audio, so this row is
- * a receipt for what the editor did rather than a control. A photo's
- * sound is genuinely attached at this stage, so it stays editable. */
+/** When the sound was chosen in the editor this row is a receipt for it
+ * rather than a control (and a photo with none shows nothing). A photo
+ * set picked straight from the library never saw an editor, so this is
+ * where it gets one. */
 function SoundRow({
   mode,
+  chosenInEditor,
   sound,
   soundStartMs,
   onOpenPicker,
@@ -434,13 +439,15 @@ function SoundRow({
   onRemove,
 }: {
   mode: "photo" | "video";
+  chosenInEditor: boolean;
   sound: Sound | null;
   soundStartMs: number;
   onOpenPicker: () => void;
   onOpenTrim: () => void;
   onRemove: () => void;
 }) {
-  if (mode === "video") {
+  if (chosenInEditor) {
+    if (!sound && mode === "photo") return null;
     return (
       <div className="flex min-h-[60px] items-center gap-3 px-4 py-2">
         {sound ? (
@@ -453,7 +460,7 @@ function SoundRow({
         <div className="min-w-0 flex-1">
           <p className="truncate text-[0.9375rem] font-medium">{sound ? sound.title : "Original sound"}</p>
           <p className="truncate text-[0.8125rem] text-white/45">
-            {sound ? "Mixed into your clip in the editor" : "Add a sound from the editor"}
+            {sound ? (sound.artist_name ? `${sound.artist_name} · Added in the editor` : "Added in the editor") : "Your clip's own audio"}
           </p>
         </div>
       </div>

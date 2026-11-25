@@ -10,7 +10,8 @@ import { useWaveformPeaks, WaveformTrimmer } from "@/features/sounds/sound-wavef
 import { PlayIcon, PauseIcon } from "@/components/ui/icons";
 
 /** The "which part of the song" picker — opens right after choosing a
- * sound for a photo post (and again from the post screen's sound row).
+ * sound for a photo (in the photo editor, or on the post screen for a
+ * photo set that skipped it).
  * Drag the window across the track's real waveform; the preview loops
  * exactly that window as it moves, so what you hear here is exactly what
  * plays behind the post. */

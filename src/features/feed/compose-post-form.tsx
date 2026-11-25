@@ -180,6 +180,9 @@ export function ComposePostForm({
   const [crewId, setCrewId] = useState("");
   const [sound, setSound] = useState<Sound | null>(initialSound);
   const [soundStartMs, setSoundStartMs] = useState(0);
+  /** Whether the photos went through the editor, where their sound is
+   * chosen. A set picked straight from the library never does. */
+  const [photoEdited, setPhotoEdited] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publish, setPublish] = useState<PublishState | null>(null);
   const [cameraSoundPickerOpen, setCameraSoundPickerOpen] = useState(false);
@@ -225,6 +228,7 @@ export function ComposePostForm({
   function clearPhotos() {
     photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     setPhotos([]);
+    setPhotoEdited(false);
   }
 
   async function handleSelectPhotos(files: FileList) {
@@ -263,7 +267,10 @@ export function ComposePostForm({
     const next = photos.filter((_, i) => i !== index);
     if (removedUrl) URL.revokeObjectURL(removedUrl);
     setPhotos(next);
-    if (next.length === 0) setStep("camera");
+    if (next.length === 0) {
+      setPhotoEdited(false);
+      setStep("camera");
+    }
   }
 
   async function handleImportFiles(files: FileList) {
@@ -358,9 +365,15 @@ export function ComposePostForm({
     setStep("compose");
   }
 
-  async function handlePhotoEditorExported(rawFile: File) {
+  async function handlePhotoEditorExported(rawFile: File, editorSound: Sound | null, editorSoundStartMs: number) {
     setPhotoEditorSource(null);
     setError(null);
+    // A photo's sound is chosen in the editor too, and played beside the
+    // photo at view time.
+    setSound(editorSound);
+    setSoundStartMs(editorSound ? editorSoundStartMs : 0);
+    setSoundUrl(editorSound ? publicSoundUrl(createBrowserClient(), editorSound.storage_path) : null);
+    setPhotoEdited(true);
     const file = await compressImageIfNeeded(rawFile, MAX_IMAGE_BYTES);
     const fileError = validateImageFile(file);
     if (fileError) return setError(fileError);
@@ -575,6 +588,7 @@ export function ComposePostForm({
           crewId={crewId}
           onCrewIdChange={setCrewId}
           sound={sound}
+          soundChosenInEditor={mode === "video" || photoEdited}
           onSoundChange={handleSoundChange}
           soundStartMs={soundStartMs}
           onSoundStartMsChange={setSoundStartMs}
@@ -599,6 +613,8 @@ export function ComposePostForm({
       {photoEditorSource && (
         <PhotoEditor
           source={photoEditorSource}
+          initialSound={sound}
+          initialSoundStartMs={soundStartMs}
           onCancel={() => setPhotoEditorSource(null)}
           onExported={handlePhotoEditorExported}
         />

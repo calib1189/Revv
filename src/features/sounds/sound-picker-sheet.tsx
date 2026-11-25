@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  listTrendingSounds,
+  listAllSounds,
   searchSounds,
   getSoundUsageCounts,
   publicSoundUrl,
@@ -29,8 +29,9 @@ type LoadState = "loading" | "ready" | "error";
  * to hear it, tap Use to put it on the clip. Fixed-dark — it only ever
  * opens over the camera, an editor or the post screen.
  *
- * Fetches its own trending list on open rather than requiring the screen
- * underneath to fetch it up front — most posts never open this at all. */
+ * Lists every sound on SORZA (the library, members' uploads, the audio
+ * of posted videos), most used first. Fetched on open rather than by the
+ * screen underneath — most posts never open this at all. */
 export function SoundPickerSheet({
   onSelect,
   onClose,
@@ -42,8 +43,8 @@ export function SoundPickerSheet({
    * file in (the video editor can; a photo post's player can't). */
   onPickDeviceFile?: (file: File) => void;
 }) {
-  const [trending, setTrending] = useState<Sound[]>([]);
-  const [trendingState, setTrendingState] = useState<LoadState>("loading");
+  const [allSounds, setAllSounds] = useState<Sound[]>([]);
+  const [listState, setListState] = useState<LoadState>("loading");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Sound[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -60,16 +61,15 @@ export function SoundPickerSheet({
     let cancelled = false;
     const supabase = createClient();
     (async () => {
-      setTrendingState("loading");
+      setListState("loading");
       try {
-        const sounds = await listTrendingSounds(supabase, 30, genre);
+        const { sounds, counts } = await listAllSounds(supabase, genre);
         if (cancelled) return;
-        setTrending(sounds);
-        setTrendingState("ready");
-        const counts = await getSoundUsageCounts(supabase, sounds.map((s) => s.id));
-        if (!cancelled) setUsageCounts((prev) => new Map([...prev, ...counts]));
+        setAllSounds(sounds);
+        setUsageCounts((prev) => new Map([...prev, ...counts]));
+        setListState("ready");
       } catch {
-        if (!cancelled) setTrendingState("error");
+        if (!cancelled) setListState("error");
       }
     })();
     return () => {
@@ -145,7 +145,51 @@ export function SoundPickerSheet({
 
   const searching = query.trim().length > 0;
   const genreLabel = soundGenreLabel(genre);
-  const shown = searching ? (results ?? []) : trending;
+  const shown = searching ? (results ?? []) : allSounds;
+  // The library and members' uploads first; the audio lifted from posted
+  // videos after, so a page of "Original sound" never buries the songs.
+  const songs = allSounds.filter((x) => x.source !== "post_audio");
+  const fromVideos = allSounds.filter((x) => x.source === "post_audio");
+
+  function renderRow(sound: Sound) {
+    const active = activeId === sound.id;
+    const count = usageCounts.get(sound.id) ?? 0;
+    return (
+      <li key={sound.id}>
+        <div
+          className={`flex items-center gap-3 rounded-[16px] px-2 py-2 transition-colors duration-200 ${
+            active ? "bg-white/[0.07]" : ""
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => handleRowTap(sound)}
+            aria-label={active && isPlaying ? `Pause ${sound.title}` : `Preview ${sound.title}`}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <SoundCover seed={sound.id} playing={active && isPlaying} size="lg" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[0.9375rem] font-semibold">{sound.title}</span>
+              <span className="block tabular-nums truncate text-[0.8125rem] text-white/50">
+                {sound.artist_name || "Unknown artist"} · {formatDuration(sound.duration_ms)}
+                {count > 0 && ` · ${formatCompactNumber(count)} ${count === 1 ? "video" : "videos"}`}
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => use(sound)}
+            aria-label={`Use ${sound.title}`}
+            className={`pressable h-9 flex-shrink-0 rounded-full px-4 text-[0.8125rem] font-semibold transition-all duration-200 ${
+              active ? "bg-accent text-white" : "bg-white/[0.08] text-white/85"
+            }`}
+          >
+            Use
+          </button>
+        </div>
+      </li>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col justify-end">
@@ -260,14 +304,16 @@ export function SoundPickerSheet({
                 : genreLabel
                   ? `Results in ${genreLabel}`
                   : "Results"
-              : genreLabel
-                ? `Trending in ${genreLabel}`
-                : "Trending on SORZA"}
+              : listState === "ready"
+                ? `${genreLabel ? `${genreLabel} sounds` : "All sounds"} · ${shown.length}`
+                : genreLabel
+                  ? `${genreLabel} sounds`
+                  : "All sounds"}
           </p>
 
-          {!searching && trendingState === "loading" && <SkeletonRows />}
+          {!searching && listState === "loading" && <SkeletonRows />}
 
-          {!searching && trendingState === "error" && (
+          {!searching && listState === "error" && (
             <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
               <p className="text-[0.9375rem] font-semibold">Sounds didn&apos;t load</p>
               <p className="text-[0.8125rem] text-white/50">Check your connection and try again.</p>
@@ -283,7 +329,7 @@ export function SoundPickerSheet({
 
           {searching && isSearching && results === null && <SkeletonRows />}
 
-          {((searching && results !== null) || (!searching && trendingState === "ready")) &&
+          {((searching && results !== null) || (!searching && listState === "ready")) &&
             shown.length === 0 && (
               <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
                 <p className="text-[0.9375rem] font-semibold">
@@ -305,47 +351,19 @@ export function SoundPickerSheet({
               </div>
             )}
 
-          <ul className="flex flex-col">
-            {shown.map((sound) => {
-              const active = activeId === sound.id;
-              const count = usageCounts.get(sound.id) ?? 0;
-              return (
-                <li key={sound.id}>
-                  <div
-                    className={`flex items-center gap-3 rounded-[16px] px-2 py-2 transition-colors duration-200 ${
-                      active ? "bg-white/[0.07]" : ""
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleRowTap(sound)}
-                      aria-label={active && isPlaying ? `Pause ${sound.title}` : `Preview ${sound.title}`}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                    >
-                      <SoundCover seed={sound.id} playing={active && isPlaying} size="lg" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[0.9375rem] font-semibold">{sound.title}</span>
-                        <span className="block tabular-nums truncate text-[0.8125rem] text-white/50">
-                          {sound.artist_name || "Unknown artist"} · {formatDuration(sound.duration_ms)}
-                          {count > 0 && ` · ${formatCompactNumber(count)} ${count === 1 ? "video" : "videos"}`}
-                        </span>
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => use(sound)}
-                      aria-label={`Use ${sound.title}`}
-                      className={`pressable h-9 flex-shrink-0 rounded-full px-4 text-[0.8125rem] font-semibold transition-all duration-200 ${
-                        active ? "bg-accent text-white" : "bg-white/[0.08] text-white/85"
-                      }`}
-                    >
-                      Use
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          {searching ? (
+            <ul className="flex flex-col">{shown.map(renderRow)}</ul>
+          ) : (
+            <>
+              <ul className="flex flex-col">{songs.map(renderRow)}</ul>
+              {fromVideos.length > 0 && (
+                <>
+                  <p className="micro-label px-2 pb-2 pt-5 text-white/40">From members&apos; videos · {fromVideos.length}</p>
+                  <ul className="flex flex-col">{fromVideos.map(renderRow)}</ul>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 

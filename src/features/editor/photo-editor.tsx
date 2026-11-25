@@ -18,7 +18,14 @@ import {
   StickerIcon,
   BrushIcon,
   ChevronRightIcon,
+  CloseIcon,
+  MusicIcon,
 } from "@/components/ui/icons";
+import { createClient } from "@/lib/supabase/client";
+import { publicSoundUrl, type Sound } from "@/lib/db/sounds";
+import { SOUND_CLIP_MS } from "@/lib/validation/sound";
+import { SoundPickerSheet } from "@/features/sounds/sound-picker-sheet";
+import { SoundTrimSheet } from "@/features/sounds/sound-trim-sheet";
 import { Callout } from "@/components/ui/callout";
 import {
   StudioHeader,
@@ -70,10 +77,16 @@ export function PhotoEditor({
   source,
   onCancel,
   onExported,
+  initialSound = null,
+  initialSoundStartMs = 0,
 }: {
   source: File;
   onCancel: () => void;
-  onExported: (file: File) => void;
+  /** The sound rides along with the photo: a photo post plays it from a
+   * separate audio element at view time, so it isn't baked into the file. */
+  onExported: (file: File, sound: Sound | null, soundStartMs: number) => void;
+  initialSound?: Sound | null;
+  initialSoundStartMs?: number;
 }) {
   const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -103,10 +116,47 @@ export function PhotoEditor({
   const hasCapturedFilterPreviewRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [sound, setSound] = useState<Sound | null>(initialSound);
+  const [soundStartMs, setSoundStartMs] = useState(initialSoundStartMs);
+  const [soundSheet, setSoundSheet] = useState<"pick" | "trim" | null>(null);
+  const soundAudioRef = useRef<HTMLAudioElement>(null);
+  const soundUrl = useMemo(() => (sound ? publicSoundUrl(createClient(), sound.storage_path) : null), [sound]);
 
   useEffect(() => {
     return () => URL.revokeObjectURL(sourceUrl);
   }, [sourceUrl]);
+
+  // While you edit, the chosen part of the sound loops under the photo,
+  // the way it will play behind the post.
+  useEffect(() => {
+    const audio = soundAudioRef.current;
+    if (!audio || !sound) return;
+    const start = soundStartMs / 1000;
+    const end = Math.min(sound.duration_ms, soundStartMs + SOUND_CLIP_MS) / 1000;
+    const seek = () => {
+      audio.currentTime = start;
+    };
+    const tick = () => {
+      if (audio.currentTime >= end || audio.currentTime < start - 0.25) seek();
+    };
+    if (audio.readyState >= 1) seek();
+    audio.addEventListener("loadedmetadata", seek);
+    audio.addEventListener("timeupdate", tick);
+    return () => {
+      audio.removeEventListener("loadedmetadata", seek);
+      audio.removeEventListener("timeupdate", tick);
+    };
+  }, [sound, soundStartMs]);
+  useEffect(() => {
+    const audio = soundAudioRef.current;
+    return () => audio?.pause();
+  }, []);
+
+  function removeSound() {
+    soundAudioRef.current?.pause();
+    setSound(null);
+    setSoundStartMs(0);
+  }
 
   useEffect(() => {
     const img = imgRef.current;
@@ -125,20 +175,29 @@ export function PhotoEditor({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !ready) return;
-    const MAX = 1080;
+    // 1440 across: a phone screen is ~1290 device px wide, so anything
+    // narrower gets stretched to fill the feed. The long edge is capped
+    // too (2560, a 9:16 at that width), never the long edge alone: that
+    // turned a 1080x1920 upload into 608x1080.
+    const SHORT = 1440;
+    const LONG = 2560;
     let w: number;
     let h: number;
     if (state.aspect === "9:16") {
-      w = 1080;
-      h = 1920;
+      w = SHORT;
+      h = LONG;
     } else if (state.aspect === "1:1") {
-      w = 1080;
-      h = 1080;
+      w = SHORT;
+      h = SHORT;
     } else if (state.aspect === "4:5") {
-      w = 1080;
-      h = 1350;
+      w = SHORT;
+      h = 1800;
     } else {
-      const scale = Math.min(1, MAX / Math.max(imgDims.width, imgDims.height));
+      const scale = Math.min(
+        1,
+        SHORT / Math.min(imgDims.width, imgDims.height),
+        LONG / Math.max(imgDims.width, imgDims.height),
+      );
       w = Math.round(imgDims.width * scale);
       h = Math.round(imgDims.height * scale);
     }
@@ -326,7 +385,8 @@ export function PhotoEditor({
       );
       if (!blob) throw new Error("Export failed.");
       const file = new File([blob], "sorza-photo.jpg", { type: "image/jpeg" });
-      onExported(file);
+      soundAudioRef.current?.pause();
+      onExported(file, sound, sound ? soundStartMs : 0);
     } catch {
       setError("Couldn't finish editing that photo. Try again.");
     } finally {
@@ -405,7 +465,37 @@ export function PhotoEditor({
           </div>
         </StudioStage>
 
-        <StudioHeader onBack={onCancel} backLabel="Back to camera" />
+        <StudioHeader
+          onBack={onCancel}
+          backLabel="Back to camera"
+          center={
+            !isDraggingLayer && (
+              <div className="flex min-w-0 max-w-full items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundAudioRef.current?.pause();
+                    setSoundSheet("pick");
+                  }}
+                  className="pressable flex min-w-0 items-center gap-2 rounded-full bg-black/40 px-3.5 py-2 text-[0.875rem] font-semibold text-white backdrop-blur-xl"
+                >
+                  <MusicIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">{sound ? sound.title : "Add sound"}</span>
+                </button>
+                {sound && (
+                  <button
+                    type="button"
+                    onClick={removeSound}
+                    aria-label="Remove sound"
+                    className="pressable flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-black/40 text-white/85 backdrop-blur-xl"
+                  >
+                    <CloseIcon className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            )
+          }
+        />
 
         <StudioRail
           tools={railTools}
@@ -518,6 +608,34 @@ export function PhotoEditor({
 
       {stickerSheetOpen && (
         <StickerSheet onPick={addStickerLayer} onClose={() => setStickerSheetOpen(false)} />
+      )}
+
+      <audio ref={soundAudioRef} src={soundUrl ?? undefined} preload="auto" className="hidden" />
+
+      {soundSheet === "pick" && (
+        <SoundPickerSheet
+          onSelect={(picked) => {
+            setSound(picked);
+            setSoundStartMs(0);
+            // Straight on to choosing which part plays.
+            setSoundSheet("trim");
+          }}
+          onClose={() => setSoundSheet(null)}
+        />
+      )}
+
+      {soundSheet === "trim" && sound && (
+        <SoundTrimSheet
+          sound={sound}
+          initialStartMs={soundStartMs}
+          onConfirm={(startMs) => {
+            setSoundStartMs(startMs);
+            setSoundSheet(null);
+            // From inside the tap, so the browser lets it play.
+            void soundAudioRef.current?.play().catch(() => {});
+          }}
+          onClose={() => setSoundSheet(null)}
+        />
       )}
     </div>
   );
