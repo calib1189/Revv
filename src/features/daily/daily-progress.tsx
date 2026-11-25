@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckIcon, ChevronRightIcon, FlameIcon, GemIcon, StarIcon } from "@/components/ui/icons";
 import { StreakTrack } from "@/features/daily/streak-track";
 import { ChestOpener } from "@/features/daily/chest-opener";
+import { PushNudge } from "@/features/push/push-nudge";
 import { StreakRestoreCard } from "@/features/daily/streak-restore-card";
 import type { RepairOffer } from "@/lib/streak/repair";
 import type { Streak } from "@/lib/daily/streak";
@@ -80,6 +81,7 @@ export function DailyProgress({
         <ChestOpener chestDate={readyChest.chestDate} username={readyChest.username} avatarUrl={readyChest.avatarUrl} />
       )}
       <StreakTrack streak={streak} todayKey={todayKey} />
+      <PushNudge />
       <ul className="grid grid-cols-3 gap-2">
         {items.map((item) => (
           <li

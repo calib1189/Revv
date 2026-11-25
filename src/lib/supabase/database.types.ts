@@ -890,6 +890,7 @@ export interface Database {
           gif_id: string | null;
           gif_width: number | null;
           gif_height: number | null;
+          media_id: string | null;
         };
         Insert: {
           id?: string;
@@ -901,6 +902,7 @@ export interface Database {
           gif_id?: string | null;
           gif_width?: number | null;
           gif_height?: number | null;
+          media_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["comments"]["Insert"]>;
         Relationships: never[];

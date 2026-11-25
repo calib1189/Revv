@@ -75,6 +75,8 @@ export async function createComment(
   parentId: string | null = null,
   /** A GIF comment has an empty body (migration 0130). */
   gif: GifRef | null = null,
+  /** A photo the author uploaded; the body is then an optional caption (0134). */
+  mediaId: string | null = null,
 ): Promise<Comment> {
   const { data, error } = await supabase
     .from("comments")
@@ -86,6 +88,8 @@ export async function createComment(
       // Only named when there is a GIF, so text comments don't depend on
       // migration 0130 having been applied.
       ...(gif ? { gif_id: gif.id, gif_width: gif.width, gif_height: gif.height } : {}),
+      // Likewise only named for a photo comment, so the rest don't need 0134.
+      ...(mediaId && !gif ? { media_id: mediaId } : {}),
     })
     .select("*")
     .single();

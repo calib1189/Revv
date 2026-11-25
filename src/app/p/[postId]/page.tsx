@@ -1,3 +1,4 @@
+import { getCommentPhotos, type CommentPhoto } from "@/lib/db/comment-photos";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
@@ -93,9 +94,12 @@ export default async function PostPage({
   );
 
   // Best-effort: comments still show if reactions can't load.
-  const commentReactions = await getReactionSummaries(supabase, "comment", comments.map((c) => c.id), user?.id ?? null).catch(
-    () => new Map<string, ReactionSummary>(),
-  );
+  const [commentReactions, commentPhotos] = await Promise.all([
+    getReactionSummaries(supabase, "comment", comments.map((c) => c.id), user?.id ?? null).catch(
+      () => new Map<string, ReactionSummary>(),
+    ),
+    getCommentPhotos(supabase, comments).catch(() => new Map<string, CommentPhoto>()),
+  ]);
   const commentsWithAuthor = comments.map((c) => {
     const authorProfile = commentAuthorById.get(c.author_id);
     return {
@@ -108,6 +112,7 @@ export default async function PostPage({
       authorIsVerified: authorProfile?.is_verified ?? false,
       authorRatingScore: commentAuthorScores.get(c.author_id) ?? null,
       reactions: commentReactions.get(c.id) ?? NO_REACTIONS,
+      photo: commentPhotos.get(c.id) ?? null,
     };
   });
 
@@ -272,7 +277,7 @@ export default async function PostPage({
           />
           <div className="mt-4 border-t border-border pt-4">
             {user ? (
-              <CommentForm postId={post.id} />
+              <CommentForm postId={post.id} userId={user.id} />
             ) : (
               <p className="text-center text-[0.9375rem] text-muted">
                 <Link href={`/login?next=/p/${post.id}`} className="font-semibold text-accent">

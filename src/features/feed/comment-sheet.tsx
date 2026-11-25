@@ -9,6 +9,7 @@ import { listCommentsForSheetAction, type CommentSheetData } from "@/features/fe
 import { CloseIcon } from "@/components/ui/icons";
 import { useHideBottomNav } from "@/lib/ui/use-hide-bottom-nav";
 import { useVisualViewportBox } from "@/lib/ui/use-visual-viewport";
+import { KEYBOARD_TRANSITION, useNativeKeyboardHeight } from "@/lib/native/keyboard";
 
 /** Fraction of the sheet's own height a drag has to cross before
  * releasing counts as "close it" rather than "snap back open". */
@@ -46,12 +47,14 @@ export function CommentSheet({
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [composerFocused, setComposerFocused] = useState(false);
+  const [gifOpen, setGifOpen] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<SheetComposerHandle>(null);
   const dragStartYRef = useRef<number | null>(null);
   // Portalled, so only once there's a document to portal into.
   const isClient = useSyncExternalStore(subscribeNever, () => true, () => false);
   const viewport = useVisualViewportBox(isOpen);
+  const nativeKeyboard = useNativeKeyboardHeight();
   useHideBottomNav(isOpen);
 
   function handleDragStart(e: React.PointerEvent<HTMLDivElement>) {
@@ -106,10 +109,17 @@ export function CommentSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // With the keyboard up the sheet keeps its top edge where it was and
-  // ends right on top of the keyboard, so the composer sits on it — the
-  // list in between gets shorter, the way TikTok's does.
-  const keyboardOpen = viewport !== null && viewport.layoutHeight - viewport.height > KEYBOARD_MIN_PX;
+  // In the app the keyboard is iOS's own translucent glass, and its height
+  // is known the moment it starts to rise (lib/native/keyboard.ts). The
+  // sheet then never moves: it stays full height down to the bottom of the
+  // screen, so what shows through the keyboard is the sheet itself rather
+  // than the video, and only the composer's bottom padding grows — on the
+  // keyboard's own curve, so the box rides up with it as one piece instead
+  // of jumping ahead and leaving a gap. The list above gets shorter.
+  const docked = nativeKeyboard > 0;
+  // On the web the sheet keeps its top edge where it was and ends right on
+  // top of the keyboard, so the composer sits on it.
+  const keyboardOpen = !docked && viewport !== null && viewport.layoutHeight - viewport.height > KEYBOARD_MIN_PX;
   const sheetStyle: React.CSSProperties = {
     ...(keyboardOpen
       ? {
@@ -119,6 +129,9 @@ export function CommentSheet({
           ),
         }
       : {}),
+    // Searching GIFs with the keyboard up needs the grid, the composer and
+    // the keyboard stacked, so the sheet rises to just under the status bar.
+    ...(docked && gifOpen ? { height: "calc(100% - env(safe-area-inset-top) - 12px)" } : {}),
     ...(isDragging ? { transform: `translateY(${dragY}px)` } : {}),
   };
 
@@ -134,7 +147,7 @@ export function CommentSheet({
       data-no-edge-swipe
       data-keyboard-dock
       className="pointer-events-none fixed inset-x-0 z-[75]"
-      style={viewport ? { top: viewport.top, height: viewport.height } : { top: 0, bottom: 0 }}
+      style={viewport && !docked ? { top: viewport.top, height: viewport.height } : { top: 0, bottom: 0 }}
     >
       <div
         aria-hidden="true"
@@ -230,11 +243,14 @@ export function CommentSheet({
 
         <div
           className={`flex-shrink-0 border-t border-border/60 bg-surface px-3 pt-2.5 ${
-            // Typing, the box sits right on the keyboard: no home-indicator
-            // padding (the app's web view shrinks for the keyboard, so the
-            // safe area would otherwise leave a dead strip under the box).
-            keyboardOpen || composerFocused ? "pb-2" : "pb-[calc(0.625rem+env(safe-area-inset-bottom))]"
+            // Typing on the web, the box sits right on the keyboard: no
+            // home-indicator padding, which would leave a dead strip.
+            keyboardOpen || (composerFocused && !docked) ? "pb-2" : "pb-[calc(0.625rem+env(safe-area-inset-bottom))]"
           }`}
+          style={{
+            ...(docked ? { paddingBottom: nativeKeyboard + 8 } : {}),
+            transition: `padding-bottom ${KEYBOARD_TRANSITION}`,
+          }}
         >
           {isAuthenticated ? (
             <SheetComposer
@@ -244,6 +260,8 @@ export function CommentSheet({
               onCancelReply={() => setReplyTarget(null)}
               onFocusChange={setComposerFocused}
               me={data?.currentUser ?? null}
+              userId={data?.currentUserId ?? null}
+              onGifOpenChange={setGifOpen}
               onPosted={() => {
                 setReplyTarget(null);
                 void refresh();

@@ -18,7 +18,9 @@ import { createReport } from "@/lib/db/reports";
 import { blockUser } from "@/lib/db/blocks";
 import { getProfileByUserId, getProfilesByIds } from "@/lib/db/profiles";
 import { listVehicleIdsByCategory } from "@/lib/db/vehicles";
-import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
+import { isUuid } from "@/lib/validation/uuid";
+import { getCommentPhotos, type CommentPhoto } from "@/lib/db/comment-photos";
 import { getBestRatingScoresByOwnerIds } from "@/lib/rating/best-build-scores";
 import { validateComment } from "@/lib/validation/comment";
 import { parseGifFromForm } from "@/lib/gifs";
@@ -208,10 +210,11 @@ export async function listCommentsForSheetAction(postId: string): Promise<Commen
   const me = user ? authorById.get(user.id) : null;
 
   const avatarIds = authors.map((a) => a.avatar_media_id).filter((id): id is string => Boolean(id));
-  const [avatarMedia, reactions] = await Promise.all([
+  const [avatarMedia, reactions, photos] = await Promise.all([
     getMediaByIds(supabase, avatarIds),
     // Best-effort: comments still show if reactions can't load.
     getReactionSummaries(supabase, "comment", comments.map((c) => c.id), user?.id ?? null).catch(() => new Map<string, ReactionSummary>()),
+    getCommentPhotos(supabase, comments).catch(() => new Map<string, CommentPhoto>()),
   ]);
   const avatarUrlByMediaId = new Map(
     avatarMedia.map((m) => [m.id, publicMediaUrl(supabase, m.storage_path)]),
@@ -230,6 +233,7 @@ export async function listCommentsForSheetAction(postId: string): Promise<Commen
         authorIsVerified: author?.is_verified ?? false,
         authorRatingScore: authorScores.get(c.author_id) ?? null,
         reactions: reactions.get(c.id) ?? NO_REACTIONS,
+        photo: photos.get(c.id) ?? null,
       };
     }),
     currentUserId: user?.id ?? null,
@@ -272,12 +276,23 @@ async function postComment(postId: string, parentId: string | null, formData: Fo
   const body = String(formData.get("body") ?? "");
   const gif = parseGifFromForm(formData);
   if (gif === "invalid") return { error: "Couldn't post that GIF." };
+  const rawMedia = String(formData.get("media_id") ?? "");
+  const mediaId = !gif && isUuid(rawMedia) ? rawMedia : null;
   if (!gif) {
-    const error = validateComment(body);
+    // A photo's caption is optional; everything else needs words.
+    const error = mediaId ? (body.trim().length > 2000 ? "That caption is too long." : null) : validateComment(body);
     if (error) return { error };
   }
 
   const { supabase, user } = await requireUser();
+
+  // The photo has to be one you uploaded (the database checks too, 0134).
+  if (mediaId) {
+    const media = await getMediaById(supabase, mediaId).catch(() => null);
+    if (!media || media.owner_id !== user.id || media.kind !== "image") {
+      return { error: "That photo couldn't be attached. Try adding it again." };
+    }
+  }
 
   // RLS already blocks this insert outright for a banned account (see
   // migration 0055) — checked again here so the error actually says why,
@@ -289,7 +304,7 @@ async function postComment(postId: string, parentId: string | null, formData: Fo
   }
 
   try {
-    await createComment(supabase, postId, user.id, body.trim(), parentId, gif);
+    await createComment(supabase, postId, user.id, body.trim(), parentId, gif, mediaId);
   } catch {
     return { error: "Couldn't post that comment. Try again in a bit." };
   }

@@ -14,8 +14,10 @@ import { CommentIcon } from "@/components/ui/icons";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { relativeTime } from "@/lib/format/relative-time";
 import { GifImage } from "@/features/gifs/gif-image";
+import { CommentPhoto } from "@/features/feed/comment-photo";
 import { gifFromRow } from "@/lib/gifs";
 import type { Comment } from "@/lib/db/comments";
+import type { CommentPhoto as CommentPhotoData } from "@/lib/db/comment-photos";
 
 export interface CommentWithAuthor extends Comment {
   authorUsername: string;
@@ -29,6 +31,8 @@ export interface CommentWithAuthor extends Comment {
   authorRatingScore: number | null;
   /** Everyone's reactions, and the viewer's own. */
   reactions: ReactionSummary;
+  /** A photo posted with the comment (0134), if any. */
+  photo: CommentPhotoData | null;
 }
 
 /** Replies shown under a comment before the rest fold behind "View more". */
@@ -135,6 +139,7 @@ export function CommentList({
                 <CommentForm
                   postId={postId}
                   parentId={comment.id}
+                  userId={currentUserId}
                   autoFocus
                   onPosted={() => {
                     setReplyingTo(null);
@@ -202,9 +207,14 @@ function CommentRow({
         {gif ? (
           <GifImage gif={gif} className="mt-1 max-w-[180px] rounded-xl" />
         ) : (
-          <p className="mt-0.5 whitespace-pre-line break-words text-[0.9375rem] leading-snug text-foreground">
-            {comment.body}
-          </p>
+          <>
+            {comment.body && (
+              <p className="mt-0.5 whitespace-pre-line break-words text-[0.9375rem] leading-snug text-foreground">
+                {comment.body}
+              </p>
+            )}
+            {comment.photo && <CommentPhoto photo={comment.photo} alt={`Photo from @${comment.authorUsername}`} />}
+          </>
         )}
         <div className="mt-1.5 flex items-center gap-4 text-[0.8125rem] font-semibold text-muted">
           {onReply && (
