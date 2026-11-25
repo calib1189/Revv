@@ -145,7 +145,7 @@ function clipKnownSilent(video: HTMLVideoElement): boolean {
  * pulling the sound out with ffmpeg first (extract-audio.ts). Null means
  * there's no sound to keep — or none that could be read, which the
  * caller turns into an error when the clip clearly has one. */
-async function decodeClipAudio(audioCtx: AudioContext, source: File): Promise<AudioBuffer | null> {
+export async function decodeClipAudio(audioCtx: BaseAudioContext, source: File): Promise<AudioBuffer | null> {
   try {
     return await audioCtx.decodeAudioData(await source.arrayBuffer());
   } catch {

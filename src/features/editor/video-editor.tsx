@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { drawFrame } from "@/features/editor/draw-frame";
+import { useObjectUrl } from "@/features/editor/use-object-url";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Compositor, elementSource } from "@/features/editor/compositor";
 import { useVideoExport } from "@/features/editor/use-video-export";
 import { compressVideo } from "@/features/editor/compress-video";
 import { shrinkVideoForFeed } from "@/features/editor/shrink-video";
@@ -9,7 +10,9 @@ import { TrimScrubber } from "@/features/editor/trim-scrubber";
 import { capturePreviewSource } from "@/features/editor/capture-preview-source";
 import { aspectNeedsPan } from "@/features/editor/crop";
 import { createAudioContext, pickAudioRecorderMimeType } from "@/features/editor/audio-recording";
-import { MAX_VIDEO_BYTES } from "@/lib/validation/media";
+import { MAX_VIDEO_BYTES, validateVideoDuration } from "@/lib/validation/media";
+import { prepareRender } from "@/features/editor/render-video";
+import { readyJob, startJob, type VideoJob } from "@/features/editor/video-job";
 import {
   DEFAULT_EDIT_STATE,
   SPEED_PRESETS,
@@ -132,26 +135,41 @@ function loadVideoSource(video: HTMLVideoElement, url: string): Promise<void> {
   });
 }
 
+/** What the editor hands on when Next is tapped. The finished file is
+ * usually still rendering (`job`); the post screen shows `cover` until it
+ * lands, and `source` + `state` reopen the edit if Back is tapped. */
+export interface EditedVideo {
+  source: File;
+  state: EditState;
+  /** The library sound behind the clip, credited on the post. */
+  sound: Sound | null;
+  soundStartMs: number;
+  job: VideoJob;
+  /** A still of the edit, as an object URL (revoked by the receiver). */
+  cover: string | null;
+  durationSeconds: number;
+}
+
 export function VideoEditor({
   source,
   onCancel,
-  onExported,
+  onDone,
   initialSound = null,
+  initialEdit = null,
 }: {
   source: File;
   onCancel: () => void;
-  /** The chosen library sound rides along with the exported file: its
-   * audio is already mixed into those bytes, but the post still records
-   * which sound it was so it shows up on that sound's own page and in
-   * "use this sound". */
-  onExported: (file: File, sound: Sound | null, soundStartMs: number) => void;
+  onDone: (result: EditedVideo) => void;
   initialSound?: Sound | null;
+  /** An edit to pick back up (Back from the post screen). */
+  initialEdit?: { state: EditState; sound: Sound | null } | null;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const compositorRef = useRef<Compositor | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const musicAudioRef = useRef<HTMLAudioElement>(null);
-  const sourceUrl = useMemo(() => URL.createObjectURL(source), [source]);
+  const sourceUrl = useObjectUrl(source);
   const musicUrl = useRef<string | null>(null);
 
   const [ready, setReady] = useState(false);
@@ -162,15 +180,21 @@ export function VideoEditor({
   const [soundBlocked, setSoundBlocked] = useState(false);
   const soundBlockedRef = useRef(false);
   const audioUnlockedRef = useRef(false);
+  // Tap the picture to pause it and look closely; tap again to carry on.
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const playheadRef = useRef<HTMLSpanElement>(null);
   const [videoDims, setVideoDims] = useState({ width: 0, height: 0 });
   const [duration, setDuration] = useState(0);
-  const [canvasSize, setCanvasSize] = useState({ width: 9, height: 16 });
   const [tool, setTool] = useState<Tool>(null);
-  const [state, setState] = useState<EditState>({
-    ...DEFAULT_EDIT_STATE,
-    trimStart: 0,
-    trimEnd: 0,
-  });
+  const [state, setState] = useState<EditState>(
+    initialEdit?.state ?? {
+      ...DEFAULT_EDIT_STATE,
+      trimStart: 0,
+      trimEnd: 0,
+    },
+  );
+  const resumingRef = useRef(!!initialEdit);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   // Open text composer: null when closed, { layerId: null } for a new
   // layer, or the id of the layer being edited.
@@ -189,7 +213,8 @@ export function VideoEditor({
   // inside it: EditState describes the edit (and musicFile already holds
   // the audio being mixed), while this is the catalog row the finished
   // post gets attributed to.
-  const [librarySound, setLibrarySound] = useState<Sound | null>(null);
+  const [librarySound, setLibrarySound] = useState<Sound | null>(initialEdit?.sound ?? null);
+  const [isPreparing, setIsPreparing] = useState(false);
   const [soundPickerOpen, setSoundPickerOpen] = useState(false);
   const [isLoadingSound, setIsLoadingSound] = useState(false);
   const voiceoverAudioRef = useRef<HTMLAudioElement>(null);
@@ -242,9 +267,6 @@ export function VideoEditor({
     return () => audio.removeEventListener("loadedmetadata", onMetadata);
   }, []);
 
-  useEffect(() => {
-    return () => URL.revokeObjectURL(sourceUrl);
-  }, [sourceUrl]);
 
   // Load source metadata once the hidden decode <video> is ready. Clips
   // recorded via MediaRecorder (both in-app recording and, per repeated
@@ -264,11 +286,10 @@ export function VideoEditor({
       const d = el.duration;
       setVideoDims({ width: el.videoWidth, height: el.videoHeight });
       setDuration(d);
-      setState((s) => {
-        const next = { ...s, trimStart: 0, trimEnd: Math.min(d, MAX_CLIP_SECONDS) };
-        baselineStateRef.current = next;
-        return next;
-      });
+      // The untouched clip, for telling later whether anything changed.
+      baselineStateRef.current = { ...DEFAULT_EDIT_STATE, trimStart: 0, trimEnd: Math.min(d, MAX_CLIP_SECONDS) };
+      // A resumed edit keeps its own trim.
+      if (!resumingRef.current) setState((s) => ({ ...s, trimStart: 0, trimEnd: Math.min(d, MAX_CLIP_SECONDS) }));
       setReady(true);
     }
 
@@ -335,7 +356,7 @@ export function VideoEditor({
       // Played even when it's already running muted: that play() from a
       // tap is what lets the preview restart with sound by itself later
       // (it restarts after every save attempt).
-      if (video.readyState >= HTMLMediaElement.HAVE_METADATA) video.play().catch(() => {});
+      if (video.readyState >= HTMLMediaElement.HAVE_METADATA && !pausedRef.current) video.play().catch(() => {});
     }
     const music = musicAudioRef.current;
     if (music) {
@@ -370,8 +391,8 @@ export function VideoEditor({
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    compositorRef.current ??= new Compositor(canvas);
+    const compositor = compositorRef.current;
 
     video.currentTime = stateRef.current.trimStart;
     // iOS ignores volume set from script (it always plays at 1), so 0% is
@@ -379,7 +400,7 @@ export function VideoEditor({
     // played the clip's audio under an added sound.
     video.muted = soundBlockedRef.current || stateRef.current.originalVolume === 0;
     video.volume = stateRef.current.originalVolume;
-    video.play().catch((err: unknown) => {
+    if (!pausedRef.current) video.play().catch((err: unknown) => {
       // Refused because there's been no tap to allow sound yet. Playing
       // muted instead keeps the picture moving — refused outright, the
       // canvas had no decoded frame to draw and the preview sat blank.
@@ -399,7 +420,13 @@ export function VideoEditor({
       el.muted = soundBlockedRef.current || s.originalVolume === 0;
       el.volume = s.originalVolume;
       el.playbackRate = s.playbackRate;
-      drawFrame(ctx!, el, canvas!.width, canvas!.height, s);
+      const frame = elementSource(el);
+      if (frame && el.readyState >= el.HAVE_CURRENT_DATA) compositor.render(frame, s);
+      const head = playheadRef.current;
+      if (head) {
+        const span = Math.max(0.01, s.trimEnd - s.trimStart);
+        head.style.transform = `scaleX(${Math.min(1, Math.max(0, (el.currentTime - s.trimStart) / span))})`;
+      }
       // Captured once, from this canvas's first real drawn frame rather
       // than directly from the <video> element — see
       // capture-preview-source.ts for why that distinction matters.
@@ -417,7 +444,8 @@ export function VideoEditor({
       // just painted.
       if (!hasCapturedFilterPreviewRef.current && el.readyState >= el.HAVE_CURRENT_DATA) {
         hasCapturedFilterPreviewRef.current = true;
-        setFilterPreviewSource(capturePreviewSource(canvas!));
+        const unfiltered = compositor.unfiltered;
+        if (unfiltered instanceof HTMLCanvasElement) setFilterPreviewSource(capturePreviewSource(unfiltered));
       }
       raf = requestAnimationFrame(loop);
     }
@@ -428,36 +456,26 @@ export function VideoEditor({
     };
   }, [ready, isExporting, markSoundBlocked]);
 
-  // Preview canvas resolution follows the chosen aspect — modest size for
-  // smooth live editing; the export pass renders at full target resolution
-  // on its own offscreen canvas, independent of this one.
+  // The preview renders at the screen's own resolution (up to 2x), not a
+  // fixed 720: a 720-tall picture stretched over a phone screen is what
+  // made the preview look pixelated.
   useEffect(() => {
+    const box = previewRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const MAX = 720;
-    let w: number;
-    let h: number;
-    if (state.aspect === "9:16") {
-      w = Math.round((MAX * 9) / 16);
-      h = MAX;
-    } else if (state.aspect === "1:1") {
-      w = MAX;
-      h = MAX;
-    } else if (state.aspect === "4:5") {
-      w = Math.round((MAX * 4) / 5);
-      h = MAX;
-    } else if (videoDims.width && videoDims.height) {
-      const scale = MAX / Math.max(videoDims.width, videoDims.height);
-      w = Math.round(videoDims.width * scale);
-      h = Math.round(videoDims.height * scale);
-    } else {
-      w = Math.round((MAX * 9) / 16);
-      h = MAX;
-    }
-    canvas.width = w;
-    canvas.height = h;
-    setCanvasSize({ width: w, height: h });
-  }, [state.aspect, videoDims]);
+    if (!box || !canvas) return;
+    const fit = () => {
+      const scale = Math.min(2, window.devicePixelRatio || 1);
+      const w = Math.round(box.clientWidth * scale);
+      const h = Math.round(box.clientHeight * scale);
+      if (!w || !h) return;
+      compositorRef.current ??= new Compositor(canvas);
+      compositorRef.current.resize(w, h);
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
 
   // Music preview: a plain <audio> element loop, independent of the more
   // precise Web Audio graph the export pass builds — close enough for
@@ -558,6 +576,21 @@ export function VideoEditor({
       voiceoverStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
+
+  function togglePlayback() {
+    const video = videoRef.current;
+    if (!video || !ready || isExporting) return;
+    const next = !pausedRef.current;
+    pausedRef.current = next;
+    setPaused(next);
+    if (next) {
+      video.pause();
+      musicAudioRef.current?.pause();
+    } else {
+      video.play().catch(() => {});
+      if (stateRef.current.musicFile) musicAudioRef.current?.play().catch(() => {});
+    }
+  }
 
   function updateState(patch: Partial<EditState>) {
     setState((s) => ({ ...s, ...patch }));
@@ -752,6 +785,10 @@ export function VideoEditor({
     const cropPanEnabled =
       tool === "crop" && aspectNeedsPan(state.aspect, videoDims.width, videoDims.height, state.rotation);
     if (!cropPanEnabled) {
+      if (tool === null && selectedTextId === null) {
+        togglePlayback();
+        return;
+      }
       if (tool === "sticker" || tool === null) {
         setSelectedTextId(null);
         if (tool === "sticker") setTool(null);
@@ -798,13 +835,47 @@ export function VideoEditor({
       onProgress: setCompressionProgress,
     });
     setCompressionStage("idle");
-    onExported(final, librarySound, state.musicStartMs);
+    hand(readyJob(final));
+  }
+
+  /** A still of the edit as it stands, for the post screen's cover. */
+  function captureCover(): Promise<string | null> {
+    const canvas = canvasRef.current;
+    if (!canvas) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      try {
+        canvas.toBlob((blob) => resolve(blob ? URL.createObjectURL(blob) : null), "image/jpeg", 0.85);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+
+  const coverRef = useRef<Promise<string | null> | null>(null);
+  function hand(job: VideoJob) {
+    void (coverRef.current ?? captureCover()).then((cover) => {
+      onDone({
+        source,
+        state,
+        sound: librarySound,
+        soundStartMs: state.musicStartMs,
+        job,
+        cover,
+        durationSeconds: (state.trimEnd - state.trimStart) / Math.max(0.1, state.playbackRate),
+      });
+    });
   }
 
   async function handleDone() {
     const video = videoRef.current;
     if (!video) return;
     setError(null);
+    const durationError = validateVideoDuration((state.trimEnd - state.trimStart) / Math.max(0.1, state.playbackRate));
+    if (durationError) {
+      setError(durationError);
+      return;
+    }
+    coverRef.current = captureCover();
 
     // Nothing was actually changed from the freshly-loaded baseline —
     // no trim, no crop/aspect change, no filter, no text, no drawing, no
@@ -843,9 +914,22 @@ export function VideoEditor({
     // source's resolution, so this is expected to succeed even when the
     // pass-through can't.
     if (isUnedited && source.size <= MAX_VIDEO_BYTES) {
-      await finishWith(source);
+      // Brought to feed size in the background, while the caption's
+      // being written.
+      hand(startJob((report) => shrinkVideoForFeed(source, { onProgress: report })));
       return;
     }
+
+    // The edit renders in the background on this device's own video
+    // encoder (render-video.ts), so Next goes straight on to the post.
+    setIsPreparing(true);
+    const run = await prepareRender(source, state);
+    setIsPreparing(false);
+    if (run) {
+      hand(startJob(run));
+      return;
+    }
+    // Otherwise: the real-time recorder, here, before moving on.
 
     // Created here, before the first await, while this tap still counts —
     // the export's audio mix runs on it, and one created later can be
@@ -932,6 +1016,14 @@ export function VideoEditor({
     }
   }
 
+  // The stage's shape follows the chosen aspect.
+  let stageRatio = 9 / 16;
+  if (state.aspect === "1:1") stageRatio = 1;
+  else if (state.aspect === "4:5") stageRatio = 4 / 5;
+  else if (state.aspect === "original" && videoDims.width && videoDims.height) {
+    stageRatio = videoDims.width / videoDims.height;
+    if (state.rotation === 90 || state.rotation === 270) stageRatio = 1 / stageRatio;
+  }
   const selectedLayer = state.textLayers.find((l) => l.id === selectedTextId) ?? null;
   const editingLayer = textComposer?.layerId
     ? (state.textLayers.find((l) => l.id === textComposer.layerId) ?? null)
@@ -942,7 +1034,7 @@ export function VideoEditor({
     500,
     ((state.trimEnd - state.trimStart) / Math.max(state.playbackRate, 0.1)) * 1000,
   );
-  const isBusy = isExporting || compressionStage !== "idle";
+  const isBusy = isExporting || isPreparing || compressionStage !== "idle";
   const baseline = baselineStateRef.current;
   const isTrimmed =
     baseline !== null && (state.trimStart !== baseline.trimStart || state.trimEnd !== baseline.trimEnd);
@@ -991,10 +1083,10 @@ export function VideoEditor({
       data-no-edge-swipe
       onTouchEndCapture={unlockAudio}
       onClickCapture={unlockAudio}
-      className="fixed inset-0 z-50 flex flex-col bg-black"
+      className="animate-studio-in fixed inset-0 z-50 flex flex-col bg-black"
     >
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <StudioStage ratio={canvasSize.width / canvasSize.height}>
+        <StudioStage ratio={stageRatio}>
           <div
             ref={previewRef}
             onPointerDown={handlePreviewPointerDown}
@@ -1037,6 +1129,19 @@ export function VideoEditor({
                   Choose another
                 </button>
               </div>
+            )}
+            {ready && !loadError && (
+              <>
+                {/* Where in the clip the preview is. */}
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[3px] bg-white/15">
+                  <span ref={playheadRef} className="block h-full w-full origin-left bg-white/80" style={{ transform: "scaleX(0)" }} />
+                </span>
+                {paused && (
+                  <span className="animate-fade-in pointer-events-none absolute left-1/2 top-1/2 z-[5] flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-xl">
+                    <PlayIcon className="ml-1 h-7 w-7" />
+                  </span>
+                )}
+              </>
             )}
             {soundBlocked && ready && !isExporting && (
               <button
@@ -1338,7 +1443,7 @@ export function VideoEditor({
                       : undefined
               }
             >
-              {compressionStage === "loading" ? (
+              {compressionStage === "loading" || isPreparing ? (
                 "Preparing…"
               ) : compressionStage === "compressing" ? (
                 `Compressing ${Math.round(compressionProgress * 100)}%`

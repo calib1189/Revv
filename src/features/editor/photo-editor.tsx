@@ -1,7 +1,8 @@
 "use client";
 
+import { useObjectUrl } from "@/features/editor/use-object-url";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { drawFrame } from "@/features/editor/draw-frame";
+import { Compositor, elementSource } from "@/features/editor/compositor";
 import { capturePreviewSource } from "@/features/editor/capture-preview-source";
 import { aspectNeedsPan } from "@/features/editor/crop";
 import {
@@ -63,7 +64,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-interface PhotoEditState {
+export interface PhotoEditState {
   aspect: AspectRatioId;
   panOffset: number;
   rotation: Rotation;
@@ -79,25 +80,29 @@ export function PhotoEditor({
   onExported,
   initialSound = null,
   initialSoundStartMs = 0,
+  initialState = null,
 }: {
   source: File;
   onCancel: () => void;
   /** The sound rides along with the photo: a photo post plays it from a
    * separate audio element at view time, so it isn't baked into the file. */
-  onExported: (file: File, sound: Sound | null, soundStartMs: number) => void;
+  onExported: (file: File, sound: Sound | null, soundStartMs: number, state: PhotoEditState) => void;
   initialSound?: Sound | null;
   initialSoundStartMs?: number;
+  /** An edit to pick back up (Back from the post screen). */
+  initialState?: PhotoEditState | null;
 }) {
   const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const compositorRef = useRef<Compositor | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
-  const sourceUrl = useMemo(() => URL.createObjectURL(source), [source]);
+  const sourceUrl = useObjectUrl(source);
 
   const [ready, setReady] = useState(false);
   const [imgDims, setImgDims] = useState({ width: 0, height: 0 });
   const [canvasSize, setCanvasSize] = useState({ width: 9, height: 16 });
   const [tool, setTool] = useState<Tool>(null);
-  const [state, setState] = useState<PhotoEditState>({
+  const [state, setState] = useState<PhotoEditState>(() => initialState ?? {
     aspect: "original",
     panOffset: 0.5,
     rotation: 0,
@@ -122,9 +127,6 @@ export function PhotoEditor({
   const soundAudioRef = useRef<HTMLAudioElement>(null);
   const soundUrl = useMemo(() => (sound ? publicSoundUrl(createClient(), sound.storage_path) : null), [sound]);
 
-  useEffect(() => {
-    return () => URL.revokeObjectURL(sourceUrl);
-  }, [sourceUrl]);
 
   // While you edit, the chosen part of the sound loops under the photo,
   // the way it will play behind the post.
@@ -201,8 +203,8 @@ export function PhotoEditor({
       w = Math.round(imgDims.width * scale);
       h = Math.round(imgDims.height * scale);
     }
-    canvas.width = w;
-    canvas.height = h;
+    compositorRef.current ??= new Compositor(canvas);
+    compositorRef.current.resize(w, h);
     setCanvasSize({ width: w, height: h });
   }, [state.aspect, imgDims, ready]);
 
@@ -212,9 +214,11 @@ export function PhotoEditor({
     const img = imgRef.current;
     const canvas = canvasRef.current;
     if (!img || !canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    drawFrame(ctx, img, canvas.width, canvas.height, state);
+    compositorRef.current ??= new Compositor(canvas);
+    const compositor = compositorRef.current;
+    const frame = elementSource(img);
+    if (!frame) return;
+    compositor.render(frame, state);
     // Captured once, from this canvas's first real drawn frame rather
     // than directly from the source <img> — see capture-preview-source.ts
     // for why (matches the same fix applied in video-editor.tsx, even
@@ -224,7 +228,8 @@ export function PhotoEditor({
     // screen, crop/rotation included).
     if (!hasCapturedFilterPreviewRef.current) {
       hasCapturedFilterPreviewRef.current = true;
-      setFilterPreviewSource(capturePreviewSource(canvas));
+      const unfiltered = compositor.unfiltered;
+      if (unfiltered instanceof HTMLCanvasElement) setFilterPreviewSource(capturePreviewSource(unfiltered));
     }
   }, [ready, state, canvasSize]);
 
@@ -386,7 +391,7 @@ export function PhotoEditor({
       if (!blob) throw new Error("Export failed.");
       const file = new File([blob], "sorza-photo.jpg", { type: "image/jpeg" });
       soundAudioRef.current?.pause();
-      onExported(file, sound, sound ? soundStartMs : 0);
+      onExported(file, sound, sound ? soundStartMs : 0, state);
     } catch {
       setError("Couldn't finish editing that photo. Try again.");
     } finally {
@@ -431,7 +436,7 @@ export function PhotoEditor({
   }
 
   return (
-    <div data-no-edge-swipe className="fixed inset-0 z-50 flex flex-col bg-black">
+    <div data-no-edge-swipe className="animate-studio-in fixed inset-0 z-50 flex flex-col bg-black">
       {/* eslint-disable-next-line @next/next/no-img-element -- source decode element, not a display asset */}
       <img ref={imgRef} src={sourceUrl} alt="" className="sr-only" />
 

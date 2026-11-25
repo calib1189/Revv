@@ -11,7 +11,6 @@ import { addPostMedia } from "@/lib/db/post-media";
 import {
   validateImageFile,
   validateVideoFile,
-  validateVideoDuration,
   MAX_IMAGE_BYTES,
 } from "@/lib/validation/media";
 import { compressImageIfNeeded } from "@/lib/validation/compress-image";
@@ -26,8 +25,10 @@ import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { deleteSound, publicSoundUrl } from "@/lib/db/sounds";
 import { createOriginalSound, extractOriginalSound } from "@/features/sounds/original-sound";
 import { SoundPickerSheet } from "@/features/sounds/sound-picker-sheet";
-import { VideoEditor } from "@/features/editor/video-editor";
-import { PhotoEditor } from "@/features/editor/photo-editor";
+import { VideoEditor, type EditedVideo } from "@/features/editor/video-editor";
+import { CancelledError } from "@/features/editor/video-job";
+import type { EditState } from "@/features/editor/types";
+import { PhotoEditor, type PhotoEditState } from "@/features/editor/photo-editor";
 import { CameraRecorder } from "@/features/editor/camera-recorder";
 import { ClipCombiner } from "@/features/editor/clip-combiner";
 import { PostComposer, type PublishState } from "@/features/feed/post-composer";
@@ -65,89 +66,6 @@ async function checkMedia(file: File): Promise<{ allowed: boolean; reason?: stri
   return checkImage(file);
 }
 
-// The durationchange fix-up below had no ceiling at all — if it never
-// fired (for any reason: a malformed export, a device-specific decoder
-// stall), this promise just hung forever with no error, no way to
-// recover, and no diagnostic signal. Same class of bug as
-// video-editor.tsx's own load-metadata effect, fixed the same way.
-const READ_DURATION_TIMEOUT_MS = 15000;
-
-function readVideoDurationSeconds(file: File): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.muted = true;
-    video.playsInline = true;
-    // Real (if off-screen) size, not left fully detached from the
-    // document — WebKit is documented to stop reliably decoding a
-    // <video> element that was never actually attached to the page at
-    // all, the same bug already found and fixed twice elsewhere in this
-    // feature area (camera-recorder.tsx's preview video, video-editor.tsx's
-    // decode video). This was the third instance of it, just never
-    // exercised until now.
-    video.style.cssText = "position:fixed;left:-9999px;top:0;width:160px;height:160px;";
-    document.body.appendChild(video);
-
-    let settled = false;
-    const timer = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new Error("Timed out reading that video's duration."));
-    }, READ_DURATION_TIMEOUT_MS);
-
-    function cleanup() {
-      clearTimeout(timer);
-      URL.revokeObjectURL(url);
-      video.remove();
-    }
-
-    video.onloadedmetadata = () => {
-      if (settled) return;
-      if (Number.isFinite(video.duration) && video.duration > 0) {
-        const duration = video.duration;
-        settled = true;
-        cleanup();
-        resolve(duration);
-        return;
-      }
-      // The file being read here is always a just-exported/recorded
-      // clip, which commonly reports a bogus duration (Infinity, NaN)
-      // until something forces a seek near the true end — same fix
-      // already applied in video-editor.tsx.
-      const onFixed = () => {
-        if (settled) return;
-        video.removeEventListener("durationchange", onFixed);
-        const duration = video.duration;
-        settled = true;
-        cleanup();
-        resolve(duration);
-      };
-      video.addEventListener("durationchange", onFixed);
-      video.currentTime = 1e10;
-    };
-    video.onerror = () => {
-      if (settled) return;
-      settled = true;
-      // Surfaces the browser's own MediaError code/message (e.g.
-      // MEDIA_ERR_SRC_NOT_SUPPORTED, MEDIA_ERR_DECODE) instead of a
-      // generic string, so a report of this failure actually carries
-      // real diagnostic signal instead of another dead end.
-      const mediaError = video.error;
-      cleanup();
-      reject(
-        new Error(
-          mediaError
-            ? `Could not read video (code ${mediaError.code}: ${mediaError.message || "no message"}).`
-            : "Could not read video.",
-        ),
-      );
-    };
-    video.src = url;
-  });
-}
-
 export function ComposePostForm({
   userId,
   username,
@@ -183,8 +101,20 @@ export function ComposePostForm({
   /** Whether the photos went through the editor, where their sound is
    * chosen. A set picked straight from the library never does. */
   const [photoEdited, setPhotoEdited] = useState(false);
+  // The last photo through the editor, as it went in and how it was
+  // edited, so Back from the post screen can reopen that edit.
+  const photoEditRef = useRef<{ source: File; state: PhotoEditState } | null>(null);
+  const [resumePhoto, setResumePhoto] = useState<PhotoEditState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [publish, setPublish] = useState<PublishState | null>(null);
+  // The edited video while it renders in the background, and how far
+  // along it is (null once it's done, or when there's none).
+  const [videoEdit, setVideoEdit] = useState<EditedVideo | null>(null);
+  const videoEditRef = useRef<EditedVideo | null>(null);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  // An edit being picked back up from the post screen.
+  const [resumeEdit, setResumeEdit] = useState<{ state: EditState; sound: Sound | null } | null>(null);
   const [cameraSoundPickerOpen, setCameraSoundPickerOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const addPhotosInputRef = useRef<HTMLInputElement>(null);
@@ -192,7 +122,7 @@ export function ComposePostForm({
   const [soundUrl, setSoundUrl] = useState<string | null>(initialSoundUrl);
   const router = useRouter();
 
-  const mode: "photo" | "video" | null = video ? "video" : photos.length > 0 ? "photo" : null;
+  const mode: "photo" | "video" | null = video || videoEdit ? "video" : photos.length > 0 ? "photo" : null;
   const editorOpen = Boolean(videoEditorSource || photoEditorSource || multiClipSources);
 
   // Every preview here is a blob: URL held open by the browser until it's
@@ -223,6 +153,32 @@ export function ComposePostForm({
   function clearVideo() {
     if (video) URL.revokeObjectURL(video.previewUrl);
     setVideo(null);
+    const edit = videoEditRef.current;
+    if (edit) {
+      edit.job.cancel();
+      if (edit.cover) URL.revokeObjectURL(edit.cover);
+    }
+    videoEditRef.current = null;
+    setVideoEdit(null);
+    setVideoProgress(null);
+    setVideoError(null);
+  }
+
+  /** Back from the post screen: a video goes back into its edit, as it
+   * was; anything else goes back to the camera. */
+  function backFromCompose() {
+    const edit = videoEditRef.current;
+    if (edit) {
+      setResumeEdit({ state: edit.state, sound: edit.sound });
+      setVideoEditorSource(edit.source);
+      clearVideo();
+    } else if (photoEdited && photos.length === 1 && photoEditRef.current) {
+      // A single edited photo goes back into its edit too.
+      setResumePhoto(photoEditRef.current.state);
+      setPhotoEditorSource(photoEditRef.current.source);
+      clearPhotos();
+    }
+    setStep("camera");
   }
 
   function clearPhotos() {
@@ -324,49 +280,58 @@ export function ComposePostForm({
     }
   }
 
-  async function handleVideoEditorExported(
-    file: File,
-    editorSound: Sound | null,
-    editorSoundStartMs: number,
-  ) {
+  function handleVideoEditorDone(result: EditedVideo) {
     setVideoEditorSource(null);
+    setResumeEdit(null);
     setError(null);
     // A video's sound is chosen in the editor, where it gets mixed into
-    // the exported file itself. What comes back here is only the catalog
-    // row to credit the post to.
-    setSound(editorSound);
-    setSoundStartMs(editorSound ? editorSoundStartMs : 0);
-    setSoundUrl(editorSound ? publicSoundUrl(createBrowserClient(), editorSound.storage_path) : null);
-    const fileError = validateVideoFile(file);
-    if (fileError) return setError(fileError);
-
-    try {
-      const durationSeconds = await readVideoDurationSeconds(file);
-      const durationError = validateVideoDuration(durationSeconds);
-      if (durationError) return setError(durationError);
-    } catch (err) {
-      // The real underlying reason (a MediaError code, a timeout) used
-      // to be thrown away here in favor of one generic string — leaving
-      // no way to tell a genuinely corrupt export apart from a device-
-      // specific decoder stall from a report of "couldn't read that
-      // video file" alone. File size is the cheapest possible signal for
-      // which failure this actually is: a few KB means the export
-      // produced next to nothing (the encoder never really ran); a
-      // normal-looking size that still won't decode points at a
-      // structurally broken container instead (e.g. a MediaRecorder
-      // export whose finalization never completed).
-      const detail = err instanceof Error ? err.message : String(err);
-      const sizeKb = Math.round(file.size / 1024);
-      return setError(`Couldn't read that video file. (${detail}, ${sizeKb}KB)`);
-    }
-
+    // the file itself. What comes back here is only the catalog row to
+    // credit the post to.
+    setSound(result.sound);
+    setSoundStartMs(result.sound ? result.soundStartMs : 0);
+    setSoundUrl(result.sound ? publicSoundUrl(createBrowserClient(), result.sound.storage_path) : null);
+    clearPhotos();
     clearVideo();
-    setVideo({ file, previewUrl: URL.createObjectURL(file) });
+
+    // On to the post screen straight away; the file finishes behind it.
+    videoEditRef.current = result;
+    setVideoEdit(result);
+    setVideoProgress(result.job.progress());
+    const off = result.job.onProgress((p) => {
+      if (videoEditRef.current === result) setVideoProgress(p);
+    });
+    result.job.result
+      .then((file) => {
+        off();
+        if (videoEditRef.current !== result) return;
+        const fileError = validateVideoFile(file);
+        if (fileError) {
+          setVideoError(fileError);
+          setVideoProgress(null);
+          return;
+        }
+        setVideo({ file, previewUrl: URL.createObjectURL(file) });
+        setVideoProgress(null);
+      })
+      .catch((err: unknown) => {
+        off();
+        if (videoEditRef.current !== result || err instanceof CancelledError) return;
+        const detail = err instanceof Error ? err.message : String(err);
+        setVideoError(`Couldn't finish your video. (${detail}) Go back to the editor and try again.`);
+        setVideoProgress(null);
+      });
     setStep("compose");
   }
 
-  async function handlePhotoEditorExported(rawFile: File, editorSound: Sound | null, editorSoundStartMs: number) {
+  async function handlePhotoEditorExported(
+    rawFile: File,
+    editorSound: Sound | null,
+    editorSoundStartMs: number,
+    editState: PhotoEditState,
+  ) {
+    if (photoEditorSource) photoEditRef.current = { source: photoEditorSource, state: editState };
     setPhotoEditorSource(null);
+    setResumePhoto(null);
     setError(null);
     // A photo's sound is chosen in the editor too, and played beside the
     // photo at view time.
@@ -390,7 +355,7 @@ export function ComposePostForm({
     if (mode === "photo") {
       const photoError = validatePhotoCount(photos.length);
       if (photoError) return setError(photoError);
-    } else if (mode === "video" && !video) {
+    } else if (mode === "video" && !video && !videoEdit) {
       return setError("Add a video.");
     } else if (!mode) {
       return setError("Record or import a photo or video first.");
@@ -398,6 +363,29 @@ export function ComposePostForm({
     const finalCaption = caption.trim();
     const captionError = validateCaption(finalCaption);
     if (captionError) return setError(captionError);
+
+    // A video still finishing in the background is waited for here.
+    let videoFile = video?.file ?? null;
+    const edit = videoEditRef.current;
+    if (mode === "video" && !videoFile && edit) {
+      setPublish({ stage: "finishing", done: 0, total: 1, ratio: edit.job.progress() });
+      const off = edit.job.onProgress((ratio) => setPublish({ stage: "finishing", done: 0, total: 1, ratio }));
+      try {
+        videoFile = await edit.job.result;
+      } catch (err) {
+        off();
+        setPublish(null);
+        if (err instanceof CancelledError) return;
+        setError("Couldn't finish your video. Go back to the editor and try again.");
+        return;
+      }
+      off();
+      const fileError = validateVideoFile(videoFile);
+      if (fileError) {
+        setPublish(null);
+        return setError(fileError);
+      }
+    }
 
     setPublish({ stage: "checking", done: 0, total: mode === "photo" ? photos.length : 1 });
     try {
@@ -413,8 +401,8 @@ export function ComposePostForm({
             return;
           }
         }
-      } else if (video) {
-        const frame = await captureVideoFrame(video.file);
+      } else if (videoFile) {
+        const frame = await captureVideoFrame(videoFile);
         const check = await checkMedia(frame);
         if (!check.allowed) {
           setError(check.reason ?? "This video doesn't meet our content guidelines.");
@@ -429,8 +417,8 @@ export function ComposePostForm({
       // that audio turned into a sound others can use. Pulled out while
       // the video uploads; anything going wrong just posts it without one.
       const originalAudio =
-        mode === "video" && video && !sound
-          ? withTimeout(extractOriginalSound(video.file), ORIGINAL_SOUND_TIMEOUT_MS).catch(() => null)
+        mode === "video" && videoFile && !sound
+          ? withTimeout(extractOriginalSound(videoFile), ORIGINAL_SOUND_TIMEOUT_MS).catch(() => null)
           : Promise.resolve(null);
 
       // Every byte is uploaded and every media row created BEFORE the
@@ -456,8 +444,10 @@ export function ComposePostForm({
           mediaIds.push(media.id);
           setPublish({ stage: "uploading", done: mediaIds.length, total });
         }
-      } else if (video) {
-        const uploaded = await uploadVideo(supabase, userId, video.file);
+      } else if (videoFile) {
+        const uploaded = await uploadVideo(supabase, userId, videoFile, (ratio) =>
+          setPublish({ stage: "uploading", done: 0, total: 1, ratio }),
+        );
         const media = await createMedia(supabase, {
           owner_id: userId,
           storage_path: uploaded.storagePath,
@@ -579,6 +569,9 @@ export function ComposePostForm({
           mode={mode}
           photos={photos}
           video={video}
+          videoCover={videoEdit?.cover ?? null}
+          videoProgress={videoProgress}
+          videoError={videoError}
           vehicles={vehicles}
           crews={crews}
           caption={caption}
@@ -592,7 +585,7 @@ export function ComposePostForm({
           onSoundChange={handleSoundChange}
           soundStartMs={soundStartMs}
           onSoundStartMsChange={setSoundStartMs}
-          onBack={() => setStep("camera")}
+          onBack={backFromCompose}
           onRemovePhoto={removePhoto}
           onAddPhotos={mode === "photo" ? () => addPhotosInputRef.current?.click() : undefined}
           onSubmit={handleSubmit}
@@ -604,9 +597,13 @@ export function ComposePostForm({
       {videoEditorSource && (
         <VideoEditor
           source={videoEditorSource}
-          initialSound={sound}
-          onCancel={() => setVideoEditorSource(null)}
-          onExported={handleVideoEditorExported}
+          initialSound={resumeEdit ? null : sound}
+          initialEdit={resumeEdit}
+          onCancel={() => {
+            setVideoEditorSource(null);
+            setResumeEdit(null);
+          }}
+          onDone={handleVideoEditorDone}
         />
       )}
 
@@ -615,7 +612,11 @@ export function ComposePostForm({
           source={photoEditorSource}
           initialSound={sound}
           initialSoundStartMs={soundStartMs}
-          onCancel={() => setPhotoEditorSource(null)}
+          initialState={resumePhoto}
+          onCancel={() => {
+            setPhotoEditorSource(null);
+            setResumePhoto(null);
+          }}
           onExported={handlePhotoEditorExported}
         />
       )}

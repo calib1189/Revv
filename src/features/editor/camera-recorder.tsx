@@ -72,8 +72,8 @@ const RESOLUTION_PRESETS: Record<ResolutionPreset, { width: number; height: numb
 // harmless; what it actually delivers depends entirely on the device.
 const FPS_PRESETS = [30, 60, 120] as const;
 type FpsPreset = (typeof FPS_PRESETS)[number];
-const DEFAULT_RESOLUTION: ResolutionPreset = "720p";
-const DEFAULT_FPS: FpsPreset = 60;
+const DEFAULT_RESOLUTION: ResolutionPreset = "1080p";
+const DEFAULT_FPS: FpsPreset = 30;
 
 /** Formats a recorder has already refused on this device. isTypeSupported
  * can say yes to a format whose encoder then rejects the actual stream
@@ -103,15 +103,10 @@ function pickVideoMimeType(): string {
   return "video/webm";
 }
 
-/** Scales target bitrate to the actual capture resolution and frame rate
- * — both user-selectable (see the settings sheet), defaulting to
- * 720p/60fps: chosen so the default per-second workload (pixels drawn/
- * encoded per second) comes out roughly the same or lower than the old
- * fixed 1080p/30fps (1280×720×60 ≈ 1920×1080×30), while frame rate — the
- * thing that actually reads as "smooth" motion — doubles. 4K and 120fps
- * are offered as explicit opt-ins, not the default, because they trade
- * that smoothness away. The in-app copy next to those options says so
- * rather than hiding the trade-off. */
+/** Scales target bitrate to the actual capture resolution and frame rate,
+ * both user-selectable in the settings sheet. The default is 1080p at
+ * 30fps: 720p looked soft on a phone screen once a post filled it. 4K
+ * and 120fps are opt-ins, and the copy beside them says what they cost. */
 function pickVideoBitsPerSecond(width: number, height: number, fps: number): number {
   const pixels = width * height;
   const bitsPerSecond = Math.round(pixels * 0.14 * fps);

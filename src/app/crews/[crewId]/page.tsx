@@ -138,15 +138,20 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
   return (
     <div className="flex-1 pb-16">
       <div className="mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6 sm:pt-8">
-        {/* Banner: the uploaded photo if there is one, otherwise the
-            equipped Crew Banner cosmetic, otherwise a quiet surface. */}
+        {/* Banner: the uploaded photo, edged in the bought Crew Banner's
+            colours when there is one; the bought banner alone without a
+            photo; otherwise a quiet surface. */}
         <div
-          className={`relative h-36 overflow-hidden rounded-[28px] bg-surface elev-2 sm:h-48 ${
-            !bannerUrl ? (bannerItem?.effectClassName ?? "") : ""
+          className={`relative h-36 overflow-hidden rounded-[28px] bg-surface elev-2 sm:h-48 ${bannerItem?.effectClassName ?? ""} ${
+            bannerItem && bannerUrl ? "p-[3px]" : ""
           }`}
-          style={!bannerUrl && bannerItem ? { backgroundImage: bannerItem.value } : undefined}
+          style={bannerItem ? { backgroundImage: bannerItem.value } : undefined}
         >
-          {bannerUrl && <Image src={bannerUrl} alt="" fill sizes="(min-width: 768px) 720px, 100vw" className="object-cover" priority />}
+          {bannerUrl && (
+            <div className={`relative h-full w-full overflow-hidden ${bannerItem ? "rounded-[25px]" : ""}`}>
+              <Image src={bannerUrl} alt="" fill sizes="(min-width: 768px) 720px, 100vw" className="object-cover" priority />
+            </div>
+          )}
         </div>
 
         <header className="animate-section-rise -mt-14 flex flex-col items-center text-center">

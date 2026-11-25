@@ -5,6 +5,7 @@ import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
 import { rankForScore, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { FlagIcon, LockIcon } from "@/components/ui/icons";
 import type { Crew } from "@/lib/db/crews";
+import { bannerStyle, crewLook, CrewLogo, CrewName } from "@/features/crews/crew-look";
 
 /** A crew as a cover card: banner photo full-bleed, logo and name over
  * a scrim at the bottom, and — when a member has a rated build — the
@@ -26,12 +27,20 @@ export function CrewCard({
 }) {
   const tier = bestScore != null ? rankForScore(bestScore) : null;
   const TierIcon = tier ? RANK_MATERIAL_ICONS[tier] : null;
+  const look = crewLook(crew);
+  const banner = bannerStyle(look);
 
   return (
+    // A bought banner edges the card in its colours (round the crew's own
+    // photo), or fills it when there's no photo.
     <Link
       href={`/crews/${crew.id}`}
-      className="pressable group relative block aspect-[4/3] overflow-hidden rounded-[24px] bg-neutral-900 elev-2"
+      className={`pressable group relative block aspect-[4/3] overflow-hidden rounded-[24px] bg-neutral-900 elev-2 ${
+        look.banner ? `p-[3px] ${banner.className}` : ""
+      }`}
+      style={banner.style}
     >
+      <div className={`relative h-full w-full overflow-hidden ${look.banner ? "rounded-[21px]" : ""} ${bannerUrl ? "bg-neutral-900" : ""}`}>
       {bannerUrl ? (
         <Image
           src={bannerUrl}
@@ -40,7 +49,7 @@ export function CrewCard({
           sizes="(min-width: 640px) 50vw, 100vw"
           className="object-cover transition-transform duration-[900ms] ease-[var(--ease-ios)] group-hover:scale-[1.04]"
         />
-      ) : (
+      ) : look.banner ? null : (
         <div className="flex h-full w-full items-center justify-center">
           <FlagIcon className="h-9 w-9 text-white/25" />
         </div>
@@ -68,17 +77,19 @@ export function CrewCard({
       </div>
 
       <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-4">
-        <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-[14px] bg-neutral-800 ring-2 ring-white/15">
-          {logoUrl ? (
-            <Image src={logoUrl} alt="" fill sizes="48px" className="object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-lg font-bold text-white">
-              {crew.name.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </div>
+        <CrewLogo
+          crew={crew}
+          logoUrl={logoUrl}
+          look={look}
+          size={48}
+          radius={14}
+          className={`bg-neutral-800 ${look.frame ? "" : "ring-2 ring-white/15"}`}
+          initialClassName="text-lg font-bold text-white"
+        />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[1.125rem] font-bold tracking-[-0.01em] text-white">{crew.name}</h3>
+          <h3 className="truncate text-[1.125rem] font-bold tracking-[-0.01em] text-white">
+            <CrewName crew={crew} look={look} />
+          </h3>
           <p className="truncate text-[0.8125rem] text-white/75">
             {CREW_CATEGORY_LABELS[crew.category]}
             {crew.location_text ? ` · ${crew.location_text}` : ""}
@@ -86,6 +97,7 @@ export function CrewCard({
             <span className="numeral">{memberCount}</span> member{memberCount === 1 ? "" : "s"}
           </p>
         </div>
+      </div>
       </div>
     </Link>
   );

@@ -56,10 +56,14 @@ interface SelectedMedia {
 }
 
 export interface PublishState {
-  stage: "checking" | "uploading" | "publishing" | "done";
+  /** "finishing": the edited video is still rendering. */
+  stage: "finishing" | "checking" | "uploading" | "publishing" | "done";
   /** Files uploaded so far, during "uploading". */
   done: number;
   total: number;
+  /** 0-1 within the stage, where it can be measured (the render, a
+   * video's bytes going up). */
+  ratio?: number;
   /** Points a promo paid for this post (lib/promo), on "done". */
   bonusPoints?: number;
 }
@@ -76,6 +80,9 @@ export function PostComposer({
   mode,
   photos,
   video,
+  videoCover = null,
+  videoProgress = null,
+  videoError = null,
   vehicles,
   crews,
   caption,
@@ -98,7 +105,13 @@ export function PostComposer({
 }: {
   mode: "photo" | "video";
   photos: SelectedMedia[];
+  /** Null while an edited video is still rendering (see videoProgress). */
   video: SelectedMedia | null;
+  /** A still of the edit, shown until the video itself is ready. */
+  videoCover?: string | null;
+  /** 0-1 while the edited video renders; null once it's ready. */
+  videoProgress?: number | null;
+  videoError?: string | null;
   vehicles: Vehicle[];
   crews: Crew[];
   caption: string;
@@ -131,7 +144,8 @@ export function PostComposer({
   const tags = captionTags(caption);
   const isPublishing = publish !== null;
 
-  const cover = mode === "photo" ? photos[0]?.previewUrl : video?.previewUrl;
+  const cover = mode === "photo" ? photos[0]?.previewUrl : (video?.previewUrl ?? videoCover ?? undefined);
+  const videoReady = mode !== "video" || !!video;
 
   function insertHashSign() {
     const el = captionRef.current;
@@ -148,7 +162,7 @@ export function PostComposer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#0c0c0d] text-white">
+    <div className="animate-studio-in fixed inset-0 z-50 flex flex-col bg-[#0c0c0d] text-white">
       <div className="grid flex-shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center px-2 pb-2 pt-[calc(0.5rem+env(safe-area-inset-top))]">
         <button
           type="button"
@@ -175,26 +189,33 @@ export function PostComposer({
               value={caption}
               onChange={(e) => onCaptionChange(e.target.value)}
               maxLength={MAX_CAPTION_LENGTH}
-              placeholder="Describe your post. What's done, what's next?"
+              placeholder="Write a caption. What's done, what's next?"
               aria-label="Caption"
-              className="h-[8.5rem] w-full resize-none bg-transparent text-[1.0625rem] leading-relaxed text-white placeholder:text-white/35 focus:outline-none"
+              className="h-[9.5rem] w-full resize-none bg-transparent text-[1.0625rem] leading-relaxed text-white placeholder:text-white/35 focus:outline-none"
             />
           </div>
           <button
             type="button"
             onClick={() => setPreviewOpen(true)}
-            aria-label="Preview your post"
-            className="pressable relative h-[8.5rem] w-24 flex-shrink-0 overflow-hidden rounded-[14px] bg-white/[0.06] ring-1 ring-white/10"
+            disabled={!videoReady}
+            aria-label={videoReady ? "Preview your post" : "Your video is finishing"}
+            className="pressable relative h-[9.5rem] w-[6.75rem] flex-shrink-0 overflow-hidden rounded-[16px] bg-white/[0.06] ring-1 ring-white/10"
           >
             {cover &&
-              (mode === "video" ? (
-                <video src={cover} autoPlay loop muted playsInline className="h-full w-full object-cover" />
+              (mode === "video" && video ? (
+                <video src={cover} autoPlay loop muted playsInline className="animate-fade-in h-full w-full object-cover" />
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset
                 <img src={cover} alt="" className="h-full w-full object-cover" />
               ))}
+            {!videoReady && !videoError && (
+              <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/45">
+                <ProgressRing ratio={videoProgress ?? 0} />
+                <span className="numeral text-[0.6875rem] font-semibold">{Math.round((videoProgress ?? 0) * 100)}%</span>
+              </span>
+            )}
             <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2 pb-1.5 pt-5 text-[0.6875rem] font-semibold">
-              Preview
+              {videoReady ? "Preview" : videoError ? "Not finished" : "Finishing"}
             </span>
             {mode === "photo" && photos.length > 1 && (
               <span className="numeral absolute right-1.5 top-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[0.625rem] font-semibold backdrop-blur-md">
@@ -272,9 +293,8 @@ export function PostComposer({
           </div>
         )}
 
-        <div className="mx-4 mt-5 h-px bg-white/[0.07]" />
-
-        <div className="flex flex-col py-2">
+        {/* What's attached to the post, as one grouped card. */}
+        <div className="mx-4 mb-4 mt-5 flex flex-col divide-y divide-white/[0.06] overflow-hidden rounded-[18px] bg-white/[0.045] empty:hidden">
           <SoundRow
             mode={mode}
             chosenInEditor={soundChosenInEditor}
@@ -312,9 +332,9 @@ export function PostComposer({
           )}
         </div>
 
-        {error && (
+        {(error || videoError) && (
           <div className="animate-rise-in px-4 pb-4">
-            <Callout tone="danger">{error}</Callout>
+            <Callout tone="danger">{error ?? videoError}</Callout>
           </div>
         )}
       </form>
@@ -323,7 +343,7 @@ export function PostComposer({
         <button
           type="button"
           onClick={() => setPreviewOpen(true)}
-          disabled={isPublishing}
+          disabled={isPublishing || !videoReady}
           className="pressable flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-white/[0.08] text-[1rem] font-semibold text-white disabled:opacity-40"
         >
           <PlayIcon className="h-4 w-4" />
@@ -332,7 +352,7 @@ export function PostComposer({
         <button
           type="submit"
           form="post-form"
-          disabled={isPublishing}
+          disabled={isPublishing || !!videoError}
           className="pressable flex h-[52px] flex-[2] items-center justify-center gap-2 rounded-full bg-accent text-[1rem] font-semibold text-white shadow-[0_12px_28px_-14px_rgb(255_68_51/0.9)] disabled:opacity-60"
         >
           <ShareIcon className="h-[18px] w-[18px] -rotate-12" />
@@ -340,7 +360,7 @@ export function PostComposer({
         </button>
       </div>
 
-      {previewOpen && cover && (
+      {previewOpen && cover && videoReady && (
         <PostPreview
           mode={mode}
           photos={photos}
@@ -350,7 +370,7 @@ export function PostComposer({
         />
       )}
 
-      {publish && <PublishOverlay publish={publish} cover={cover ?? null} mode={mode} />}
+      {publish && <PublishOverlay publish={publish} cover={cover ?? null} isVideo={mode === "video" && !!video} />}
 
       {pickerOpen && (
         <SoundPickerSheet
@@ -639,24 +659,31 @@ function PreviewVideo({ src }: { src: string }) {
 function PublishOverlay({
   publish,
   cover,
-  mode,
+  isVideo,
 }: {
   publish: PublishState;
   cover: string | null;
-  mode: "photo" | "video";
+  /** The cover is the finished video rather than a still. */
+  isVideo: boolean;
 }) {
+  const uploaded =
+    publish.ratio !== undefined ? publish.ratio : publish.total ? publish.done / publish.total : 0;
   const fraction =
-    publish.stage === "checking"
-      ? 0.08
-      : publish.stage === "uploading"
-        ? 0.12 + 0.76 * (publish.total ? publish.done / publish.total : 0)
-        : publish.stage === "publishing"
-          ? 0.94
-          : 1;
+    publish.stage === "finishing"
+      ? 0.3 * (publish.ratio ?? 0)
+      : publish.stage === "checking"
+        ? 0.33
+        : publish.stage === "uploading"
+          ? 0.36 + 0.56 * uploaded
+          : publish.stage === "publishing"
+            ? 0.95
+            : 1;
   const radius = 34;
   const circumference = 2 * Math.PI * radius;
   const label =
-    publish.stage === "checking"
+    publish.stage === "finishing"
+      ? "Finishing your video"
+      : publish.stage === "checking"
       ? "Checking your post"
       : publish.stage === "uploading"
         ? publish.total > 1
@@ -670,7 +697,7 @@ function PublishOverlay({
     <div className="animate-fade-in fixed inset-0 z-[70] flex flex-col items-center justify-center gap-6 bg-black/80 backdrop-blur-md">
       <div className="relative h-[13.5rem] w-[9.5rem] overflow-hidden rounded-[20px] ring-1 ring-white/15">
         {cover &&
-          (mode === "video" ? (
+          (isVideo ? (
             <video src={cover} autoPlay loop muted playsInline className="h-full w-full object-cover" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element -- local blob: preview, not an optimizable remote asset
@@ -710,5 +737,28 @@ function PublishOverlay({
         )}
       </div>
     </div>
+  );
+}
+
+/** A small progress ring for the cover while the video finishes. */
+function ProgressRing({ ratio }: { ratio: number }) {
+  const r = 13;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" className="-rotate-90" aria-hidden>
+      <circle cx="16" cy="16" r={r} fill="none" stroke="rgb(255 255 255 / 0.25)" strokeWidth="3" />
+      <circle
+        cx="16"
+        cy="16"
+        r={r}
+        fill="none"
+        stroke="#fff"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={c * (1 - Math.min(1, Math.max(0, ratio)))}
+        style={{ transition: "stroke-dashoffset 300ms linear" }}
+      />
+    </svg>
   );
 }

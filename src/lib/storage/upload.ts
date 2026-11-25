@@ -136,14 +136,59 @@ export interface UploadedVideo {
   durationMs: number;
 }
 
+/** The same upload storage.upload() makes, sent with XMLHttpRequest so
+ * its progress can be shown (fetch can't report upload progress). False
+ * when it couldn't be sent this way at all, so the caller can fall back. */
+async function uploadWithProgress(
+  supabase: SupabaseClient<Database>,
+  storagePath: string,
+  file: File,
+  onProgress: (ratio: number) => void,
+): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!url || !key || !token || typeof XMLHttpRequest === "undefined") return false;
+  const path = storagePath.split("/").map(encodeURIComponent).join("/");
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${url}/storage/v1/object/media/${path}`);
+    xhr.setRequestHeader("authorization", `Bearer ${token}`);
+    xhr.setRequestHeader("apikey", key);
+    xhr.setRequestHeader("content-type", file.type || "application/octet-stream");
+    xhr.setRequestHeader("cache-control", `max-age=${IMMUTABLE_CACHE_CONTROL}`);
+    xhr.setRequestHeader("x-upsert", "false");
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && e.total > 0) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress(1);
+        resolve(true);
+      } else {
+        reject(new Error(`Upload failed (${xhr.status}).`));
+      }
+    };
+    xhr.onerror = () => resolve(false);
+    xhr.send(file);
+  });
+}
+
 export async function uploadVideo(
   supabase: SupabaseClient<Database>,
   userId: string,
   file: File,
+  /** 0-1 as the bytes go up, where the browser can report it. */
+  onProgress?: (ratio: number) => void,
 ): Promise<UploadedVideo> {
   const metadata = await readVideoMetadata(file);
   const extension = file.name.split(".").pop() || "mp4";
   const storagePath = `${userId}/${crypto.randomUUID()}.${extension}`;
+
+  if (onProgress && (await uploadWithProgress(supabase, storagePath, file, onProgress))) {
+    return { storagePath, ...metadata };
+  }
 
   const { error } = await supabase.storage
     .from("media")
