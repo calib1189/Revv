@@ -16,17 +16,17 @@ const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
  * (lib/daily/rewards.ts); opening only reveals it, so opening twice, or
  * never, changes nothing about what you have. */
 export async function openStreakChestAction(chestDate: string): Promise<OpenChestResult> {
-  if (!DATE_KEY.test(chestDate)) return { error: "That chest isn't available." };
+  if (!DATE_KEY.test(chestDate)) return { error: "That garage isn't available." };
   const user = await getCurrentUser();
-  if (!user) return { error: "Sign in to open your chest." };
+  if (!user) return { error: "Sign in to open your garage." };
   try {
     const chest = await openStreakChest(createServiceRoleClient(), user.id, chestDate);
-    if (!chest) return { error: "That chest isn't available." };
+    if (!chest) return { error: "That garage isn't available." };
     // No revalidation here: the page would redraw mid-animation with no
     // chest left to open. The reveal refreshes it once it's closed.
     return { error: null, tier: chest.tier, points: chest.points, itemId: chest.itemId };
   } catch (err) {
     console.error("openStreakChestAction failed:", err);
-    return { error: "Couldn't open your chest. Try again." };
+    return { error: "Couldn't open your garage. Try again." };
   }
 }

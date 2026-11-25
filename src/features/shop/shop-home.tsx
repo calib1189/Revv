@@ -730,7 +730,7 @@ function ProductCard({
     ) : item.streakOnly ? (
       <span className="flex items-center gap-1 text-[0.8125rem] font-bold text-muted">
         <FlameIcon className="h-3.5 w-3.5" style={{ color: RARITY_COLOR.streak }} />
-        Streak chest
+        Streak garage
       </span>
     ) : (
       <span className="numeral flex items-center gap-1 text-[1.0625rem] font-extrabold">
@@ -880,8 +880,8 @@ function ItemDetail({
       ) : item.streakOnly ? (
         <div className="flex flex-col gap-2">
           <p className="text-center text-[0.875rem] text-muted">
-            Can&apos;t be bought. Only found in streak chests: keep a streak in Sorza Daily or the Build Battle, and
-            every 7th day opens one.
+            Can&apos;t be bought. Only found in streak garages: keep a streak in Sorza Daily or the Build Battle, and
+            every 7th day unlocks one.
           </p>
           <Link href="/daily" className="pressable flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground/[0.08] text-[0.9375rem] font-semibold">
             <FlameIcon className="h-4 w-4" style={{ color: RARITY_COLOR.streak }} />

@@ -2303,7 +2303,18 @@ export function FlameIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-/** The streak's seventh-day chest. */
+/** The streak's seventh-day garage: a roofline over a sectional door. */
+export function GarageIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" {...props}>
+      <path d="M3 20.5V9.3a1 1 0 0 1 .6-.92l8-3.6a1 1 0 0 1 .8 0l8 3.6a1 1 0 0 1 .6.92v11.2" />
+      <path d="M6.75 20.5v-8.25h10.5v8.25" />
+      <path d="M6.75 15h10.5M6.75 17.75h10.5" />
+    </svg>
+  );
+}
+
+/** A wrapped gift. */
 export function GiftIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinejoin="round" {...props}>

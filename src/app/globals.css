@@ -520,186 +520,57 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   animation: section-rise 560ms var(--ease-ios) both;
 }
 
-/* Streak chest (features/daily/chest-opener.tsx). Waiting: a small hop
-   every few seconds. Opening: it rattles harder and swells, the lid
-   flies off, light bursts out in the prize's tier colour, and the prize
-   rises out of it. */
-@keyframes chest-idle {
+/* Streak garage (features/daily/chest-opener.tsx). The scene itself is
+   rendered on a canvas (garage-scene.ts); these are the pieces around it:
+   the card's glowing icon and the words. */
+@keyframes garage-idle {
   0%,
-  70%,
   100% {
-    transform: translateY(0) rotate(0);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 6px 18px -8px rgba(79, 139, 255, 0.35);
   }
-  76% {
-    transform: translateY(-5px) rotate(-6deg);
-  }
-  82% {
-    transform: translateY(0) rotate(5deg);
-  }
-  88% {
-    transform: translateY(-2px) rotate(-3deg);
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(143, 192, 255, 0.45),
+      0 8px 28px -4px rgba(79, 139, 255, 0.75);
   }
 }
-.chest-idle {
-  animation: chest-idle 2.6s var(--ease-ios) infinite;
+.garage-idle {
+  animation: garage-idle 2.8s ease-in-out infinite;
 }
-@keyframes chest-shake {
-  0% {
-    transform: rotate(0) scale(1);
-  }
-  10% {
-    transform: rotate(-7deg) scale(1.01);
-  }
-  20% {
-    transform: rotate(7deg) scale(1.02);
-  }
-  32% {
-    transform: rotate(-9deg) scale(1.04);
-  }
-  44% {
-    transform: rotate(9deg) scale(1.06);
-  }
-  56% {
-    transform: rotate(-11deg) scale(1.08);
-  }
-  68% {
-    transform: rotate(11deg) scale(1.1);
-  }
-  80% {
-    transform: rotate(-6deg) scale(1.13);
-  }
-  90% {
-    transform: rotate(3deg) scale(1.16);
-  }
+@keyframes garage-icon-glow {
+  0%,
   100% {
-    transform: rotate(0) scale(1.18);
+    opacity: 0.75;
+    filter: drop-shadow(0 0 0 rgba(111, 180, 255, 0));
   }
-}
-.chest-shake {
-  animation: chest-shake 950ms cubic-bezier(0.36, 0, 0.66, 1) both;
-}
-@keyframes chest-lid-pop {
-  0% {
-    transform: translateY(0) rotate(0);
+  50% {
     opacity: 1;
+    filter: drop-shadow(0 0 5px rgba(111, 180, 255, 0.9));
   }
-  100% {
-    transform: translateY(-95px) rotate(-28deg);
+}
+.garage-icon-glow {
+  animation: garage-icon-glow 2.2s ease-in-out infinite;
+}
+@keyframes garage-copy-in {
+  from {
     opacity: 0;
+    transform: translateY(16px);
   }
-}
-.chest-lid-pop {
-  animation: chest-lid-pop 600ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
-}
-@keyframes chest-body-sink {
-  0% {
-    transform: scale(1.18);
-  }
-  35% {
-    transform: scale(0.94);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-.chest-body-sink {
-  transform-box: fill-box;
-  transform-origin: center bottom;
-  animation: chest-body-sink 500ms var(--ease-ios) both;
-}
-@keyframes chest-flash {
-  0% {
-    transform: translate(-50%, -50%) scale(0.2);
-    opacity: 0.95;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(5);
-    opacity: 0;
-  }
-}
-.chest-flash {
-  animation: chest-flash 750ms cubic-bezier(0.1, 0.7, 0.3, 1) both;
-}
-@keyframes chest-rays {
-  0% {
-    transform: translate(-50%, -50%) scale(0.4);
-    opacity: 0;
-  }
-  12% {
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.8;
-  }
-}
-.chest-rays {
-  animation: chest-rays 1.2s cubic-bezier(0.2, 0.8, 0.3, 1) both;
-}
-@keyframes chest-rays-spin {
   to {
-    transform: rotate(360deg);
-  }
-}
-.chest-rays-spin {
-  animation: chest-rays-spin 40s linear infinite;
-}
-@keyframes chest-spark {
-  0% {
-    transform: translate(-50%, -50%) scale(1.2);
     opacity: 1;
-  }
-  100% {
-    transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(0.2);
-    opacity: 0;
-  }
-}
-.chest-spark {
-  animation: chest-spark 900ms cubic-bezier(0.1, 0.8, 0.3, 1) both;
-}
-@keyframes chest-prize-rise {
-  0% {
-    transform: translateY(40px) scale(0.85);
-    opacity: 0;
-  }
-  100% {
     transform: none;
-    opacity: 1;
   }
 }
-.chest-prize-rise {
-  animation: chest-prize-rise 520ms cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
-}
-@keyframes chest-fade-out {
-  to {
-    transform: translateY(-20px) scale(0.8);
-    opacity: 0;
-  }
-}
-.chest-fade-out {
-  animation: chest-fade-out 400ms var(--ease-ios) both;
+.garage-copy-in {
+  animation: garage-copy-in 560ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .chest-idle,
-  .chest-shake,
-  .chest-lid-pop,
-  .chest-body-sink,
-  .chest-flash,
-  .chest-rays,
-  .chest-rays-spin,
-  .chest-spark,
-  .chest-prize-rise,
-  .chest-fade-out {
+  .garage-idle,
+  .garage-icon-glow,
+  .garage-copy-in {
     animation: none;
-  }
-  .chest-fade-out,
-  .chest-flash,
-  .chest-spark {
-    opacity: 0;
-  }
-  .chest-rays {
-    transform: translate(-50%, -50%);
-    opacity: 0.5;
   }
 }
 

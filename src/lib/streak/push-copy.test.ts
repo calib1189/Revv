@@ -6,8 +6,8 @@ describe("streakEndingBody", () => {
     expect(streakEndingBody(12)).toBe("Your 12-day streak ends at midnight. One vote keeps it going.");
   });
 
-  it("mentions the chest when tonight would earn one", () => {
-    expect(streakEndingBody(6)).toBe("Your 6-day streak ends at midnight, and one vote tonight opens your day-7 chest.");
-    expect(streakEndingBody(13)).toContain("day-14 chest");
+  it("mentions the garage when tonight would unlock one", () => {
+    expect(streakEndingBody(6)).toBe("Your 6-day streak ends at midnight, and one vote tonight unlocks your day-7 garage.");
+    expect(streakEndingBody(13)).toContain("day-14 garage");
   });
 });

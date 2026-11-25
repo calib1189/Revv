@@ -1,4 +1,4 @@
-import { CheckIcon, GiftIcon } from "@/components/ui/icons";
+import { CheckIcon, GarageIcon } from "@/components/ui/icons";
 import { trackSlots, trackDay, TRACK_LENGTH, type TrackSlot } from "@/lib/streak/track";
 import { STREAK_POINTS } from "@/lib/points/values";
 import { addDays } from "@/lib/daily/day";
@@ -14,7 +14,7 @@ function weekdayOf(key: string): string {
 }
 
 /** One day of the week row: a circle that fills when you play. Today is
- * outlined until you do; the seventh is the chest. */
+ * outlined until you do; the seventh is the garage. */
 function Day({ slot, label, isToday }: { slot: TrackSlot; label: string; isToday: boolean }) {
   const chest = slot.day === TRACK_LENGTH;
   const done = slot.state === "done";
@@ -52,10 +52,10 @@ function Day({ slot, label, isToday }: { slot: TrackSlot; label: string; isToday
           slot.claimedToday ? "streak-day-pop" : ""
         }`}
         style={style}
-        aria-label={`Day ${slot.streakDay}${chest ? ", chest" : ""}${done ? ", done" : isToday ? ", today" : ""}`}
+        aria-label={`Day ${slot.streakDay}${chest ? ", garage" : ""}${done ? ", done" : isToday ? ", today" : ""}`}
       >
         {chest ? (
-          <GiftIcon className="h-[17px] w-[17px]" />
+          <GarageIcon className="h-[17px] w-[17px]" />
         ) : done ? (
           <CheckIcon className="h-4 w-4" strokeWidth={2.6} />
         ) : null}
@@ -70,19 +70,19 @@ const CHEST_LINE = "points or a cosmetic you can't buy";
 function caption(streak: Streak, chestDay: number): string {
   const day = trackDay(streak.current);
   if (streak.activeToday) {
-    if (day === TRACK_LENGTH) return `Day ${streak.current} chest earned. Next one on day ${streak.current + TRACK_LENGTH}.`;
+    if (day === TRACK_LENGTH) return `Day ${streak.current} garage unlocked. Next one on day ${streak.current + TRACK_LENGTH}.`;
     const left = chestDay - streak.current;
-    return `+${STREAK_POINTS.track[day - 1]} today. ${left === 1 ? "Chest tomorrow" : `${left} days to your chest`}.`;
+    return `+${STREAK_POINTS.track[day - 1]} today. ${left === 1 ? "Garage tomorrow" : `${left} days to your garage`}.`;
   }
   const next = day === TRACK_LENGTH ? 1 : day + 1;
-  if (next === TRACK_LENGTH) return `Play today to open your day-${chestDay} chest: ${CHEST_LINE}.`;
+  if (next === TRACK_LENGTH) return `Play today to unlock your day-${chestDay} garage: ${CHEST_LINE}.`;
   if (streak.current > 0) return `Play today for +${STREAK_POINTS.track[next - 1]}.`;
-  return `Every 7th day opens a chest: ${CHEST_LINE}.`;
+  return `Every 7th day unlocks a garage: ${CHEST_LINE}.`;
 }
 
 /** The streak's week: seven circles named for the days they fall on,
  * filling in as you play, joined by a line that grows with them. The
- * seventh is the chest (day 7, 14, 21…). */
+ * seventh is the garage (day 7, 14, 21…). */
 export function StreakTrack({ streak, todayKey }: { streak: Streak; todayKey: string }) {
   const slots = trackSlots(streak);
   const todayIndex = slots.findIndex((s) => s.state === "today" || s.claimedToday);

@@ -1,4 +1,4 @@
-import { FlameIcon, GiftIcon } from "@/components/ui/icons";
+import { FlameIcon, GarageIcon } from "@/components/ui/icons";
 
 /** A streak at a glance: the flame and the day count. Lit once you've
  * shown up today; grey while today is still to play, which is the nudge.
@@ -10,7 +10,7 @@ export function StreakChip({
   className = "",
 }: {
   streak: { current: number; activeToday: boolean } | null;
-  /** A chest waiting to be opened: shown as a blue gift beside the count. */
+  /** A garage waiting to be opened: shown as a glowing blue garage beside the count. */
   chestReady?: boolean;
   onMedia?: boolean;
   className?: string;
@@ -19,7 +19,7 @@ export function StreakChip({
     return (
       <span className={`inline-flex items-center gap-1 ${className}`}>
         <StreakChip streak={streak} onMedia={onMedia} />
-        <GiftIcon className="chest-idle h-[1.1em] w-[1.1em]" style={{ color: "#6fb4ff" }} aria-label="Chest ready to open" />
+        <GarageIcon className="garage-icon-glow h-[1.1em] w-[1.1em]" style={{ color: "#6fb4ff" }} aria-label="Garage ready to open" />
       </span>
     );
   }

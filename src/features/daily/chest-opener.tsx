@@ -1,16 +1,26 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { openStreakChestAction } from "@/features/daily/chest-actions";
+import { openStreakChestAction, type OpenChestResult } from "@/features/daily/chest-actions";
 import { equipItemAction } from "@/features/store/actions";
 import { StyledName } from "@/features/store/look-preview";
 import { getStoreItem, STORE_CATEGORY_LABELS, type StoreItem } from "@/lib/store/catalog";
 import type { ChestTier } from "@/lib/streak/chest";
-import { hapticLanding, hapticTierUp } from "@/lib/haptics";
-import { CheckIcon } from "@/components/ui/icons";
+import { hapticLanding, hapticSnap, hapticTierUp } from "@/lib/haptics";
+import { CheckIcon, GarageIcon, WheelIcon } from "@/components/ui/icons";
+import { GarageScene, hexToRgb, type GarageLayout } from "@/features/daily/garage-scene";
+
+/*
+ * The streak's seventh-day reward, opened as a garage (garage-scene.ts
+ * renders it). A building at night: the SORZA sign comes on over the
+ * door, you open it, and it rises at an opener's pace while the light
+ * inside spills out across the driveway. The prize is in there, revealed
+ * by the door as it goes up. Under the hood it's still a "chest"
+ * (streak_chests, lib/streak/chest.ts).
+ */
 
 const TIER_LABEL: Record<ChestTier, string> = {
   common: "Common",
@@ -20,165 +30,291 @@ const TIER_LABEL: Record<ChestTier, string> = {
   legendary: "Legendary",
 };
 
-/** The colour of the light that bursts out: it tells you how good the
- * prize is a beat before you read it. */
+/** The colour of the strip lighting inside: how good the prize is, a
+ * beat before you read it. */
 const TIER_COLOR: Record<ChestTier, string> = {
-  common: "#b8c0cc",
+  common: "#c4ccd8",
   uncommon: "#4ade80",
   rare: "#4ea8ff",
   epic: "#a78bfa",
   legendary: "#f5b93c",
 };
 
-const SHAKE_MS = 950;
-const BURST_MS = 650;
+/** The scene fades up, then the sign comes on. */
+const FADE_MS = 1100;
+const SIGN_AT = 1050;
+const SIGN_MS = 650;
+const READY_AT = 1900;
+/** The opener engaging, then the door's travel. */
+const MOTOR_MS = 350;
+const TRAVEL_MS = 3300;
+const PUSH_MS = 4300;
+/** Where the prize hangs in the doorway, from the top, or for one that
+ * stands, where the floor it stands on is. */
+const PRIZE_AT = 0.66;
+const PRIZE_FLOOR = 0.9;
 
 type Prize = { tier: ChestTier; points: number; item: StoreItem | null };
-type Phase = "shake" | "burst" | "reveal" | "error";
+type Stage = "intro" | "ready" | "opening" | "reveal" | "error";
 
-/** The chest itself: a box and a lid that come apart. Drawn rather than
- * an icon so the lid can fly off on its own. */
-function ChestArt({ phase, color }: { phase: Phase | "idle"; color: string }) {
-  const open = phase === "burst" || phase === "reveal";
-  // Unique per chest: two on screen (the card and the open one) mustn't
-  // share gradients, or the burst would glow in the other one's colour.
-  const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const id = (name: string) => `chest-${name}-${uid}`;
-  return (
-    <svg viewBox="0 0 120 110" className="h-full w-full overflow-visible" aria-hidden>
-      <defs>
-        <linearGradient id={id("body")} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3b5491" />
-          <stop offset="1" stopColor="#18213d" />
-        </linearGradient>
-        <linearGradient id={id("lid")} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#5672b8" />
-          <stop offset="1" stopColor="#25345f" />
-        </linearGradient>
-        <linearGradient id={id("metal")} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#4f8bff" />
-          <stop offset="0.5" stopColor="#eaf5ff" />
-          <stop offset="1" stopColor="#4f8bff" />
-        </linearGradient>
-        <radialGradient id={id("inside")} cx="0.5" cy="0.5" r="0.5">
-          <stop offset="0" stopColor="#fff" />
-          <stop offset="0.45" stopColor={color} />
-          <stop offset="1" stopColor={color} stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      {/* What's inside, pouring light out of the open top. */}
-      <ellipse
-        cx="60"
-        cy="47"
-        rx="52"
-        ry="14"
-        fill={`url(#${id("inside")})`}
-        opacity={open ? 1 : 0}
-        className="transition-opacity duration-150"
-      />
-      <g className={open ? "chest-body-sink" : ""}>
-        <rect x="14" y="46" width="92" height="56" rx="10" fill={`url(#${id("body")})`} stroke="rgba(255,255,255,0.22)" />
-        {/* Metal corners and a top rim catching the light. */}
-        <path d="M14 58 V56 a10 10 0 0 1 10 -10 h6 v6 h-6 a4 4 0 0 0 -4 4 v2 Z" fill={`url(#${id("metal")})`} opacity="0.8" />
-        <path d="M106 58 V56 a10 10 0 0 0 -10 -10 h-6 v6 h6 a4 4 0 0 1 4 4 v2 Z" fill={`url(#${id("metal")})`} opacity="0.8" />
-        <rect x="18" y="47" width="84" height="2" rx="1" fill="rgba(255,255,255,0.28)" />
-        <rect x="51" y="46" width="18" height="56" fill={`url(#${id("metal")})`} />
-        <rect x="14" y="76" width="92" height="3" fill="rgba(0,0,0,0.25)" />
-      </g>
-      <g className={open ? "chest-lid-pop" : ""} style={{ transformOrigin: "60px 46px" }}>
-        <path d="M10 46 Q10 16 60 16 Q110 16 110 46 Z" fill={`url(#${id("lid")})`} stroke="rgba(255,255,255,0.25)" />
-        <path d="M22 30 Q40 21 60 21" stroke="rgba(255,255,255,0.35)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        <rect x="51" y="16" width="18" height="30" fill={`url(#${id("metal")})`} />
-        {/* The lock, lit from inside. */}
-        <rect x="51" y="36" width="18" height="18" rx="4" fill="#f2f8ff" stroke="#4f8bff" strokeWidth="2.5" />
-        <circle cx="60" cy="44" r="2.6" fill="#2563eb" />
-        <rect x="59" y="45" width="2" height="5" rx="1" fill="#2563eb" />
-      </g>
-    </svg>
-  );
+const clamp = (v: number) => Math.min(1, Math.max(0, v));
+const easeInOut = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+const easeOut = (p: number) => 1 - Math.pow(1 - p, 3);
+/** A door opener's travel: it spins up, runs steady, and slows into the top. */
+function travel(p: number) {
+  const a = 0.14;
+  const d = 0.24;
+  const v = 1 / (1 - a / 2 - d / 2);
+  if (p <= 0) return 0;
+  if (p >= 1) return 1;
+  if (p < a) return (v * p * p) / (2 * a);
+  if (p < 1 - d) return v * (a / 2 + (p - a));
+  const q = 1 - p;
+  return 1 - (v * q * q) / (2 * d);
+}
+function rgba(hex: string, a: number) {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
 }
 
-/** Sparks thrown out when it bursts, in the prize's colour. */
-const SPARKS = Array.from({ length: 16 }, (_, i) => {
-  const angle = (i / 16) * Math.PI * 2 + (i % 3) * 0.17;
-  const distance = 110 + ((i * 37) % 70);
-  return { dx: Math.cos(angle) * distance, dy: Math.sin(angle) * distance - 20, size: 4 + (i % 3) * 2, delay: (i % 4) * 25 };
-});
+/** Prizes shown as things standing on the garage floor (with a
+ * reflection under them), rather than floating in the doorway. */
+function standsOnFloor(prize: Prize) {
+  return prize.item?.category === "profile_background" || prize.item?.category === "showcase_frame";
+}
 
-/** How the prize looks on you: your name in the colour, a profile panel
- * in the background, your picture in the frame. */
-function PrizePreview({ item, username, avatarUrl }: { item: StoreItem; username: string; avatarUrl: string | null }) {
+/** The prize, in the garage. Points and name colours hang in the light;
+ * a background or ring is shown the way it looks in the app, on a panel
+ * standing on the floor and lit like everything else in there. */
+function PrizeHero({ prize, color, username, avatarUrl }: { prize: Prize; color: string; username: string; avatarUrl: string | null }) {
+  const item = prize.item;
+  if (!item) {
+    return (
+      <p
+        className="numeral text-[5rem] font-bold leading-none tracking-[-0.05em] text-white"
+        style={{ textShadow: `0 0 34px ${rgba(color, 0.55)}, 0 6px 24px rgba(0,0,0,0.6)` }}
+      >
+        +{prize.points}
+      </p>
+    );
+  }
   if (item.category === "name_color") {
     return (
-      <p className="text-[1.75rem] font-bold tracking-[-0.02em]">
+      <p className="max-w-[80vw] truncate px-2 text-[2.1rem] font-bold tracking-[-0.03em]" style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.6))" }}>
         <StyledName item={item}>@{username}</StyledName>
       </p>
     );
   }
+  // The room's light on a panel: the honeycomb's sheen across the top,
+  // the strip's colour along the bottom edge.
+  const lit = {
+    boxShadow: `0 0 0 1px rgba(255,255,255,0.07), inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 ${rgba(color, 0.55)}`,
+  };
   if (item.category === "profile_background") {
+    // A profile header wearing it, as other people will see it.
+    const initial = username.charAt(0).toUpperCase() || "S";
     return (
-      <span
-        className="block h-28 w-56 rounded-[18px] ring-1 ring-white/15"
-        style={{ background: item.value }}
-        aria-hidden
-      />
+      <span className="relative block h-[118px] w-[208px] overflow-hidden rounded-[14px] bg-[#0c0c0f]" style={lit}>
+        <span className={`absolute inset-0 ${item.effectClassName ?? ""}`} style={{ backgroundImage: item.value }} />
+        <span className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/75 to-transparent" />
+        <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.10),transparent_40%)]" />
+        <span className="absolute bottom-2.5 left-3 right-3 flex min-w-0 items-center gap-2">
+          <span className="relative flex h-7 w-7 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/15 text-[0.75rem] font-bold">
+            {avatarUrl ? <Image src={avatarUrl} alt="" fill sizes="28px" className="object-cover" /> : initial}
+          </span>
+          <span className="min-w-0 truncate text-[0.875rem] font-bold tracking-[-0.01em]">@{username}</span>
+        </span>
+      </span>
     );
   }
+  // A showcase ring goes round the badges pinned to your profile: shown
+  // on the same tile the shop previews it with, at twice the size.
   return (
-    <span className={`relative block h-24 w-24 rounded-full ${item.value}`}>
-      <span className="relative block h-full w-full overflow-hidden rounded-full bg-white/10">
-        {avatarUrl && <Image src={avatarUrl} alt="" fill sizes="96px" className="object-cover" />}
+    <span className="block h-[112px] w-[144px] p-[3px]">
+      <span
+        className={`relative flex h-14 w-[4.5rem] origin-top-left scale-200 items-center justify-center rounded-[12px] bg-gradient-to-br from-neutral-600 to-neutral-900 ${item.value}`}
+        style={lit}
+      >
+        <WheelIcon className="h-6 w-6 text-white/70" />
       </span>
     </span>
   );
 }
 
-function ChestOverlay({
+export function GarageOverlay({
   chestDate,
   username,
   avatarUrl,
   onClose,
+  openChest = openStreakChestAction,
 }: {
   chestDate: string;
   username: string;
   avatarUrl: string | null;
   onClose: () => void;
+  /** Swappable only so the scene can be previewed without spending a real garage. */
+  openChest?: (chestDate: string) => Promise<OpenChestResult>;
 }) {
-  const [phase, setPhase] = useState<Phase>("shake");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const clipRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const prizeRef = useRef<Prize | null>(null);
+  const failed = useRef(false);
+  const started = useRef(false);
+  const wantOpen = useRef(false);
+  const [stage, setStage] = useState<Stage>("intro");
   const [prize, setPrize] = useState<Prize | null>(null);
+  const [box, setBox] = useState<GarageLayout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wearing, setWearing] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [pending, startTransition] = useTransition();
-  const started = useRef(false);
 
+  // The prize: asked for once (opening it can't be repeated), while the
+  // sign comes on, so it's there by the time you open the door.
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const shakeDone = new Promise<void>((resolve) => {
-      if (reduce) return resolve();
-      // A tap on each big wobble.
-      for (const at of [120, 420, 720]) window.setTimeout(hapticTierUp, at);
-      window.setTimeout(resolve, SHAKE_MS);
-    });
-    void Promise.all([openStreakChestAction(chestDate), shakeDone]).then(([result]) => {
+    void openChest(chestDate).then((result) => {
       if (result.error !== null) {
+        failed.current = true;
         setError(result.error);
-        setPhase("error");
+        setStage("error");
         return;
       }
-      setPrize({ tier: result.tier, points: result.points, item: result.itemId ? (getStoreItem(result.itemId) ?? null) : null });
-      hapticLanding();
-      if (reduce) {
-        setPhase("reveal");
-        return;
-      }
-      setPhase("burst");
-      window.setTimeout(() => setPhase("reveal"), BURST_MS);
+      const p = { tier: result.tier, points: result.points, item: result.itemId ? (getStoreItem(result.itemId) ?? null) : null };
+      prizeRef.current = p;
+      setPrize(p);
     });
-  }, [chestDate]);
+  }, [chestDate, openChest]);
 
-  const color = prize ? TIER_COLOR[prize.tier] : "#7cc4ff";
+  // The scene: baked once, then one animation loop with its state in refs.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const logo = new window.Image();
+    const scene = new GarageScene(el, logo);
+    let raf = 0;
+    let bakeTimer = 0;
+    let resizeTimer = 0;
+    let alive = true;
+    let t0 = 0; // when the scene was ready to show
+    let openAt = 0;
+    let stage: Stage = "intro";
+    let tierSet = false;
+    let nextTick = 0;
+
+    const go = (next: Stage) => {
+      stage = next;
+      setStage(next);
+    };
+    const bake = () => {
+      if (!alive) return;
+      scene.prepare();
+      setBox(scene.layout());
+      if (!t0) t0 = performance.now();
+    };
+
+    const frame = (now: number) => {
+      raf = requestAnimationFrame(frame);
+      if (!scene.ready || !t0) return;
+      const p = prizeRef.current;
+      if (p && !tierSet) {
+        tierSet = true;
+        scene.setTier(hexToRgb(TIER_COLOR[p.tier]));
+      }
+      const since = now - t0;
+      let fade = easeOut(clamp(since / FADE_MS));
+      let logoOn = easeInOut(clamp((since - SIGN_AT) / SIGN_MS));
+      let open = 0;
+      let lurch = 0;
+      let push = 0;
+
+      if (failed.current) {
+        // Nothing to open; the scene stays as it is behind the message.
+      } else if (reduce) {
+        if (p && stage !== "reveal") go("reveal");
+        if (stage === "reveal") {
+          fade = 1;
+          logoOn = 1;
+          open = 1;
+          push = 1;
+        }
+      } else {
+        if (stage === "intro" && since > READY_AT) go("ready");
+        if (stage === "ready" && wantOpen.current && p) {
+          openAt = now;
+          hapticSnap();
+          go("opening");
+        }
+        if (stage === "opening" || stage === "reveal") {
+          const run = now - openAt - MOTOR_MS;
+          open = travel(clamp(run / TRAVEL_MS));
+          // The opener's jolt as it takes the door's weight.
+          if (run > 0 && run < 200) lurch = -1.2 * Math.sin((Math.PI * run) / 200);
+          push = easeInOut(clamp((now - openAt) / PUSH_MS));
+          if (stage === "opening") {
+            if (run > 0 && now >= nextTick) {
+              if (nextTick === 0) hapticTierUp();
+              else hapticSnap();
+              nextTick = now + 420;
+            }
+            if (run >= TRAVEL_MS) {
+              hapticLanding();
+              go("reveal");
+            }
+          }
+        }
+      }
+      const zoom = 1 + 0.015 * easeOut(clamp(since / 6000)) + 0.085 * push;
+      scene.draw({ fade, logo: logoOn, open, zoom, lurch });
+
+      // The prize is inside: only what the door has cleared shows.
+      const clip = clipRef.current;
+      const hero = heroRef.current;
+      const L = scene.layout();
+      if (clip) {
+        const [x0, y0] = scene.project(L.left, L.top + L.height * (1 - open), zoom);
+        const [x1, y1] = scene.project(L.left + L.width, L.top + L.height, zoom);
+        clip.style.clipPath = `inset(${y0}px ${window.innerWidth - x1}px ${window.innerHeight - y1}px ${x0}px)`;
+      }
+      if (hero) {
+        const stand = hero.dataset.stand === "1";
+        const [hx, hy] = scene.project(L.anchorX, L.top + L.height * (stand ? PRIZE_FLOOR : PRIZE_AT), zoom);
+        hero.style.transform = `translate(${hx}px, ${hy}px) translate(-50%, ${stand ? "-100%" : "-50%"}) scale(${zoom})`;
+      }
+    };
+
+    // Let the black overlay paint before the heavy bake.
+    const start = () => {
+      raf = requestAnimationFrame(() => {
+        bakeTimer = window.setTimeout(bake, 30);
+        raf = requestAnimationFrame(frame);
+      });
+    };
+    logo.onload = start;
+    logo.onerror = start;
+    logo.src = "/logo-mark.png";
+
+    const onResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(bake, 160);
+    };
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      alive = false;
+      cancelAnimationFrame(raf);
+      window.clearTimeout(bakeTimer);
+      window.clearTimeout(resizeTimer);
+      window.removeEventListener("resize", onResize);
+      logo.onload = null;
+      logo.onerror = null;
+    };
+  }, []);
+
+  const color = prize ? TIER_COLOR[prize.tier] : "#ffffff";
 
   function wear(item: StoreItem) {
     startTransition(async () => {
@@ -188,135 +324,140 @@ function ChestOverlay({
     });
   }
 
+  function openDoor() {
+    wantOpen.current = true;
+    if (!prizeRef.current) setWaiting(true);
+  }
+
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Streak chest"
+      aria-label="Streak garage"
       data-no-edge-swipe
-      className="fixed inset-0 z-[80] flex flex-col items-center justify-center overflow-hidden bg-black/85 px-6 text-white backdrop-blur-md"
+      className="fixed inset-0 z-[80] select-none overflow-hidden bg-black text-white [-webkit-touch-callout:none]"
     >
-      <div className="relative flex w-full max-w-sm flex-col items-center">
-      {/* The light that bursts out of the chest, in the prize's tier
-          colour. Anchored on the chest itself (h-44: its centre is 88px
-          down), fading out well before the edges of the screen. */}
-      {(phase === "burst" || phase === "reveal") && (
-        <span aria-hidden className="pointer-events-none absolute left-1/2 top-[88px] h-0 w-0">
-          {/* Light rays: burst in, then keep slowly turning behind the prize. */}
-          <span className="chest-rays absolute left-0 top-0 h-[760px] w-[760px]">
-            <span
-              className="chest-rays-spin absolute inset-0"
-              style={{
-                background: `repeating-conic-gradient(from 0deg, color-mix(in srgb, ${color} 42%, transparent) 0deg 5deg, transparent 5deg 18deg)`,
-                maskImage: "radial-gradient(circle, #000 0%, rgba(0,0,0,0.45) 18%, transparent 46%)",
-                WebkitMaskImage: "radial-gradient(circle, #000 0%, rgba(0,0,0,0.45) 18%, transparent 46%)",
-              }}
-            />
-          </span>
-          <span
-            className="chest-flash absolute left-0 top-0 h-48 w-48 rounded-full"
-            style={{ background: `radial-gradient(circle, #fff 0%, ${color} 30%, transparent 70%)` }}
-          />
-          {SPARKS.map((s, i) => (
-            <span
-              key={i}
-              className="chest-spark absolute left-0 top-0 rounded-full"
-              style={
-                {
-                  width: s.size,
-                  height: s.size,
-                  background: i % 4 === 0 ? "#fff" : color,
-                  boxShadow: `0 0 8px ${color}`,
-                  animationDelay: `${s.delay}ms`,
-                  "--spark-x": `${s.dx}px`,
-                  "--spark-y": `${s.dy}px`,
-                } as React.CSSProperties
-              }
-            />
-          ))}
-        </span>
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" aria-hidden />
+
+      {/* The prize, inside the garage. */}
+      {prize && box && (stage === "opening" || stage === "reveal") && (
+        <div ref={clipRef} className="pointer-events-none absolute inset-0" style={{ clipPath: "inset(100% 0 0 0)" }}>
+          {standsOnFloor(prize) ? (
+            <div
+              ref={heroRef}
+              data-stand="1"
+              className="absolute left-0 top-0 origin-bottom"
+              style={{ transform: `translate(${box.anchorX}px, ${box.top + box.height * PRIZE_FLOOR}px) translate(-50%, -100%)` }}
+            >
+              <PrizeHero prize={prize} color={color} username={username} avatarUrl={avatarUrl} />
+              {/* Its reflection in the epoxy floor. */}
+              <div className="absolute left-0 top-full w-full opacity-25 [-webkit-mask-image:linear-gradient(to_bottom,#000,transparent_45%)] [mask-image:linear-gradient(to_bottom,#000,transparent_45%)]" aria-hidden>
+                <div className="-scale-y-100">
+                  <PrizeHero prize={prize} color={color} username={username} avatarUrl={avatarUrl} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              ref={heroRef}
+              className="absolute left-0 top-0"
+              style={{ transform: `translate(${box.anchorX}px, ${box.top + box.height * PRIZE_AT}px) translate(-50%, -50%)` }}
+            >
+              <PrizeHero prize={prize} color={color} username={username} avatarUrl={avatarUrl} />
+            </div>
+          )}
+        </div>
       )}
 
-        <div
-          className={`relative h-44 w-44 ${phase === "shake" ? "chest-shake" : ""} ${phase === "reveal" ? "chest-fade-out" : ""}`}
-          style={{ filter: "drop-shadow(0 18px 40px rgba(37, 99, 235, 0.45))" }}
+      {(stage === "intro" || stage === "ready") && (
+        <p
+          className="garage-copy-in absolute inset-x-0 top-[calc(env(safe-area-inset-top)+1.25rem)] text-center text-[0.6875rem] font-semibold uppercase tracking-[0.32em] text-white/45"
+          style={{ animationDelay: "700ms" }}
         >
-          <ChestArt phase={phase} color={color} />
+          Streak garage
+        </p>
+      )}
+
+      {stage === "ready" && (
+        <div className="garage-copy-in absolute inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+2.25rem)] mx-auto flex max-w-sm flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={openDoor}
+            disabled={waiting}
+            className="pressable flex h-[52px] w-full items-center justify-center gap-2.5 rounded-full bg-white text-[0.9375rem] font-semibold text-black disabled:opacity-80"
+          >
+            <GarageIcon className="h-5 w-5" />
+            {waiting ? "Opening" : "Open the garage"}
+          </button>
         </div>
+      )}
 
-        {phase === "shake" && <p className="mt-6 text-[0.9375rem] text-white/60">Opening…</p>}
+      {stage === "error" && (
+        <div className="absolute inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+2.5rem)] flex flex-col items-center gap-4">
+          <p className="text-center text-[0.9375rem] text-white/85">{error}</p>
+          <button type="button" onClick={onClose} className="pressable h-12 rounded-full bg-white/15 px-8 font-semibold">
+            Close
+          </button>
+        </div>
+      )}
 
-        {phase === "error" && (
-          <div className="mt-6 flex flex-col items-center gap-4">
-            <p className="text-center text-[0.9375rem] text-white/80">{error}</p>
-            <button type="button" onClick={onClose} className="pressable h-12 rounded-full bg-white/15 px-8 font-semibold">
-              Close
-            </button>
-          </div>
-        )}
-
-        {phase === "reveal" && prize && (
-          <div className="chest-prize-rise -mt-24 flex w-full flex-col items-center gap-4 text-center">
-            <p className="text-[0.8125rem] font-bold uppercase tracking-[0.18em]" style={{ color }}>
-              {TIER_LABEL[prize.tier]}
-              {prize.item ? " · Streak exclusive" : ""}
-            </p>
-            {prize.item ? (
-              <>
-                <PrizePreview item={prize.item} username={username} avatarUrl={avatarUrl} />
-                <div>
-                  <p className="text-[1.375rem] font-bold tracking-[-0.02em]">{prize.item.name}</p>
-                  <p className="mt-0.5 text-[0.875rem] text-white/60">
-                    {STORE_CATEGORY_LABELS[prize.item.category]}. Can&apos;t be bought, only found in chests.
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="numeral text-[4rem] font-bold leading-none" style={{ color }}>
-                  +{prize.points}
-                </p>
-                <p className="text-[0.9375rem] text-white/70">points</p>
-              </>
-            )}
-            {error && <p className="text-[0.8125rem] text-white/70">{error}</p>}
-            <div className="mt-2 flex w-full flex-col gap-2">
-              {prize.item && (
-                <button
-                  type="button"
-                  disabled={pending || wearing}
-                  onClick={() => prize.item && wear(prize.item)}
-                  className="pressable flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white text-[0.9375rem] font-semibold text-black disabled:opacity-80"
-                >
-                  {wearing ? (
-                    <>
-                      <CheckIcon className="h-4 w-4" /> Wearing it
-                    </>
-                  ) : (
-                    "Wear it"
-                  )}
-                </button>
-              )}
+      {stage === "reveal" && prize && (
+        <div className="absolute inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+1.75rem)] mx-auto flex max-w-sm flex-col items-center gap-3 text-center">
+          <p className="garage-copy-in text-[0.75rem] font-bold uppercase tracking-[0.3em]" style={{ color, animationDelay: "120ms" }}>
+            {TIER_LABEL[prize.tier]}
+            {prize.item ? " · Streak exclusive" : ""}
+          </p>
+          {prize.item ? (
+            <div className="garage-copy-in" style={{ animationDelay: "200ms" }}>
+              <p className="text-[2rem] font-bold leading-tight tracking-[-0.035em]">{prize.item.name}</p>
+              <p className="mt-1 text-[0.875rem] text-white/60">
+                {STORE_CATEGORY_LABELS[prize.item.category]}. Can&apos;t be bought, only found in streak garages.
+              </p>
+            </div>
+          ) : (
+            <div className="garage-copy-in" style={{ animationDelay: "200ms" }}>
+              <p className="text-[2rem] font-bold leading-tight tracking-[-0.035em]">
+                <span className="numeral">{prize.points}</span> points
+              </p>
+              <p className="mt-1 text-[0.875rem] text-white/60">Added to your balance.</p>
+            </div>
+          )}
+          {error && <p className="text-[0.8125rem] text-white/70">{error}</p>}
+          <div className="garage-copy-in mt-3 flex w-full flex-col gap-2" style={{ animationDelay: "300ms" }}>
+            {prize.item && (
               <button
                 type="button"
-                onClick={onClose}
-                className={`pressable h-12 w-full rounded-full text-[0.9375rem] font-semibold ${
-                  prize.item ? "bg-white/12 text-white" : "bg-white text-black"
-                }`}
+                disabled={pending || wearing}
+                onClick={() => prize.item && wear(prize.item)}
+                className="pressable flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white text-[0.9375rem] font-semibold text-black disabled:opacity-80"
               >
-                {prize.item ? "Done" : "Nice"}
+                {wearing ? (
+                  <>
+                    <CheckIcon className="h-4 w-4" /> Wearing it
+                  </>
+                ) : (
+                  "Wear it"
+                )}
               </button>
-            </div>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className={`pressable h-12 w-full rounded-full text-[0.9375rem] font-semibold ${
+                prize.item ? "bg-white/12 text-white backdrop-blur-md" : "bg-white text-black"
+              }`}
+            >
+              {prize.item ? "Done" : "Nice"}
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/** "Your chest is ready": a card that bobs until you tap it, then the
- * chest shakes, bursts open in the colour of what's inside, and shows you
- * what you got (and lets you wear it there and then). */
+/** "Your garage is ready": a card that opens the garage full screen (and
+ * lets you wear what you got there and then). */
 export function ChestOpener({
   chestDate,
   username,
@@ -336,22 +477,20 @@ export function ChestOpener({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="pressable flex w-full items-center gap-3 rounded-[18px] bg-[#0d1830] p-3 text-left text-white ring-1 ring-[#4f8bff]/40"
+        className="pressable flex w-full items-center gap-3 rounded-[18px] bg-[linear-gradient(135deg,#111725,#0b0e16)] p-3 text-left text-white ring-1 ring-[#4f8bff]/35"
       >
-        <span className="chest-idle h-12 w-12 flex-shrink-0">
-          <ChestArt phase="idle" color="#7cc4ff" />
+        <span className="garage-idle relative flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[14px] bg-[#0a0d14] text-[#8fc0ff] ring-1 ring-white/10">
+          <GarageIcon className="h-7 w-7" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[0.9375rem] font-semibold">Your chest is ready</span>
+          <span className="block text-[0.9375rem] font-semibold">Your garage is ready</span>
           <span className="block text-[0.8125rem] text-white/65">Points or a streak-only cosmetic. Tap to open.</span>
         </span>
-        <span className="flex-shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[0.8125rem] font-semibold text-black">
-          Open
-        </span>
+        <span className="flex-shrink-0 rounded-full bg-white px-3.5 py-1.5 text-[0.8125rem] font-semibold text-black">Open</span>
       </button>
       {open &&
         createPortal(
-          <ChestOverlay
+          <GarageOverlay
             chestDate={chestDate}
             username={username}
             avatarUrl={avatarUrl}
