@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { MediaImg } from "@/components/ui/media-img";
 import { VerifiedBadge } from "@/components/ui/verified-badge";
 import { CheckIcon } from "@/components/ui/icons";
 import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { votePercents } from "@/lib/battles/result";
-import { voteInBattleAction } from "@/features/battles/actions";
+import { useBattleVote } from "@/features/battles/use-battle-vote";
 import { ShareBattleButton } from "@/features/battles/share-battle-button";
 import type { BattleCar, BattleView } from "@/lib/battles/load";
 
@@ -38,11 +38,7 @@ export function BattleCard({
   /** "media" on the feed's black slides (white text in either theme). */
   tone?: "page" | "media";
 }) {
-  const [myVote, setMyVote] = useState<string | null>(view.myVote);
-  const [pendingPick, setPendingPick] = useState<string | null>(null);
-  const [points, setPoints] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { myVote, pendingPick, points, error, isPending, canVote, reveal, vote } = useBattleVote(view, isAuthenticated);
   // The intro (globals.css, battle-*) waits until the card is on screen,
   // so a feed slide swiped into view plays it rather than finishing
   // off screen.
@@ -64,24 +60,7 @@ export function BattleCard({
     return () => io.disconnect();
   }, []);
 
-  const canVote = isAuthenticated && !view.isOwner && !view.ended && myVote === null;
-  const reveal = myVote !== null || view.ended || view.isOwner;
   const [pa, pb] = view.result ? votePercents(view.result.a, view.result.b) : [0, 0];
-
-  function vote(vehicleId: string) {
-    if (!canVote || isPending) return;
-    setError(null);
-    setPendingPick(vehicleId);
-    startTransition(async () => {
-      const result = await voteInBattleAction(view.id, vehicleId);
-      setPendingPick(null);
-      if (result.error) setError(result.error);
-      else {
-        setMyVote(vehicleId);
-        setPoints(result.points);
-      }
-    });
-  }
 
   function side(car: BattleCar, percent: number, order: "a" | "b") {
     const tier = rankForScore(car.score);

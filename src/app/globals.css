@@ -703,6 +703,121 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   }
 }
 
+/* Build Battle (features/battles/battle-arena.tsx). Calm on purpose:
+   the photos ease in from their sides, the line draws across, VS and the
+   type fade up, and after that only the photos move, slowly. Holds
+   still until it's on screen (data-intro="wait"). */
+[data-intro="wait"] .arena-in-a,
+[data-intro="wait"] .arena-in-b,
+[data-intro="wait"] .arena-seam,
+[data-intro="wait"] .arena-vs,
+[data-intro="wait"] .arena-plate,
+[data-intro="wait"] .arena-hud {
+  animation-play-state: paused;
+}
+@keyframes arena-in-a {
+  from {
+    transform: translateX(-6%);
+    opacity: 0;
+  }
+}
+@keyframes arena-in-b {
+  from {
+    transform: translateX(6%);
+    opacity: 0;
+  }
+}
+.arena-in-a {
+  animation: arena-in-a 650ms var(--ease-ios) both;
+}
+.arena-in-b {
+  animation: arena-in-b 650ms 80ms var(--ease-ios) both;
+}
+@keyframes arena-drift {
+  from {
+    transform: scale(1.02);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+.arena-drift {
+  animation: arena-drift 22s ease-in-out infinite alternate;
+}
+@keyframes arena-seam {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.arena-seam {
+  animation: arena-seam 700ms 250ms var(--ease-ios) both;
+}
+@keyframes arena-vs {
+  from {
+    transform: translate(-50%, -50%) scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+.arena-vs {
+  transform: translate(-50%, -50%);
+  animation: arena-vs 450ms 600ms var(--ease-ios) both;
+}
+@keyframes arena-fade-up {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+.arena-plate {
+  animation: arena-fade-up 500ms 520ms var(--ease-ios) both;
+}
+.arena-hud {
+  animation: arena-fade-up 500ms 650ms var(--ease-ios) both;
+}
+@keyframes arena-live {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.arena-live {
+  animation: arena-live 1.6s ease-in-out infinite;
+}
+@keyframes arena-bar {
+  from {
+    transform: scaleX(0);
+  }
+}
+.arena-bar {
+  transform-origin: left;
+  animation: arena-bar 800ms 500ms var(--ease-ios) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .arena-in-a,
+  .arena-in-b,
+  .arena-drift,
+  .arena-seam,
+  .arena-plate,
+  .arena-hud,
+  .arena-live,
+  .arena-bar {
+    animation: none;
+  }
+  .arena-vs {
+    animation: none;
+  }
+}
+
 /* The streak card's flame once it's lit: a slow, small flicker. And the
    day you just played popping into place. */
 @keyframes flame-flicker {
