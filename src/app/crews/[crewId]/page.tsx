@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
-import { getCrewById } from "@/lib/db/crews";
+import { getCrewById, listPublicCrews } from "@/lib/db/crews";
+import { getCrewStats } from "@/lib/db/crew-stats";
+import { getProfileByUserId } from "@/lib/db/profiles";
+import { CREW_SCORE_SLOTS, crewScore, rankCrews } from "@/lib/crews/crew-score";
+import { CrewScorePanel, CrewPodium } from "@/features/crews/crew-standing";
+import { CrewInviteButton } from "@/features/crews/crew-invite-button";
 import {
   getCrewMembership,
   getCrewMemberRole,
@@ -26,6 +32,20 @@ import type { CrewCarItem } from "@/features/crews/crew-cars-grid";
 import { Button } from "@/components/ui/button";
 import { PinIcon, LockIcon, GlobeIcon } from "@/components/ui/icons";
 
+export async function generateMetadata({ params }: { params: Promise<{ crewId: string }> }): Promise<Metadata> {
+  const { crewId } = await params;
+  const supabase = await createClient();
+  const crew = await getCrewById(supabase, crewId).catch(() => null);
+  if (!crew) return {};
+  const [stats] = await getCrewStats(supabase, [crew]).catch(() => []);
+  const size = stats ? `${stats.memberCount} ${stats.memberCount === 1 ? "member" : "members"}` : null;
+  const score = stats?.score.score != null ? `crew score ${Math.round(stats.score.score)}` : null;
+  return {
+    title: `${crew.name} · SORZA`,
+    description: [size, score, "Join the crew on SORZA."].filter(Boolean).join(" · "),
+  };
+}
+
 export default async function CrewPage({ params }: { params: Promise<{ crewId: string }> }) {
   const { crewId } = await params;
   const supabase = await createClient();
@@ -35,13 +55,15 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
 
   const isOwner = currentUser?.id === crew.owner_id;
 
-  const [membership, viewerRole, memberCount, members, posts, events] = await Promise.all([
+  const [membership, viewerRole, memberCount, members, posts, events, viewerProfile, publicCrews] = await Promise.all([
     currentUser ? getCrewMembership(supabase, crewId, currentUser.id) : Promise.resolve(null),
     currentUser ? getCrewMemberRole(supabase, crewId, currentUser.id) : Promise.resolve(null),
     getCrewMemberCount(supabase, crewId),
     listCrewMembers(supabase, crewId),
     listCrewFeedPosts(supabase, crewId),
     listCrewMeetups(supabase, crewId),
+    currentUser ? getProfileByUserId(supabase, currentUser.id) : Promise.resolve(null),
+    listPublicCrews(supabase),
   ]);
 
   const canManageMembers = viewerRole === "leader" || viewerRole === "admin";
@@ -90,6 +112,15 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
     bestScoreByOwner.set(userId, maxScore(scores));
   }
 
+  // The five approved members whose best builds make up the crew score.
+  const countingIds = new Set(
+    members
+      .filter((m) => m.status === "approved" && bestScoreByOwner.get(m.user_id) != null)
+      .sort((a, b) => (bestScoreByOwner.get(b.user_id) ?? 0) - (bestScoreByOwner.get(a.user_id) ?? 0))
+      .slice(0, CREW_SCORE_SLOTS)
+      .map((m) => m.user_id),
+  );
+
   const tabMembers: CrewTabMember[] = members.map((member) => {
     const profile = profileById.get(member.user_id);
     return {
@@ -98,6 +129,7 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
       avatarUrl: profile?.avatar_media_id ? (avatarUrlById.get(profile.avatar_media_id) ?? null) : null,
       isVerified: profile?.is_verified ?? false,
       bestScore: bestScoreByOwner.get(member.user_id) ?? null,
+      counts: countingIds.has(member.user_id),
     };
   });
 
@@ -127,6 +159,18 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
   const crewNameColorItem = crew.equipped_crew_name_color ? getStoreItem(crew.equipped_crew_name_color) : undefined;
   const crewFrameItem = crew.equipped_crew_frame ? getStoreItem(crew.equipped_crew_frame) : undefined;
   const crewNameIsGradient = crewNameColorItem?.value.includes("gradient") ?? false;
+
+  // The crew score from its approved members' best builds, and where
+  // that puts it among every public crew.
+  const score = crewScore(
+    members.filter((m) => m.status === "approved").map((m) => bestScoreByOwner.get(m.user_id) ?? null),
+  );
+  const ranked =
+    crew.visibility === "public"
+      ? rankCrews((await getCrewStats(supabase, publicCrews)).map((c) => ({ id: c.crew.id, score: c.score.score })))
+      : [];
+  const place = ranked.find((c) => c.id === crew.id)?.place ?? null;
+  const isMember = membership?.status === "approved" || isOwner;
 
   const actionClass = "h-10 w-full px-3 py-0 text-[0.9375rem] font-semibold";
   const stats = [
@@ -245,6 +289,20 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
                 </Button>
               </Link>
             )}
+            {currentUser && (
+              <CrewInviteButton
+                crewId={crew.id}
+                crewName={crew.name}
+                refUsername={viewerProfile?.username ?? null}
+                label={isMember ? "Invite" : "Share"}
+                className="h-10 min-w-0 flex-1 rounded-full bg-foreground/[0.08] px-3 text-[0.9375rem]"
+              />
+            )}
+          </div>
+
+          <div className="mt-6 flex w-full max-w-md flex-col gap-6">
+            <CrewScorePanel score={score} place={place} rankedCount={ranked.length} />
+            <CrewPodium cars={cars} />
           </div>
         </header>
 

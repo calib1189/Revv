@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Crew } from "@/lib/db/crews";
 import { Avatar } from "@/features/feed/avatar";
 import { PhotoCarousel } from "@/features/feed/photo-carousel";
 import { VideoPlayer } from "@/features/feed/video-player";
@@ -28,6 +29,8 @@ export interface PostCardData {
   authorAvatarUrl: string | null;
   authorIsVerified: boolean;
   vehicleTitle: string | null;
+  /** The crew the post is shared to, in its bought look. */
+  crew?: { crew: Pick<Crew, "id" | "name" | "equipped_crew_name_color" | "equipped_crew_banner" | "equipped_crew_frame">; logoUrl: string | null } | null;
   soundId: string | null;
   soundTitle: string | null;
   /** Shown beside the title on the post — a Creative Commons track has to

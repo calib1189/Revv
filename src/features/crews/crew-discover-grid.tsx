@@ -4,15 +4,9 @@ import { useState } from "react";
 import { CrewCard } from "@/features/crews/crew-card";
 import { CREW_CATEGORIES, CREW_CATEGORY_LABELS, type CrewCategory } from "@/lib/crews/category";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { Crew } from "@/lib/db/crews";
+import type { CrewStats } from "@/lib/db/crew-stats";
 
-export interface CrewCardData {
-  crew: Crew;
-  logoUrl: string | null;
-  bannerUrl: string | null;
-  memberCount: number;
-  bestScore: number | null;
-}
+export type CrewCardData = CrewStats;
 
 /** Filters a pre-fetched crew list by category entirely client-side —
  * no refetch, same "local state over server-fetched data" idea as
@@ -55,15 +49,8 @@ export function CrewDiscoverGrid({
         <EmptyState title="Nothing here yet" body="No crews in this category yet." />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {filtered.map(({ crew, logoUrl, bannerUrl, memberCount, bestScore }) => (
-            <CrewCard
-              key={crew.id}
-              crew={crew}
-              logoUrl={logoUrl}
-              bannerUrl={bannerUrl}
-              memberCount={memberCount}
-              bestScore={bestScore}
-            />
+          {filtered.map((data) => (
+            <CrewCard key={data.crew.id} data={data} />
           ))}
         </div>
       )}

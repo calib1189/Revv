@@ -50,6 +50,7 @@ export function MemberRow({
   avatarUrl,
   isVerified,
   bestScore,
+  counts = false,
   canManage,
   viewerRole,
   isCrewOwner,
@@ -60,6 +61,8 @@ export function MemberRow({
   avatarUrl: string | null;
   isVerified: boolean;
   bestScore: number | null;
+  /** Their best build is one of the five that make up the crew score. */
+  counts?: boolean;
   canManage: boolean;
   viewerRole: CrewMemberRole | null;
   isCrewOwner: boolean;
@@ -120,8 +123,16 @@ export function MemberRow({
           <span className="truncate">{username}</span>
           {isVerified && <VerifiedBadge className="h-[15px] w-[15px]" />}
         </Link>
-        <div className="mt-0.5">
+        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
           <RoleBadge role={role} />
+          {bestScore != null && (
+            <span className="numeral text-[0.75rem] text-muted">{bestScore.toFixed(2)}</span>
+          )}
+          {counts && (
+            <span className="rounded-full bg-accent/12 px-1.5 py-px text-[0.6875rem] font-semibold text-accent">
+              Counts
+            </span>
+          )}
         </div>
       </div>
 

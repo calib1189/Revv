@@ -1,5 +1,6 @@
 "use client";
 
+import { CrewTag } from "@/features/crews/crew-look";
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from "react";
 import { useDwellPrefetch } from "@/lib/navigation/prefetch";
 import Link from "next/link";
@@ -1097,14 +1098,19 @@ export function SwipeSlide({
             </span>
           </div>
 
-          {data.vehicleTitle && data.post.vehicle_id && (
-            <Link
-              href={`/garage/${data.post.vehicle_id}?from=${data.post.id}`}
-              className="pressable mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 py-1 pl-2 pr-2.5 text-[0.8125rem] font-semibold backdrop-blur-md [text-shadow:none]"
-            >
-              <WheelIcon className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="truncate">{data.vehicleTitle}</span>
-            </Link>
+          {((data.vehicleTitle && data.post.vehicle_id) || data.crew) && (
+            <div className="mt-1.5 flex max-w-full flex-wrap gap-1.5">
+              {data.vehicleTitle && data.post.vehicle_id && (
+                <Link
+                  href={`/garage/${data.post.vehicle_id}?from=${data.post.id}`}
+                  className="pressable inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/15 py-1 pl-2 pr-2.5 text-[0.8125rem] font-semibold backdrop-blur-md [text-shadow:none]"
+                >
+                  <WheelIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="truncate">{data.vehicleTitle}</span>
+                </Link>
+              )}
+              {data.crew && <CrewTag crew={data.crew.crew} logoUrl={data.crew.logoUrl} onMedia />}
+            </div>
           )}
 
           {displayedCaption && (

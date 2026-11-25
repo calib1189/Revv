@@ -21,6 +21,8 @@ export interface CrewTabMember {
   avatarUrl: string | null;
   isVerified: boolean;
   bestScore: number | null;
+  /** One of the five builds the crew score is made of. */
+  counts: boolean;
 }
 
 function EmptyPanel({ icon, text }: { icon: React.ReactNode; text: string }) {
@@ -95,7 +97,7 @@ export function CrewTabs({
           <EmptyPanel icon={<UsersIcon className="h-5 w-5" />} text="No members yet." />
         ) : (
           <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[4.75rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
-            {members.map(({ member, username, avatarUrl, isVerified, bestScore }) => (
+            {members.map(({ member, username, avatarUrl, isVerified, bestScore, counts }) => (
               <MemberRow
                 key={member.id}
                 crewId={crewId}
@@ -104,6 +106,7 @@ export function CrewTabs({
                 avatarUrl={avatarUrl}
                 isVerified={isVerified}
                 bestScore={bestScore}
+                counts={counts}
                 canManage={canManageMembers}
                 viewerRole={viewerRole}
                 isCrewOwner={member.user_id === crew.owner_id}

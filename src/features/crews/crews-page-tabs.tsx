@@ -1,11 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CrewDiscoverGrid, type CrewCardData } from "@/features/crews/crew-discover-grid";
+import {
+  CrewDiscoverGrid,
+  type CrewCardData,
+} from "@/features/crews/crew-discover-grid";
 import { CrewLeaderboardRow } from "@/features/crews/crew-leaderboard-row";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { EmptyState } from "@/components/ui/empty-state";
 import { GemIcon } from "@/components/ui/icons";
+import { rankCrews } from "@/lib/crews/crew-score";
 
 type View = "discover" | "leaderboard";
 
@@ -21,10 +25,7 @@ export function CrewsPageTabs({ crews }: { crews: CrewCardData[] }) {
   const [view, setView] = useState<View>("discover");
 
   const ranked = useMemo(
-    () =>
-      crews
-        .filter((c) => c.bestScore != null)
-        .sort((a, b) => (b.bestScore ?? 0) - (a.bestScore ?? 0)),
+    () => rankCrews(crews.map((c) => ({ score: c.score.score, stats: c }))),
     [crews],
   );
 
@@ -51,11 +52,21 @@ export function CrewsPageTabs({ crews }: { crews: CrewCardData[] }) {
             body="Once a member rates and verifies a build, their crew shows up here."
           />
         ) : (
-          <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[6.875rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
-            {ranked.map((data, i) => (
-              <CrewLeaderboardRow key={data.crew.id} rank={i + 1} data={data} />
-            ))}
-          </div>
+          <>
+            <p className="mb-3 px-1 text-[0.8125rem] leading-snug text-muted">
+              A crew&apos;s score is its five best member builds added up, so
+              every rated member who joins raises it.
+            </p>
+            <div className="glass-raised elev-1 overflow-hidden rounded-[22px] [&>*+*]:before:absolute [&>*+*]:before:left-[6.875rem] [&>*+*]:before:right-0 [&>*+*]:before:top-0 [&>*+*]:before:h-px [&>*+*]:before:bg-border [&>*+*]:before:content-['']">
+              {ranked.map(({ stats, place }) => (
+                <CrewLeaderboardRow
+                  key={stats.crew.id}
+                  rank={place}
+                  data={stats}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

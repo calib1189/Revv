@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { getStoreItem, type StoreItem } from "@/lib/store/catalog";
 import { StyledName } from "@/features/store/look-preview";
 import type { Crew } from "@/lib/db/crews";
@@ -76,4 +77,46 @@ export function CrewLogo({
 export function bannerStyle(look: CrewLook): { className: string; style: React.CSSProperties | undefined } {
   if (!look.banner) return { className: "", style: undefined };
   return { className: look.banner.effectClassName ?? "", style: { backgroundImage: look.banner.value } };
+}
+
+/** A small pill naming someone's crew (profile header, posts): its logo
+ * in its frame, its name in its colour, linking to the crew. */
+export function CrewTag({
+  crew,
+  logoUrl,
+  className = "",
+  onMedia = false,
+  href,
+}: {
+  crew: Pick<Crew, "id" | "name" | "equipped_crew_name_color" | "equipped_crew_banner" | "equipped_crew_frame">;
+  logoUrl: string | null;
+  className?: string;
+  /** Over a photo or video (the feed), rather than on the page. */
+  onMedia?: boolean;
+  href?: string;
+}) {
+  const look = crewLook(crew);
+  const banner = bannerStyle(look);
+  return (
+    <Link
+      href={href ?? `/crews/${crew.id}`}
+      className={`pressable relative inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-full py-1 pl-1 pr-2.5 text-[0.8125rem] font-semibold ${
+        onMedia ? "bg-white/15 text-white backdrop-blur-md [text-shadow:none]" : look.banner ? "" : "bg-foreground/[0.07]"
+      } ${className}`}
+    >
+      {look.banner && (
+        <span aria-hidden className={`pointer-events-none absolute inset-0 opacity-25 ${banner.className}`} style={banner.style} />
+      )}
+      <CrewLogo
+        crew={crew}
+        logoUrl={logoUrl}
+        look={look}
+        size={20}
+        radius={6}
+        className={onMedia ? "bg-white/20" : "bg-foreground/[0.1]"}
+        initialClassName="text-[0.625rem] font-bold"
+      />
+      <CrewName crew={crew} look={look} className="relative truncate" />
+    </Link>
+  );
 }

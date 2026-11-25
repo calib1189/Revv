@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getPrimaryCrewForUser } from "@/lib/db/crew-stats";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
@@ -117,6 +118,8 @@ export default async function VehiclePage({
   if (!vehicle) notFound();
 
   const isOwner = user?.id === vehicle.owner_id;
+  // Where the owner's score counts (their crew), for the row under it.
+  const ownerCrew = isOwner ? await getPrimaryCrewForUser(supabase, vehicle.owner_id).catch(() => null) : undefined;
 
   // A visit from a post counts toward its Creator Studio stats. Recorded
   // by the page once it's on screen (RecordVisit below), not here: the
@@ -357,6 +360,7 @@ export default async function VehiclePage({
           <div id="rate" className="scroll-mt-24">
             <RateBuildPanel
               vehicleId={vehicle.id}
+              crew={ownerCrew === undefined ? undefined : ownerCrew ? { id: ownerCrew.crew.id, name: ownerCrew.crew.name } : null}
               kind={vehicleKind(vehicle.category)}
               currentScore={score}
               currentStrengths={activeBuild?.ai_rating_strengths ?? null}

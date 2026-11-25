@@ -9,8 +9,8 @@ import { bannerStyle, crewLook, CrewLogo, CrewName } from "@/features/crews/crew
  * from a vehicle's. Meant to sit inside a grouped card that draws the
  * hairlines. */
 export function CrewLeaderboardRow({ rank, data }: { rank: number; data: CrewCardData }) {
-  const { crew, logoUrl, memberCount, bestScore } = data;
-  const tier = bestScore != null ? rankForScore(bestScore) : null;
+  const { crew, logoUrl, memberCount, score } = data;
+  const tier = score.tierScore != null ? rankForScore(score.tierScore) : null;
   const look = crewLook(crew);
   const banner = bannerStyle(look);
 
@@ -47,13 +47,15 @@ export function CrewLeaderboardRow({ rank, data }: { rank: number; data: CrewCar
         </p>
         <p className="mt-0.5 text-[0.8125rem] text-muted">
           <span className="numeral">{memberCount}</span> {memberCount === 1 ? "member" : "members"}
+          {" · "}
+          <span className="numeral">{score.counted}</span>/5 builds
         </p>
       </div>
 
       <div className="relative flex-shrink-0 text-right">
-        {tier && bestScore != null ? (
+        {tier && score.score != null ? (
           <>
-            <p className="numeral text-[1.125rem] leading-none">{bestScore.toFixed(2)}</p>
+            <p className="numeral text-[1.125rem] leading-none">{Math.round(score.score)}</p>
             <p className="micro-label mt-1" style={{ color: tierColorVar(tier) }}>
               {RANK_LABELS[tier]}
             </p>

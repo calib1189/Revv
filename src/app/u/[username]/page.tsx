@@ -25,6 +25,8 @@ import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
 import { listUnlockedAchievements } from "@/lib/db/user-achievements";
 import { AchievementUnlockToast } from "@/features/achievements/achievement-unlock-toast";
 import { ProfileShowcase } from "@/features/achievements/achievement-showcase";
+import { getPrimaryCrewForUser } from "@/lib/db/crew-stats";
+import { CrewTag } from "@/features/crews/crew-look";
 import { FollowButton } from "@/features/profile/follow-button";
 import { BlockButton } from "@/features/profile/block-button";
 import { GrantVerifiedButton } from "@/features/admin/grant-verified-button";
@@ -95,7 +97,7 @@ export default async function ProfilePage({
     .map((v) => v.hero_media_id)
     .filter((id): id is string => Boolean(id));
   const avatarIds = profile.avatar_media_id ? [profile.avatar_media_id] : [];
-  const [heroMedia, activeBuildByVehicle, avatarMedia, storyRings] = await Promise.all([
+  const [heroMedia, activeBuildByVehicle, avatarMedia, storyRings, primaryCrew] = await Promise.all([
     getMediaByIds(supabase, heroIds),
     listActiveBuildsByVehicleIds(supabase, vehicles.map((v) => v.id)),
     getMediaByIds(supabase, avatarIds),
@@ -103,6 +105,7 @@ export default async function ProfilePage({
     amBlocking
       ? Promise.resolve(new Map<string, RingState>())
       : loadStoryRings(supabase, currentUser?.id ?? null, [profile.id]).catch(() => new Map<string, RingState>()),
+    getPrimaryCrewForUser(supabase, profile.id).catch(() => null),
   ]);
   const storyRing = storyRings.get(profile.id) ?? null;
   const heroUrlById = new Map(
@@ -342,6 +345,8 @@ export default async function ProfilePage({
             <span className="numeral text-[0.875rem] leading-none">{bestRatingScore.toFixed(2)}</span>
           </p>
         )}
+
+        {primaryCrew && <CrewTag crew={primaryCrew.crew} logoUrl={primaryCrew.logoUrl} className="mt-2.5" />}
 
         <div className="mt-6 flex w-full max-w-sm items-stretch">
           {[

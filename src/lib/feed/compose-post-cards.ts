@@ -11,6 +11,7 @@ import { getMediaByIds, publicMediaUrl } from "@/lib/db/media";
 import { listActiveBuildsByVehicleIds } from "@/lib/db/builds";
 import { listVehiclesByOwnerIds } from "@/lib/db/vehicles";
 import { getSoundsByIds, publicSoundUrl } from "@/lib/db/sounds";
+import { getCrewsByIds } from "@/lib/db/crews";
 import { loadStoryRings, type RingState } from "@/lib/stories/load";
 import { clampSoundStartMs } from "@/lib/validation/sound";
 import type { Vehicle } from "@/lib/db/vehicles";
@@ -34,6 +35,7 @@ export async function composePostCards(
   const soundIds = [
     ...new Set(posts.map((p) => p.sound_id).filter((id): id is string => Boolean(id))),
   ];
+  const crewIds = [...new Set(posts.map((p) => p.crew_id).filter((id): id is string => Boolean(id)))];
 
   const [
     postMedia,
@@ -49,6 +51,7 @@ export async function composePostCards(
     authorVehicles,
     sounds,
     storyRings,
+    crews,
   ] = await Promise.all([
     listPostMediaForPosts(supabase, postIds),
     getLikeCountsForPosts(supabase, postIds),
@@ -78,7 +81,10 @@ export async function composePostCards(
     // Best-effort: a story ring is a nice-to-have on a feed card, never a
     // reason for the feed itself to fail.
     loadStoryRings(supabase, currentUserId, authorIds).catch(() => new Map<string, RingState>()),
+    // The crew tag on a post is decoration: never a reason to fail.
+    getCrewsByIds(supabase, crewIds).catch(() => []),
   ]);
+  const crewById = new Map(crews.map((c) => [c.id, c]));
   const followingIdSet = new Set(followingIds);
 
   const authorById = new Map(
@@ -89,9 +95,10 @@ export async function composePostCards(
   );
   const soundById = new Map(sounds.map((s) => [s.id, s]));
 
-  const avatarMediaIds = (authors.data ?? [])
-    .map((a: Profile) => a.avatar_media_id)
-    .filter((id): id is string => Boolean(id));
+  const avatarMediaIds = [
+    ...(authors.data ?? []).map((a: Profile) => a.avatar_media_id),
+    ...crews.map((c) => c.logo_media_id),
+  ].filter((id): id is string => Boolean(id));
   // Both depend only on the batch above, not on each other: one round
   // trip instead of two, on every feed page and every infinite-scroll page.
   const [authorActiveBuildByVehicle, avatarMedia] = await Promise.all([
@@ -130,6 +137,7 @@ export async function composePostCards(
     const vehicle = post.vehicle_id ? vehicleById.get(post.vehicle_id) : null;
     const author = authorById.get(post.author_id);
     const sound = post.sound_id ? soundById.get(post.sound_id) : null;
+    const crew = post.crew_id ? crewById.get(post.crew_id) : null;
     return {
       post,
       authorId: post.author_id,
@@ -141,6 +149,9 @@ export async function composePostCards(
       authorIsVerified: author?.is_verified ?? false,
       vehicleTitle: vehicle
         ? vehicle.nickname || `${vehicle.make} ${vehicle.model}`
+        : null,
+      crew: crew
+        ? { crew, logoUrl: crew.logo_media_id ? (avatarUrlByMediaId.get(crew.logo_media_id) ?? null) : null }
         : null,
       soundId: post.sound_id,
       soundTitle: sound?.title ?? null,

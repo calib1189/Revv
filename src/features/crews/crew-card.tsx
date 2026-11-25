@@ -2,30 +2,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { CREW_CATEGORY_LABELS } from "@/lib/crews/category";
 import { RANK_MATERIAL_ICONS } from "@/features/garage/rank-material-icons";
-import { rankForScore, RANK_TEXT_COLORS } from "@/lib/rating/rank";
+import { rankForScore, RANK_LABELS, RANK_TEXT_COLORS } from "@/lib/rating/rank";
 import { FlagIcon, LockIcon } from "@/components/ui/icons";
-import type { Crew } from "@/lib/db/crews";
+import type { CrewStats } from "@/lib/db/crew-stats";
 import { bannerStyle, crewLook, CrewLogo, CrewName } from "@/features/crews/crew-look";
 
 /** A crew as a cover card: banner photo full-bleed, logo and name over
- * a scrim at the bottom, and — when a member has a rated build — the
- * crew's best tier as a small frosted chip up top. `bestScore` is the
- * highest rated build across every approved member (computed in
- * /crews/page.tsx), never stored. */
-export function CrewCard({
-  crew,
-  logoUrl,
-  bannerUrl,
-  memberCount,
-  bestScore,
-}: {
-  crew: Crew;
-  logoUrl: string | null;
-  bannerUrl: string | null;
-  memberCount: number;
-  bestScore: number | null;
-}) {
-  const tier = bestScore != null ? rankForScore(bestScore) : null;
+ * a scrim at the bottom, and, once a member has a rated build, the crew's
+ * tier and score (lib/crews/crew-score.ts) as a frosted chip up top. */
+export function CrewCard({ data }: { data: CrewStats }) {
+  const { crew, logoUrl, bannerUrl, memberCount, score } = data;
+  const tier = score.tierScore != null ? rankForScore(score.tierScore) : null;
   const TierIcon = tier ? RANK_MATERIAL_ICONS[tier] : null;
   const look = crewLook(crew);
   const banner = bannerStyle(look);
@@ -58,12 +45,13 @@ export function CrewCard({
       <div className="photo-scrim pointer-events-none absolute inset-0" />
 
       <div className="absolute left-3 right-3 top-3 flex items-center justify-between gap-2">
-        {tier && TierIcon && bestScore != null ? (
+        {tier && TierIcon && score.score != null ? (
           <span className="flex items-center gap-1.5 rounded-full bg-black/45 py-1 pl-1 pr-2.5 backdrop-blur-md">
             <TierIcon className="h-5 w-5" />
-            <span className="numeral text-[0.75rem] leading-none" style={{ color: RANK_TEXT_COLORS[tier] }}>
-              {bestScore.toFixed(2)}
+            <span className="text-[0.75rem] font-semibold leading-none" style={{ color: RANK_TEXT_COLORS[tier] }}>
+              {RANK_LABELS[tier]}
             </span>
+            <span className="numeral text-[0.75rem] leading-none text-white/85">{Math.round(score.score)}</span>
           </span>
         ) : (
           <span />

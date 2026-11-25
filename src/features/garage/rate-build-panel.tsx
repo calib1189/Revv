@@ -21,7 +21,7 @@ import { RatingBreakdownTrigger, type RatingHistoryPoint } from "@/features/gara
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { requestAppReviewAfterRating } from "@/lib/native/app-review";
-import { GemIcon, ChevronRightIcon } from "@/components/ui/icons";
+import { GemIcon, ChevronRightIcon, UsersIcon } from "@/components/ui/icons";
 import type { BuildRating, BuildRatingSubscores } from "@/lib/providers/rating-provider";
 import type { RankPosition } from "@/lib/rating/rank-position";
 import type { VehicleKind } from "@/lib/vehicles/category";
@@ -44,6 +44,7 @@ export function RateBuildPanel({
   rerate = null,
   decal = null,
   kind = "car",
+  crew,
 }: {
   vehicleId: string;
   /** Bike, truck or car: how the score's categories are labelled. */
@@ -78,6 +79,9 @@ export function RateBuildPanel({
   /** Set when this car can have a rank decal (the owner's, approved,
    * decals switched on): the reveal then offers the rank just earned. */
   decal?: { carName: string; photoUrl: string | null; priceCents: number } | null;
+  /** The owner's crew, where this score counts (null: in no crew, so the
+   * row points them at one). Left out entirely when it isn't their car. */
+  crew?: { id: string; name: string } | null;
 }) {
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -287,6 +291,24 @@ export function RateBuildPanel({
 
           <ScoreReasons strengths={currentStrengths} limitingFactors={currentLimitingFactors} />
           <MissingShotsPrompt limitingFactors={currentLimitingFactors} />
+
+          {crew !== undefined && currentScore != null && (
+            <Link
+              href={crew ? `/crews/${crew.id}` : "/crews"}
+              className="pressable mt-5 flex items-center gap-3 rounded-[18px] bg-foreground/[0.05] px-4 py-3"
+            >
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-accent/12 text-accent">
+                <UsersIcon className="h-[18px] w-[18px]" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[0.875rem] font-semibold">{crew ? `Counts for ${crew.name}` : "Count this for a crew"}</p>
+                <p className="mt-0.5 text-[0.8125rem] text-muted">
+                  {crew ? "Your best build adds to its crew score." : "Join a crew and your best build raises its score."}
+                </p>
+              </div>
+              <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-muted/60" />
+            </Link>
+          )}
 
           {rankPosition && (
             <Link
