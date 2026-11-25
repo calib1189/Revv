@@ -1,5 +1,6 @@
 import { HEADER_HEIGHT } from "@/components/shell/tab-pager-shell";
 import { BattleCard } from "@/features/battles/battle-card";
+import { BATTLE_SLIDE_ATTR } from "@/features/battles/battle-result-slide";
 import type { BattleView } from "@/lib/battles/load";
 
 /** Today's Build Battle as a feed slide, clear of the floating header
@@ -17,6 +18,7 @@ export function BattleFeedSlide({
 }) {
   return (
     <div
+      {...{ [BATTLE_SLIDE_ATTR]: "" }}
       className={`relative ${slideHeight} w-full flex-shrink-0 snap-start overflow-hidden bg-black px-3`}
       style={{
         paddingTop: `calc(${HEADER_HEIGHT} + 3.5rem)`,

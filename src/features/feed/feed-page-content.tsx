@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { listRankedFeedPosts } from "@/lib/ranking/ranked-feed";
@@ -12,6 +13,7 @@ import { isNewViewer, loadJustRated, loadTopBuilds, type JustRatedSlideData } fr
 import { loadFeedDrop } from "@/lib/merch/feed-drop";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { loadTodayBattle, loadYesterdayBattle } from "@/lib/battles/load";
+import { BATTLE_SEEN_COOKIE, shouldLeadWithResult } from "@/lib/battles/seen";
 
 export async function FeedPageContent() {
   const supabase = await createClient();
@@ -56,6 +58,7 @@ export async function FeedPageContent() {
     loadYesterdayBattle(supabase, user?.id ?? null).catch(() => null),
   ]);
   const viewerUsername = await profilePromise.then((p) => p?.username ?? null).catch(() => null);
+  const seenBattleId = (await cookies()).get(BATTLE_SEEN_COOKIE)?.value;
   const [cards, ad] = await Promise.all([
     composePostCards(supabase, items.map((item) => item.post), user?.id ?? null),
     adPromise,
@@ -75,7 +78,10 @@ export async function FeedPageContent() {
       // Today's battle leads until you've voted; your own car's battle
       // stays up so you can share it.
       battle={todayBattle && !todayBattle.ended && (!todayBattle.myVote || todayBattle.isOwner) ? todayBattle : null}
-      battleWinner={yesterdayBattle?.result?.winnerId ? yesterdayBattle : null}
+      // Yesterday's result: leads the feed until it's been watched here,
+      // then sits a few posts in.
+      battleResult={yesterdayBattle?.result && yesterdayBattle.result.a + yesterdayBattle.result.b > 0 ? yesterdayBattle : null}
+      battleResultFirst={shouldLeadWithResult(yesterdayBattle, seenBattleId)}
       viewerUsername={viewerUsername}
       drop={drop}
       isAuthenticated={Boolean(user)}

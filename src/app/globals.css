@@ -802,6 +802,36 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   transform-origin: left;
   animation: arena-bar 800ms 500ms var(--ease-ios) both;
 }
+/* The battle result's tally (battle-result-reveal.tsx): each vote pops
+   its side's count and lifts a "+1" off it. */
+@keyframes vote-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.22);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-vote-pop {
+  animation: vote-pop 300ms var(--ease-ios);
+}
+@keyframes vote-plus {
+  from {
+    opacity: 1;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+.animate-vote-plus {
+  animation: vote-plus 600ms var(--ease-ios) forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .arena-in-a,
   .arena-in-b,
@@ -810,7 +840,9 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
   .arena-plate,
   .arena-hud,
   .arena-live,
-  .arena-bar {
+  .arena-bar,
+  .animate-vote-pop,
+  .animate-vote-plus {
     animation: none;
   }
   .arena-vs {

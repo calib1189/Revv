@@ -13,7 +13,7 @@ import type { JustRatedSlideData } from "@/lib/feed/just-rated";
 import type { DailyTeaser } from "@/lib/daily/teaser";
 import type { BattleView } from "@/lib/battles/load";
 import { BattleFeedSlide } from "@/features/battles/battle-feed-slide";
-import { BattleWinnerSlide } from "@/features/battles/battle-winner-slide";
+import { BattleResultSlide } from "@/features/battles/battle-result-slide";
 import { CategoryFilterBar } from "@/features/feed/category-filter-bar";
 import { StoriesPeek } from "@/features/stories/stories-peek";
 import type { TrayPerson } from "@/lib/stories/load";
@@ -34,7 +34,7 @@ const JUST_RATED_INDEXES = [1, 6, 10];
 // never at the top: it's SORZA selling something, so it waits its turn.
 const DROP_INDEX = 8;
 // Yesterday's Build Battle winner: early, so being seen is the prize.
-const BATTLE_WINNER_INDEX = 2;
+const BATTLE_RESULT_INDEX = 2;
 
 export function SwipeFeed({
   initialPosts,
@@ -43,7 +43,8 @@ export function SwipeFeed({
   justRated = [],
   topBuilds = [],
   battle = null,
-  battleWinner = null,
+  battleResult = null,
+  battleResultFirst = false,
   viewerUsername = null,
   drop = null,
   isAuthenticated,
@@ -59,8 +60,10 @@ export function SwipeFeed({
   topBuilds?: JustRatedSlideData[];
   /** Today's Build Battle, leading the feed until you've voted. */
   battle?: BattleView | null;
-  /** Yesterday's battle, when it had a winner to show off. */
-  battleWinner?: BattleView | null;
+  /** Yesterday's battle, when anyone voted in it: its result reveal. */
+  battleResult?: BattleView | null;
+  /** The result hasn't been watched on this device yet, so it leads. */
+  battleResultFirst?: boolean;
   viewerUsername?: string | null;
   /** A live limited tee drop, as one slide deep in the feed (drop-slide). */
   drop?: FeedDrop | null;
@@ -224,6 +227,9 @@ export function SwipeFeed({
         >
           {category === null &&
             topBuilds.map((b) => <JustRatedSlide key={`top-${b.vehicleId}`} data={b} slideHeight={feedHeight} />)}
+          {battleResult && battleResultFirst && category === null && (
+            <BattleResultSlide view={battleResult} isAuthenticated={isAuthenticated} slideHeight={feedHeight} />
+          )}
           {daily && category === null && <DailyFeedSlide teaser={daily} slideHeight={feedHeight} />}
           {battle && category === null && (
             <BattleFeedSlide
@@ -243,8 +249,8 @@ export function SwipeFeed({
                 <SponsoredSlide data={ad} slideHeight={feedHeight} />
               )}
               {drop && category === null && index === DROP_INDEX && <DropSlide drop={drop} slideHeight={feedHeight} />}
-              {battleWinner && category === null && index === BATTLE_WINNER_INDEX && (
-                <BattleWinnerSlide view={battleWinner} slideHeight={feedHeight} />
+              {battleResult && !battleResultFirst && category === null && index === BATTLE_RESULT_INDEX && (
+                <BattleResultSlide view={battleResult} isAuthenticated={isAuthenticated} slideHeight={feedHeight} />
               )}
               {category === null && justRatedAt(index) && (
                 <JustRatedSlide data={justRatedAt(index)!} slideHeight={feedHeight} />
@@ -259,8 +265,8 @@ export function SwipeFeed({
             justRated
               .filter((_, k) => (JUST_RATED_INDEXES[k] ?? Infinity) >= posts.length)
               .map((data) => <JustRatedSlide key={data.vehicleId} data={data} slideHeight={feedHeight} />)}
-          {battleWinner && category === null && !hasMore && posts.length <= BATTLE_WINNER_INDEX && (
-            <BattleWinnerSlide view={battleWinner} slideHeight={feedHeight} />
+          {battleResult && !battleResultFirst && category === null && !hasMore && posts.length <= BATTLE_RESULT_INDEX && (
+            <BattleResultSlide view={battleResult} isAuthenticated={isAuthenticated} slideHeight={feedHeight} />
           )}
           {hasMore && <div ref={sentinelRef} className="h-1" />}
         </div>

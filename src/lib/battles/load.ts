@@ -45,6 +45,8 @@ export interface BattleView {
   myVote: string | null;
   /** The viewer owns one of the two cars, so sits this one out. */
   isOwner: boolean;
+  /** Which of the two is the viewer's own car, if either. */
+  myCarId: string | null;
 }
 
 async function composeCars(
@@ -114,6 +116,8 @@ export async function loadBattleView(
     voteTotal,
     myVote,
     isOwner: viewerId !== null && (cars.a.ownerId === viewerId || cars.b.ownerId === viewerId),
+    myCarId:
+      viewerId === null ? null : cars.a.ownerId === viewerId ? cars.a.vehicleId : cars.b.ownerId === viewerId ? cars.b.vehicleId : null,
   };
 }
 
