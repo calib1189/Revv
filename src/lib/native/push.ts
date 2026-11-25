@@ -57,6 +57,14 @@ export async function isNativeApp(): Promise<boolean> {
   return Capacitor.isNativePlatform();
 }
 
+/** Whether this copy of the app has the push plugin at all. 1.0.1 and
+ * 1.1 shipped without it, so on those iOS answers "not implemented" and
+ * the only fix is updating the app. */
+export async function isNativePushAvailable(): Promise<boolean> {
+  const { Capacitor } = await import("@capacitor/core");
+  return Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("PushNotifications");
+}
+
 export async function getNativePushPermission(): Promise<NativePushPermission> {
   const loaded = await loadPlugin();
   if (!loaded) return "denied";
@@ -67,12 +75,23 @@ export async function getNativePushPermission(): Promise<NativePushPermission> {
   return "prompt";
 }
 
+type EnableResult = { ok: true } | { ok: false; reason: "denied" } | { ok: false; reason: "failed"; detail: string };
+
+let enabling: Promise<EnableResult> | null = null;
+
 /** Asks iOS for permission (once — after a refusal iOS never shows the
  * prompt again, and the person has to use Settings), gets an APNs token,
- * and attaches it to the signed-in account. */
-export async function enableNativePush(): Promise<
-  { ok: true } | { ok: false; reason: "denied" } | { ok: false; reason: "failed"; detail: string }
-> {
+ * and attaches it to the signed-in account. Calls made while one is
+ * already running share it — the app-open prompt and the "turn on
+ * notifications" page can both ask at the same moment. */
+export function enableNativePush(): Promise<EnableResult> {
+  enabling ??= enableNativePushOnce().finally(() => {
+    enabling = null;
+  });
+  return enabling;
+}
+
+async function enableNativePushOnce(): Promise<EnableResult> {
   const loaded = await loadPlugin();
   if (!loaded) return { ok: false, reason: "failed", detail: "plugin unavailable" };
   const { plugin } = loaded;
@@ -121,34 +140,14 @@ export async function disableNativePush(): Promise<void> {
   await loaded?.plugin.unregister().catch(() => {});
 }
 
-/** The first-open "Allow notifications?" prompt. Only fires while the
- * permission is still undecided — iOS reports "prompt" until the person
- * has answered once, and never shows the system dialog a second time, so
- * this can't nag. Called once someone is signed in rather than at the
- * very first frame: the device token has to be attached to an account to
- * be of any use, and a signed-out first launch would just get a token
- * nothing could be sent to. Best-effort — a failure here only means the
- * Notifications settings screen is still there to turn it on. */
-export async function promptForNativePushIfNeverAsked(): Promise<void> {
-  try {
-    const loaded = await loadPlugin();
-    if (!loaded) return;
-    const { receive } = await loaded.plugin.checkPermissions();
-    if (receive !== "prompt") return;
-    await enableNativePush();
-  } catch {
-    // intentionally silent
-  }
-}
-
 /** Called once per app launch. If notifications were already allowed,
  * re-registers so the server always holds the CURRENT token: APNs may
  * rotate it, an app reinstall issues a new one, and a phone that changed
  * hands needs its token reassigned to whoever is signed in now.
  *
- * Never prompts itself — the first-open prompt is
- * promptForNativePushIfNeverAsked, and the Notifications settings screen
- * remains the way to turn it on after an earlier refusal. */
+ * Never prompts itself — asking is PushPrompt's job (the one-time sheet
+ * that asks before iOS does), with the Notifications settings screen and
+ * the streak card's nudge after that. */
 export async function refreshNativePushRegistration(): Promise<void> {
   const loaded = await loadPlugin();
   if (!loaded) return;

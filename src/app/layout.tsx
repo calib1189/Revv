@@ -74,7 +74,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="flex min-h-full flex-col">
-        <NativeAppBridge isSignedIn={Boolean(user)} />
+        <NativeAppBridge />
         {!user && <CaptureInviteRef />}
         {user && <TimeZoneSync />}
         {user && (

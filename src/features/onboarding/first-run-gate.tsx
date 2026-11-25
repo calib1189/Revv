@@ -13,6 +13,7 @@ import { hasSeenAnnouncement } from "@/lib/db/announcement-views";
 import { INVITE_ANNOUNCEMENT, isAnnouncementAgeReady } from "@/lib/announcements";
 import { loadDailyBoost } from "@/lib/daily/boost";
 import { DailyBoostPromo } from "@/features/daily/daily-boost-promo";
+import { PushPrompt } from "@/features/push/push-prompt";
 
 /** A free username built from what Google or Apple shared, or null. */
 async function suggestFreeUsername(supabase: SupabaseClient<Database>, user: User): Promise<string | null> {
@@ -37,7 +38,8 @@ async function suggestFreeUsername(supabase: SupabaseClient<Database>, user: Use
  * 3. Once that's done, a prize day's takeover (the Daily winner gets more
  *    points than usual) once that day, if they haven't entered; else a
  *    one-time announcement (the invite program) for accounts at least a
- *    day old. Never both at once.
+ *    day old; else, in the iPhone app with notifications off, the
+ *    one-time sheet to turn them on. Never two at once.
  *
  * Only for confirmed accounts (only they can save either), and nothing is
  * shown when the reads fail, so neither can end up on every launch.
@@ -74,7 +76,12 @@ export async function FirstRunGate({ user }: { user: User }) {
       </>
     );
   }
-  return <TutorialHost startStep={startStep} />;
+  return (
+    <>
+      <TutorialHost startStep={startStep} />
+      {startStep === null && profile && <PushPrompt accountCreatedAt={profile.created_at} />}
+    </>
+  );
 }
 
 /** Not yet seen on any device. False when it can't be read (before 0122),

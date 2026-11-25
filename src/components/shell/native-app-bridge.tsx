@@ -8,7 +8,6 @@ import { installSwipeToProfile } from "@/lib/native/swipe-to-profile";
 import { isAndroidApp } from "@/lib/native/android-app";
 import {
   listenForNotificationTaps,
-  promptForNativePushIfNeverAsked,
   refreshNativePushRegistration,
 } from "@/lib/native/push";
 import { installNativeKeyboardTracking } from "@/lib/native/keyboard";
@@ -17,7 +16,7 @@ import { installNativeKeyboardTracking } from "@/lib/native/keyboard";
  * page is running inside the Capacitor-wrapped native shell. Dynamically
  * imported so the Capacitor JS bridge is never pulled into the ordinary
  * web bundle. */
-export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
+export function NativeAppBridge() {
   // The gesture is installed once; it always navigates with the current
   // router.
   const router = useRouter();
@@ -25,14 +24,6 @@ export function NativeAppBridge({ isSignedIn }: { isSignedIn: boolean }) {
   useEffect(() => {
     routerRef.current = router;
   }, [router]);
-
-  // Re-runs when someone signs in (the layout re-renders with the new
-  // value), so a first launch that starts logged out still gets asked
-  // right after they log in. No-ops on the web and once iOS has recorded
-  // an answer.
-  useEffect(() => {
-    if (isSignedIn) void promptForNativePushIfNeverAsked();
-  }, [isSignedIn]);
 
   useEffect(() => {
     let cancelled = false;
