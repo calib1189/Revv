@@ -42,7 +42,7 @@ export function pointsSale(row: { points: number; provider: string }): SaleItem 
   return {
     kind: "points",
     title: `${row.points.toLocaleString("en-US")} points`,
-    detail: row.provider === "apple" ? "App Store" : "Web checkout",
+    detail: row.provider === "apple" ? "App Store" : row.provider === "google" ? "Google Play" : "Web checkout",
   };
 }
 

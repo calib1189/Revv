@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  subscribeToPushAction,
   unsubscribeFromPushAction,
   hasDeviceTokenAction,
   sendTestPushAction,
@@ -16,22 +15,12 @@ import {
   readStoredPushToken,
 } from "@/lib/native/push";
 import { Toggle } from "@/components/ui/toggle";
+import { enableWebPush } from "@/lib/push/web-push-client";
 import { Spinner } from "@/components/ui/spinner";
 import { Callout } from "@/components/ui/callout";
 import { Button } from "@/components/ui/button";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  const array = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; i++) {
-    array[i] = rawData.charCodeAt(i);
-  }
-  return array;
-}
 
 type Status = "loading" | "unsupported" | "ios-needs-install" | "denied" | "off" | "on";
 
@@ -169,29 +158,10 @@ export function PushOptIn() {
       return;
     }
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setStatus("denied");
-        return;
-      }
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY!),
-      });
-      const json = subscription.toJSON();
-      const result = await subscribeToPushAction({
-        endpoint: json.endpoint!,
-        keys: { p256dh: json.keys!.p256dh!, auth: json.keys!.auth! },
-      });
-      if (result.error) {
-        setError(result.error);
-        await subscription.unsubscribe();
-        return;
-      }
-      setStatus("on");
-    } catch {
-      setError("Couldn't enable notifications. Try again.");
+      const result = await enableWebPush();
+      if (result.ok) setStatus("on");
+      else if (result.reason === "denied") setStatus("denied");
+      else setError(result.detail && result.detail !== "not supported" ? result.detail : "Couldn't enable notifications. Try again.");
     } finally {
       setIsPending(false);
     }

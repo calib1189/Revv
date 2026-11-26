@@ -9,6 +9,8 @@ import { APP_STORE_URL } from "@/lib/app-store";
 import { isAnnouncementBlockedPath } from "@/lib/announcements";
 import { useHideBottomNav } from "@/lib/ui/use-hide-bottom-nav";
 import { enableNativePush, getNativePushPermission, isNativeApp, isNativePushAvailable } from "@/lib/native/push";
+import { isAndroidApp } from "@/lib/native/android-app";
+import { enableWebPush, webPushState } from "@/lib/push/web-push-client";
 
 /** Set once the sheet has shown on this phone, so it only ever shows once. */
 const SHOWN_KEY = "sorza.pushPrompt.v1";
@@ -43,8 +45,9 @@ function markShown() {
 }
 
 /**
- * Once, the first time someone opens the iPhone app without notifications
- * on: a sheet that says so plainly and turns them on in one tap. It asks
+ * Once, the first time someone opens the iPhone app (or the Android app,
+ * which uses the browser's own notifications) without notifications on:
+ * a sheet that says so plainly and turns them on in one tap. It asks
  * first and lets iOS ask second, so the one-and-only system prompt comes
  * when someone has just said yes.
  *
@@ -59,6 +62,8 @@ export function PushPrompt({ accountCreatedAt }: { accountCreatedAt: string }) {
   const [mode, setMode] = useState<Mode | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [closing, setClosing] = useState(false);
+  // The Android app turns notifications on through the browser (Web Push).
+  const [viaBrowser, setViaBrowser] = useState(false);
   const open = mode !== null;
   useHideBottomNav(open);
 
@@ -68,6 +73,14 @@ export function PushPrompt({ accountCreatedAt }: { accountCreatedAt: string }) {
     const timer = setTimeout(() => {
       void (async () => {
         try {
+          if (isAndroidApp()) {
+            // Already on, refused, or not possible here: nothing to ask.
+            if ((await webPushState()) !== "off" || cancelled || alreadyShown()) return;
+            markShown();
+            setViaBrowser(true);
+            setMode("ask");
+            return;
+          }
           if (!(await isNativeApp())) return;
           let next: Mode;
           if (!(await isNativePushAvailable())) next = "update";
@@ -105,7 +118,7 @@ export function PushPrompt({ accountCreatedAt }: { accountCreatedAt: string }) {
       return close();
     }
     setPhase("busy");
-    const result = await enableNativePush().catch(() => null);
+    const result = await (viaBrowser ? enableWebPush() : enableNativePush()).catch(() => null);
     if (result?.ok) {
       setPhase("on");
       setTimeout(close, CLOSE_AFTER_ON_MS);
@@ -117,7 +130,8 @@ export function PushPrompt({ accountCreatedAt }: { accountCreatedAt: string }) {
 
   if (!isClient || !open) return null;
 
-  const ownedUp = Date.parse(accountCreatedAt) < PUSH_FIXED_AT;
+  // The bug it owns up to was the iPhone app's; Android never had it.
+  const ownedUp = !viaBrowser && Date.parse(accountCreatedAt) < PUSH_FIXED_AT;
   const title =
     mode === "update"
       ? "Update SORZA to get notifications"

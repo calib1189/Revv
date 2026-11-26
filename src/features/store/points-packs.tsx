@@ -11,7 +11,13 @@ import {
   unfinishedAppleTransactions,
   type StoreEnvironment,
 } from "@/lib/native/points-store";
-import { confirmApplePurchaseAction, startPointsCheckoutAction } from "@/features/store/points-actions";
+import {
+  confirmApplePurchaseAction,
+  confirmGooglePurchaseAction,
+  googlePlayPacksReadyAction,
+  startPointsCheckoutAction,
+} from "@/features/store/points-actions";
+import { buyWithGoogle, playBillingAvailable, playPrices, unconsumedGooglePurchases } from "@/lib/native/play-billing";
 import { Sheet } from "@/components/ui/sheet";
 import { GemIcon, PlusIcon } from "@/components/ui/icons";
 
@@ -20,7 +26,8 @@ type Message = { tone: "ok" | "error"; text: string };
 /**
  * The store's wallet: a points pill beside the page title, and (once
  * points packs are switched on) a "Get points" sheet with the packs. Stripe on the web, Apple's
- * in-app purchase in the iPhone app (Apple requires it there for points).
+ * in-app purchase in the iPhone app, Google Play Billing in the Android
+ * app (each store requires its own billing there for points).
  * Points only buy cosmetics, every one of which can be earned for free.
  */
 export function PointsWallet({
@@ -44,6 +51,9 @@ export function PointsWallet({
   const [env, setEnv] = useState<StoreEnvironment | null>(null);
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  // The Android app sells packs only once it can reach Play Billing and the
+  // server can check purchases with Google.
+  const [androidReady, setAndroidReady] = useState(false);
   const [message, setMessage] = useState<Message | null>(
     params.get("points") === "added" ? { tone: "ok", text: "Thanks! Your points show up in a moment." } : null,
   );
@@ -56,6 +66,19 @@ export function PointsWallet({
       const found = await storeEnvironment();
       if (cancelled) return;
       setEnv(found);
+      if (found === "android-app") {
+        const [billing, server] = await Promise.all([playBillingAvailable(), googlePlayPacksReadyAction().catch(() => false)]);
+        if (cancelled || !billing || !server) return;
+        setAndroidReady(true);
+        playPrices(POINT_PACKS.map((p) => p.id))
+          .then((p) => !cancelled && setPrices(p))
+          .catch(() => undefined);
+        // Purchases Google completed that were never confirmed here.
+        const owed = await unconsumedGooglePurchases();
+        for (const purchase of owed) await confirmGooglePurchaseAction(purchase.itemId, purchase.purchaseToken);
+        if (owed.length && !cancelled) router.refresh();
+        return;
+      }
       if (found !== "app") return;
       appStorePrices(POINT_PACKS.map((p) => p.appleProductId))
         .then((p) => !cancelled && setPrices(p))
@@ -80,7 +103,18 @@ export function PointsWallet({
     setMessage(null);
     setBusy(pack.id);
     try {
-      if (env === "app") {
+      if (env === "android-app") {
+        const result = await buyWithGoogle(pack.id);
+        if (result.status !== "purchased") return;
+        const confirmed = await confirmGooglePurchaseAction(pack.id, result.purchaseToken);
+        if (!confirmed.ok) {
+          setMessage({ tone: "error", text: confirmed.error });
+          return;
+        }
+        setMessage({ tone: "ok", text: `+${confirmed.points.toLocaleString()} points added` });
+        onOpenChange(false);
+        startTransition(() => router.refresh());
+      } else if (env === "app") {
         const result = await buyWithApple(pack.appleProductId, userId);
         if (result.status === "pending") {
           setMessage({ tone: "ok", text: "Waiting for approval. The points arrive once it goes through." });
@@ -112,7 +146,7 @@ export function PointsWallet({
     }
   }
 
-  const canBuy = packsEnabled && env !== null && env !== "android-app";
+  const canBuy = packsEnabled && env !== null && (env !== "android-app" || androidReady);
 
   const pill = (
     <>
@@ -171,7 +205,7 @@ export function PointsWallet({
               </p>
               <ul className="flex flex-col gap-2">
                 {POINT_PACKS.map((pack) => {
-                  const price = env === "app" ? prices[pack.appleProductId] : formatUsd(pack.priceCents);
+                  const price = env === "app" ? prices[pack.appleProductId] : env === "android-app" ? (prices[pack.id] ?? formatUsd(pack.priceCents)) : formatUsd(pack.priceCents);
                   return (
                     <li key={pack.id}>
                       <button

@@ -7,11 +7,12 @@ import { setDevicePreference, useDevicePreferences } from "@/lib/device-preferen
 import { useAppShell } from "@/lib/native/use-is-native";
 
 /** Settings that apply to this device only (see device-preferences.ts):
- * how feed videos start, and haptics in the iPhone app. */
+ * how feed videos start, and haptics in the apps. */
 export function PlaybackSettings() {
   const preferences = useDevicePreferences();
-  // Haptics come from the iPhone app's native bridge; Android has none.
-  const isIosApp = useAppShell() === "ios";
+  // Haptics: the iPhone app's native bridge, or vibration in the Android app.
+  const shell = useAppShell();
+  const isStoreApp = shell === "ios" || shell === "android";
 
   return (
     <GroupedList footer="Saved on this device.">
@@ -47,7 +48,7 @@ export function PlaybackSettings() {
           />
         }
       />
-      {isIosApp && (
+      {isStoreApp && (
         <GroupedRow
           label="Haptics"
           detail="Small vibrations, like when your build rating lands"

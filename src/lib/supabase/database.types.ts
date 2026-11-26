@@ -98,7 +98,7 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          provider: "apple" | "stripe";
+          provider: "apple" | "stripe" | "google";
           provider_ref: string;
           pack_id: string;
           points: number;
@@ -110,7 +110,7 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          provider: "apple" | "stripe";
+          provider: "apple" | "stripe" | "google";
           provider_ref: string;
           pack_id: string;
           points: number;

@@ -7,6 +7,7 @@ import { createPointsCheckoutSession } from "@/lib/billing/stripe";
 import { packById, pointsPacksEnabled } from "@/lib/points/packs";
 import { checkAppleTransaction, fetchAppleTransaction, appleIapConfig } from "@/lib/points/apple-iap";
 import { creditPointsPurchase } from "@/lib/points/credit";
+import { checkGooglePurchase, consumeGooglePurchase, fetchGooglePurchase, googlePlayConfig } from "@/lib/points/google-play";
 import { SITE_URL } from "@/lib/site-url";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByUserId } from "@/lib/db/profiles";
@@ -77,6 +78,61 @@ export async function confirmApplePurchaseAction(transactionId: string): Promise
     return { ok: true, points: check.pack.points };
   } catch (err) {
     console.error("Apple purchase not credited:", err);
+    return { ok: false, error: "Couldn't add your points yet. They'll be added the next time you open the store." };
+  }
+}
+
+/** Whether points packs can be bought in the Android app right now: the
+ * on-switch, plus the Play Developer API credentials the server checks
+ * every purchase with. */
+export async function googlePlayPacksReadyAction(): Promise<boolean> {
+  const user = await getCurrentUser();
+  return !!googlePlayConfig() && pointsPacksEnabled(user ? await isAdmin(user.id) : false);
+}
+
+/** Android: credits a Google Play purchase after checking it with Google,
+ * then consumes it so the pack can be bought again. Safe to call again for
+ * the same purchase (it credits once). */
+export async function confirmGooglePurchaseAction(
+  productId: string,
+  purchaseToken: string,
+): Promise<Result<{ points: number }>> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "Log in to buy points." };
+  if (!googlePlayConfig() || !pointsPacksEnabled(await isAdmin(user.id))) {
+    return { ok: false, error: "In-app purchases aren't switched on yet." };
+  }
+  try {
+    const purchase = await fetchGooglePurchase(productId, purchaseToken);
+    if (!purchase) return { ok: false, error: "Google Play doesn't have that purchase." };
+    const check = checkGooglePurchase(purchase, { productId, purchaseToken });
+    if (!check.ok) {
+      console.error("Google purchase refused:", check.reason, productId);
+      return {
+        ok: false,
+        error: check.reason === "pending" ? "Your payment is still pending. Points are added once it goes through." : "That purchase couldn't be added to this account.",
+      };
+    }
+    const amountCents = check.test ? 0 : check.pack.priceCents;
+    const credited = await creditPointsPurchase({
+      userId: user.id,
+      provider: "google",
+      providerRef: check.providerRef,
+      pack: check.pack,
+      amountCents,
+      currency: "usd",
+    });
+    // Consumed only once it's credited: an unconsumed purchase is still
+    // listed on the phone, so a failure here gets retried next time.
+    await consumeGooglePurchase(productId, purchaseToken).catch((err) => console.error("Google consume failed:", err));
+    if (credited.isNew && !check.test) {
+      const { pack } = check;
+      after(() => notifyAdminsOfSale({ buyerId: user.id, amountCents, item: pointsSale({ points: pack.points, provider: "google" }) }));
+    }
+    revalidatePath("/store");
+    return { ok: true, points: check.pack.points };
+  } catch (err) {
+    console.error("Google purchase not credited:", err);
     return { ok: false, error: "Couldn't add your points yet. They'll be added the next time you open the store." };
   }
 }

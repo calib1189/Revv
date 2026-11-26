@@ -4,8 +4,10 @@
  * a paywall: this just lets people skip the grind.
  *
  * appleProductId must match a Consumable in-app purchase created in App
- * Store Connect with the same price. Stripe charges priceCents directly,
- * so the web needs nothing set up per pack.
+ * Store Connect with the same price, and the pack's own id an in-app
+ * product of the same id and price in Google Play Console (the Android
+ * app). Stripe charges priceCents directly, so the web needs nothing set
+ * up per pack.
  */
 export interface PointPack {
   id: string;
@@ -38,6 +40,11 @@ export function packById(id: string): PointPack | null {
 
 export function packByAppleProductId(productId: string): PointPack | null {
   return POINT_PACKS.find((p) => p.appleProductId === productId) ?? null;
+}
+
+/** Play Console product ids are the packs' own ids (points_100, ...). */
+export function packByGoogleProductId(productId: string): PointPack | null {
+  return packById(productId);
 }
 
 export function formatUsd(cents: number): string {

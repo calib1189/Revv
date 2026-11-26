@@ -18,7 +18,7 @@ interface PointsStorePlugin {
 }
 
 // "android-app": the Play Store app, where Google requires its own billing
-// for points and that isn't built, so packs aren't offered there.
+// for points: it buys through Play Billing (lib/native/play-billing.ts).
 export type StoreEnvironment = "web" | "app" | "old-app" | "android-app";
 
 // Kept inside a plain object, never returned bare from an async function:

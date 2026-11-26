@@ -9,7 +9,7 @@ import type { PointPack } from "@/lib/points/packs";
 
 export async function creditPointsPurchase(input: {
   userId: string;
-  provider: "apple" | "stripe";
+  provider: "apple" | "stripe" | "google";
   providerRef: string;
   pack: PointPack;
   amountCents: number;
