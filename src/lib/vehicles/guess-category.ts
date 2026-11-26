@@ -122,6 +122,33 @@ function normalize(value: string): string {
   return value.toLowerCase().trim();
 }
 
+/** ATVs and side-by-sides, checked before everything else because their
+ * names collide with trucks (Polaris Ranger / Ford Ranger, Yamaha Raptor /
+ * Ford Raptor, Honda TRX / Ram TRX, Can-Am Defender / Land Rover
+ * Defender). Brands that only build off-road machines match on make
+ * alone; brands that also build bikes or cars match only on their own
+ * ATV/UTV model names, so a Yamaha R6 or a Honda Civic is untouched. */
+const ATV_UTV_MAKES = ["polaris", "can-am", "can am", "canam", "arctic cat", "cfmoto", "cf moto", "hisun", "massimo", "textron"];
+/** Can-Am's road three-wheelers aren't quads; left to the owner. */
+const NOT_ATV_MODELS = ["spyder", "ryker", "slingshot"];
+const ATV_UTV_MODELS: Record<string, string[]> = {
+  yamaha: ["grizzly", "kodiak", "raptor", "wolverine", "rhino", "viking", "yfz", "yfz450r", "banshee", "warrior", "blaster", "big bear", "bruin", "yxz", "yxz1000r", "moto-4"],
+  honda: ["rancher", "foreman", "recon", "rubicon", "rincon", "trx", "pioneer", "talon", "sportrax", "fourtrax"],
+  kawasaki: ["brute force", "kfx", "teryx", "mule", "prairie", "bayou"],
+  suzuki: ["kingquad", "king quad", "ltz", "ltr", "quadsport", "quadracer", "ozark", "eiger", "vinson"],
+};
+/** Words that mean a quad or side-by-side whatever the make. */
+const ATV_UTV_WORDS = ["atv", "utv", "quad", "side by side", "side-by-side", "sxs"];
+
+function guessAtvUtv(make: string, model: string): boolean | null {
+  if (NOT_ATV_MODELS.some((kw) => wordMatch(model, kw))) return false;
+  if (ATV_UTV_WORDS.some((kw) => wordMatch(model, kw))) return true;
+  if (ATV_UTV_MAKES.some((name) => wordMatch(make, name))) return true;
+  const models = Object.entries(ATV_UTV_MODELS).find(([name]) => wordMatch(make, name))?.[1];
+  if (models?.some((kw) => wordMatch(model, kw))) return true;
+  return null;
+}
+
 /** Best-effort category guess from a make/model pair, for pre-filling
  * the category field as the vehicle form is filled out — never applied
  * without the field staying visible and editable, and never itself the
@@ -131,6 +158,9 @@ function normalize(value: string): string {
  * "cars" default over a choice the user already made. */
 export function guessVehicleCategory(make: string, model: string): VehicleCategory | null {
   const m = normalize(model);
+  const atv = guessAtvUtv(normalize(make), m);
+  if (atv === true) return "atv_utv";
+  if (atv === false) return null;
   for (const { category, keywords } of MODEL_KEYWORDS) {
     if (keywords.some((kw) => wordMatch(m, kw))) return category;
   }

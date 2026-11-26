@@ -270,7 +270,7 @@ export async function LeaderboardPageContent({
               : scope === "crew"
                 ? "Once a crewmate rates and verifies a build, they'll show up here."
                 : initialCategory
-                  ? `Rate and verify a ${VEHICLE_CATEGORY_LABELS[initialCategory]} build from your garage to be first on this board.`
+                  ? `Rate and verify a build in ${VEHICLE_CATEGORY_LABELS[initialCategory]} to be first on this board.`
                   : "Rate your build and verify ownership from your garage to be first on the board."
           }
         />

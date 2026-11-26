@@ -7,6 +7,7 @@ describe("vehicleKind", () => {
     expect(vehicleKind("street_bikes")).toBe("bike");
     expect(vehicleKind("cruisers_choppers")).toBe("bike");
     expect(vehicleKind("trucks_offroad")).toBe("truck");
+    expect(vehicleKind("atv_utv")).toBe("atv");
     expect(vehicleKind("jdm")).toBe("car");
     expect(vehicleKind(null)).toBe("car");
   });
@@ -19,6 +20,7 @@ describe("subscoreLabels", () => {
     expect(car.interior).toBe("Interior");
     expect(bike.interior).toBe("Cockpit");
     expect(subscoreLabels("truck")).toEqual(car);
+    expect(subscoreLabels("atv").interior).toBe("Cockpit");
     expect({ ...bike, interior: car.interior }).toEqual(car);
   });
 });

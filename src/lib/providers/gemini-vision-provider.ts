@@ -15,7 +15,8 @@ const PROMPT =
   "with no strong enthusiast identity (a daily-driven sedan/SUV/crossover) " +
   "— use it as the default when nothing more specific clearly applies. " +
   '"trucks_offroad" means a pickup truck or a built off-road 4x4 (lifted, ' +
-  'big tires, armor); "street_bikes" and "cruisers_choppers" are ' +
+  'big tires, armor); "atv_utv" means an ATV/quad or a UTV/side-by-side ' +
+  '(Polaris RZR, Can-Am, Yamaha Grizzly, Honda Rancher); "street_bikes" and "cruisers_choppers" are ' +
   "motorcycles. " +
   "If you cannot confidently determine a field, use null for it rather " +
   "than guessing — this includes category if the vehicle type genuinely " +

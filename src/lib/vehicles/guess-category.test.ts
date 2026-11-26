@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { guessVehicleCategory } from "./guess-category";
 
 describe("guessVehicleCategory", () => {
+  it("leaves Can-Am's three-wheelers to the owner", () => {
+    expect(guessVehicleCategory("Can-Am", "Spyder RT")).toBeNull();
+    expect(guessVehicleCategory("Can-Am", "Ryker")).toBeNull();
+  });
+
   it.each([
     ["Toyota", "Supra", "jdm"],
     ["Nissan", "GT-R", "jdm"],
@@ -25,6 +30,27 @@ describe("guessVehicleCategory", () => {
     ["Toyota", "Tacoma TRD Pro", "trucks_offroad"],
     ["Jeep", "Wrangler Rubicon", "trucks_offroad"],
     ["Ram", "1500", "trucks_offroad"],
+    // ATVs and side-by-sides, including the names they share with trucks
+    ["Yamaha", "Grizzly 660", "atv_utv"],
+    ["Yamaha", "Warrior 350", "atv_utv"],
+    ["Yamaha", "Raptor 700R", "atv_utv"],
+    ["Honda", "TRX 450R", "atv_utv"],
+    ["Honda", "Pioneer 1000", "atv_utv"],
+    ["Kawasaki", "Brute Force 750", "atv_utv"],
+    ["Suzuki", "KingQuad 750", "atv_utv"],
+    ["Polaris", "RZR XP 1000", "atv_utv"],
+    ["Polaris", "Ranger 1000", "atv_utv"],
+    ["Can-Am", "Commander 1000R", "atv_utv"],
+    ["Can-Am", "Defender HD10", "atv_utv"],
+    ["Can-Am", "Maverick X3", "atv_utv"],
+    ["Arctic Cat", "Alterra 600", "atv_utv"],
+    ["CFMOTO", "ZForce 950", "atv_utv"],
+    ["Ford", "Ranger XLT", "trucks_offroad"],
+    ["Ford", "Maverick", "trucks_offroad"],
+    ["Ram", "1500 TRX", "trucks_offroad"],
+    ["Land Rover", "Defender 110", "trucks_offroad"],
+    ["Yamaha", "YZF-R6", "street_bikes"],
+    ["Kawasaki", "Ninja 400", "street_bikes"],
   ] as const)("guesses %s %s as %s", (make, model, expected) => {
     expect(guessVehicleCategory(make, model)).toBe(expected);
   });

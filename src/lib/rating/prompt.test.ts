@@ -68,8 +68,16 @@ describe("ratingPrompt", () => {
     expect(p).not.toMatch(/car/);
   });
 
+  it("judges an ATV or UTV as one, never as a car or truck", () => {
+    const p = ratingPrompt("atv");
+    expect(p).toContain("rating a quad or side-by-side build");
+    expect(p).toContain("never mark it down for lacking a car or truck's cab, doors, bed or bodywork");
+    expect(p).toContain("`interior` (the cockpit");
+    expect(p).not.toMatch(/truck build|car build/);
+  });
+
   it("asks for the same five subscores whatever the vehicle", () => {
-    for (const kind of ["car", "bike", "truck"] as const) {
+    for (const kind of ["car", "bike", "truck", "atv"] as const) {
       for (const key of ["appearance", "performance", "wheelsFitment", "interior", "modifications"]) {
         expect(ratingPrompt(kind)).toContain(`\`${key}\``);
       }

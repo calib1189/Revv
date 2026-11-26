@@ -12,14 +12,15 @@ export const SUBSCORE_ORDER: (keyof BuildRatingSubscores)[] = [
 
 /** What each category is called for this kind of vehicle. The stored keys
  * never change (old ratings, posters and the leaderboard all read them);
- * only a bike's `interior` reads as Cockpit, since a bike has no cabin and
- * the rating scores its seat, bars and controls there instead. */
+ * only `interior` reads as Cockpit for a bike or an ATV/UTV, since the
+ * rating scores the seat, bars and controls (or a side-by-side's cab)
+ * there instead. */
 export function subscoreLabels(kind: VehicleKind = "car"): Record<keyof BuildRatingSubscores, string> {
   return {
     appearance: "Appearance",
     performance: "Performance",
     wheelsFitment: "Wheels/Fitment",
-    interior: kind === "bike" ? "Cockpit" : "Interior",
+    interior: kind === "bike" || kind === "atv" ? "Cockpit" : "Interior",
     modifications: "Modifications",
   };
 }

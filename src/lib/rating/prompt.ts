@@ -2,11 +2,12 @@ import type { VehicleKind } from "@/lib/vehicles/category";
 
 /*
  * The AI build rating's instructions, written for the kind of vehicle
- * being rated. Cars read exactly as they always have; a bike or a truck
- * gets the same scale and the same five categories, with the places a
- * car-only reading would be unfair spelled out: a bike has no cabin (its
- * `interior` is the cockpit), and a truck's lift, tires and armor are
- * real modifications rather than odd fitment.
+ * being rated. Cars read exactly as they always have; a bike, truck or
+ * ATV/UTV gets the same scale and the same five categories, with the
+ * places a car-only reading would be unfair spelled out: a bike has no
+ * cabin (its `interior` is the cockpit), a truck's lift, tires and armor
+ * are real modifications rather than odd fitment, and a quad is never
+ * marked down for not having a truck's cab or bed.
  */
 
 interface KindWords {
@@ -42,6 +43,19 @@ const WORDS: Record<VehicleKind, KindWords> = {
     interior:
       "the cockpit, since a motorcycle has no cabin — seat, bars, grips, levers, controls, mirrors, gauges: their condition and any modifications",
     noInteriorPhotos: "a bike with no close-up of its cockpit",
+  },
+  atv: {
+    noun: "quad or side-by-side",
+    lookAt:
+      "plastics and body panels, paint or wrap, lights, wheels and tires, lift and suspension, bumpers, racks, winch, armor and skid plates, exhaust, and the cockpit (an ATV's seat, bars and controls, or a side-by-side's cage, roof, doors and cab)",
+    majorMods:
+      "This is an ATV or UTV and is judged as one: never mark it down for lacking a car or truck's cab, doors, bed or bodywork. Lift kits and long-travel suspension, aftermarket wheels and tires, full exhaust and intake, custom wraps or plastics, fabricated bumpers, cages and armor, and portal or gear-reduction work are major modifications — a lift, bigger tires, a winch, snorkels and racks are real modifications, not odd fitment",
+    performance:
+      "engine mods, exhaust, intake, tuning, clutch kits, gearing, snorkels and lockers — actual go-fast or go-anywhere work, not looks",
+    wheelsFitment: "wheel and tire choice and size, suspension and lift, stance, ground clearance",
+    interior:
+      "the cockpit — an ATV's seat, bars, grips, controls and gauges, or a side-by-side's seats, harnesses, steering wheel, dash, cage and cab: their condition and any modifications",
+    noInteriorPhotos: "a quad or side-by-side with no close-up of its cockpit",
   },
   truck: {
     noun: "truck",
