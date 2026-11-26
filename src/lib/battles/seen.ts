@@ -22,3 +22,24 @@ export function shouldLeadWithResult(
   if (!battle?.result || battle.result.a + battle.result.b === 0) return false;
   return seenBattleId !== battle.id;
 }
+
+/** Battles voted in on this device during this visit. The server already
+ * leaves a voted battle out of the next feed it builds; this covers the
+ * feed that's still open (the tab pager keeps it alive), so the card
+ * steps aside once you've scrolled past it instead of waiting for a
+ * reload. */
+export const BATTLE_VOTED_EVENT = "sorza:battle-voted";
+const voted = new Set<string>();
+
+export function markBattleVoted(battleId: string) {
+  voted.add(battleId);
+  try {
+    window.dispatchEvent(new CustomEvent(BATTLE_VOTED_EVENT, { detail: battleId }));
+  } catch {
+    // No window (tests): the set alone is enough.
+  }
+}
+
+export function wasBattleVoted(battleId: string): boolean {
+  return voted.has(battleId);
+}

@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { APP_STORE_URL } from "@/lib/app-store";
 import type { InAppBrowser } from "@/lib/in-app-browser";
-import { AppleIcon, ArrowUpIcon } from "@/components/ui/icons";
+import { ArrowUpIcon } from "@/components/ui/icons";
+import { StoreBadges } from "@/features/landing/store-badges";
 
 const EMBLEMS = ["bronze", "gold", "emerald", "diamond", "cosmic"] as const;
 
@@ -12,7 +12,8 @@ const EMBLEMS = ["bronze", "gold", "emerald", "diamond", "cosmic"] as const;
  * A real page on purpose, never a redirect. TikTok's in-app browser
  * refuses to hand a redirect off to the App Store ("Action can't be
  * completed"), which left people on a blank screen. Here they land on
- * SORZA, see a plain App Store button, and get told how to break out to
+ * SORZA, see the App Store and Google Play badges (their own store
+ * first), and get told how to break out to
  * their real browser if the button does nothing. Visitors inside a
  * social app's browser get that instruction as a callout.
  */
@@ -58,20 +59,11 @@ export function GetAppPage({ inApp, platform }: { inApp: InAppBrowser | null; pl
           <p className="px-2 text-[0.8125rem] leading-relaxed text-muted">{escape}</p>
         )}
 
-        <a
-          href={APP_STORE_URL}
-          className="pressable flex h-[3.75rem] w-full items-center justify-center gap-3 rounded-full bg-foreground text-background"
-        >
-          <AppleIcon className="h-7 w-7" />
-          <span className="flex flex-col items-start leading-none">
-            <span className="text-[0.6875rem] font-medium tracking-[0.02em] opacity-80">Download on the</span>
-            <span className="mt-1 text-[1.25rem] font-semibold tracking-[-0.01em]">App Store</span>
-          </span>
-        </a>
+        <StoreBadges platform={platform} className="justify-center pt-1" />
       </div>
 
       <p className="mt-5 text-[0.8125rem] text-muted">
-        Not on iPhone?{" "}
+        On a computer?{" "}
         <Link href="/signup" className="font-medium text-foreground underline underline-offset-4">
           Use SORZA on the web
         </Link>

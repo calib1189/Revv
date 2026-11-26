@@ -7,7 +7,7 @@ import GetPage from "@/app/get/page";
 // as /get.
 export const metadata: Metadata = {
   title: "Get SORZA",
-  description: "Get your ride rated. Download SORZA on the App Store.",
+  description: "Get your ride rated. Download SORZA on the App Store or Google Play.",
 };
 
 export default GetPage;

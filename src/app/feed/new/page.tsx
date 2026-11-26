@@ -52,6 +52,7 @@ export default async function NewPostPage({
       crews={crews}
       initialSound={initialSound}
       initialSoundUrl={initialSound ? publicSoundUrl(supabase, initialSound.storage_path) : null}
+      canAnnounce={Boolean(profile?.is_admin || profile?.can_announce)}
     />
   );
 }

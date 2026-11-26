@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   CameraFlipIcon,
+  DraftsIcon,
   CloseIcon,
   CameraIcon,
   LockIcon,
@@ -15,6 +16,7 @@ import {
   MusicIcon,
   TrashIcon,
 } from "@/components/ui/icons";
+import { useObjectUrl } from "@/features/editor/use-object-url";
 import { StudioAction, StudioSheet } from "@/features/editor/studio-ui";
 import { createAudioContext } from "@/features/editor/audio-recording";
 
@@ -152,6 +154,7 @@ export function CameraRecorder({
   onSoundRequested,
   onSoundCleared,
   suspended = false,
+  drafts = null,
 }: {
   /** True while an editor is open on top. The camera and microphone are
    * released until it's false again: a live capture left running under
@@ -172,6 +175,8 @@ export function CameraRecorder({
   soundUrl?: string | null;
   onSoundRequested?: () => void;
   onSoundCleared?: () => void;
+  /** Saved drafts on this phone, opposite Upload while nothing's recorded. */
+  drafts?: { count: number; cover: Blob | null; onOpen: () => void } | null;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1167,6 +1172,7 @@ export function CameraRecorder({
           />
 
           <div className="flex justify-center">
+            {!hasSession && drafts && <DraftsButton drafts={drafts} />}
             {hasSession && (
               <button
                 type="button"
@@ -1459,6 +1465,27 @@ function RailButton({
       <span className="text-[0.625rem] font-semibold tracking-[0.01em]">{label}</span>
     </button>
   );
+}
+
+/** The newest draft's cover, opening every draft. */
+function DraftsButton({ drafts }: { drafts: { count: number; cover: Blob | null; onOpen: () => void } }) {
+  return (
+    <button type="button" onClick={drafts.onOpen} className="pressable flex flex-col items-center gap-1.5 text-white">
+      <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-[13px] bg-white/[0.09] ring-1 ring-white/15">
+        {drafts.cover ? <DraftThumb blob={drafts.cover} /> : <DraftsIcon className="h-[22px] w-[22px]" />}
+        <span className="numeral absolute bottom-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[0.5625rem] font-bold text-white">
+          {drafts.count}
+        </span>
+      </span>
+      <span className="text-[0.6875rem] font-semibold text-white/80">Drafts</span>
+    </button>
+  );
+}
+
+function DraftThumb({ blob }: { blob: Blob }) {
+  const url = useObjectUrl(blob);
+  // eslint-disable-next-line @next/next/no-img-element -- a local blob: still from this phone
+  return <img src={url} alt="" className="absolute inset-0 h-full w-full object-cover" />;
 }
 
 function DeckButton({

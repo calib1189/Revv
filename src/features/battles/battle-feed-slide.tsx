@@ -4,7 +4,8 @@ import { BATTLE_SLIDE_ATTR } from "@/features/battles/battle-result-slide";
 import type { BattleView } from "@/lib/battles/load";
 
 /** Today's Build Battle as a feed slide, clear of the floating header
- * and category bar up top and the tab bar below. */
+ * and category bar up top. The feed's slot already ends at the tab bar,
+ * so the bottom needs only a little air. */
 export function BattleFeedSlide({
   view,
   isAuthenticated,
@@ -22,7 +23,7 @@ export function BattleFeedSlide({
       className={`relative ${slideHeight} w-full flex-shrink-0 snap-start overflow-hidden bg-black px-3`}
       style={{
         paddingTop: `calc(${HEADER_HEIGHT} + 3.5rem)`,
-        paddingBottom: "calc(var(--bottom-nav-h) + 0.75rem)",
+        paddingBottom: "0.75rem",
       }}
     >
       <BattleCard view={view} isAuthenticated={isAuthenticated} viewerUsername={viewerUsername} className="h-full" tone="media" />

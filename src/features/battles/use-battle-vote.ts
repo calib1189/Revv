@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { voteInBattleAction } from "@/features/battles/actions";
 import { hapticLanding, hapticTierUp } from "@/lib/haptics";
 import type { BattleView } from "@/lib/battles/load";
+import { markBattleVoted } from "@/lib/battles/seen";
 
 /** Voting in a battle, shared by the feed's battle card and the battle
  * page's arena: who you picked (optimistically, while it saves), the
@@ -33,6 +34,7 @@ export function useBattleVote(view: BattleView, isAuthenticated: boolean) {
       else {
         setMyVote(vehicleId);
         setPoints(result.points);
+        markBattleVoted(view.id);
         hapticLanding();
       }
     });

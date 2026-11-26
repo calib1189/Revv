@@ -6,7 +6,7 @@ import { isIosUserAgent } from "@/lib/app-store";
 
 export const metadata: Metadata = {
   title: "Get SORZA",
-  description: "Get your ride rated. Download SORZA on the App Store.",
+  description: "Get your ride rated. Download SORZA on the App Store or Google Play.",
 };
 
 export default async function GetPage() {

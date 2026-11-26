@@ -14,6 +14,8 @@ import { INVITE_ANNOUNCEMENT, isAnnouncementAgeReady } from "@/lib/announcements
 import { loadDailyBoost } from "@/lib/daily/boost";
 import { DailyBoostPromo } from "@/features/daily/daily-boost-promo";
 import { PushPrompt } from "@/features/push/push-prompt";
+import { loadAnnouncementPopup } from "@/features/announcements/load-announcement";
+import { AnnouncementPopup } from "@/features/announcements/announcement-popup";
 
 /** A free username built from what Google or Apple shared, or null. */
 async function suggestFreeUsername(supabase: SupabaseClient<Database>, user: User): Promise<string | null> {
@@ -35,7 +37,8 @@ async function suggestFreeUsername(supabase: SupabaseClient<Database>, user: Use
  *    box on /welcome that most people skipped, which left them unfindable
  *    and unrecognisable in the feed.
  * 2. After that, the first-time walkthrough.
- * 3. Once that's done, a prize day's takeover (the Daily winner gets more
+ * 3. Once that's done, a running pop-up post from SORZA they haven't
+ *    seen yet (0137); else a prize day's takeover (the Daily winner gets more
  *    points than usual) once that day, if they haven't entered; else a
  *    one-time announcement (the invite program) for accounts at least a
  *    day old; else, in the iPhone app with notifications off, the
@@ -58,6 +61,17 @@ export async function FirstRunGate({ user }: { user: User }) {
   if (profile && isPlaceholderUsername(profile.username)) {
     const suggestion = await suggestFreeUsername(supabase, user).catch(() => null);
     return <ChooseUsernameScreen suggestion={suggestion} />;
+  }
+  // A pop-up post from SORZA (0137) comes first: it's the one thing here
+  // written for this moment, and it only ever shows once.
+  const popup = startStep === null && profile ? await loadAnnouncementPopup(supabase, profile.id) : null;
+  if (popup) {
+    return (
+      <>
+        <TutorialHost startStep={startStep} />
+        <AnnouncementPopup data={popup} />
+      </>
+    );
   }
   const boost = startStep === null && profile ? await loadDailyBoost(supabase, profile.id) : null;
   if (boost) {

@@ -21,6 +21,7 @@ export interface Database {
           bio: string | null;
           avatar_media_id: string | null;
           is_admin: boolean;
+          can_announce: boolean;
           is_verified: boolean;
           is_founder: boolean;
           is_banned: boolean;
@@ -40,6 +41,7 @@ export interface Database {
           bio?: string | null;
           avatar_media_id?: string | null;
           is_admin?: boolean;
+          can_announce?: boolean;
           is_verified?: boolean;
           is_founder?: boolean;
           is_banned?: boolean;
@@ -59,6 +61,7 @@ export interface Database {
           bio?: string | null;
           avatar_media_id?: string | null;
           is_admin?: boolean;
+          can_announce?: boolean;
           is_verified?: boolean;
           is_founder?: boolean;
           is_banned?: boolean;
@@ -679,6 +682,7 @@ export interface Database {
           post_type: "photo" | "video";
           caption: string | null;
           created_at: string;
+          announcement_until: string | null;
         };
         Insert: {
           id?: string;
@@ -691,6 +695,7 @@ export interface Database {
           post_type?: "photo" | "video";
           caption?: string | null;
           created_at?: string;
+          announcement_until?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["posts"]["Insert"]>;
         Relationships: never[];

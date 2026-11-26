@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useIsNative } from "@/lib/native/use-is-native";
-import { APP_STORE_URL } from "@/lib/app-store";
+import { StoreBadges } from "@/features/landing/store-badges";
 
 /**
- * The landing page's calls to action. On the website the App Store is
- * the main action, with web sign-up kept as the secondary one. Inside
+ * The landing page's calls to action. On the website the App Store and
+ * Google Play badges are the main action, with web sign-up kept as the
+ * secondary one. Inside
  * the iPhone app (which loads this same site) nobody needs telling to
  * download it, so it falls back to plain sign-up and log-in.
  *
@@ -35,18 +36,15 @@ export function GetAppActions({ showLogin = true }: { showLogin?: boolean }) {
     );
   }
 
+  // Read only once the shell is known (after mount), so the server and
+  // the first client render agree on the order.
+  const platform =
+    isNative === null ? "other" : /iPhone|iPad|iPod/.test(navigator.userAgent) ? "ios" : /Android/i.test(navigator.userAgent) ? "android" : "other";
+
   return (
     <div className={`flex flex-col gap-4 ${isNative === null ? "invisible" : ""}`}>
-      <div className="flex flex-wrap gap-3">
-        <a
-          href={APP_STORE_URL}
-          className="inline-flex flex-col items-start justify-center rounded-full bg-accent px-7 py-2.5 text-accent-foreground shadow-[inset_0_1px_0_0_rgb(255_255_255_/_0.25),0_8px_24px_-10px_rgb(255_68_51_/_0.55)] transition-all duration-150 ease-[var(--ease-ios)] hover:bg-accent/90 active:scale-[0.97]"
-        >
-          <span className="text-[0.6875rem] font-medium uppercase leading-none tracking-[0.08em] opacity-80">
-            Download on the
-          </span>
-          <span className="mt-1 text-lg font-semibold leading-none">App Store</span>
-        </a>
+      <div className="flex flex-wrap items-center gap-3">
+        <StoreBadges platform={platform} height={46} />
         {showLogin && (
           <Link href="/login" className="self-center">
             <Button variant="secondary" className="px-7 py-3 text-base">
@@ -56,7 +54,7 @@ export function GetAppActions({ showLogin = true }: { showLogin?: boolean }) {
         )}
       </div>
       <p className="text-sm text-muted">
-        Not on iPhone?{" "}
+        On a computer?{" "}
         <Link href="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
           Use SORZA on the web
         </Link>

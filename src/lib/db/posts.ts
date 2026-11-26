@@ -222,6 +222,24 @@ export async function getPostById(
   return data;
 }
 
+/** The newest pop-up post that's still running (0137), or null. A deleted
+ * post simply stops being found. */
+export async function getActiveAnnouncementPost(
+  supabase: SupabaseClient<Database>,
+  nowIso: string,
+): Promise<Post | null> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .gt("announcement_until", nowIso)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function createPost(
   supabase: SupabaseClient<Database>,
   input: PostInsert,

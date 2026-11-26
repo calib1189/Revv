@@ -168,13 +168,17 @@ export function BattleResultReveal({
     };
   }, [winnerSide, times]);
 
+  // Seen once it starts playing on screen: waiting for the whole reveal
+  // meant scrolling past it early brought it back to the top of the feed
+  // on every visit.
+  useEffect(() => {
+    if (phase !== "wait") markBattleResultSeen(view.id);
+  }, [phase, view.id]);
+
   useEffect(() => {
     if (phase === "crown") hapticLanding();
-    if (phase === "verdict") {
-      markBattleResultSeen(view.id);
-      if (good) hapticLanding();
-    }
-  }, [phase, view.id, good]);
+    if (phase === "verdict" && good) hapticLanding();
+  }, [phase, good]);
 
   const crowned = winnerSide !== null && reached("crown");
 

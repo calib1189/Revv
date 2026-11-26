@@ -12,6 +12,18 @@ export function dailyBoostAnnouncement(dateKey: string): string {
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/** A pop-up post (0137): seen once per account, keyed by the post. */
+export function postAnnouncement(postId: string): string {
+  return `post_${postId}`;
+}
+
+/** How long a pop-up post keeps popping up for people who haven't seen it. */
+export const POST_ANNOUNCEMENT_DAYS = 7;
+
+export function postAnnouncementUntil(now: number): string {
+  return new Date(now + POST_ANNOUNCEMENT_DAYS * DAY).toISOString();
+}
+
 /** A brand-new account has just had the welcome screen and the tour, so
  * the invite promo waits for their next day. */
 export function isAnnouncementAgeReady(profileCreatedAt: string, now: number): boolean {

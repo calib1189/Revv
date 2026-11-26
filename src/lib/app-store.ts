@@ -3,6 +3,10 @@
 export const APP_STORE_ID = "6814665400";
 export const APP_STORE_URL = `https://apps.apple.com/app/id${APP_STORE_ID}`;
 
+/** SORZA's Google Play listing. Android opens this in the Play Store app. */
+export const PLAY_STORE_PACKAGE = "com.sorza.app";
+export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${PLAY_STORE_PACKAGE}`;
+
 /** Whether a User-Agent is an iPhone, iPad or iPod: the devices that
  * can actually install the app. iPadOS Safari reports itself as a Mac
  * by default, so an iPad on the desktop UA lands on the website instead,

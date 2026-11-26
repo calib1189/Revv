@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { APP_STORE_URL, isIosUserAgent } from "@/lib/app-store";
+import { APP_STORE_URL, PLAY_STORE_URL, isIosUserAgent } from "@/lib/app-store";
 
 describe("APP_STORE_URL", () => {
   it("points at SORZA's listing without pinning a country", () => {
     expect(APP_STORE_URL).toBe("https://apps.apple.com/app/id6814665400");
+  });
+});
+
+describe("PLAY_STORE_URL", () => {
+  it("points at SORZA's Google Play listing", () => {
+    expect(PLAY_STORE_URL).toBe("https://play.google.com/store/apps/details?id=com.sorza.app");
   });
 });
 

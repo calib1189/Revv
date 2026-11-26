@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { loadMoreFeedPostsAction, loadFeedByCategoryAction } from "@/features/feed/actions";
 import { SwipeSlide } from "@/features/feed/swipe-slide";
@@ -13,7 +13,8 @@ import type { JustRatedSlideData } from "@/lib/feed/just-rated";
 import type { DailyTeaser } from "@/lib/daily/teaser";
 import type { BattleView } from "@/lib/battles/load";
 import { BattleFeedSlide } from "@/features/battles/battle-feed-slide";
-import { BattleResultSlide } from "@/features/battles/battle-result-slide";
+import { BATTLE_SLIDE_ATTR, BattleResultSlide } from "@/features/battles/battle-result-slide";
+import { BATTLE_VOTED_EVENT, wasBattleVoted } from "@/lib/battles/seen";
 import { CategoryFilterBar } from "@/features/feed/category-filter-bar";
 import { StoriesPeek } from "@/features/stories/stories-peek";
 import type { TrayPerson } from "@/lib/stories/load";
@@ -84,6 +85,48 @@ export function SwipeFeed({
   // "load more" still in flight when the viewer refreshed would append
   // the old list's next page onto the fresh one.
   const generationRef = useRef(0);
+
+  // Today's battle leads the feed until you've voted. Voting in this open
+  // feed (or on the battle page) doesn't rebuild it, so once you have, the
+  // card leaves as soon as it's off screen, never while you're looking
+  // at it. Owners keep theirs, to share.
+  const [battleDone, setBattleDone] = useState(false);
+  const scrollFixRef = useRef(0);
+  useEffect(() => {
+    if (!battle || battle.isOwner || battleDone) return;
+    const container = scrollContainerRef.current;
+    const slide = container?.querySelector<HTMLElement>(`[${BATTLE_SLIDE_ATTR}]`);
+    if (!container || !slide) return;
+    let visible = true;
+    const retire = () => {
+      if (visible || !wasBattleVoted(battle.id)) return;
+      // Above where you are: take its height back off the scroll, so the
+      // post on screen stays exactly where it is.
+      if (slide.getBoundingClientRect().bottom <= container.getBoundingClientRect().top + 1) {
+        scrollFixRef.current = slide.offsetHeight;
+      }
+      setBattleDone(true);
+    };
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry.isIntersecting;
+        retire();
+      },
+      { root: container, threshold: 0 },
+    );
+    io.observe(slide);
+    window.addEventListener(BATTLE_VOTED_EVENT, retire);
+    return () => {
+      io.disconnect();
+      window.removeEventListener(BATTLE_VOTED_EVENT, retire);
+    };
+  }, [battle, battleDone]);
+  useLayoutEffect(() => {
+    if (!battleDone || !scrollFixRef.current) return;
+    const container = scrollContainerRef.current;
+    if (container) container.scrollTop -= scrollFixRef.current;
+    scrollFixRef.current = 0;
+  }, [battleDone]);
 
   // Tapping the already-active "For You" tab (top-tab-bar.tsx) is a
   // refresh gesture — back to the unfiltered view, latest posts, top of
@@ -231,7 +274,7 @@ export function SwipeFeed({
             <BattleResultSlide view={battleResult} isAuthenticated={isAuthenticated} slideHeight={feedHeight} />
           )}
           {daily && category === null && <DailyFeedSlide teaser={daily} slideHeight={feedHeight} />}
-          {battle && category === null && (
+          {battle && !battleDone && category === null && (
             <BattleFeedSlide
               view={battle}
               isAuthenticated={isAuthenticated}

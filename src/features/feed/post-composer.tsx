@@ -9,9 +9,11 @@ import {
   WheelIcon,
   UsersIcon,
   ChevronRightIcon,
+  BellIcon,
   PlayIcon,
   ShareIcon,
   CheckIcon,
+  DraftsIcon,
   PlusIcon,
   VolumeIcon,
 } from "@/components/ui/icons";
@@ -102,6 +104,11 @@ export function PostComposer({
   onSubmit,
   publish,
   error,
+  canAnnounce = false,
+  announce = false,
+  onAnnounceChange = () => {},
+  onSaveDraft,
+  draftState = "idle",
 }: {
   mode: "photo" | "video";
   photos: SelectedMedia[];
@@ -136,6 +143,13 @@ export function PostComposer({
   onSubmit: (e: React.FormEvent) => void;
   publish: PublishState | null;
   error: string | null;
+  /** The support account and admins can make this post a pop-up (0137). */
+  canAnnounce?: boolean;
+  announce?: boolean;
+  onAnnounceChange?: (value: boolean) => void;
+  /** Saves everything here as a draft on this phone. */
+  onSaveDraft?: () => void;
+  draftState?: "idle" | "saving" | "saved";
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [trimOpen, setTrimOpen] = useState(false);
@@ -332,6 +346,44 @@ export function PostComposer({
           )}
         </div>
 
+        {canAnnounce && (
+          <div className="mx-4 mb-4">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={announce}
+              onClick={() => onAnnounceChange(!announce)}
+              className="pressable flex w-full items-center gap-3 rounded-[18px] bg-white/[0.045] px-4 py-3.5 text-left"
+            >
+              <span
+                className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-colors duration-200 ${
+                  announce ? "bg-accent/15 text-accent" : "bg-white/[0.07] text-white/70"
+                }`}
+              >
+                <BellIcon className="h-[18px] w-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[0.9375rem] font-semibold">Pop-up for everyone</span>
+                <span className="mt-0.5 block text-[0.8125rem] leading-snug text-white/55">
+                  Shows once to everyone who opens SORZA this week.
+                </span>
+              </span>
+              <span
+                aria-hidden
+                className={`relative h-[30px] w-[50px] flex-shrink-0 rounded-full transition-colors duration-200 ${
+                  announce ? "bg-accent" : "bg-white/[0.16]"
+                }`}
+              >
+                <span
+                  className={`absolute top-[3px] h-6 w-6 rounded-full bg-white shadow-[0_2px_6px_rgb(0_0_0/0.35)] transition-transform duration-200 ease-[var(--ease-ios)] ${
+                    announce ? "translate-x-[23px]" : "translate-x-[3px]"
+                  }`}
+                />
+              </span>
+            </button>
+          </div>
+        )}
+
         {(error || videoError) && (
           <div className="animate-rise-in px-4 pb-4">
             <Callout tone="danger">{error ?? videoError}</Callout>
@@ -340,15 +392,36 @@ export function PostComposer({
       </form>
 
       <div className="flex flex-shrink-0 gap-2.5 border-t border-white/[0.06] bg-[#0c0c0d] px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3">
-        <button
-          type="button"
-          onClick={() => setPreviewOpen(true)}
-          disabled={isPublishing || !videoReady}
-          className="pressable flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-white/[0.08] text-[1rem] font-semibold text-white disabled:opacity-40"
-        >
-          <PlayIcon className="h-4 w-4" />
-          Preview
-        </button>
+        {onSaveDraft ? (
+          <button
+            type="button"
+            onClick={onSaveDraft}
+            disabled={isPublishing || draftState !== "idle"}
+            className="pressable flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-white/[0.08] text-[1rem] font-semibold text-white disabled:opacity-60"
+          >
+            {draftState === "saved" ? (
+              <>
+                <CheckIcon className="h-4 w-4" strokeWidth={2.5} />
+                Saved
+              </>
+            ) : (
+              <>
+                <DraftsIcon className="h-[18px] w-[18px]" />
+                {draftState === "saving" ? "Saving…" : "Drafts"}
+              </>
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            disabled={isPublishing || !videoReady}
+            className="pressable flex h-[52px] flex-1 items-center justify-center gap-2 rounded-full bg-white/[0.08] text-[1rem] font-semibold text-white disabled:opacity-40"
+          >
+            <PlayIcon className="h-4 w-4" />
+            Preview
+          </button>
+        )}
         <button
           type="submit"
           form="post-form"

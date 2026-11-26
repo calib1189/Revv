@@ -32,6 +32,10 @@ import { PhotoEditor, type PhotoEditState } from "@/features/editor/photo-editor
 import { CameraRecorder } from "@/features/editor/camera-recorder";
 import { ClipCombiner } from "@/features/editor/clip-combiner";
 import { PostComposer, type PublishState } from "@/features/feed/post-composer";
+import { DraftsSheet } from "@/features/feed/drafts-sheet";
+import { deleteDraft, draftErrorMessage, listDrafts, MAX_DRAFTS, saveDraft, type PostDraft } from "@/lib/drafts/draft-store";
+import { postAnnouncementUntil } from "@/lib/announcements";
+import { markPostAnnouncementSeenAction } from "@/features/announcements/actions";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Crew } from "@/lib/db/crews";
 import type { Sound } from "@/lib/db/sounds";
@@ -73,6 +77,7 @@ export function ComposePostForm({
   crews,
   initialSound = null,
   initialSoundUrl = null,
+  canAnnounce = false,
 }: {
   userId: string;
   /** Where the finished post opens — the author's own full-screen reel,
@@ -86,6 +91,8 @@ export function ComposePostForm({
   /** Resolved on the server alongside initialSound, so the camera can
    * play it from the first frame without building a client during render. */
   initialSoundUrl?: string | null;
+  /** The support account and admins can post a pop-up (0137). */
+  canAnnounce?: boolean;
 }) {
   const [step, setStep] = useState<Step>("camera");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
@@ -120,7 +127,25 @@ export function ComposePostForm({
   const addPhotosInputRef = useRef<HTMLInputElement>(null);
   // Resolved once per sound rather than on every render of the camera.
   const [soundUrl, setSoundUrl] = useState<string | null>(initialSoundUrl);
+  const [announce, setAnnounce] = useState(false);
+  // Drafts on this phone: the one being worked on (so saving again updates
+  // it and posting removes it), how many there are, and the newest cover
+  // for the camera's Drafts button.
+  const draftRef = useRef<{ id: string; createdAt: number } | null>(null);
+  const [draftState, setDraftState] = useState<"idle" | "saving" | "saved">("idle");
+  const [draftsOpen, setDraftsOpen] = useState(false);
+  const [draftSummary, setDraftSummary] = useState<{ count: number; cover: Blob | null }>({ count: 0, cover: null });
   const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+    listDrafts(userId)
+      .then((list) => !cancelled && setDraftSummary({ count: list.length, cover: list[0]?.cover ?? null }))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, draftsOpen]);
 
   const mode: "photo" | "video" | null = video || videoEdit ? "video" : photos.length > 0 ? "photo" : null;
   const editorOpen = Boolean(videoEditorSource || photoEditorSource || multiClipSources);
@@ -348,6 +373,88 @@ export function ComposePostForm({
     setStep("compose");
   }
 
+  /** Everything on the post screen, saved to this phone to finish later. */
+  async function handleSaveDraft() {
+    if (draftState !== "idle") return;
+    setError(null);
+    const edit = videoEditRef.current;
+    if (mode === "video" && !edit) return setError("Go back to the editor and try again.");
+    if (!mode) return;
+    if (!draftRef.current && draftSummary.count >= MAX_DRAFTS) {
+      return setError(`You have ${MAX_DRAFTS} drafts. Delete one to save another.`);
+    }
+    setDraftState("saving");
+    try {
+      const cover =
+        mode === "video"
+          ? edit?.cover
+            ? await fetch(edit.cover).then((r) => r.blob())
+            : null
+          : (photos[0]?.file ?? null);
+      const now = Date.now();
+      const draft: PostDraft = {
+        id: draftRef.current?.id ?? crypto.randomUUID(),
+        userId,
+        createdAt: draftRef.current?.createdAt ?? now,
+        updatedAt: now,
+        kind: mode,
+        cover,
+        caption,
+        vehicleId,
+        crewId,
+        sound,
+        soundStartMs,
+        ...(mode === "video" && edit
+          ? { video: { source: edit.source, state: edit.state } }
+          : {
+              photos: {
+                files: photos.map((p) => p.file),
+                edited: photoEdited,
+                editSource: photoEditRef.current?.source ?? null,
+                editState: photoEditRef.current?.state ?? null,
+              },
+            }),
+      };
+      await saveDraft(draft);
+      draftRef.current = { id: draft.id, createdAt: draft.createdAt };
+      setDraftState("saved");
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      clearVideo();
+      router.back();
+    } catch (err) {
+      setDraftState("idle");
+      setError(draftErrorMessage(err));
+    }
+  }
+
+  /** Picks a draft back up: a video reopens in the editor with its edit,
+   * a photo post goes straight to the post screen. */
+  function openDraft(draft: PostDraft) {
+    setDraftsOpen(false);
+    setError(null);
+    draftRef.current = { id: draft.id, createdAt: draft.createdAt };
+    setCaption(draft.caption);
+    setVehicleId(vehicles.some((v) => v.id === draft.vehicleId) ? draft.vehicleId : "");
+    setCrewId(crews.some((c) => c.id === draft.crewId) ? draft.crewId : "");
+    setSound(draft.sound);
+    setSoundStartMs(draft.soundStartMs);
+    setSoundUrl(draft.sound ? publicSoundUrl(createBrowserClient(), draft.sound.storage_path) : null);
+    clearVideo();
+    clearPhotos();
+    if (draft.video) {
+      setResumeEdit({ state: draft.video.state, sound: draft.sound });
+      setVideoEditorSource(draft.video.source);
+    } else if (draft.photos) {
+      setPhotos(draft.photos.files.map((file) => ({ file, previewUrl: URL.createObjectURL(file) })));
+      setPhotoEdited(draft.photos.edited);
+      photoEditRef.current =
+        draft.photos.editSource && draft.photos.editState
+          ? { source: draft.photos.editSource, state: draft.photos.editState }
+          : null;
+      setStep("compose");
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -472,6 +579,8 @@ export function ComposePostForm({
         sound_start_ms: sound ? clampSoundStartMs(soundStartMs, sound.duration_ms) : 0,
         post_type: mode!,
         caption: finalCaption || null,
+        // Only sent for a pop-up, so ordinary posts never touch the column.
+        ...(canAnnounce && announce ? { announcement_until: postAnnouncementUntil(Date.now()) } : {}),
       }).catch(async (err: unknown) => {
         // No post to hold it, so no sound either.
         if (originalSound) await deleteSound(supabase, originalSound.id).catch(() => {});
@@ -491,6 +600,11 @@ export function ComposePostForm({
       // to OTHER crew members, not something the poster needs to wait on
       // — the post itself already published successfully above.
       if (crewId) void notifyCrewPostAction(crewId, post.id);
+
+      // Posted, so the draft it came from is done with. And the author
+      // doesn't need their own pop-up popping up at them.
+      if (draftRef.current) void deleteDraft(draftRef.current.id).catch(() => {});
+      if (canAnnounce && announce) void markPostAnnouncementSeenAction(post.id).catch(() => {});
 
       // The weekend post bonus, when it applies: shown on the finished
       // state, and held a little longer so it registers.
@@ -546,6 +660,7 @@ export function ComposePostForm({
             soundUrl={soundUrl}
             onSoundRequested={() => setCameraSoundPickerOpen(true)}
             onSoundCleared={() => handleSoundChange(null)}
+            drafts={draftSummary.count > 0 ? { count: draftSummary.count, cover: draftSummary.cover, onOpen: () => setDraftsOpen(true) } : null}
           />
           {error && (
             <div className="animate-rise-in fixed inset-x-4 top-[calc(4.5rem+env(safe-area-inset-top))] z-[65]">
@@ -591,6 +706,11 @@ export function ComposePostForm({
           onSubmit={handleSubmit}
           publish={publish}
           error={error}
+          canAnnounce={canAnnounce}
+          announce={announce}
+          onAnnounceChange={setAnnounce}
+          onSaveDraft={handleSaveDraft}
+          draftState={draftState}
         />
       )}
 
@@ -620,6 +740,8 @@ export function ComposePostForm({
           onExported={handlePhotoEditorExported}
         />
       )}
+
+      {draftsOpen && <DraftsSheet userId={userId} onOpen={openDraft} onClose={() => setDraftsOpen(false)} />}
 
       {multiClipSources && (
         <ClipCombiner

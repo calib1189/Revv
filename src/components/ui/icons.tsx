@@ -2324,3 +2324,14 @@ export function GiftIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** Drafts: a clip waiting in front of another. */
+export function DraftsIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinejoin="round" {...props}>
+      <rect x="6.5" y="6" width="13" height="15" rx="3" />
+      <path d="M4.5 16.5V6a3 3 0 0 1 3-3h8.5" strokeLinecap="round" />
+      <path d="m11.5 11.2 4 2.3-4 2.3v-4.6Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
