@@ -57,8 +57,8 @@ export function CrewLogo({
 }) {
   return (
     <span
-      className={`relative block flex-shrink-0 ${look.frame?.value ?? ""}`}
-      style={{ width: size, height: size, borderRadius: radius }}
+      className={`relative block flex-shrink-0 ${look.frame ? `${look.frame.value} frame-flush` : ""}`}
+      style={{ width: size, height: size, borderRadius: radius, ["--frame-r" as string]: `${radius}px` }}
     >
       <span className={`relative block h-full w-full overflow-hidden ${className}`} style={{ borderRadius: radius }}>
         {logoUrl ? (

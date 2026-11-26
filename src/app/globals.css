@@ -2070,6 +2070,21 @@ a.place-flash.pressable {
       animation: none;
     }
   }
+
+  /* Frames round a photo (crew logos): the ring sits flush on the
+     image's edge instead of floating 1-2px outside it, which on a photo
+     reads as a dark seam. --frame-r is the image's corner radius, so the
+     ring's corners stay concentric with it. Pills keep the floating ring. */
+  .frame-flush[class]::before {
+    inset: calc(var(--frame-pad, 2px) * -1);
+    border-radius: calc(var(--frame-r, 0px) + var(--frame-pad, 2px));
+  }
+  .frame-flush.frame-checkered-ring {
+    --frame-pad: 4px;
+  }
+  .frame-flush.frame-neon-ring {
+    outline-offset: 0;
+  }
 }
 
 @layer components {

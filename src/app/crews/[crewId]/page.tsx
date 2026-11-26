@@ -199,8 +199,17 @@ export default async function CrewPage({ params }: { params: Promise<{ crewId: s
         </div>
 
         <header className="animate-section-rise -mt-14 flex flex-col items-center text-center">
-          <div className={`relative h-[104px] w-[104px] rounded-[30px] ${crewFrameItem?.value ?? ""}`}>
-            <div className="relative h-full w-full overflow-hidden rounded-[30px] border-4 border-background bg-surface-raised elev-2">
+          {/* With a bought frame, the frame is the edge and hugs the logo;
+              without one, a background-coloured border lifts it off the banner. */}
+          <div
+            className={`relative h-[104px] w-[104px] rounded-[30px] ${crewFrameItem ? `${crewFrameItem.value} frame-flush` : ""}`}
+            style={crewFrameItem ? ({ "--frame-r": "30px" } as React.CSSProperties) : undefined}
+          >
+            <div
+              className={`relative h-full w-full overflow-hidden rounded-[30px] bg-surface-raised elev-2 ${
+                crewFrameItem ? "" : "border-4 border-background"
+              }`}
+            >
               {logoUrl ? (
                 <Image src={logoUrl} alt="" fill sizes="104px" className="object-cover" />
               ) : (
