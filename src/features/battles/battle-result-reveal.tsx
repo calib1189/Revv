@@ -168,11 +168,13 @@ export function BattleResultReveal({
     };
   }, [winnerSide, times]);
 
-  // Seen once it starts playing on screen: waiting for the whole reveal
-  // meant scrolling past it early brought it back to the top of the feed
-  // on every visit.
+  // Seen once the result itself is on screen (the winner crowned, or the
+  // tie stamped): not on the first frame, which let a quick scroll past
+  // hide a result nobody had read, and not only at the very end, which
+  // brought it back to the top of the feed on every visit.
   useEffect(() => {
-    if (phase !== "wait") markBattleResultSeen(view.id);
+    if (reached("crown")) markBattleResultSeen(view.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reached() reads phase
   }, [phase, view.id]);
 
   useEffect(() => {

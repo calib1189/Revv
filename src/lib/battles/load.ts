@@ -8,6 +8,7 @@ import {
   getMyBattleVote,
   getPriorityForVehicle,
   listEndedBattlesForVehicle,
+  listRecentEndedBattles,
   type Battle,
 } from "@/lib/db/battles";
 import { listVehiclesByIds } from "@/lib/db/vehicles";
@@ -139,6 +140,18 @@ export async function loadYesterdayBattle(
 ): Promise<BattleView | null> {
   const battle = await getBattleByDate(supabase, addDays(dailyDateKey(now), -1)).catch(() => null);
   return battle ? loadBattleView(supabase, battle, viewerId) : null;
+}
+
+/** Recent finished battles for the history list, newest first, skipping
+ * ones nobody voted in (they have no result to show). */
+export async function loadPastBattles(
+  supabase: SupabaseClient<Database>,
+  viewerId: string | null,
+  limit = 10,
+): Promise<BattleView[]> {
+  const battles = await listRecentEndedBattles(supabase, limit).catch(() => [] as Battle[]);
+  const views = await Promise.all(battles.map((b) => loadBattleView(supabase, b, viewerId).catch(() => null)));
+  return views.filter((v): v is BattleView => v !== null && v.result !== null && v.result.a + v.result.b > 0);
 }
 
 export async function loadBattleViewById(

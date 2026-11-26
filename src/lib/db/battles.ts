@@ -38,6 +38,18 @@ export async function listEndedBattlesForVehicle(
   return data;
 }
 
+/** The most recent battles that have ended, newest first. */
+export async function listRecentEndedBattles(supabase: SupabaseClient<Database>, limit: number): Promise<Battle[]> {
+  const { data, error } = await supabase
+    .from("build_battles")
+    .select("*")
+    .lte("ends_at", new Date().toISOString())
+    .order("battle_date", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
 /** Each car's last battle day, for matchmaking (lib/battles/match). */
 export async function listLastBattleDates(supabase: SupabaseClient<Database>): Promise<Map<string, string>> {
   const { data, error } = await supabase

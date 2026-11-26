@@ -3,6 +3,7 @@ import { BattleArena } from "@/features/battles/battle-arena";
 import { BATTLE_POINTS } from "@/lib/points/values";
 import { SKIP_LINE } from "@/lib/battles/skip-line";
 import type { BattleView } from "@/lib/battles/load";
+import { PastBattles } from "@/features/battles/past-battles";
 
 /** The battle page: today's battle as a full-screen versus screen, the
  * rules in one short block under it, and (on today's page) yesterday's
@@ -10,11 +11,14 @@ import type { BattleView } from "@/lib/battles/load";
 export function BattlePageBody({
   view,
   previous,
+  past = [],
   isAuthenticated,
   viewerUsername,
 }: {
   view: BattleView | null;
   previous: BattleView | null;
+  /** Earlier finished battles, newest first (today's page only). */
+  past?: BattleView[];
   isAuthenticated: boolean;
   viewerUsername: string | null;
 }) {
@@ -68,6 +72,8 @@ export function BattlePageBody({
             </div>
           </section>
         )}
+
+        <PastBattles battles={past} />
       </div>
     </div>
   );
