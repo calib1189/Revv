@@ -146,10 +146,7 @@ export function StreakSteps({ steps, todayKey }: { steps: StreakStep[]; todayKey
           <PrimaryIcon className="h-5 w-5" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[0.75rem] font-semibold uppercase tracking-[0.06em] text-white/80">
-            Keep your streak
-          </span>
-          <span className="block text-[1rem] font-bold leading-tight">{primary.action}</span>
+          <span className="block truncate text-[0.9375rem] font-semibold leading-tight">{primary.action}</span>
           <span className="mt-0.5 block truncate text-[0.8125rem] text-white/80">{primary.effort}</span>
         </span>
         <ChevronRightIcon className="h-4 w-4 flex-shrink-0 text-white/80" />
