@@ -45,6 +45,15 @@ export const VEHICLE_CATEGORY_LABELS: Record<VehicleCategory, string> = {
   cruisers_choppers: "Cruisers & Choppers",
 };
 
+/** Categories ranked only on their own board, never on the main one (or
+ * anywhere that reads like it: your overall rank, the Build Battle, the
+ * top builds in the feed). A quad isn't competing with a Mustang. */
+export const SEPARATE_BOARD_CATEGORIES: readonly VehicleCategory[] = ["atv_utv"];
+
+export function isOnMainBoard(category: string | null | undefined): boolean {
+  return !(SEPARATE_BOARD_CATEGORIES as readonly string[]).includes(category ?? "cars");
+}
+
 export function isVehicleCategory(value: string): value is VehicleCategory {
   return (VEHICLE_CATEGORIES as string[]).includes(value);
 }

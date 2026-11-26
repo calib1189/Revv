@@ -1,6 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { listTopRatedBuilds } from "@/lib/db/builds";
-import { listVehiclesByIds, listLeaderboardVehicleIds } from "@/lib/db/vehicles";
+import { listVehiclesByIds, listMainBoardVehicleIds } from "@/lib/db/vehicles";
 import { sendPushToUser } from "@/lib/push/send";
 import {
   LEADERBOARD_TOP_SIZE,
@@ -25,7 +25,7 @@ export async function notifyLeaderboardDisplacements(
 ): Promise<void> {
   try {
     const service = createServiceRoleClient();
-    const verifiedIds = await listLeaderboardVehicleIds(service);
+    const verifiedIds = await listMainBoardVehicleIds(service);
     if (!verifiedIds.includes(vehicleId)) return;
 
     // Only builds ranked inside the top 10 can lose a top-10 spot, and

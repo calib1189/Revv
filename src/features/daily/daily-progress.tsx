@@ -4,6 +4,7 @@ import { StreakTrack } from "@/features/daily/streak-track";
 import { ChestOpener } from "@/features/daily/chest-opener";
 import { PushNudge } from "@/features/push/push-nudge";
 import { StreakRestoreCard } from "@/features/daily/streak-restore-card";
+import { StreakSteps, type StreakStep } from "@/features/daily/streak-steps";
 import type { RepairOffer } from "@/lib/streak/repair";
 import type { Streak } from "@/lib/daily/streak";
 
@@ -11,6 +12,11 @@ export interface TodayProgress {
   entered: boolean;
   voted: boolean;
   ratedRides: boolean;
+  /** Cars in today's Rate the Ride round. */
+  rideTotal: number;
+  /** There's a Build Battle today (its vote counts for the streak too). */
+  battleOpen: boolean;
+  battleVoted: boolean;
 }
 
 /** Your day at a glance: streak, points, and the three things you can do
@@ -34,10 +40,52 @@ export function DailyProgress({
   points: number;
   today: TodayProgress;
 }) {
-  const items: { label: string; done: boolean }[] = [
-    { label: "Enter", done: today.entered },
-    { label: "Vote", done: today.voted },
-    { label: "Rate rides", done: today.ratedRides },
+  const cars = `${today.rideTotal} ${today.rideTotal === 1 ? "car" : "cars"}`;
+  const steps: StreakStep[] = [
+    {
+      key: "battle",
+      title: "Build Battle",
+      hint: "Pick which build wins",
+      action: "Vote in today's Build Battle",
+      effort: "One tap. Takes 5 seconds.",
+      doneText: "You voted in the Build Battle",
+      href: "/battle",
+      done: today.battleVoted,
+      available: today.battleOpen,
+    },
+    {
+      key: "vote",
+      title: "Vote on an entry",
+      hint: "Pick your favorite in today's challenge",
+      action: "Vote on today's challenge",
+      effort: "Pick your favorite entry. One tap.",
+      doneText: "You voted on today's challenge",
+      href: "#daily-vote",
+      done: today.voted,
+      available: true,
+    },
+    {
+      key: "rate",
+      title: "Rate the Ride",
+      hint: `Rate ${cars}`,
+      action: "Rate today's rides",
+      effort: `${cars}, about a minute.`,
+      doneText: "You rated today's rides",
+      href: "/daily/rate",
+      done: today.ratedRides,
+      available: today.rideTotal > 0,
+    },
+    {
+      key: "enter",
+      title: "Enter today's challenge",
+      hint: "Post a photo of your car",
+      action: "Enter today's challenge",
+      effort: "Post a photo of your car.",
+      doneText: "You entered today's challenge",
+      href: "#daily-challenge",
+      done: today.entered,
+      available: true,
+    },
   ];
   const lit = streak.activeToday && streak.current > 0;
   const status = lit
@@ -82,19 +130,7 @@ export function DailyProgress({
       )}
       <StreakTrack streak={streak} todayKey={todayKey} />
       <PushNudge />
-      <ul className="grid grid-cols-3 gap-2">
-        {items.map((item) => (
-          <li
-            key={item.label}
-            className={`flex items-center justify-center gap-1.5 rounded-full py-2 text-[0.8125rem] font-semibold ${
-              item.done ? "bg-accent/15 text-accent" : "bg-foreground/[0.06] text-muted"
-            }`}
-          >
-            {item.done && <CheckIcon className="h-3.5 w-3.5" />}
-            {item.label}
-          </li>
-        ))}
-      </ul>
+      <StreakSteps steps={steps} todayKey={todayKey} />
     </div>
   );
 }

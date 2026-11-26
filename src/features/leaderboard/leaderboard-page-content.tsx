@@ -7,6 +7,7 @@ import { listTopRatedBuilds } from "@/lib/db/builds";
 import {
   listVehicleIdsByCategory,
   listLeaderboardVehicleIds,
+  listMainBoardVehicleIds,
   listVehiclesByOwnerIds,
 } from "@/lib/db/vehicles";
 import { listFollowingIds } from "@/lib/db/follows";
@@ -145,7 +146,9 @@ export async function LeaderboardPageContent({
   // reason listVehicleIdsByCategory itself avoids one — no dependency on
   // PostgREST's embedded-resource relationship cache staying in sync.
   const [verifiedVehicleIds, categoryVehicleIds, scopeOwnerIds, dailyTeaser, todayBattle] = await Promise.all([
-    listLeaderboardVehicleIds(supabase),
+    // "All" is the main board, which leaves out the categories that only
+    // rank on their own board (ATVs); a category board is that category.
+    initialCategory ? listLeaderboardVehicleIds(supabase) : listMainBoardVehicleIds(supabase),
     initialCategory ? listVehicleIdsByCategory(supabase, initialCategory) : Promise.resolve(null),
     resolveScopeOwnerIds(supabase, scope, currentUser?.id ?? null),
     loadDailyTeaser(currentUser?.id ?? null),

@@ -1,6 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { listTopRatedBuilds } from "@/lib/db/builds";
-import { listVehiclesByIds, listLeaderboardVehicleIds } from "@/lib/db/vehicles";
+import { listVehiclesByIds, listMainBoardVehicleIds } from "@/lib/db/vehicles";
 import { getProfilesByIds } from "@/lib/db/profiles";
 import { listBuildRatingHistoryForBuilds } from "@/lib/db/build-rating-history";
 import { sendPushToUser } from "@/lib/push/send";
@@ -45,7 +45,7 @@ export async function sendDueRankPushes(now: Date = new Date()): Promise<number>
 
   // The board as the leaderboard page builds it: active, rated builds on
   // approved cars.
-  const approvedIds = await listLeaderboardVehicleIds(service);
+  const approvedIds = await listMainBoardVehicleIds(service);
   const builds = await listTopRatedBuilds(service, 1000, approvedIds);
   const vehicles = await listVehiclesByIds(service, builds.map((b) => b.vehicle_id));
   const vehicleById = new Map(vehicles.map((v) => [v.id, v]));

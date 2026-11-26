@@ -2,7 +2,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { getProfileByUserId } from "@/lib/db/profiles";
-import { listVehiclesByOwner, listLeaderboardVehicleIds, listVehicleIdsByCategory } from "@/lib/db/vehicles";
+import {
+  listVehiclesByOwner,
+  listLeaderboardVehicleIds,
+  listMainBoardVehicleIds,
+  listVehicleIdsByCategory,
+} from "@/lib/db/vehicles";
+import { isOnMainBoard } from "@/lib/vehicles/category";
 import { listActiveBuildsByVehicleIds, listAllRatingScores, countBuildsCopiedFrom } from "@/lib/db/builds";
 import { listBuildRatingHistoryForBuilds } from "@/lib/db/build-rating-history";
 import { listBuildPartsForBuilds } from "@/lib/db/build-parts";
@@ -177,21 +183,28 @@ export async function checkAndUnlockAchievements(
   // Global leaderboard rank — same "only verified vehicles are eligible"
   // reasoning rate-position.ts uses elsewhere, so this achievement never
   // claims a rank the real leaderboard wouldn't back up.
+  // Only main-board cars count for the overall rank: an ATV ranks on its
+  // own board (it still counts for bestCategoryRank below).
   const bestVerifiedScore = activeBuilds
-    .filter((b) => leaderboardVehicles.some((v) => v.id === b.vehicle_id))
+    .filter((b) => leaderboardVehicles.some((v) => v.id === b.vehicle_id && isOnMainBoard(v.category)))
     .reduce<number | null>((best, b) => {
       if (b.ai_rating_score == null) return best;
       return best == null || b.ai_rating_score > best ? b.ai_rating_score : best;
     }, null);
 
+  const hasRatedVerified = activeBuilds.some(
+    (b) => b.ai_rating_score != null && leaderboardVehicles.some((v) => v.id === b.vehicle_id),
+  );
   let leaderboardRank: number | null = null;
   let bestCategoryRank: number | null = null;
-  if (bestVerifiedScore != null) {
+  if (hasRatedVerified) {
     const allVerifiedIds = await listLeaderboardVehicleIds(supabase);
-    leaderboardRank = computeRankPosition(
-      bestVerifiedScore,
-      await listAllRatingScores(supabase, allVerifiedIds),
-    ).rank;
+    if (bestVerifiedScore != null) {
+      leaderboardRank = computeRankPosition(
+        bestVerifiedScore,
+        await listAllRatingScores(supabase, await listMainBoardVehicleIds(supabase)),
+      ).rank;
+    }
 
     // Best position across any single category board the user actually
     // has a verified, rated vehicle in — bounded by their own category

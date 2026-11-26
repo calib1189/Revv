@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
+import { isOnMainBoard } from "@/lib/vehicles/category";
 
 export type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 export type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
@@ -74,6 +75,22 @@ export async function listLeaderboardVehicleIds(
 
   if (error) throw error;
   return data.map((v) => v.id);
+}
+
+/** The main board's vehicles: approved ones, minus the categories that
+ * only rank on their own board (SEPARATE_BOARD_CATEGORIES, e.g. ATVs).
+ * Use this wherever a rank means "on SORZA overall"; a category board
+ * uses listLeaderboardVehicleIds narrowed to its category instead. */
+export async function listMainBoardVehicleIds(
+  supabase: SupabaseClient<Database>,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id, category")
+    .eq("ownership_verification_status", "approved");
+
+  if (error) throw error;
+  return data.filter((v) => isOnMainBoard(v.category)).map((v) => v.id);
 }
 
 /** New cars waiting for an admin to approve them for the leaderboard:

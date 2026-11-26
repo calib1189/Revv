@@ -3,7 +3,13 @@ import { getPrimaryCrewForUser } from "@/lib/db/crew-stats";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/get-user";
 import { createClient } from "@/lib/supabase/server";
-import { getVehicleById, listLeaderboardVehicleIds } from "@/lib/db/vehicles";
+import {
+  getVehicleById,
+  listLeaderboardVehicleIds,
+  listMainBoardVehicleIds,
+  listVehicleIdsByCategory,
+} from "@/lib/db/vehicles";
+import { isOnMainBoard, VEHICLE_CATEGORY_LABELS, type VehicleCategory } from "@/lib/vehicles/category";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getStoreItem } from "@/lib/store/catalog";
 import { getMediaById, getMediaByIds, publicMediaUrl } from "@/lib/db/media";
@@ -181,9 +187,26 @@ export default async function VehiclePage({
   // wouldn't back up. A not-yet-verified vehicle simply doesn't get one,
   // rather than a rank that would be wrong the moment they checked
   // /leaderboard themselves.
+  // A car in a category that ranks on its own board (ATVs) is ranked
+  // there, not against the main board it never appears on.
+  const ownBoard = !isOnMainBoard(vehicle.category);
+  const rankBoard = ownBoard
+    ? {
+        href: `/leaderboard?category=${vehicle.category}`,
+        label: `On the ${VEHICLE_CATEGORY_LABELS[vehicle.category as VehicleCategory] ?? "category"} leaderboard`,
+      }
+    : null;
   const rankPositionPromise: Promise<RankPosition | null> =
     isOwner && activeBuild?.ai_rating_score != null && vehicle.ownership_verification_status === "approved"
-      ? listLeaderboardVehicleIds(supabase)
+      ? (ownBoard
+          ? Promise.all([listLeaderboardVehicleIds(supabase), listVehicleIdsByCategory(supabase, vehicle.category)]).then(
+              ([approved, inCategory]) => {
+                const approvedSet = new Set(approved);
+                return inCategory.filter((id) => approvedSet.has(id));
+              },
+            )
+          : listMainBoardVehicleIds(supabase)
+        )
           .then((ids) => listAllRatingScores(supabase, ids))
           .then((scores) => computeRankPosition(activeBuild.ai_rating_score!, scores))
       : Promise.resolve(null);
@@ -369,6 +392,7 @@ export default async function VehiclePage({
               topPercent={topPercent}
               ratingHistory={ratingHistory}
               rankPosition={rankPosition}
+              rankBoard={rankBoard}
               shareText={buildShareText({ title, score, isOwner })}
               cardUrl={
                 score != null && heroMedia?.kind === "image"

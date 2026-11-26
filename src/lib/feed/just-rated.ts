@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import { listTopRatedBuilds } from "@/lib/db/builds";
-import { listLeaderboardVehicleIds, listVehiclesByOwner } from "@/lib/db/vehicles";
+import { listMainBoardVehicleIds, listVehiclesByOwner } from "@/lib/db/vehicles";
 import { composeLeaderboard } from "@/lib/leaderboard/compose-leaderboard";
 import { computeRankPosition } from "@/lib/rating/rank-position";
 
@@ -42,7 +42,7 @@ export function isNewViewer(accountCreatedAt: string | null, now: Date = new Dat
 /** The top of the leaderboard as feed slides, best first. Same board,
  * same scores and places the leaderboard shows. */
 export async function loadTopBuilds(supabase: SupabaseClient<Database>): Promise<JustRatedSlideData[]> {
-  const approvedIds = await listLeaderboardVehicleIds(supabase);
+  const approvedIds = await listMainBoardVehicleIds(supabase);
   const builds = await listTopRatedBuilds(supabase, 1000, approvedIds);
   const scores = builds.flatMap((b) => (b.ai_rating_score === null ? [] : [b.ai_rating_score]));
   // A few spare, in case one has no cover photo.
@@ -79,7 +79,7 @@ export async function loadJustRated(
   now: Date = new Date(),
 ): Promise<JustRatedSlideData[]> {
   const [approvedIds, ownVehicles] = await Promise.all([
-    listLeaderboardVehicleIds(supabase),
+    listMainBoardVehicleIds(supabase),
     viewerId ? listVehiclesByOwner(supabase, viewerId) : Promise.resolve([]),
   ]);
   const builds = await listTopRatedBuilds(supabase, 1000, approvedIds);

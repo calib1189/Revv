@@ -1,5 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { listLeaderboardVehicleIds, listVehiclesByIds } from "@/lib/db/vehicles";
+import { listMainBoardVehicleIds, listVehiclesByIds } from "@/lib/db/vehicles";
 import { listTopRatedBuilds } from "@/lib/db/builds";
 import {
   assignPriority,
@@ -35,7 +35,7 @@ export async function ensureTodayBattle(now: Date = new Date()): Promise<Battle 
   // Too late in the day for a fair vote: tomorrow's battle opens at midnight.
   if (!hasTimeForBattle(endsAt, now)) return null;
 
-  const approvedIds = await listLeaderboardVehicleIds(service);
+  const approvedIds = await listMainBoardVehicleIds(service);
   const builds = await listTopRatedBuilds(service, 1000, approvedIds);
   const vehicles = await listVehiclesByIds(
     service,

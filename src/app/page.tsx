@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth/get-user";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { createClient } from "@/lib/supabase/server";
 import { listTopRatedBuilds } from "@/lib/db/builds";
-import { listLeaderboardVehicleIds } from "@/lib/db/vehicles";
+import { listMainBoardVehicleIds } from "@/lib/db/vehicles";
 import { composeLeaderboard, type LeaderboardEntry } from "@/lib/leaderboard/compose-leaderboard";
 import { LeaderboardRow } from "@/features/leaderboard/leaderboard-row";
 import { LeaderboardHeroCard } from "@/features/leaderboard/leaderboard-hero-card";
@@ -39,7 +39,7 @@ const STEPS = [
 async function getTopEntries(): Promise<LeaderboardEntry[]> {
   try {
     const supabase = await createClient();
-    const verifiedVehicleIds = await listLeaderboardVehicleIds(supabase);
+    const verifiedVehicleIds = await listMainBoardVehicleIds(supabase);
     const builds = await listTopRatedBuilds(supabase, 5, verifiedVehicleIds);
     return composeLeaderboard(supabase, builds);
   } catch (err) {

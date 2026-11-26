@@ -28,6 +28,7 @@ import { getPointsBalance } from "@/lib/db/points";
 import { getUnopenedStreakChest } from "@/lib/db/streak-chests";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import { getOrCreateRideRound } from "@/lib/daily/ride-server";
+import { getBattleByDate, getMyBattleVote } from "@/lib/db/battles";
 import type { Streak } from "@/lib/daily/streak";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
@@ -107,6 +108,7 @@ export async function DailyPageContent() {
       </header>
 
       {/* Today's challenge */}
+      <div id="daily-challenge" className="scroll-mt-20">
       <ChallengeHero
         icon={challenge.icon}
         coverUrl={cover ? publicMediaUrl(supabase, cover.storage_path) : null}
@@ -143,6 +145,7 @@ export async function DailyPageContent() {
           challengeTitle={challenge.title}
         />
       </ChallengeHero>
+      </div>
 
       {personal && (
         <section className="mt-6 flex flex-col gap-2.5">
@@ -159,7 +162,7 @@ export async function DailyPageContent() {
       )}
 
       {/* Today's entries */}
-      <section className="mt-9">
+      <section id="daily-vote" className="mt-9 scroll-mt-20">
         <SectionTitle>Vote</SectionTitle>
         <p className="-mt-1 mb-3 px-1 text-[0.8125rem] leading-relaxed text-muted">
           One vote each. Tap again to take it back. Vote counts are revealed when the challenge ends.
@@ -244,12 +247,14 @@ async function loadPersonalDaily(
   today: string,
   live: { entered: boolean; voted: boolean },
 ) {
-  const [streakDays, points, round, readyChest] = await Promise.all([
+  const [streakDays, points, round, readyChest, battle] = await Promise.all([
     listStreakDays(supabase, userId),
     getPointsBalance(supabase, userId).catch(() => 0),
     getOrCreateRideRound(userId, today).catch(() => [] as string[]),
     loadReadyChest(supabase, userId),
+    getBattleByDate(supabase, today).catch(() => null),
   ]);
+  const battleVote = battle ? await getMyBattleVote(supabase, battle.id, userId).catch(() => null) : null;
   const { data: myRideRatings } = round.length
     ? await supabase.from("peer_ratings").select("vehicle_id").eq("rater_id", userId).in("vehicle_id", round)
     : { data: [] as { vehicle_id: string }[] };
@@ -261,9 +266,14 @@ async function loadPersonalDaily(
     entered: live.entered,
     voted: live.voted,
     ratedRides: round.length > 0 && rated >= round.length,
+    rideTotal: round.length,
+    battleOpen: battle !== null && Date.parse(battle.ends_at) > Date.now(),
+    battleVoted: Boolean(battleVote),
   };
   const days = { ...streakDays, active: [...streakDays.active] };
-  if (todayProgress.entered || todayProgress.voted || todayProgress.ratedRides) days.active.push(today);
+  if (todayProgress.entered || todayProgress.voted || todayProgress.ratedRides || todayProgress.battleVoted) {
+    days.active.push(today);
+  }
   return {
     streak: streakFrom(days, today),
     repairOffer: streakRepairOffer(days, today, streakDays.lastRepairKey),

@@ -753,10 +753,88 @@ html[data-hide-bottom-nav] [data-bottom-nav] {
 .streak-day-pop {
   animation: streak-day-pop 500ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
+/* Keep-your-streak steps: rows ease in, and a step you just finished
+   pops its circle, sends out a ring and draws its tick. */
+@keyframes step-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.step-row-in {
+  animation: step-row-in 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes step-check-pop {
+  0% {
+    transform: scale(0.3);
+  }
+  55% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.step-check-pop {
+  animation: step-check-pop 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) 250ms both;
+}
+@keyframes step-check-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+.step-check-ring {
+  animation: step-check-ring 700ms ease-out 420ms both;
+}
+@keyframes step-check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.step-check-draw {
+  stroke-dasharray: 1;
+  animation: step-check-draw 360ms ease-out 560ms both;
+}
+@keyframes step-kept-in {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.step-kept-in {
+  animation: step-kept-in 480ms cubic-bezier(0.2, 0.9, 0.3, 1.2) 900ms both;
+}
 @media (prefers-reduced-motion: reduce) {
   .flame-flicker,
-  .streak-day-pop {
+  .streak-day-pop,
+  .step-row-in,
+  .step-check-pop,
+  .step-check-ring,
+  .step-check-draw,
+  .step-kept-in {
     animation: none;
+  }
+  .step-check-ring {
+    display: none;
   }
 }
 

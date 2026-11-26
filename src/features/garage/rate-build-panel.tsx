@@ -35,6 +35,7 @@ export function RateBuildPanel({
   topPercent,
   ratingHistory,
   rankPosition,
+  rankBoard = null,
   shareText,
   cardUrl,
   refUsername,
@@ -62,6 +63,9 @@ export function RateBuildPanel({
   topPercent: number | null;
   ratingHistory: RatingHistoryPoint[];
   rankPosition: RankPosition | null;
+  /** The board that rank is on, when it isn't the main one (an ATV ranks
+   * on the ATVs & UTVs board only). */
+  rankBoard?: { href: string; label: string } | null;
   /** A rating generated earlier but never saved. It stays on the server
    * (and counts toward the 24h limit), so it's offered again here rather
    * than leaving "rate again in 23h" as the only thing they can see. */
@@ -312,12 +316,12 @@ export function RateBuildPanel({
 
           {rankPosition && (
             <Link
-              href="/leaderboard"
+              href={rankBoard?.href ?? "/leaderboard"}
               className="pressable mt-5 flex items-center gap-3 rounded-[18px] bg-accent/10 px-4 py-3"
             >
               <span className="numeral text-[1.375rem] leading-none text-accent">#{rankPosition.rank}</span>
               <div className="min-w-0 flex-1">
-                <p className="text-[0.875rem] font-semibold">On the leaderboard</p>
+                <p className="text-[0.875rem] font-semibold">{rankBoard?.label ?? "On the leaderboard"}</p>
                 <p className="mt-0.5 text-[0.8125rem] text-muted">
                   {rankPosition.gapToNext != null
                     ? `${rankPosition.gapToNext.toFixed(2)} points to pass #${rankPosition.rank - 1}`
