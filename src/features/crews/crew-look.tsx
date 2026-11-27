@@ -97,20 +97,27 @@ export function CrewTag({
 }) {
   const look = crewLook(crew);
   const banner = bannerStyle(look);
+  // The crew's frame goes around the whole pill (logo and name), not just
+  // the logo. Frames draw a ring just outside the element, so the pill
+  // doesn't clip; the banner rounds itself instead.
   return (
     <Link
       href={href ?? `/crews/${crew.id}`}
-      className={`pressable relative inline-flex max-w-full items-center gap-1.5 overflow-hidden rounded-full py-1 pl-1 pr-2.5 text-[0.8125rem] font-semibold ${
+      className={`pressable relative inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5 text-[0.8125rem] font-semibold ${
         onMedia ? "bg-white/15 text-white backdrop-blur-md [text-shadow:none]" : look.banner ? "" : "bg-foreground/[0.07]"
-      } ${className}`}
+      } ${look.frame ? look.frame.value : ""} ${className}`}
     >
       {look.banner && (
-        <span aria-hidden className={`pointer-events-none absolute inset-0 opacity-25 ${banner.className}`} style={banner.style} />
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute inset-0 overflow-hidden rounded-full opacity-25 ${banner.className}`}
+          style={banner.style}
+        />
       )}
       <CrewLogo
         crew={crew}
         logoUrl={logoUrl}
-        look={look}
+        look={{ ...look, frame: null }}
         size={20}
         radius={6}
         className={onMedia ? "bg-white/20" : "bg-foreground/[0.1]"}
