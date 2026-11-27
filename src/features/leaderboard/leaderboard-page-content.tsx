@@ -145,14 +145,20 @@ export async function LeaderboardPageContent({
   // the category filter (rather than a Postgres-side join) the same
   // reason listVehicleIdsByCategory itself avoids one — no dependency on
   // PostgREST's embedded-resource relationship cache staying in sync.
-  const [verifiedVehicleIds, categoryVehicleIds, scopeOwnerIds, dailyTeaser, todayBattle] = await Promise.all([
+  // The Daily and Build Battle cards load alongside the board, not ahead
+  // of it: the board only needs the vehicle ids, so it starts as soon as
+  // those are in.
+  const dailyTeaserPromise = loadDailyTeaser(currentUser?.id ?? null);
+  // Awaited below; this only keeps an early failure from being reported
+  // as unhandled before then (it still fails the page just as before).
+  dailyTeaserPromise.catch(() => {});
+  const todayBattlePromise = loadTodayBattle(supabase, currentUser?.id ?? null).catch(() => null);
+  const [verifiedVehicleIds, categoryVehicleIds, scopeOwnerIds] = await Promise.all([
     // "All" is the main board, which leaves out the categories that only
     // rank on their own board (ATVs); a category board is that category.
     initialCategory ? listLeaderboardVehicleIds(supabase) : listMainBoardVehicleIds(supabase),
     initialCategory ? listVehicleIdsByCategory(supabase, initialCategory) : Promise.resolve(null),
     resolveScopeOwnerIds(supabase, scope, currentUser?.id ?? null),
-    loadDailyTeaser(currentUser?.id ?? null),
-    loadTodayBattle(supabase, currentUser?.id ?? null).catch(() => null),
   ]);
   const verifiedSet = new Set(verifiedVehicleIds);
   let vehicleIds = categoryVehicleIds
@@ -165,12 +171,14 @@ export async function LeaderboardPageContent({
   }
   // Places moved since yesterday load alongside the board; the board
   // never waits on them failing.
-  const [entries, movement] = await Promise.all([
+  const [entries, movement, dailyTeaser, todayBattle] = await Promise.all([
     listTopRatedBuilds(supabase, 50, vehicleIds).then((builds) => composeLeaderboard(supabase, builds)),
     loadRankMovement(supabase, vehicleIds).catch((err) => {
       console.error("loadRankMovement failed:", err);
       return new Map<string, RankMovement>();
     }),
+    dailyTeaserPromise,
+    todayBattlePromise,
   ]);
 
   // The top five as photo cards: #1 the big card, #2–#5 a 2×2 grid under

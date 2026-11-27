@@ -38,8 +38,14 @@ export async function FeedPageContent() {
   }).catch(() => null);
   const user = await getCurrentUser();
   const profilePromise = user ? getProfileByUserId(supabase, user.id) : Promise.resolve(null);
+  // The posts' cards are built the moment the ranked posts arrive, in
+  // parallel with everything else, not after the slowest extra has loaded.
+  const rankedPromise = listRankedFeedPosts(supabase, { viewerId: user?.id ?? null, limit: 8 });
+  const cardsPromise = rankedPromise.then(({ items }) =>
+    composePostCards(supabase, items.map((item) => item.post), user?.id ?? null),
+  );
   const [{ items }, dailyTeaser, storyTray, justRated, drop, topBuilds, todayBattle, yesterdayBattle] = await Promise.all([
-    listRankedFeedPosts(supabase, { viewerId: user?.id ?? null, limit: 8 }),
+    rankedPromise,
     loadDailyTeaser(user?.id ?? null),
     user ? loadStoryTray(supabase, user.id).catch(() => [] as TrayPerson[]) : Promise.resolve([] as TrayPerson[]),
     // Like the ad: extra, so failing to load is never the feed failing.
@@ -59,10 +65,7 @@ export async function FeedPageContent() {
   ]);
   const viewerUsername = await profilePromise.then((p) => p?.username ?? null).catch(() => null);
   const seenBattleId = (await cookies()).get(BATTLE_SEEN_COOKIE)?.value;
-  const [cards, ad] = await Promise.all([
-    composePostCards(supabase, items.map((item) => item.post), user?.id ?? null),
-    adPromise,
-  ]);
+  const [cards, ad] = await Promise.all([cardsPromise, adPromise]);
   const cardsWithCursor = cards.map((card, i) => ({ ...card, rankCursor: items[i].cursor }));
 
   // Today's challenge leads the feed until you've taken part today.

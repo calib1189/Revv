@@ -39,6 +39,15 @@ export function TabPagerShell({
   const containerRef = useRef<HTMLDivElement>(null);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ready, setReady] = useState(false);
+  // The panel on screen, and whether a tab tap is gliding across several.
+  // Panels more than one swipe away aren't drawn at all (content-visibility:
+  // hidden keeps their state, scroll position and data; it just skips
+  // their layout, paint and animations), so the leaderboard's animated
+  // frames don't cost the feed anything. A swipe only ever reveals the
+  // next panel, which stays drawn; a tap that jumps further draws them all
+  // until it lands.
+  const [settledIndex, setSettledIndex] = useState(initialIndex);
+  const [jumping, setJumping] = useState(false);
 
   // Until this runs, every panel is shifted left by CSS (see the
   // transform below) so the server-rendered HTML already shows the right
@@ -69,6 +78,7 @@ export function TabPagerShell({
     function scrollToIndex(index: number) {
       const el = containerRef.current;
       if (!el) return;
+      if (Math.abs(index - currentIndex()) > 1) setJumping(true);
       el.scrollTo({ left: index * el.clientWidth, behavior: "smooth" });
     }
 
@@ -89,6 +99,8 @@ export function TabPagerShell({
       settleTimerRef.current = setTimeout(() => {
         const index = currentIndex();
         registerPager(index, scrollToIndex);
+        setSettledIndex(index);
+        setJumping(false);
         const href = hrefs[index];
         if (href && href !== window.location.pathname) {
           // history.replaceState, not router.push/replace — this must
@@ -123,13 +135,18 @@ export function TabPagerShell({
         ref={containerRef}
         className={`no-scrollbar flex ${slotHeight} snap-x snap-mandatory overflow-x-auto`}
       >
-        {tabs.map((tab) => {
+        {tabs.map((tab, i) => {
           const isFeed = tab.href === "/feed";
+          const far = ready && !jumping && Math.abs(i - settledIndex) > 1;
           return (
             <div
               key={tab.href}
-              className="h-full w-full flex-shrink-0 snap-center"
-              style={ready || initialIndex === 0 ? undefined : { transform: `translateX(-${initialIndex * 100}%)` }}
+              // snap-always: a swipe moves one tab, never flings past one.
+              className="h-full w-full flex-shrink-0 snap-center snap-always"
+              style={{
+                ...(ready || initialIndex === 0 ? {} : { transform: `translateX(-${initialIndex * 100}%)` }),
+                ...(far ? { contentVisibility: "hidden" } : {}),
+              }}
             >
               {isFeed ? (
                 tab.content

@@ -13,42 +13,31 @@ import type { MeetupListItem } from "@/features/meetups/meetups-list";
 
 export async function DiscoverPageContent() {
   const supabase = await createClient();
-  const [user, meetups] = await Promise.all([
-    getCurrentUser(),
-    listUpcomingMeetups(supabase),
-  ]);
-
-  // Degrade gracefully if the sounds migration hasn't been applied yet —
-  // same reasoning as header.tsx's messaging fetch: a missing table here
-  // shouldn't take down the whole Discover page, just leave its Sounds
-  // tab looking empty until the migration runs.
-  let sounds: Awaited<ReturnType<typeof listTrendingSounds>> = [];
-  try {
-    sounds = await listTrendingSounds(supabase);
-  } catch {
-    sounds = [];
-  }
-
-  const [hostProfiles, meetupMedia] = await Promise.all([
-    Promise.all(
-      [...new Set(meetups.map((m) => m.host_id))].map((id) =>
-        getProfileByUserId(supabase, id),
-      ),
-    ),
-    listMeetupMediaForMeetups(supabase, meetups.map((m) => m.id)),
+  // Everything here only depends on the meets list or on who you are, so
+  // it all loads side by side rather than one step after another.
+  const userPromise = getCurrentUser();
+  const meetupsPromise = listUpcomingMeetups(supabase);
+  const soundsPromise = listTrendingSounds(supabase).catch(
+    () => [] as Awaited<ReturnType<typeof listTrendingSounds>>,
+  );
+  const crewsPromise = userPromise.then(async (u) => {
+    const id = u?.email_confirmed_at ? u.id : null;
+    return id ? getCrewsByIds(supabase, await listCrewIdsForUser(supabase, id)) : [];
+  });
+  crewsPromise.catch(() => {});
+  const meetups = await meetupsPromise;
+  const meetupIds = meetups.map((m) => m.id);
+  const [user, sounds, hostProfiles, meetupMedia, goingCounts, yourCrews] = await Promise.all([
+    userPromise,
+    soundsPromise,
+    Promise.all([...new Set(meetups.map((m) => m.host_id))].map((id) => getProfileByUserId(supabase, id))),
+    listMeetupMediaForMeetups(supabase, meetupIds),
+    getAttendeeCountsForMeetups(supabase, meetupIds).catch(() => new Map<string, number>()),
+    crewsPromise,
   ]);
   const usernameById = new Map(
     hostProfiles.filter(Boolean).map((p) => [p!.id, p!.username]),
   );
-
-  // Same fail-soft as sounds above: until 0098 is applied the cards just
-  // show no "going" count.
-  let goingCounts = new Map<string, number>();
-  try {
-    goingCounts = await getAttendeeCountsForMeetups(supabase, meetups.map((m) => m.id));
-  } catch {
-    goingCounts = new Map();
-  }
 
   const mediaByMeetup = new Map<string, (typeof meetupMedia)[number][]>();
   for (const mm of meetupMedia) {
@@ -69,9 +58,6 @@ export async function DiscoverPageContent() {
   });
 
   const currentUserId = user?.email_confirmed_at ? user.id : null;
-  const yourCrews = currentUserId
-    ? await getCrewsByIds(supabase, await listCrewIdsForUser(supabase, currentUserId))
-    : [];
   return (
     <DiscoverTabs
       meetupItems={items}

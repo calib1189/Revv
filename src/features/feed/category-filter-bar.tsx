@@ -58,7 +58,7 @@ export function CategoryFilterBar({
     // touch-pan-x tells it this element only ever handles horizontal
     // gestures; vertical ones are left for whatever's actually meant to
     // handle them.
-    <div className="no-scrollbar fade-edge-r flex touch-pan-x items-center gap-1.5 overflow-x-auto px-3 py-1.5">
+    <div className="feed-chrome no-scrollbar fade-edge-r flex touch-pan-x items-center gap-1.5 overflow-x-auto px-3 py-1.5">
       {leading}
       <FilterChip active={selected === null} disabled={disabled} onClick={() => onSelect(null)}>
         All

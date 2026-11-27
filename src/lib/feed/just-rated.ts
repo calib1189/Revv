@@ -4,6 +4,15 @@ import { listTopRatedBuilds } from "@/lib/db/builds";
 import { listMainBoardVehicleIds, listVehiclesByOwner } from "@/lib/db/vehicles";
 import { composeLeaderboard } from "@/lib/leaderboard/compose-leaderboard";
 import { computeRankPosition } from "@/lib/rating/rank-position";
+import { cache } from "react";
+
+/** The main board's rated builds, best first. Both feed loaders below need
+ * exactly this, on the same page load: cached per request so it's fetched
+ * once, not twice. */
+const mainBoardBuilds = cache(async (supabase: SupabaseClient<Database>) => {
+  const approvedIds = await listMainBoardVehicleIds(supabase);
+  return listTopRatedBuilds(supabase, 1000, approvedIds);
+});
 
 /** A car that was rated in the last few days, as a slide in the feed
  * (features/feed/just-rated-slide). Most days nobody posts, so the feed
@@ -42,8 +51,7 @@ export function isNewViewer(accountCreatedAt: string | null, now: Date = new Dat
 /** The top of the leaderboard as feed slides, best first. Same board,
  * same scores and places the leaderboard shows. */
 export async function loadTopBuilds(supabase: SupabaseClient<Database>): Promise<JustRatedSlideData[]> {
-  const approvedIds = await listMainBoardVehicleIds(supabase);
-  const builds = await listTopRatedBuilds(supabase, 1000, approvedIds);
+  const builds = await mainBoardBuilds(supabase);
   const scores = builds.flatMap((b) => (b.ai_rating_score === null ? [] : [b.ai_rating_score]));
   // A few spare, in case one has no cover photo.
   const top = builds.filter((b) => b.ai_rating_score !== null).slice(0, TOP_BUILDS_LIMIT * 2);
@@ -78,11 +86,10 @@ export async function loadJustRated(
   viewerId: string | null,
   now: Date = new Date(),
 ): Promise<JustRatedSlideData[]> {
-  const [approvedIds, ownVehicles] = await Promise.all([
-    listMainBoardVehicleIds(supabase),
+  const [builds, ownVehicles] = await Promise.all([
+    mainBoardBuilds(supabase),
     viewerId ? listVehiclesByOwner(supabase, viewerId) : Promise.resolve([]),
   ]);
-  const builds = await listTopRatedBuilds(supabase, 1000, approvedIds);
   const scores = builds.flatMap((b) => (b.ai_rating_score === null ? [] : [b.ai_rating_score]));
 
   // Your own car isn't news to you.

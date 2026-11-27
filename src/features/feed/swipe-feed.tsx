@@ -266,7 +266,7 @@ export function SwipeFeed({
       ) : (
         <div
           ref={scrollContainerRef}
-          className={`no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}
+          className={`feed-scroller no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}
         >
           {category === null &&
             topBuilds.map((b) => <JustRatedSlide key={`top-${b.vehicleId}`} data={b} slideHeight={feedHeight} />)}

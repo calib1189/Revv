@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/shell/header";
 import { LayoutFooter } from "@/components/shell/layout-footer";
 import { NativeAppBridge } from "@/components/shell/native-app-bridge";
+import { ScrollSmoothing } from "@/components/shell/scroll-smoothing";
 import { TabPagerProvider } from "@/components/shell/tab-pager-context";
 import { StoryViewerProvider } from "@/features/stories/story-viewer-provider";
 import { getCurrentUser } from "@/lib/auth/get-user";
@@ -62,6 +63,17 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        {/* Feed videos, sounds and the browser's own data calls go straight
+            to Supabase: open that connection while the page is still
+            arriving, so the first video doesn't wait on a fresh handshake. */}
+        {/* Two: <video>/<audio> requests and fetch() calls use separate
+            connection pools, so each gets its own warm connection. */}
+        {process.env.NEXT_PUBLIC_SUPABASE_URL && (
+          <>
+            <link rel="preconnect" href={new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin} />
+            <link rel="preconnect" href={new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin} crossOrigin="anonymous" />
+          </>
+        )}
         {/* Applies the saved theme before first paint, so there's no
             flash of the default (dark) theme for someone who picked
             light. Runs before hydration, hence suppressHydrationWarning
@@ -75,6 +87,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <NativeAppBridge />
+        <ScrollSmoothing />
         {!user && <CaptureInviteRef />}
         {user && <TimeZoneSync />}
         {user && (

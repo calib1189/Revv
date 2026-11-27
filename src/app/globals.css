@@ -197,12 +197,58 @@ select {
 
 body {
   background: var(--color-background);
+  color: var(--color-foreground);
+}
+/* The page's soft glow, on its own fixed, GPU-composited layer. It used
+   to be a background-attachment: fixed gradient on <body>, which makes
+   Android repaint the whole screen on every scroll frame. (html has no
+   background, so this paints just above the canvas and behind
+   everything else.) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image:
     radial-gradient(ellipse 900px 500px at 15% -10%, var(--bg-glow-1), transparent 60%),
     radial-gradient(ellipse 700px 500px at 100% 0%, var(--bg-glow-2), transparent 55%);
   background-repeat: no-repeat;
-  background-attachment: fixed;
-  color: var(--color-foreground);
+  transform: translateZ(0);
+}
+
+/* The swipe feed. Slides off screen aren't laid out or painted at all
+   (each has an explicit full height, so nothing shifts), and the frosted
+   pills over a playing video drop their blur: a blur over video is
+   redone on every video frame, which is what made swiping stutter. The
+   see-through white ones get a darker base instead so they stay
+   readable. */
+.feed-scroller > :not(.contents),
+.feed-scroller > .contents > * {
+  content-visibility: auto;
+  /* One post per swipe, like TikTok: a hard flick lands on the next post
+     instead of flying past several half-loaded ones. */
+  scroll-snap-stop: always;
+}
+.feed-scroller [class*="backdrop-blur"],
+.feed-chrome [class*="backdrop-blur"] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.feed-scroller [class*="backdrop-blur"][class*="bg-white/"],
+.feed-chrome [class*="backdrop-blur"][class*="bg-white/"] {
+  background-color: rgb(16 16 18 / 0.5);
+}
+
+/* While a finger is scrolling anything (html.is-scrolling, set by
+   ScrollSmoothing), the always-running decorations hold still: the
+   spinning rank frames and badges repaint a gradient and a glow on every
+   frame, and a leaderboard shows a dozen at once. They pick up where they
+   left off the moment the scroll settles. */
+html.is-scrolling :is([class*="rank-"], [class*="frame-"]),
+html.is-scrolling :is([class*="rank-"], [class*="frame-"])::before,
+html.is-scrolling :is([class*="rank-"], [class*="frame-"])::after {
+  animation-play-state: paused !important;
 }
 
 .no-scrollbar {
@@ -2170,11 +2216,14 @@ a.place-flash.pressable {
      catches light on its top edge. Two tiers — .glass for standard cards,
      .glass-raised for anything that should sit visually above them (modals,
      the sticky header, popovers). */
+  /* No backdrop-filter on these three: they sit on the page's solid
+     background (or are ~96% opaque themselves), where a blur can't be
+     seen, yet the phone still re-blurs behind every one of them on every
+     frame of a scroll. There are hundreds on screen across the app, and
+     dropping it is the single biggest smoothness win. */
   .glass {
     background: linear-gradient(180deg, var(--glass-bg), rgb(var(--glass-tint) / 0.012));
     border: 1px solid var(--glass-border);
-    -webkit-backdrop-filter: blur(12px) saturate(125%);
-    backdrop-filter: blur(12px) saturate(125%);
     box-shadow:
       inset 0 1px 0 0 var(--glass-highlight),
       0 8px 24px -16px rgb(0 0 0 / 0.4);
@@ -2189,8 +2238,6 @@ a.place-flash.pressable {
        wherever it does apply. */
     background: linear-gradient(180deg, var(--glass-solid-raised), var(--glass-solid-raised));
     border: 1px solid var(--glass-border-raised);
-    -webkit-backdrop-filter: blur(14px) saturate(135%);
-    backdrop-filter: blur(14px) saturate(135%);
     box-shadow:
       inset 0 1px 0 0 var(--glass-highlight),
       0 10px 32px -18px rgb(0 0 0 / 0.5);
@@ -2199,8 +2246,6 @@ a.place-flash.pressable {
   .glass-inset {
     background: rgb(0 0 0 / 0.2);
     border: 1px solid rgb(var(--glass-tint) / 0.08);
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
   }
 }
 
