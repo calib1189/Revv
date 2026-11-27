@@ -65,6 +65,19 @@
       </array>
     </dict>
 	</dict>
+	<key>WKAppBoundDomains</key>
+	<array>
+		<string>sorza.net</string>
+		<string>www.sorza.net</string>
+		<string>fvuhrnbaadynpybaxkow.supabase.co</string>
+		<string>accounts.google.com</string>
+		<string>appleid.apple.com</string>
+		<string>hcaptcha.com</string>
+		<string>newassets.hcaptcha.com</string>
+		<string>assets.hcaptcha.com</string>
+		<string>imgs.hcaptcha.com</string>
+		<string>js.hcaptcha.com</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

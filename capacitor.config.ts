@@ -61,6 +61,15 @@ const config: CapacitorConfig = {
     // the safe area on top of that — same gap applied twice, which is
     // exactly the oversized empty strip under the status bar this fixes.
     contentInset: "never",
+    // Lets the web view run SORZA's service worker (public/sw.js), which
+    // is what makes the app open instantly from the last visit. WKWebView
+    // only allows a service worker for "app-bound" domains, listed under
+    // WKAppBoundDomains in ios/App/App/Info.plist (Apple's limit is 10).
+    // With this on, the web view may only navigate to those domains, so
+    // that list must cover every page the app opens in place: sorza.net,
+    // the Supabase auth callback, Google and Apple sign-in, and hCaptcha's
+    // challenge frames (see allowNavigation above for why each is here).
+    limitsNavigationsToAppBoundDomains: true,
   },
   plugins: {
     // The page moves its own composers for the keyboard (src/lib/native/
