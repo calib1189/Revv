@@ -32,6 +32,11 @@ export interface Database {
           equipped_profile_background: string | null;
           equipped_showcase_frame: string | null;
           equipped_vehicle_name_color: string | null;
+          instagram_handle: string | null;
+          tiktok_handle: string | null;
+          youtube_handle: string | null;
+          snapchat_handle: string | null;
+          website_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -52,6 +57,11 @@ export interface Database {
           equipped_profile_background?: string | null;
           equipped_showcase_frame?: string | null;
           equipped_vehicle_name_color?: string | null;
+          instagram_handle?: string | null;
+          tiktok_handle?: string | null;
+          youtube_handle?: string | null;
+          snapchat_handle?: string | null;
+          website_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -72,6 +82,11 @@ export interface Database {
           equipped_profile_background?: string | null;
           equipped_showcase_frame?: string | null;
           equipped_vehicle_name_color?: string | null;
+          instagram_handle?: string | null;
+          tiktok_handle?: string | null;
+          youtube_handle?: string | null;
+          snapchat_handle?: string | null;
+          website_url?: string | null;
           created_at?: string;
         };
         Relationships: never[];

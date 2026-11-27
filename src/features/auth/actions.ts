@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { validateUsername } from "@/lib/validation/username";
+import { parseLoginIdentifier } from "@/lib/auth/login-identifier";
 import { trackEvent } from "@/lib/analytics/track";
 import { getProfileByUserId } from "@/lib/db/profiles";
 import {
@@ -19,6 +20,18 @@ import { unstashAccount } from "@/lib/auth/account-stash";
 
 export interface AuthActionState {
   error: string | null;
+}
+
+/** The email behind a SORZA username, for signing in by username. Server
+ * only (service role: auth emails aren't readable any other way). Null
+ * for no such username, or an account with no email. */
+async function emailForUsername(username: string): Promise<string | null> {
+  const service = createServiceRoleClient();
+  const { data: profile, error } = await service.from("profiles").select("id").eq("username", username).maybeSingle();
+  if (error || !profile) return null;
+  const { data, error: userError } = await service.auth.admin.getUserById(profile.id);
+  if (userError) return null;
+  return data.user?.email ?? null;
 }
 
 function friendlyError(message: string): string {
@@ -94,13 +107,27 @@ export async function signIn(
     return { error: "Please agree to the Terms of Use to continue." };
   }
 
-  const email = String(formData.get("email") ?? "").trim();
+  const identifier = parseLoginIdentifier(String(formData.get("email") ?? ""));
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/feed");
   const captchaToken = String(formData.get("captchaToken") ?? "");
 
-  if (!email || !password) {
-    return { error: "Email and password are required." };
+  if (identifier.kind === "invalid" || !password) {
+    return { error: "Enter your email or username, and your password." };
+  }
+
+  // A username signs in as that account's email, looked up here on the
+  // server; the email itself is never sent back. Every way a username
+  // sign-in can fail reads the same, so the box can't be used to learn
+  // anything about an account (usernames are public; emails aren't).
+  const usernameFailure = "Incorrect username or password.";
+  let email: string;
+  if (identifier.kind === "username") {
+    const found = await emailForUsername(identifier.value).catch(() => null);
+    if (!found) return { error: usernameFailure };
+    email = found;
+  } else {
+    email = identifier.value;
   }
 
   const supabase = await createClient();
@@ -110,7 +137,12 @@ export async function signIn(
     options: { captchaToken },
   });
 
-  if (error) return { error: friendlyError(error.message) };
+  if (error) {
+    if (identifier.kind === "username" && error.message.toLowerCase().includes("invalid login credentials")) {
+      return { error: usernameFailure };
+    }
+    return { error: friendlyError(error.message) };
+  }
 
   if (data.user) {
     const profile = await getProfileByUserId(supabase, data.user.id);

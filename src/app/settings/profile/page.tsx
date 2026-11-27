@@ -7,6 +7,7 @@ import { EditAvatarForm } from "@/features/profile/edit-avatar-form";
 import { EditDisplayNameForm } from "@/features/profile/edit-display-name-form";
 import { EditUsernameForm } from "@/features/profile/edit-username-form";
 import { EditBioForm } from "@/features/profile/edit-bio-form";
+import { EditLinksForm } from "@/features/profile/edit-links-form";
 import { PageHeader, PageShell } from "@/components/ui/page-header";
 
 export default async function EditProfilePage() {
@@ -47,6 +48,20 @@ export default async function EditProfilePage() {
         <div className="h-px bg-border" />
         <EditBioForm initialBio={profile?.bio ?? null} />
       </div>
+
+      {profile && (
+        <div className="glass-raised elev-1 mt-4 flex flex-col gap-6 rounded-[22px] p-5">
+          <EditLinksForm
+            initial={{
+              instagram: profile.instagram_handle ?? null,
+              tiktok: profile.tiktok_handle ?? null,
+              youtube: profile.youtube_handle ?? null,
+              snapchat: profile.snapchat_handle ?? null,
+              website: profile.website_url ?? null,
+            }}
+          />
+        </div>
+      )}
     </PageShell>
   );
 }

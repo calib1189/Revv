@@ -25,6 +25,7 @@ import { checkAndUnlockAchievements } from "@/lib/achievements/unlock";
 import { listUnlockedAchievements } from "@/lib/db/user-achievements";
 import { AchievementUnlockToast } from "@/features/achievements/achievement-unlock-toast";
 import { ProfileShowcase } from "@/features/achievements/achievement-showcase";
+import { ProfileLinks } from "@/features/profile/profile-links";
 import { getPrimaryCrewForUser } from "@/lib/db/crew-stats";
 import { CrewTag } from "@/features/crews/crew-look";
 import { FollowButton } from "@/features/profile/follow-button";
@@ -391,6 +392,8 @@ export default async function ProfilePage({
             {profile.bio}
           </p>
         )}
+
+        <ProfileLinks profile={profile} className="mt-4" />
 
         <ProfileShowcase
           achievementIds={profile.showcased_achievement_ids ?? []}

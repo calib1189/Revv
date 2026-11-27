@@ -2181,6 +2181,34 @@ export function InstagramIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+/** Profile links (features/profile/profile-links): line glyphs drawn to
+ * sit with InstagramIcon, recognizable without copying any logo art. */
+export function TikTokIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M13.5 3.5v11.25a3.75 3.75 0 1 1-3.75-3.75" />
+      <path d="M13.5 3.5c.4 2.6 2.2 4.3 4.75 4.5" />
+    </svg>
+  );
+}
+
+export function YouTubeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinejoin="round" {...props}>
+      <rect x="2.75" y="5.5" width="18.5" height="13" rx="4" />
+      <path d="M10.25 9.25v5.5l4.75-2.75-4.75-2.75Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function SnapchatIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 3.75c-2.9 0-4.75 2.1-4.75 4.9v2.1c-.6.1-1.3-.1-1.8.2-.5.4.2 1 1.1 1.4-.5 1.5-1.7 2.9-3.3 3.5.3.7 1.4.8 2.2 1 .2.6.2 1.1.8 1.1.6 0 1.3-.4 2.4-.1 1 .3 1.8 1.4 3.35 1.4s2.35-1.1 3.35-1.4c1.1-.3 1.8.1 2.4.1.6 0 .6-.5.8-1.1.8-.2 1.9-.3 2.2-1-1.6-.6-2.8-2-3.3-3.5.9-.4 1.6-1 1.1-1.4-.5-.3-1.2-.1-1.8-.2v-2.1c0-2.8-1.85-4.9-4.75-4.9Z" />
+    </svg>
+  );
+}
+
 /* Story editor tools. */
 
 export function StickerPeelIcon(props: SVGProps<SVGSVGElement>) {

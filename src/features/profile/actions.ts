@@ -8,9 +8,12 @@ import {
   updateProfileBio,
   updateProfileDisplayName,
   updateProfileUsername,
+  updateProfileLinks,
   getProfileByUserId,
   getProfileByUsername,
+  type ProfileLinks,
 } from "@/lib/db/profiles";
+import { normalizeHandle, normalizeWebsite, SOCIAL_PLATFORMS } from "@/lib/validation/profile-links";
 import { blockUser, unblockUser } from "@/lib/db/blocks";
 import { validateBio, validateDisplayName } from "@/lib/validation/profile";
 import { isPlaceholderUsername, validateUsername } from "@/lib/validation/username";
@@ -70,6 +73,47 @@ export async function updateBioAction(
   revalidatePath(`/u/${profile.username}`);
   revalidatePath("/settings/profile");
   return { error: null };
+}
+
+export interface UpdateLinksState {
+  error: string | null;
+  /** Which field the error is about, so the form can point at it. */
+  field: string | null;
+  saved: boolean;
+}
+
+/** Saves the social links and website shown on your profile. Each one is
+ * optional; a pasted profile link or "@name" is reduced to the handle. */
+export async function updateLinksAction(
+  _prevState: UpdateLinksState,
+  formData: FormData,
+): Promise<UpdateLinksState> {
+  const links: ProfileLinks = {
+    instagram_handle: null,
+    tiktok_handle: null,
+    youtube_handle: null,
+    snapchat_handle: null,
+    website_url: null,
+  };
+  for (const platform of SOCIAL_PLATFORMS) {
+    const result = normalizeHandle(platform, String(formData.get(platform) ?? ""));
+    if (result.error) return { error: result.error, field: platform, saved: false };
+    links[`${platform}_handle`] = result.value ?? null;
+  }
+  const website = normalizeWebsite(String(formData.get("website") ?? ""));
+  if (website.error) return { error: website.error, field: "website", saved: false };
+  links.website_url = website.value ?? null;
+
+  const { supabase, user } = await requireUser();
+  try {
+    const profile = await updateProfileLinks(supabase, user.id, links);
+    revalidatePath(`/u/${profile.username}`);
+    revalidatePath("/settings/profile");
+  } catch (err) {
+    console.error("updateLinksAction failed:", err);
+    return { error: "Couldn't save your links. Try again.", field: null, saved: false };
+  }
+  return { error: null, field: null, saved: true };
 }
 
 export interface ClaimUsernameState {

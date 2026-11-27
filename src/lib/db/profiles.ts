@@ -196,6 +196,32 @@ export async function updateProfileBio(
   return data;
 }
 
+export interface ProfileLinks {
+  instagram_handle: string | null;
+  tiktok_handle: string | null;
+  youtube_handle: string | null;
+  snapchat_handle: string | null;
+  website_url: string | null;
+}
+
+/** Saves someone's social links and website (0138), already normalized
+ * (lib/validation/profile-links). RLS: own row only. */
+export async function updateProfileLinks(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  links: ProfileLinks,
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .update(links)
+    .eq("id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export async function updateProfileUsername(
   supabase: SupabaseClient<Database>,
   userId: string,

@@ -29,12 +29,15 @@ export function SignInForm({ next }: { next?: string }) {
       <input type="hidden" name="next" value={next ?? "/feed"} />
 
       <div>
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Email or username</Label>
         <Input
           id="email"
           name="email"
-          type="email"
-          autoComplete="email"
+          type="text"
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           required
         />
       </div>
