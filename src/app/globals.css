@@ -217,15 +217,14 @@ body::before {
   transform: translateZ(0);
 }
 
-/* The swipe feed. Slides off screen aren't laid out or painted at all
-   (each has an explicit full height, so nothing shifts), and the frosted
-   pills over a playing video drop their blur: a blur over video is
-   redone on every video frame, which is what made swiping stutter. The
-   see-through white ones get a darker base instead so they stay
-   readable. */
+/* The swipe feed. The frosted pills over a playing video drop their
+   blur: a blur over video is redone on every video frame, which is what
+   made swiping stutter. The see-through white ones get a darker base
+   instead so they stay readable. (No content-visibility on the slides:
+   iOS WebKit then skips painting a post's caption, buttons and scrims
+   while its video plays, even with the post on screen.) */
 .feed-scroller > :not(.contents),
 .feed-scroller > .contents > * {
-  content-visibility: auto;
   /* One post per swipe, like TikTok: a hard flick lands on the next post
      instead of flying past several half-loaded ones. */
   scroll-snap-stop: always;
