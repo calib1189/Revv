@@ -5,6 +5,7 @@ import { Header } from "@/components/shell/header";
 import { LayoutFooter } from "@/components/shell/layout-footer";
 import { NativeAppBridge } from "@/components/shell/native-app-bridge";
 import { ScrollSmoothing } from "@/components/shell/scroll-smoothing";
+import { InstantOpen } from "@/components/shell/instant-open";
 import { TabPagerProvider } from "@/components/shell/tab-pager-context";
 import { StoryViewerProvider } from "@/features/stories/story-viewer-provider";
 import { getCurrentUser } from "@/lib/auth/get-user";
@@ -63,6 +64,14 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        {/* Read by the service worker (public/sw.js) to know whose page this
+            is and which deploy made it, so a saved copy of the app is only
+            ever shown to the same person on the same version. */}
+        <meta name="sorza-user" content={user?.id ?? ""} />
+        <meta
+          name="sorza-build"
+          content={process.env.VERCEL_DEPLOYMENT_ID ?? process.env.VERCEL_GIT_COMMIT_SHA ?? "dev"}
+        />
         {/* Feed videos, sounds and the browser's own data calls go straight
             to Supabase: open that connection while the page is still
             arriving, so the first video doesn't wait on a fresh handshake. */}
@@ -88,6 +97,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col">
         <NativeAppBridge />
         <ScrollSmoothing />
+        <InstantOpen signedIn={Boolean(user)} />
         {!user && <CaptureInviteRef />}
         {user && <TimeZoneSync />}
         {user && (

@@ -77,6 +77,18 @@ export function SwipeFeed({
   const [posts, setPosts] = useState(initialPosts);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(initialPosts.length > 0);
+  // Instant open (components/shell/instant-open.tsx) shows the feed saved
+  // last time, then refreshes the page a moment later: the fresh posts
+  // take over, as long as you haven't started scrolling yet.
+  const [shownInitial, setShownInitial] = useState(initialPosts);
+  const [scrolled, setScrolled] = useState(false);
+  if (initialPosts !== shownInitial) {
+    setShownInitial(initialPosts);
+    if (!scrolled && category === null) {
+      setPosts(initialPosts);
+      setHasMore(initialPosts.length > 0);
+    }
+  }
   const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { registerRefreshHandler } = useTabPagerContext();
@@ -267,6 +279,7 @@ export function SwipeFeed({
         <div
           ref={scrollContainerRef}
           className={`feed-scroller no-scrollbar ${feedHeight} snap-y snap-mandatory overflow-y-auto`}
+          onScroll={scrolled ? undefined : () => setScrolled(true)}
         >
           {category === null &&
             topBuilds.map((b) => <JustRatedSlide key={`top-${b.vehicleId}`} data={b} slideHeight={feedHeight} />)}
