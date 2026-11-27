@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { setOwnershipVerificationStatusAction } from "@/features/admin/actions";
 import { formatDateTime } from "@/lib/format/date";
-import { REJECTION_REASON_MAX } from "@/lib/validation/rejection-reason";
+import { PROOF_REQUEST_MESSAGE, REJECTION_REASON_MAX } from "@/lib/validation/rejection-reason";
 
 export interface VerificationRowData {
   vehicleId: string;
@@ -45,6 +45,8 @@ export function VerificationRow({ data }: { data: VerificationRowData }) {
   const [isPending, startTransition] = useTransition();
   const [resolved, setResolved] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  // "Ask for proof" is a rejection with the proof request already written.
+  const [askingProof, setAskingProof] = useState(false);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -138,7 +140,7 @@ export function VerificationRow({ data }: { data: VerificationRowData }) {
       {rejecting ? (
         <div className="flex flex-col gap-2 border-t border-border pt-3">
           <label htmlFor={`reject-${data.vehicleId}`} className="text-sm font-medium">
-            Why isn&apos;t it approved?
+            {askingProof ? "Ask them to prove it's theirs" : <>Why isn&apos;t it approved?</>}
           </label>
           <textarea
             id={`reject-${data.vehicleId}`}
@@ -161,6 +163,8 @@ export function VerificationRow({ data }: { data: VerificationRowData }) {
               disabled={isPending}
               onClick={() => {
                 setRejecting(false);
+                setAskingProof(false);
+                setReason("");
                 setError(null);
               }}
               className="text-sm text-muted hover:underline disabled:opacity-60"
@@ -173,7 +177,13 @@ export function VerificationRow({ data }: { data: VerificationRowData }) {
               onClick={() => handle("rejected")}
               className="text-sm font-medium text-danger hover:underline disabled:opacity-60"
             >
-              {isPending ? "Sending…" : reason.trim() ? "Reject and send" : "Reject without a message"}
+              {isPending
+                ? "Sending…"
+                : askingProof
+                  ? "Send proof request"
+                  : reason.trim()
+                    ? "Reject and send"
+                    : "Reject without a message"}
             </button>
           </div>
         </div>
@@ -192,7 +202,23 @@ export function VerificationRow({ data }: { data: VerificationRowData }) {
             <button
               type="button"
               disabled={isPending}
-              onClick={() => setRejecting(true)}
+              onClick={() => {
+                setReason(PROOF_REQUEST_MESSAGE);
+                setAskingProof(true);
+                setRejecting(true);
+              }}
+              className="text-sm font-medium text-accent hover:underline disabled:opacity-60"
+            >
+              Ask for proof
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                setReason("");
+                setAskingProof(false);
+                setRejecting(true);
+              }}
               className="text-sm text-danger hover:underline disabled:opacity-60"
             >
               Reject

@@ -10,6 +10,12 @@ export function normalizeRejectionReason(raw: string | null | undefined): { reas
   return { reason: reason || null };
 }
 
+/** The admin queue's "Ask for proof" message: for a car that might not be
+ * theirs (a pro race car, a car-show shot, a photo off the internet). A
+ * new cover photo sends it back to the queue. */
+export const PROOF_REQUEST_MESSAGE =
+  "We need proof this car is yours before it goes on the leaderboard. Upload a new cover photo of you with the car, holding a paper with your SORZA username on it, and it'll go back for review.";
+
 const PUSH_MAX = 160;
 
 /** The rejection push. The full message is on the car page; a push only
