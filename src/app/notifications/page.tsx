@@ -183,7 +183,11 @@ export default async function NotificationsPage() {
                           <span className="relative flex-shrink-0">
                             <Avatar
                               username={username}
-                              avatarUrl={n.actor_id ? (avatarUrlByActorId.get(n.actor_id) ?? null) : null}
+                              // SORZA's own notifications (no person behind
+                              // them) show the app icon, not a letter.
+                              avatarUrl={
+                                n.actor_id ? (avatarUrlByActorId.get(n.actor_id) ?? null) : "/icons/icon-192.png"
+                              }
                               className="h-14 w-14 text-lg"
                             />
                             {badge && (
