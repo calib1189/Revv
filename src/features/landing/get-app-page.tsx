@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { InAppBrowser } from "@/lib/in-app-browser";
 import { ArrowUpIcon } from "@/components/ui/icons";
 import { StoreBadges } from "@/features/landing/store-badges";
+import { DownloadTracker } from "@/features/landing/download-tracker";
 
 const EMBLEMS = ["bronze", "gold", "emerald", "diamond", "cosmic"] as const;
 
@@ -23,6 +24,7 @@ export function GetAppPage({ inApp, platform }: { inApp: InAppBrowser | null; pl
 
   return (
     <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center px-5 pb-14 pt-10 text-center">
+      <DownloadTracker platform={platform} inApp={inApp} />
       {inApp && (
         <div className="pointer-events-none absolute right-3 top-2 flex items-center gap-1.5 text-accent" aria-hidden="true">
           <span className="text-[0.75rem] font-semibold">Tap •••</span>
