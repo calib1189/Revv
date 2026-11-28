@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Spinner } from "@/components/ui/spinner";
 import { loadMoreFeedPostsAction, loadFeedByCategoryAction } from "@/features/feed/actions";
 import { SwipeSlide } from "@/features/feed/swipe-slide";
 import { SponsoredSlide, type SponsoredSlideData } from "@/features/feed/sponsored-slide";
@@ -82,6 +83,7 @@ export function SwipeFeed({
   // take over, as long as you haven't started scrolling yet.
   const [shownInitial, setShownInitial] = useState(initialPosts);
   const [scrolled, setScrolled] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   if (initialPosts !== shownInitial) {
     setShownInitial(initialPosts);
     if (!scrolled && category === null) {
@@ -148,17 +150,26 @@ export function SwipeFeed({
   useEffect(() => {
     registerRefreshHandler("/feed", () => {
       const generation = ++generationRef.current;
+      // Straight to the top the moment you tap, like TikTok: an instant
+      // jump (a smooth one would have to glide past every post, and
+      // one-post-per-swipe snapping can stop it partway), with a
+      // "Refreshing" pill until the fresh posts arrive.
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: "auto" });
       setCategory(null);
       setIsLoading(true);
+      setRefreshing(true);
       loadFeedByCategoryAction(null)
         .then((fresh) => {
           if (generation !== generationRef.current) return;
           setPosts(fresh);
           setHasMore(fresh.length > 0);
-          scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+          scrollContainerRef.current?.scrollTo({ top: 0, behavior: "auto" });
         })
         .finally(() => {
-          if (generation === generationRef.current) setIsLoading(false);
+          if (generation === generationRef.current) {
+            setIsLoading(false);
+            setRefreshing(false);
+          }
         });
     });
     return () => registerRefreshHandler("/feed", null);
@@ -250,6 +261,14 @@ export function SwipeFeed({
             leading={storyTray.length > 0 ? <StoriesPeek tray={storyTray} /> : null}
           />
         </div>
+        {refreshing && (
+          <div className="mt-2 flex justify-center" role="status">
+            <span className="animate-fade-in flex items-center gap-2 rounded-full bg-black/60 px-3.5 py-1.5 text-[0.8125rem] font-semibold text-white">
+              <Spinner className="h-3.5 w-3.5" />
+              Refreshing
+            </span>
+          </div>
+        )}
       </div>
 
       {posts.length === 0 ? (
